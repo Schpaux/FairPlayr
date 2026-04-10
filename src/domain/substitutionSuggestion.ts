@@ -1,4 +1,4 @@
-import type { LiveMatchState } from "@/domain/liveMatch";
+import { getPlayerAccumulatedSeconds, type LiveMatchState } from "@/domain/liveMatch";
 
 export interface SubstitutionSuggestion {
   outgoingPlayerId: string;
@@ -9,11 +9,11 @@ export interface SubstitutionSuggestion {
   lowBenchPlayerIds: string[];
 }
 
-function readPlaytime(state: LiveMatchState, playerId: string): number {
-  return state.playerAccumulatedSeconds[playerId] ?? 0;
+function readPlaytime(state: LiveMatchState, playerId: string, nowMs: number): number {
+  return getPlayerAccumulatedSeconds(state, playerId, nowMs);
 }
 
-function maxPlaytimeIds(state: LiveMatchState): string[] {
+function maxPlaytimeIds(state: LiveMatchState, nowMs: number): string[] {
   if (state.onFieldPlayerIds.length === 0) {
     return [];
   }
@@ -21,15 +21,15 @@ function maxPlaytimeIds(state: LiveMatchState): string[] {
   let maxSeconds = -1;
 
   for (const playerId of state.onFieldPlayerIds) {
-    maxSeconds = Math.max(maxSeconds, readPlaytime(state, playerId));
+    maxSeconds = Math.max(maxSeconds, readPlaytime(state, playerId, nowMs));
   }
 
   return state.onFieldPlayerIds.filter(
-    (playerId) => readPlaytime(state, playerId) === maxSeconds
+    (playerId) => readPlaytime(state, playerId, nowMs) === maxSeconds
   );
 }
 
-function minPlaytimeIds(state: LiveMatchState): string[] {
+function minPlaytimeIds(state: LiveMatchState, nowMs: number): string[] {
   if (state.benchPlayerIds.length === 0) {
     return [];
   }
@@ -37,11 +37,11 @@ function minPlaytimeIds(state: LiveMatchState): string[] {
   let minSeconds = Number.POSITIVE_INFINITY;
 
   for (const playerId of state.benchPlayerIds) {
-    minSeconds = Math.min(minSeconds, readPlaytime(state, playerId));
+    minSeconds = Math.min(minSeconds, readPlaytime(state, playerId, nowMs));
   }
 
   return state.benchPlayerIds.filter(
-    (playerId) => readPlaytime(state, playerId) === minSeconds
+    (playerId) => readPlaytime(state, playerId, nowMs) === minSeconds
   );
 }
 
@@ -56,7 +56,8 @@ function pickStablePlayer(orderedIds: string[], candidateIds: string[]): string 
 }
 
 export function getSubstitutionSuggestion(
-  state: LiveMatchState
+  state: LiveMatchState,
+  nowMs: number
 ): SubstitutionSuggestion | null {
   if (state.status === "ended") {
     return null;
@@ -66,8 +67,8 @@ export function getSubstitutionSuggestion(
     return null;
   }
 
-  const topFieldPlayerIds = maxPlaytimeIds(state);
-  const lowBenchPlayerIds = minPlaytimeIds(state);
+  const topFieldPlayerIds = maxPlaytimeIds(state, nowMs);
+  const lowBenchPlayerIds = minPlaytimeIds(state, nowMs);
 
   if (topFieldPlayerIds.length === 0 || lowBenchPlayerIds.length === 0) {
     return null;
@@ -89,8 +90,8 @@ export function getSubstitutionSuggestion(
   return {
     outgoingPlayerId,
     incomingPlayerId,
-    outgoingSeconds: readPlaytime(state, outgoingPlayerId),
-    incomingSeconds: readPlaytime(state, incomingPlayerId),
+    outgoingSeconds: readPlaytime(state, outgoingPlayerId, nowMs),
+    incomingSeconds: readPlaytime(state, incomingPlayerId, nowMs),
     topFieldPlayerIds,
     lowBenchPlayerIds,
   };

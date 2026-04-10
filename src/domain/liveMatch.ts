@@ -3,6 +3,13 @@ import type { MatchSetup } from "@/domain/match";
 export type LiveMatchStatus = "not_started" | "running" | "paused" | "ended";
 export type LiveMatchPhase = "first_half" | "half_time" | "second_half" | "full_time";
 
+export interface MatchClockBasis {
+  startedAtMs: number | null;
+  pausedAtMs: number | null;
+  accumulatedPausedMs: number;
+  isRunning: boolean;
+}
+
 export interface LiveMatchState {
   id: string;
   setupId: string;
@@ -12,19 +19,15 @@ export interface LiveMatchState {
   regularSecondsPerHalf: number;
   phase: LiveMatchPhase;
   currentHalf: 1 | 2 | null;
-  phaseElapsedSeconds: number;
-  phaseElapsedBaseSeconds: number;
-  phaseRegularElapsedSeconds: number;
-  phaseStoppageElapsedSeconds: number;
-  elapsedSeconds: number;
-  elapsedBaseSeconds: number;
+  phaseStartedAtElapsedMs: number;
+  clock: MatchClockBasis;
   status: LiveMatchStatus;
   teamScore: number;
   opponentScore: number;
   onFieldPlayerIds: string[];
   benchPlayerIds: string[];
-  playerAccumulatedSeconds: Record<string, number>;
-  runStartedAtMs: number | null;
+  playerAccumulatedMs: Record<string, number>;
+  onFieldStartedAtElapsedMs: Record<string, number | null>;
   startedAt: string | null;
   endedAt: string | null;
   createdAt: string;
@@ -51,55 +54,125 @@ function getPhaseDurationSeconds(state: LiveMatchState): number {
   return state.durationSeconds;
 }
 
-function getDerivedElapsedSeconds(state: LiveMatchState, nowMs: number): number {
-  if (state.status !== "running" || state.runStartedAtMs === null) {
-    return Math.max(0, state.elapsedBaseSeconds);
+function getElapsedMsFromClock(clock: MatchClockBasis, nowMs: number): number {
+  if (clock.startedAtMs === null) {
+    return 0;
   }
 
-  const runningDelta = Math.floor(Math.max(0, nowMs - state.runStartedAtMs) / 1000);
+  const effectiveNowMs = clock.isRunning ? nowMs : (clock.pausedAtMs ?? nowMs);
 
-  return Math.max(0, state.elapsedBaseSeconds + runningDelta);
+  return Math.max(0, effectiveNowMs - clock.startedAtMs - Math.max(0, clock.accumulatedPausedMs));
 }
 
-function applyDelta(state: LiveMatchState, deltaSeconds: number): LiveMatchState {
-  if (deltaSeconds <= 0 || state.status !== "running") {
+function startClock(clock: MatchClockBasis, nowMs: number): MatchClockBasis {
+  if (clock.startedAtMs === null) {
+    return {
+      startedAtMs: nowMs,
+      pausedAtMs: null,
+      accumulatedPausedMs: 0,
+      isRunning: true,
+    };
+  }
+
+  if (clock.isRunning) {
+    return clock;
+  }
+
+  const pausedAtMs = clock.pausedAtMs ?? nowMs;
+
+  return {
+    startedAtMs: clock.startedAtMs,
+    pausedAtMs: null,
+    accumulatedPausedMs: Math.max(0, clock.accumulatedPausedMs + Math.max(0, nowMs - pausedAtMs)),
+    isRunning: true,
+  };
+}
+
+function pauseClock(clock: MatchClockBasis, nowMs: number): MatchClockBasis {
+  if (!clock.isRunning || clock.startedAtMs === null) {
+    return clock;
+  }
+
+  return {
+    ...clock,
+    pausedAtMs: nowMs,
+    isRunning: false,
+  };
+}
+
+function withUpdatedStatus(state: LiveMatchState): LiveMatchState {
+  if (state.status === "ended") {
     return state;
   }
 
-  const appliedSeconds = Math.max(0, deltaSeconds);
-
-  const updatedPlaytime = { ...state.playerAccumulatedSeconds };
-
-  for (const playerId of state.onFieldPlayerIds) {
-    updatedPlaytime[playerId] = (updatedPlaytime[playerId] ?? 0) + appliedSeconds;
-  }
-
-  const nextElapsed = state.elapsedSeconds + appliedSeconds;
-  const phaseDurationSeconds = getPhaseDurationSeconds(state);
-  const nextPhaseElapsed = state.phaseElapsedSeconds + appliedSeconds;
-  const nextPhaseRegularElapsed = Math.min(nextPhaseElapsed, phaseDurationSeconds);
-  const nextPhaseStoppageElapsed = Math.max(0, nextPhaseElapsed - phaseDurationSeconds);
+  const nextStatus: LiveMatchStatus =
+    state.clock.startedAtMs === null
+      ? "not_started"
+      : state.clock.isRunning
+        ? "running"
+        : "paused";
 
   return {
     ...state,
-    elapsedSeconds: nextElapsed,
-    elapsedBaseSeconds: nextElapsed,
-    phaseElapsedSeconds: nextPhaseElapsed,
-    phaseElapsedBaseSeconds: nextPhaseElapsed,
-    phaseRegularElapsedSeconds: nextPhaseRegularElapsed,
-    phaseStoppageElapsedSeconds: nextPhaseStoppageElapsed,
-    playerAccumulatedSeconds: updatedPlaytime,
-    runStartedAtMs: state.runStartedAtMs,
+    status: nextStatus,
+  };
+}
+
+function getPlayerElapsedMsAt(state: LiveMatchState, playerId: string, elapsedMs: number): number {
+  const baseMs = state.playerAccumulatedMs[playerId] ?? 0;
+  const startedAtElapsedMs = state.onFieldStartedAtElapsedMs[playerId];
+
+  if (startedAtElapsedMs === null || startedAtElapsedMs === undefined) {
+    return baseMs;
+  }
+
+  return baseMs + Math.max(0, elapsedMs - startedAtElapsedMs);
+}
+
+function normalizePlayerState(
+  state: LiveMatchState,
+  elapsedMs: number
+): LiveMatchState {
+  if (!state.clock.isRunning) {
+    return state;
+  }
+
+  const nextAccumulatedMs = { ...state.playerAccumulatedMs };
+  const nextOnFieldStart = { ...state.onFieldStartedAtElapsedMs };
+
+  for (const playerId of state.onFieldPlayerIds) {
+    if (nextOnFieldStart[playerId] === null || nextOnFieldStart[playerId] === undefined) {
+      nextOnFieldStart[playerId] = elapsedMs;
+    }
+  }
+
+  for (const playerId of state.benchPlayerIds) {
+    const startedAtElapsedMs = nextOnFieldStart[playerId];
+
+    if (startedAtElapsedMs !== null && startedAtElapsedMs !== undefined) {
+      nextAccumulatedMs[playerId] = getPlayerElapsedMsAt(state, playerId, elapsedMs);
+      nextOnFieldStart[playerId] = null;
+    }
+  }
+
+  return {
+    ...state,
+    playerAccumulatedMs: nextAccumulatedMs,
+    onFieldStartedAtElapsedMs: nextOnFieldStart,
     updatedAt: nowIso(),
   };
 }
 
 export function createLiveMatchFromSetup(setup: MatchSetup): LiveMatchState {
   const timestamp = nowIso();
-  const playtime: Record<string, number> = {};
+  const playerAccumulatedMs: Record<string, number> = {};
+  const onFieldStartedAtElapsedMs: Record<string, number | null> = {};
 
   for (const playerId of setup.selectedPlayerIds) {
-    playtime[playerId] = 0;
+    playerAccumulatedMs[playerId] = 0;
+    onFieldStartedAtElapsedMs[playerId] = setup.startingPlayerIds.includes(playerId)
+      ? 0
+      : null;
   }
 
   const halves = setup.duration.halves === 2 ? 2 : 1;
@@ -116,12 +189,13 @@ export function createLiveMatchFromSetup(setup: MatchSetup): LiveMatchState {
     regularSecondsPerHalf,
     phase: "first_half",
     currentHalf: 1,
-    phaseElapsedSeconds: 0,
-    phaseElapsedBaseSeconds: 0,
-    phaseRegularElapsedSeconds: 0,
-    phaseStoppageElapsedSeconds: 0,
-    elapsedSeconds: 0,
-    elapsedBaseSeconds: 0,
+    phaseStartedAtElapsedMs: 0,
+    clock: {
+      startedAtMs: null,
+      pausedAtMs: null,
+      accumulatedPausedMs: 0,
+      isRunning: false,
+    },
     status: "not_started",
     teamScore: 0,
     opponentScore: 0,
@@ -129,8 +203,8 @@ export function createLiveMatchFromSetup(setup: MatchSetup): LiveMatchState {
     benchPlayerIds: setup.selectedPlayerIds.filter(
       (playerId) => !setup.startingPlayerIds.includes(playerId)
     ),
-    playerAccumulatedSeconds: playtime,
-    runStartedAtMs: null,
+    playerAccumulatedMs,
+    onFieldStartedAtElapsedMs,
     startedAt: null,
     endedAt: null,
     createdAt: timestamp,
@@ -138,38 +212,48 @@ export function createLiveMatchFromSetup(setup: MatchSetup): LiveMatchState {
   };
 }
 
-export function tickLiveMatch(state: LiveMatchState, nowMs: number): LiveMatchState {
-  if (state.status !== "running") {
-    return state;
-  }
+export function getElapsedMs(state: LiveMatchState, nowMs: number): number {
+  return getElapsedMsFromClock(state.clock, nowMs);
+}
 
-  const derivedElapsed = getDerivedElapsedSeconds(state, nowMs);
-  const deltaSeconds = Math.max(0, derivedElapsed - state.elapsedSeconds);
+export function getElapsedSeconds(state: LiveMatchState, nowMs: number): number {
+  return Math.floor(getElapsedMs(state, nowMs) / 1000);
+}
 
-  if (deltaSeconds <= 0) {
-    return state;
-  }
+export function getPhaseElapsedSeconds(state: LiveMatchState, nowMs: number): number {
+  const elapsedMs = getElapsedMs(state, nowMs);
+  return Math.floor(Math.max(0, elapsedMs - state.phaseStartedAtElapsedMs) / 1000);
+}
 
-  return applyDelta(state, deltaSeconds);
+export function getPhaseStoppageElapsedSeconds(state: LiveMatchState, nowMs: number): number {
+  const phaseElapsedSeconds = getPhaseElapsedSeconds(state, nowMs);
+  const phaseDurationSeconds = getPhaseDurationSeconds(state);
+
+  return Math.max(0, phaseElapsedSeconds - phaseDurationSeconds);
 }
 
 export function startLiveMatch(state: LiveMatchState, nowMs: number): LiveMatchState {
-  if (state.status !== "not_started" && state.status !== "paused") {
+  if (state.status === "ended") {
     return state;
   }
 
+  const elapsedMs = getElapsedMs(state, nowMs);
   const nextPhase = state.phase === "half_time" ? "second_half" : state.phase;
   const nextHalf = state.phase === "half_time" ? 2 : state.currentHalf;
+  const normalized = normalizePlayerState(state, elapsedMs);
 
-  return {
-    ...state,
+  const nextState: LiveMatchState = {
+    ...normalized,
     phase: nextPhase,
     currentHalf: nextHalf,
-    status: "running",
-    runStartedAtMs: nowMs,
-    startedAt: state.startedAt ?? nowIso(),
+    phaseStartedAtElapsedMs:
+      state.phase === "half_time" ? elapsedMs : normalized.phaseStartedAtElapsedMs,
+    clock: startClock(normalized.clock, nowMs),
+    startedAt: normalized.startedAt ?? nowIso(),
     updatedAt: nowIso(),
   };
+
+  return withUpdatedStatus(nextState);
 }
 
 export function pauseLiveMatch(state: LiveMatchState, nowMs: number): LiveMatchState {
@@ -177,20 +261,16 @@ export function pauseLiveMatch(state: LiveMatchState, nowMs: number): LiveMatchS
     return state;
   }
 
-  const ticked = tickLiveMatch(state, nowMs);
+  const elapsedMs = getElapsedMs(state, nowMs);
+  const normalized = normalizePlayerState(state, elapsedMs);
 
-  if (ticked.status !== "running") {
-    return ticked;
-  }
-
-  return {
-    ...ticked,
-    status: "paused",
-    elapsedBaseSeconds: ticked.elapsedSeconds,
-    phaseElapsedBaseSeconds: ticked.phaseElapsedSeconds,
-    runStartedAtMs: null,
+  const nextState: LiveMatchState = {
+    ...normalized,
+    clock: pauseClock(normalized.clock, nowMs),
     updatedAt: nowIso(),
   };
+
+  return withUpdatedStatus(nextState);
 }
 
 export function resumeLiveMatch(state: LiveMatchState, nowMs: number): LiveMatchState {
@@ -198,12 +278,13 @@ export function resumeLiveMatch(state: LiveMatchState, nowMs: number): LiveMatch
     return state;
   }
 
-  return {
+  const nextState: LiveMatchState = {
     ...state,
-    status: "running",
-    runStartedAtMs: nowMs,
+    clock: startClock(state.clock, nowMs),
     updatedAt: nowIso(),
   };
+
+  return withUpdatedStatus(nextState);
 }
 
 export function endLiveMatch(state: LiveMatchState, nowMs: number): LiveMatchState {
@@ -211,16 +292,20 @@ export function endLiveMatch(state: LiveMatchState, nowMs: number): LiveMatchSta
     return state;
   }
 
-  const maybeTicked = state.status === "running" ? tickLiveMatch(state, nowMs) : state;
+  const elapsedMs = getElapsedMs(state, nowMs);
+  const normalized = normalizePlayerState(state, elapsedMs);
+  const pausedClock = pauseClock(normalized.clock, nowMs);
 
   return {
-    ...maybeTicked,
+    ...normalized,
     status: "ended",
     phase: "full_time",
     currentHalf: state.halves === 2 ? 2 : 1,
-    elapsedBaseSeconds: maybeTicked.elapsedSeconds,
-    runStartedAtMs: null,
-    endedAt: maybeTicked.endedAt ?? nowIso(),
+    clock: {
+      ...pausedClock,
+      isRunning: false,
+    },
+    endedAt: normalized.endedAt ?? nowIso(),
     updatedAt: nowIso(),
   };
 }
@@ -230,23 +315,22 @@ export function endCurrentHalf(state: LiveMatchState, nowMs: number): LiveMatchS
     return state;
   }
 
-  const ticked = state.status === "running" ? tickLiveMatch(state, nowMs) : state;
+  const elapsedMs = getElapsedMs(state, nowMs);
+  const normalized = normalizePlayerState(state, elapsedMs);
 
-  if (ticked.halves !== 2 || ticked.phase !== "first_half") {
-    return endLiveMatch(ticked, nowMs);
+  if (normalized.halves !== 2 || normalized.phase !== "first_half") {
+    return endLiveMatch(normalized, nowMs);
   }
 
-  return {
-    ...ticked,
+  const nextState: LiveMatchState = {
+    ...normalized,
     phase: "half_time",
-    status: "paused",
-    runStartedAtMs: null,
-    phaseElapsedSeconds: 0,
-    phaseElapsedBaseSeconds: 0,
-    phaseRegularElapsedSeconds: 0,
-    phaseStoppageElapsedSeconds: 0,
+    phaseStartedAtElapsedMs: elapsedMs,
+    clock: pauseClock(normalized.clock, nowMs),
     updatedAt: nowIso(),
   };
+
+  return withUpdatedStatus(nextState);
 }
 
 export function updateScore(
@@ -283,7 +367,8 @@ export function substitutePlayers(
     return state;
   }
 
-  const sourceState = state.status === "running" ? tickLiveMatch(state, nowMs) : state;
+  const elapsedMs = getElapsedMs(state, nowMs);
+  const sourceState = normalizePlayerState(state, elapsedMs);
 
   if (
     !sourceState.onFieldPlayerIds.includes(outgoingPlayerId) ||
@@ -300,20 +385,34 @@ export function substitutePlayers(
     playerId === incomingPlayerId ? outgoingPlayerId : playerId
   );
 
+  const playerAccumulatedMs = {
+    ...sourceState.playerAccumulatedMs,
+    [outgoingPlayerId]: getPlayerElapsedMsAt(sourceState, outgoingPlayerId, elapsedMs),
+    [incomingPlayerId]: sourceState.playerAccumulatedMs[incomingPlayerId] ?? 0,
+  };
+
+  const onFieldStartedAtElapsedMs = {
+    ...sourceState.onFieldStartedAtElapsedMs,
+    [outgoingPlayerId]: null,
+    [incomingPlayerId]: elapsedMs,
+  };
+
   return {
     ...sourceState,
     onFieldPlayerIds,
     benchPlayerIds,
+    playerAccumulatedMs,
+    onFieldStartedAtElapsedMs,
     updatedAt: nowIso(),
   };
 }
 
-export function getRemainingSeconds(state: LiveMatchState): number {
-  return Math.max(0, state.durationSeconds - state.elapsedSeconds);
+export function getRemainingSeconds(state: LiveMatchState, nowMs: number): number {
+  return Math.max(0, state.durationSeconds - getElapsedSeconds(state, nowMs));
 }
 
-export function isInStoppageTime(state: LiveMatchState): boolean {
-  return state.phaseStoppageElapsedSeconds > 0;
+export function isInStoppageTime(state: LiveMatchState, nowMs: number): boolean {
+  return getPhaseStoppageElapsedSeconds(state, nowMs) > 0;
 }
 
 export function getCurrentHalfNumber(state: LiveMatchState): 1 | 2 | null {
@@ -370,17 +469,30 @@ export function reconcileLiveMatchWithSquad(
   const missingIds = squadPlayerIds.filter((playerId) => !accountedIds.has(playerId));
 
   const nextBench = [...benchPlayerIds, ...missingIds];
-  const nextPlaytime: Record<string, number> = {};
+  const nextPlaytimeMs: Record<string, number> = {};
+  const nextOnFieldStart: Record<string, number | null> = {};
 
   for (const playerId of squadPlayerIds) {
-    nextPlaytime[playerId] = state.playerAccumulatedSeconds[playerId] ?? 0;
+    nextPlaytimeMs[playerId] = state.playerAccumulatedMs[playerId] ?? 0;
+    nextOnFieldStart[playerId] =
+      state.onFieldStartedAtElapsedMs[playerId] ?? (onFieldPlayerIds.includes(playerId) ? 0 : null);
   }
 
   return {
     ...state,
     onFieldPlayerIds,
     benchPlayerIds: nextBench,
-    playerAccumulatedSeconds: nextPlaytime,
+    playerAccumulatedMs: nextPlaytimeMs,
+    onFieldStartedAtElapsedMs: nextOnFieldStart,
     updatedAt: nowIso(),
   };
+}
+
+export function getPlayerAccumulatedSeconds(
+  state: LiveMatchState,
+  playerId: string,
+  nowMs: number
+): number {
+  const elapsedMs = getElapsedMs(state, nowMs);
+  return Math.floor(getPlayerElapsedMsAt(state, playerId, elapsedMs) / 1000);
 }

@@ -15,13 +15,15 @@ import {
   formatClock,
   formatPlaytime,
   getCurrentHalfNumber,
+  getElapsedSeconds,
+  getPhaseStoppageElapsedSeconds,
+  getPlayerAccumulatedSeconds,
   getRemainingSeconds,
   isInStoppageTime,
   pauseLiveMatch,
   resumeLiveMatch,
   startLiveMatch,
   substitutePlayers,
-  tickLiveMatch,
   reconcileLiveMatchWithSquad,
   updateScore,
   type LiveMatchState,
@@ -35,6 +37,7 @@ import {
 import {
   clearStoredLiveMatch,
   getStoredLiveMatch,
+  normalizeLiveMatchState,
   saveStoredLiveMatch,
 } from "@/lib/storage/liveMatchStorage";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
@@ -46,6 +49,7 @@ import { AppCard } from "@/components/ui/AppCard";
 import { FpButton } from "@/components/ui/FpButton";
 import { MatchTimerPanel } from "@/components/match/MatchTimerPanel";
 import { LivePlayerSection } from "@/components/match/LivePlayerSection";
+import { useMatchClock } from "@/components/match/useMatchClock";
 import { variants } from "@/lib/tokens";
 
 interface PromptPlayerOption {
@@ -61,6 +65,13 @@ interface GoalPromptState {
   scorerId: string | null;
   scorerName: string | null;
 }
+
+const EMPTY_CLOCK = {
+  startedAtMs: null,
+  pausedAtMs: null,
+  accumulatedPausedMs: 0,
+  isRunning: false,
+} as const;
 
 function mapPlayersById(players: Player[]) {
   return new Map(players.map((player) => [player.id, player]));
@@ -269,7 +280,13 @@ export function MatchLiveManager() {
         return;
       }
 
-      setLiveMatch(runtimeState as LiveMatchState);
+      const normalized = normalizeLiveMatchState(runtimeState);
+
+      if (!normalized) {
+        return;
+      }
+
+      setLiveMatch(normalized);
       setSetupStatus("active");
     })();
   }, [activeMatchId, auth.status, isHydrated, liveMatch]);
@@ -297,19 +314,18 @@ export function MatchLiveManager() {
     };
   }, [isHydrated, liveMatch?.status]);
 
-  useEffect(() => {
-    if (!isHydrated || liveMatch?.status !== "running") {
-      return;
-    }
-
-    const id = window.setInterval(() => {
-      setLiveMatch((previous) =>
-        previous ? tickLiveMatch(previous, Date.now()) : previous
-      );
-    }, 1000);
-
-    return () => window.clearInterval(id);
-  }, [isHydrated, liveMatch?.status]);
+  const matchClock = useMatchClock({
+    clock: liveMatch?.clock ?? EMPTY_CLOCK,
+    onStart: () => {
+      setLiveMatch((previous) => (previous ? startLiveMatch(previous, Date.now()) : previous));
+    },
+    onPause: () => {
+      setLiveMatch((previous) => (previous ? pauseLiveMatch(previous, Date.now()) : previous));
+    },
+    onResume: () => {
+      setLiveMatch((previous) => (previous ? resumeLiveMatch(previous, Date.now()) : previous));
+    },
+  });
 
   const playersById = useMemo(() => mapPlayersById(teamPlayers), [teamPlayers]);
 
@@ -323,13 +339,21 @@ export function MatchLiveManager() {
     [liveMatch, playersById]
   );
 
-  const remainingClock = liveMatch ? formatClock(getRemainingSeconds(liveMatch)) : "00:00";
-  const elapsedClock = liveMatch ? formatClock(liveMatch.elapsedSeconds) : "00:00";
+  const elapsedSeconds = liveMatch
+    ? getElapsedSeconds(liveMatch, matchClock.nowMs)
+    : 0;
+  const phaseStoppageSeconds = liveMatch
+    ? getPhaseStoppageElapsedSeconds(liveMatch, matchClock.nowMs)
+    : 0;
+  const remainingClock = liveMatch
+    ? formatClock(getRemainingSeconds(liveMatch, matchClock.nowMs))
+    : "00:00";
+  const elapsedClock = formatClock(elapsedSeconds);
   const currentHalf = liveMatch ? getCurrentHalfNumber(liveMatch) : null;
-  const inStoppage = liveMatch ? isInStoppageTime(liveMatch) : false;
+  const inStoppage = liveMatch ? isInStoppageTime(liveMatch, matchClock.nowMs) : false;
 
   const selectedPlayersReady = Boolean(selectedFieldId && selectedBenchId);
-  const suggestion = liveMatch ? getSubstitutionSuggestion(liveMatch) : null;
+  const suggestion = liveMatch ? getSubstitutionSuggestion(liveMatch, matchClock.nowMs) : null;
   const suggestedOutgoingPlayer = suggestion
     ? playersById.get(suggestion.outgoingPlayerId) ?? null
     : null;
@@ -342,7 +366,7 @@ export function MatchLiveManager() {
       return "0:00";
     }
 
-    return formatPlaytime(liveMatch.playerAccumulatedSeconds[playerId] ?? 0);
+    return formatPlaytime(getPlayerAccumulatedSeconds(liveMatch, playerId, matchClock.nowMs));
   };
 
   const clearSelection = () => {
@@ -351,21 +375,15 @@ export function MatchLiveManager() {
   };
 
   const handleStart = () => {
-    setLiveMatch((previous) =>
-      previous ? startLiveMatch(previous, Date.now()) : previous
-    );
+    matchClock.start();
   };
 
   const handlePause = () => {
-    setLiveMatch((previous) =>
-      previous ? pauseLiveMatch(previous, Date.now()) : previous
-    );
+    matchClock.pause();
   };
 
   const handleResume = () => {
-    setLiveMatch((previous) =>
-      previous ? resumeLiveMatch(previous, Date.now()) : previous
-    );
+    matchClock.resume();
   };
 
   const handleEndHalf = () => {
@@ -474,7 +492,7 @@ export function MatchLiveManager() {
       body: JSON.stringify({
         type,
         minute,
-        timestampMs: liveMatch ? liveMatch.elapsedSeconds * 1000 : null,
+        timestampMs: liveMatch ? elapsedSeconds * 1000 : null,
         teamSide: type === "goal_for" ? "own" : "opponent",
         payload: {},
       }),
@@ -586,7 +604,7 @@ export function MatchLiveManager() {
     );
 
     if (delta > 0) {
-      const minute = liveMatch ? Math.floor(liveMatch.elapsedSeconds / 60) : null;
+      const minute = liveMatch ? Math.floor(elapsedSeconds / 60) : null;
       void (async () => {
         const eventId = await createGoalEvent("goal_for", minute);
 
@@ -605,7 +623,7 @@ export function MatchLiveManager() {
     );
 
     if (delta > 0) {
-      const minute = liveMatch ? Math.floor(liveMatch.elapsedSeconds / 60) : null;
+      const minute = liveMatch ? Math.floor(elapsedSeconds / 60) : null;
       void createGoalEvent("goal_against", minute);
     }
   };
@@ -748,7 +766,7 @@ export function MatchLiveManager() {
                   ? t("phase.secondHalf")
                   : t("phase.firstHalf")
             }
-            stoppageLabel={inStoppage ? t("timer.stoppage", { value: formatClock(liveMatch.phaseStoppageElapsedSeconds) }) : null}
+            stoppageLabel={inStoppage ? t("timer.stoppage", { value: formatClock(phaseStoppageSeconds) }) : null}
             onStart={handleStart}
             onPause={handlePause}
             onResume={handleResume}
