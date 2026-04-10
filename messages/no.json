@@ -57,9 +57,38 @@
   },
   "team": {
     "title": "Lag",
-    "subtitle": "Administrer spillergruppen din og spillerprofiler.",
-    "empty": "Ingen spillere ennå. Legg til din første spiller for å komme i gang.",
-    "addPlayer": "Legg til spiller"
+    "subtitle": "Administrer laget og spillerne dine til kampdag.",
+    "noTeam": {
+      "title": "Opprett laget ditt",
+      "description": "Start med å opprette et lag. Data lagres lokalt på denne enheten foreløpig."
+    },
+    "teamCard": {
+      "label": "Lagnavn"
+    },
+    "players": {
+      "title": "Spillere",
+      "count": "{count, plural, =0 {Ingen spillere} one {# spiller} other {# spillere}}",
+      "emptyTitle": "Ingen spillere ennå",
+      "emptyDescription": "Legg til den første spilleren for å begynne å bygge troppen."
+    },
+    "forms": {
+      "teamNameLabel": "Lagnavn",
+      "teamNamePlaceholder": "Eksempel: FairPlayr FC",
+      "playerNameLabel": "Spillernavn",
+      "playerNamePlaceholder": "Skriv inn spillernavn"
+    },
+    "validation": {
+      "teamNameRequired": "Lagnavn kan ikke være tomt.",
+      "playerNameRequired": "Spillernavn kan ikke være tomt.",
+      "playerNameDuplicate": "En spiller med dette navnet finnes allerede."
+    },
+    "actions": {
+      "createTeam": "Opprett lag",
+      "addPlayer": "Legg til spiller",
+      "moveUp": "Flytt spiller opp",
+      "moveDown": "Flytt spiller ned",
+      "confirmDeletePlayer": "Slette denne spilleren?"
+    }
   },
   "matchSetup": {
     "title": "Kampoppsett",

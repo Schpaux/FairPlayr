@@ -57,9 +57,38 @@
   },
   "team": {
     "title": "Team",
-    "subtitle": "Manage your squad and player profiles.",
-    "empty": "No players yet. Add your first player to get started.",
-    "addPlayer": "Add Player"
+    "subtitle": "Manage your team and players for matchday.",
+    "noTeam": {
+      "title": "Create your team",
+      "description": "Start by creating a team. Your data stays on this device for now."
+    },
+    "teamCard": {
+      "label": "Team name"
+    },
+    "players": {
+      "title": "Players",
+      "count": "{count, plural, =0 {No players} one {# player} other {# players}}",
+      "emptyTitle": "No players yet",
+      "emptyDescription": "Add your first player to begin building your squad."
+    },
+    "forms": {
+      "teamNameLabel": "Team name",
+      "teamNamePlaceholder": "Example: FairPlayr FC",
+      "playerNameLabel": "Player name",
+      "playerNamePlaceholder": "Enter player name"
+    },
+    "validation": {
+      "teamNameRequired": "Team name cannot be empty.",
+      "playerNameRequired": "Player name cannot be empty.",
+      "playerNameDuplicate": "A player with this name already exists."
+    },
+    "actions": {
+      "createTeam": "Create Team",
+      "addPlayer": "Add Player",
+      "moveUp": "Move player up",
+      "moveDown": "Move player down",
+      "confirmDeletePlayer": "Delete this player?"
+    }
   },
   "matchSetup": {
     "title": "Match Setup",
