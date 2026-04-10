@@ -25,7 +25,8 @@ interface PlayerListCopy {
 interface PlayerListProps {
   players: Player[];
   copy: PlayerListCopy;
-  onRenamePlayer: (playerId: string, name: string) => boolean;
+  allowReorder?: boolean;
+  onRenamePlayer: (playerId: string, name: string) => boolean | Promise<boolean>;
   onDeletePlayer: (playerId: string) => void;
   onMovePlayer: (playerId: string, direction: "up" | "down") => void;
 }
@@ -33,6 +34,7 @@ interface PlayerListProps {
 export function PlayerList({
   players,
   copy,
+  allowReorder = true,
   onRenamePlayer,
   onDeletePlayer,
   onMovePlayer,
@@ -47,7 +49,7 @@ export function PlayerList({
     setError(null);
   };
 
-  const handleRenameSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleRenameSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!editingPlayerId) {
@@ -61,7 +63,7 @@ export function PlayerList({
       return;
     }
 
-    const didRename = onRenamePlayer(editingPlayerId, trimmedName);
+    const didRename = await onRenamePlayer(editingPlayerId, trimmedName);
 
     if (!didRename) {
       setError(copy.playerNameDuplicate);
@@ -134,28 +136,32 @@ export function PlayerList({
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
-                    <FpButton
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="tap-target px-2"
-                      aria-label={copy.moveUp}
-                      onClick={() => onMovePlayer(player.id, "up")}
-                      disabled={index === 0}
-                    >
-                      <ArrowUp size={16} />
-                    </FpButton>
-                    <FpButton
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="tap-target px-2"
-                      aria-label={copy.moveDown}
-                      onClick={() => onMovePlayer(player.id, "down")}
-                      disabled={index === players.length - 1}
-                    >
-                      <ArrowDown size={16} />
-                    </FpButton>
+                    {allowReorder ? (
+                      <>
+                        <FpButton
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="tap-target px-2"
+                          aria-label={copy.moveUp}
+                          onClick={() => onMovePlayer(player.id, "up")}
+                          disabled={index === 0}
+                        >
+                          <ArrowUp size={16} />
+                        </FpButton>
+                        <FpButton
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="tap-target px-2"
+                          aria-label={copy.moveDown}
+                          onClick={() => onMovePlayer(player.id, "down")}
+                          disabled={index === players.length - 1}
+                        >
+                          <ArrowDown size={16} />
+                        </FpButton>
+                      </>
+                    ) : null}
                     <FpButton
                       type="button"
                       variant="ghost"

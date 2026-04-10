@@ -11,7 +11,7 @@ interface PlayerQuickAddFormProps {
   submitLabel: string;
   validationMessage: string;
   duplicateMessage: string;
-  onAddPlayer: (name: string) => boolean;
+  onAddPlayer: (name: string) => boolean | Promise<boolean>;
 }
 
 export function PlayerQuickAddForm({
@@ -25,7 +25,7 @@ export function PlayerQuickAddForm({
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const trimmedName = name.trim();
@@ -35,7 +35,7 @@ export function PlayerQuickAddForm({
       return;
     }
 
-    const didAdd = onAddPlayer(trimmedName);
+    const didAdd = await onAddPlayer(trimmedName);
 
     if (!didAdd) {
       setError(duplicateMessage);

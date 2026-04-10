@@ -4,20 +4,9 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
 import { ShieldAlert, Users } from "lucide-react";
 import {
-  addPlayer,
-  createTeam,
-  deletePlayer,
   hasPlayerNameConflict,
-  renamePlayer,
-  renameTeam,
-  reorderPlayer,
   type Team,
 } from "@/domain/team";
-import {
-  clearStoredTeam,
-  getStoredTeam,
-  saveStoredTeam,
-} from "@/lib/storage/teamStorage";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -28,31 +17,72 @@ import { PlayerList } from "@/components/team/PlayerList";
 import { PlayerQuickAddForm } from "@/components/team/PlayerQuickAddForm";
 import { TeamNameForm } from "@/components/team/TeamNameForm";
 import { variants } from "@/lib/tokens";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { createTeamRepository } from "@/lib/teamData/createTeamRepository";
 
 export function TeamManager() {
   const t = useTranslations("team");
   const common = useTranslations("common");
+  const auth = useAuth();
 
   const isHydrated = useSyncExternalStore(
     () => () => {},
     () => true,
     () => false
   );
-  const [team, setTeam] = useState<Team | null>(() => getStoredTeam());
+  const [team, setTeam] = useState<Team | null>(null);
   const [isEditingTeamName, setIsEditingTeamName] = useState(false);
+  const [loadedRepositoryKey, setLoadedRepositoryKey] = useState<string | null>(null);
+  const [teamError, setTeamError] = useState<string | null>(null);
+
+  const repository = useMemo(
+    () =>
+      createTeamRepository({
+        supabase: auth.supabase,
+        userId: auth.user?.id,
+        userEmail: auth.user?.email,
+      }),
+    [auth.supabase, auth.user?.id, auth.user?.email]
+  );
+
+  const allowReorder = repository.mode === "guest-local";
+  const repositoryKey = auth.user?.id ?? "guest";
+  const isTeamLoading = loadedRepositoryKey !== repositoryKey;
 
   useEffect(() => {
-    if (!isHydrated) {
+    if (!isHydrated || auth.status === "loading") {
       return;
     }
 
-    if (!team) {
-      clearStoredTeam();
-      return;
-    }
+    let isActive = true;
 
-    saveStoredTeam(team);
-  }, [team, isHydrated]);
+    repository
+      .getTeam()
+      .then((value) => {
+        if (!isActive) {
+          return;
+        }
+
+        setTeam(value);
+        setTeamError(null);
+      })
+      .catch((error: unknown) => {
+        if (!isActive) {
+          return;
+        }
+
+        setTeamError(error instanceof Error ? error.message : t("errors.generic"));
+      })
+      .finally(() => {
+        if (isActive) {
+          setLoadedRepositoryKey(repositoryKey);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [auth.status, isHydrated, repository, repositoryKey, t]);
 
   const playerCopy = useMemo(
     () => ({
@@ -70,81 +100,141 @@ export function TeamManager() {
     [common, t]
   );
 
-  const handleCreateTeam = (name: string) => {
-    setTeam(createTeam(name));
+  const handleCreateTeam = async (name: string) => {
+    try {
+      const nextTeam = await repository.createTeam(name);
+      setTeam(nextTeam);
+      setTeamError(null);
+    } catch (error) {
+      setTeamError(error instanceof Error ? error.message : t("errors.generic"));
+    }
   };
 
-  const handleRenameTeam = (name: string) => {
-    setTeam((previous) => (previous ? renameTeam(previous, name) : previous));
+  const handleRenameTeam = async (name: string) => {
+    if (!team) {
+      return;
+    }
+
+    try {
+      const nextTeam = await repository.renameTeam(team.id, name);
+      setTeam(nextTeam);
+      setTeamError(null);
+    } catch (error) {
+      setTeamError(error instanceof Error ? error.message : t("errors.generic"));
+    }
+
     setIsEditingTeamName(false);
   };
 
-  const handleAddPlayer = (name: string): boolean => {
-    let didAdd = false;
+  const handleAddPlayer = async (name: string): Promise<boolean> => {
+    if (!team) {
+      return false;
+    }
 
-    setTeam((previous) => {
-      if (!previous) {
-        return previous;
-      }
+    if (hasPlayerNameConflict(team, name)) {
+      return false;
+    }
 
-      if (hasPlayerNameConflict(previous, name)) {
-        return previous;
-      }
-
-      didAdd = true;
-      return addPlayer(previous, name);
-    });
-
-    return didAdd;
+    try {
+      const nextTeam = await repository.addPlayer(team.id, name);
+      setTeam(nextTeam);
+      setTeamError(null);
+      return true;
+    } catch (error) {
+      setTeamError(error instanceof Error ? error.message : t("errors.generic"));
+      return false;
+    }
   };
 
-  const handleRenamePlayer = (playerId: string, name: string): boolean => {
-    let didRename = false;
+  const handleRenamePlayer = async (
+    playerId: string,
+    name: string
+  ): Promise<boolean> => {
+    if (!team) {
+      return false;
+    }
 
-    setTeam((previous) => {
-      if (!previous) {
-        return previous;
-      }
+    if (hasPlayerNameConflict(team, name, playerId)) {
+      return false;
+    }
 
-      if (hasPlayerNameConflict(previous, name, playerId)) {
-        return previous;
-      }
-
-      didRename = true;
-      return renamePlayer(previous, playerId, name);
-    });
-
-    return didRename;
+    try {
+      const nextTeam = await repository.renamePlayer(team.id, playerId, name);
+      setTeam(nextTeam);
+      setTeamError(null);
+      return true;
+    } catch (error) {
+      setTeamError(error instanceof Error ? error.message : t("errors.generic"));
+      return false;
+    }
   };
 
-  const handleDeletePlayer = (playerId: string) => {
+  const handleDeletePlayer = async (playerId: string) => {
     if (!window.confirm(t("actions.confirmDeletePlayer"))) {
       return;
     }
 
-    setTeam((previous) => (previous ? deletePlayer(previous, playerId) : previous));
+    if (!team) {
+      return;
+    }
+
+    try {
+      const nextTeam = await repository.deletePlayer(team.id, playerId);
+      setTeam(nextTeam);
+      setTeamError(null);
+    } catch (error) {
+      setTeamError(error instanceof Error ? error.message : t("errors.generic"));
+    }
   };
 
-  const handleMovePlayer = (playerId: string, direction: "up" | "down") => {
-    setTeam((previous) =>
-      previous ? reorderPlayer(previous, playerId, direction) : previous
-    );
+  const handleMovePlayer = async (playerId: string, direction: "up" | "down") => {
+    if (!team || !allowReorder) {
+      return;
+    }
+
+    try {
+      const nextTeam = await repository.reorderPlayer(team.id, playerId, direction);
+      setTeam(nextTeam);
+      setTeamError(null);
+    } catch (error) {
+      setTeamError(error instanceof Error ? error.message : t("errors.generic"));
+    }
   };
 
   return (
     <PageShell className="space-y-6">
       <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
 
-      {!isHydrated ? (
+      {!isHydrated || auth.status === "loading" || isTeamLoading ? (
         <AppCard className="p-6 text-sm text-muted-foreground">{common("loading")}</AppCard>
       ) : null}
 
-      {isHydrated && !team ? (
+      {isHydrated && auth.status !== "loading" ? (
+        <AppCard className="p-3 text-xs text-muted-foreground">
+          {repository.mode === "guest-local"
+            ? t("storage.guest")
+            : t("storage.cloud")}
+        </AppCard>
+      ) : null}
+
+      {teamError ? (
+        <AppCard className="p-3 text-xs text-danger">{teamError}</AppCard>
+      ) : null}
+
+      {isHydrated && auth.status !== "loading" && !isTeamLoading && !team ? (
         <motion.div initial="hidden" animate="visible" variants={variants.fadeInUp}>
           <EmptyState
             icon={ShieldAlert}
-            title={t("noTeam.title")}
-            description={t("noTeam.description")}
+            title={
+              repository.mode === "guest-local"
+                ? t("noTeam.title")
+                : t("noTeamCloud.title")
+            }
+            description={
+              repository.mode === "guest-local"
+                ? t("noTeam.description")
+                : t("noTeamCloud.description")
+            }
             action={
               <div className="w-full max-w-sm text-left">
                 <TeamNameForm
@@ -232,6 +322,7 @@ export function TeamManager() {
                 <PlayerList
                   players={team.players}
                   copy={playerCopy}
+                  allowReorder={allowReorder}
                   onRenamePlayer={handleRenamePlayer}
                   onDeletePlayer={handleDeletePlayer}
                   onMovePlayer={handleMovePlayer}

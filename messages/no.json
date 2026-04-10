@@ -62,6 +62,14 @@
       "title": "Opprett laget ditt",
       "description": "Start med å opprette et lag. Data lagres lokalt på denne enheten foreløpig."
     },
+    "noTeamCloud": {
+      "title": "Opprett skylaget ditt",
+      "description": "Du er logget inn, men har ikke et lag lagret i skyen ennå."
+    },
+    "storage": {
+      "guest": "Gjestemodus: lagdata lagres på denne enheten.",
+      "cloud": "Innlogget modus: lagdata lagres i skyen."
+    },
     "teamCard": {
       "label": "Lagnavn"
     },
@@ -88,6 +96,40 @@
       "moveUp": "Flytt spiller opp",
       "moveDown": "Flytt spiller ned",
       "confirmDeletePlayer": "Slette denne spilleren?"
+    },
+    "errors": {
+      "generic": "Noe gikk galt. Prøv igjen."
+    }
+  },
+  "auth": {
+    "actions": {
+      "signIn": "Logg inn",
+      "signOut": "Logg ut",
+      "signingOut": "Logger ut..."
+    },
+    "status": {
+      "loading": "Sjekker kontostatus...",
+      "guestTitle": "Gjestemodus",
+      "guestDescription": "Bruk FairPlayr uten innlogging, eller logg inn for å lagre Lag/Spillere i skyen.",
+      "signedInTitle": "Innlogget",
+      "signedInAs": "Innlogget som {email}"
+    },
+    "signIn": {
+      "title": "Logg inn",
+      "subtitle": "Skriv inn e-post, så sender vi deg en magisk lenke.",
+      "emailLabel": "E-post",
+      "emailPlaceholder": "trener@eksempel.no",
+      "submit": "Send magisk lenke",
+      "submitting": "Sender...",
+      "alreadySignedIn": "Du er allerede logget inn.",
+      "goToTeam": "Gå til Lag",
+      "disclaimer": "Innlogging er valgfritt. Du kan fortsatt bruke appen i gjestemodus."
+    },
+    "messages": {
+      "magicLinkSent": "Magisk lenke sendt. Sjekk innboksen din."
+    },
+    "validation": {
+      "emailRequired": "E-post er påkrevd."
     }
   },
   "matchSetup": {
@@ -261,6 +303,7 @@
   "settings": {
     "title": "Innstillinger",
     "subtitle": "Preferanser og appkonfigurasjon.",
+    "account": "Konto",
     "appearance": "Utseende",
     "theme": "Tema",
     "lightMode": "Lys",

@@ -4,15 +4,18 @@ import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
 import { Moon, Sun } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
   const t = useTranslations("a11y");
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
   // Avoid hydration mismatch — render placeholder until client is ready
-  useEffect(() => setMounted(true), []);
   if (!mounted) {
     return <div className="h-9 w-9 rounded-xl bg-fp-surface-2 animate-pulse" />;
   }

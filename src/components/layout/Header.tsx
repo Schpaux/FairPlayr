@@ -1,6 +1,7 @@
 import { ThemeToggle } from "./ThemeToggle";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { Link } from "@/i18n/navigation";
+import { AuthActionButton } from "@/components/auth/AuthActionButton";
 
 export function Header() {
   return (
@@ -33,6 +34,7 @@ export function Header() {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
+          <AuthActionButton />
           <LanguageSwitcher />
           <ThemeToggle />
         </div>

@@ -5,6 +5,7 @@ import { getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { AuthProvider } from "@/components/providers/AuthProvider";
 import { Header } from "@/components/layout/Header";
 import { BottomNav } from "@/components/layout/BottomNav";
 import "../globals.css";
@@ -76,11 +77,13 @@ export default async function LocaleLayout({ children, params }: Props) {
             enableSystem={false}
             disableTransitionOnChange={false}
           >
-            <div className="relative flex min-h-screen flex-col">
-              <Header />
-              <main className="flex-1 pb-20">{children}</main>
-              <BottomNav />
-            </div>
+            <AuthProvider>
+              <div className="relative flex min-h-screen flex-col">
+                <Header />
+                <main className="flex-1 pb-20">{children}</main>
+                <BottomNav />
+              </div>
+            </AuthProvider>
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>

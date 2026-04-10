@@ -10,6 +10,7 @@ import { Sun, Moon, Monitor, Globe } from "lucide-react";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { AppCard } from "@/components/ui/AppCard";
+import { AuthStatusCard } from "@/components/auth/AuthStatusCard";
 import { cn } from "@/lib/utils";
 
 type ThemeOption = "light" | "dark" | "system";
@@ -32,6 +33,13 @@ export default function SettingsPage() {
   return (
     <PageShell>
       <SectionHeader title={t("title")} subtitle={t("subtitle")} />
+
+      <section className="mb-6">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          {t("account")}
+        </p>
+        <AuthStatusCard />
+      </section>
 
       {/* Appearance */}
       <section className="mb-6">
