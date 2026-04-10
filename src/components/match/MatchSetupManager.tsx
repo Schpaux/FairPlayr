@@ -12,6 +12,7 @@ import {
   setMatchDuration,
   setMatchHalves,
   setMatchDurationPreset,
+  setReportEnabled,
   toggleSquadPlayer,
   setSelectedSquad,
   selectAllSquad,
@@ -144,6 +145,10 @@ export function MatchSetupManager() {
     setSetup((prev) => (prev ? setMatchFormation(prev, formationId) : prev));
   };
 
+  const handleReportToggle = (enabled: boolean) => {
+    setSetup((prev) => (prev ? setReportEnabled(prev, enabled) : prev));
+  };
+
   const handleToggleSquad = (playerId: string) => {
     setSetup((prev) => (prev ? toggleSquadPlayer(prev, playerId) : prev));
   };
@@ -195,7 +200,10 @@ export function MatchSetupManager() {
           headers: {
             "content-type": "application/json",
           },
-          body: JSON.stringify({ status: "live" }),
+          body: JSON.stringify({
+            status: "live",
+            reportEnabled: setup.reportEnabled,
+          }),
         });
 
         if (!response.ok) {
@@ -330,6 +338,36 @@ export function MatchSetupManager() {
             onCustomChange={handleDurationChange}
             onHalvesChange={handleHalvesChange}
           />
+        </SetupSection>
+
+        <SetupSection label={t("sections.summary")}> 
+          <div className="rounded-xl border border-fp-border bg-fp-surface-2 p-3">
+            <label className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-foreground">{t("reportToggle.label")}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t("reportToggle.help")}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={setup.reportEnabled}
+                onClick={() => handleReportToggle(!setup.reportEnabled)}
+                className={cn(
+                  "relative mt-0.5 h-7 w-12 rounded-full border transition-colors",
+                  setup.reportEnabled
+                    ? "border-primary/40 bg-primary"
+                    : "border-fp-border bg-background"
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform",
+                    setup.reportEnabled ? "translate-x-6" : "translate-x-0.5"
+                  )}
+                />
+              </button>
+            </label>
+          </div>
         </SetupSection>
 
         {/* Squad */}

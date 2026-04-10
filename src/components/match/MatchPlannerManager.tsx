@@ -20,7 +20,13 @@ interface MatchItem {
   opponentName: string | null;
   startsAt: string;
   location: string | null;
+  format?: "3v3" | "5v5" | "7v7" | "9v9" | "11v11";
   status: "draft" | "upcoming" | "live" | "completed";
+  reportEnabled?: boolean;
+  reportStatus?: "not_requested" | "pending" | "ready" | "failed";
+  reportText?: string | null;
+  scoreFor?: number;
+  scoreAgainst?: number;
   source: "manual" | "spond";
   startedAt?: string | null;
   endedAt?: string | null;
@@ -102,8 +108,19 @@ export function MatchPlannerManager() {
     return Boolean(stored?.status === "active");
   }, [isHydrated]);
 
-  const sortedMatches = useMemo(
-    () => [...matches].sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()),
+  const plannedMatches = useMemo(
+    () =>
+      matches
+        .filter((match) => match.status !== "completed")
+        .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()),
+    [matches]
+  );
+
+  const historyMatches = useMemo(
+    () =>
+      matches
+        .filter((match) => match.status === "completed")
+        .sort((a, b) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime()),
     [matches]
   );
 
@@ -368,6 +385,32 @@ export function MatchPlannerManager() {
     }
   };
 
+  const handleDeleteMatch = async (matchId: string) => {
+    if (!window.confirm(t("delete.confirm"))) {
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+
+    try {
+      const response = await fetch(`/api/matches/${encodeURIComponent(matchId)}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok && response.status !== 204) {
+        const payload = (await response.json()) as unknown;
+        const parsed = parseApiError(payload);
+        throw new Error(parsed.message);
+      }
+
+      setMatches((previous) => previous.filter((match) => match.id !== matchId));
+      setNotice(t("delete.success"));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t("errors.generic"));
+    }
+  };
+
   if (!isHydrated || auth.status === "loading" || workspace.isLoading) {
     return (
       <PageShell>
@@ -573,11 +616,11 @@ export function MatchPlannerManager() {
 
         {isLoadingMatches ? (
           <p className="text-xs text-muted-foreground">{common("loading")}</p>
-        ) : sortedMatches.length === 0 ? (
+        ) : plannedMatches.length === 0 ? (
           <p className="text-xs text-muted-foreground">{t("empty")}</p>
         ) : (
           <ul className="space-y-2">
-            {sortedMatches.map((match) => (
+            {plannedMatches.map((match) => (
               <li key={match.id} className="rounded-xl border border-fp-border bg-fp-surface-2 p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 space-y-1">
@@ -611,6 +654,57 @@ export function MatchPlannerManager() {
                         <ExternalLink size={12} />
                       </span>
                     </Link>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </AppCard>
+
+      <AppCard className="space-y-3 p-4">
+        <h3 className="text-sm font-semibold text-foreground">{t("historyTitle")}</h3>
+
+        {isLoadingMatches ? (
+          <p className="text-xs text-muted-foreground">{common("loading")}</p>
+        ) : historyMatches.length === 0 ? (
+          <p className="text-xs text-muted-foreground">{t("historyEmpty")}</p>
+        ) : (
+          <ul className="space-y-2">
+            {historyMatches.map((match) => (
+              <li key={match.id} className="rounded-xl border border-fp-border bg-fp-surface-2 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 space-y-1">
+                    <p className="text-sm font-semibold text-foreground truncate">{match.opponentName ? `${match.title} - ${match.opponentName}` : match.title}</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <CalendarClock size={12} />
+                      {formatDate(match.startsAt)}
+                    </p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {t("resultLabel", {
+                        scoreFor: match.scoreFor ?? 0,
+                        scoreAgainst: match.scoreAgainst ?? 0,
+                      })}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    {match.reportText ? (
+                      <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                        {t("reportBadge")}
+                      </span>
+                    ) : null}
+                    <Link href={`/match/${match.id}`}>
+                      <span className="text-xs font-medium text-primary">{t("openMatch")}</span>
+                    </Link>
+                    <button
+                      type="button"
+                      className="text-xs font-medium text-danger"
+                      onClick={() => {
+                        void handleDeleteMatch(match.id);
+                      }}
+                    >
+                      {t("delete.cta")}
+                    </button>
                   </div>
                 </div>
               </li>

@@ -3,14 +3,42 @@ import { IntegrationError } from "@/lib/server/integrations/spond/errors";
 import type {
   CreateMatchInput,
   ExternalEventLinkRow,
+  MatchEventItem,
+  MatchEventRow,
+  MatchEventTeamSide,
+  MatchEventType,
+  MatchFormat,
   MatchListItem,
+  MatchReportStatus,
   MatchRow,
   MatchStatus,
   UpdateMatchStatusInput,
 } from "@/lib/server/matches/types";
 
-const MATCH_SELECT_BASE = "id, team_id, title, opponent_name, starts_at, location, status, runtime_state, created_by, created_at, updated_at";
-const MATCH_SELECT_WITH_TIMESTAMPS = `${MATCH_SELECT_BASE}, started_at, ended_at`;
+const MATCH_SELECT_LEGACY = "id, team_id, title, opponent_name, starts_at, location, status, runtime_state, created_by, created_at, updated_at";
+const MATCH_SELECT_ENHANCED = `${MATCH_SELECT_LEGACY}, started_at, ended_at, format, report_enabled, report_status, report_text, score_for, score_against`;
+const MATCH_EVENT_SELECT = "id, match_id, type, minute, timestamp_ms, team_side, primary_player_id, secondary_player_id, payload, created_at, updated_at";
+
+interface CreateMatchEventInput {
+  matchId: string;
+  type: MatchEventType;
+  minute?: number | null;
+  timestampMs?: number | null;
+  teamSide?: MatchEventTeamSide;
+  primaryPlayerId?: string | null;
+  secondaryPlayerId?: string | null;
+  payload?: Record<string, unknown> | null;
+}
+
+interface UpdateMatchEventInput {
+  eventId: string;
+  minute?: number | null;
+  timestampMs?: number | null;
+  teamSide?: MatchEventTeamSide;
+  primaryPlayerId?: string | null;
+  secondaryPlayerId?: string | null;
+  payload?: Record<string, unknown> | null;
+}
 
 function isMissingMatchTimestampColumnError(error: { code?: string; message?: string } | null): boolean {
   if (!error) {
@@ -21,7 +49,7 @@ function isMissingMatchTimestampColumnError(error: { code?: string; message?: st
     return true;
   }
 
-  return /column\s+matches\.(started_at|ended_at)\s+does\s+not\s+exist/i.test(error.message ?? "");
+  return /column\s+matches\.(started_at|ended_at|format|report_enabled|report_status|report_text|score_for|score_against)\s+does\s+not\s+exist/i.test(error.message ?? "");
 }
 
 async function requireTeamMembership(
@@ -58,7 +86,13 @@ function mapMatchRows(rows: MatchRow[], links: ExternalEventLinkRow[]): MatchLis
       opponentName: row.opponent_name,
       startsAt: row.starts_at,
       location: row.location,
+      format: (row.format ?? "5v5") as MatchFormat,
       status: row.status,
+      reportEnabled: row.report_enabled ?? false,
+      reportStatus: (row.report_status ?? "not_requested") as MatchReportStatus,
+      reportText: row.report_text ?? null,
+      scoreFor: row.score_for ?? 0,
+      scoreAgainst: row.score_against ?? 0,
       startedAt: row.started_at ?? null,
       endedAt: row.ended_at ?? null,
       runtimeState:
@@ -74,6 +108,86 @@ function mapMatchRows(rows: MatchRow[], links: ExternalEventLinkRow[]): MatchLis
   });
 }
 
+function mapMatchEventRows(rows: MatchEventRow[]): MatchEventItem[] {
+  return rows.map((row) => ({
+    id: row.id,
+    matchId: row.match_id,
+    type: row.type,
+    minute: row.minute,
+    timestampMs: row.timestamp_ms,
+    teamSide: row.team_side,
+    primaryPlayerId: row.primary_player_id,
+    secondaryPlayerId: row.secondary_player_id,
+    payload: row.payload,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }));
+}
+
+function extractScorerName(event: MatchEventItem): string | null {
+  const payload = event.payload;
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const value = payload.primaryPlayerName;
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function extractAssistName(event: MatchEventItem): string | null {
+  const payload = event.payload;
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const value = payload.secondaryPlayerName;
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function generateMatchReport(match: MatchListItem, events: MatchEventItem[]): string {
+  const teamName = match.title.trim() || "Laget";
+  const opponent = match.opponentName?.trim() || "motstanderen";
+  const goalEvents = events.filter((event) => event.type === "goal_for");
+
+  const scorerCounts = new Map<string, number>();
+  const assists = new Set<string>();
+
+  for (const event of goalEvents) {
+    const scorer = extractScorerName(event);
+    if (scorer) {
+      scorerCounts.set(scorer, (scorerCounts.get(scorer) ?? 0) + 1);
+    }
+    const assist = extractAssistName(event);
+    if (assist) {
+      assists.add(assist);
+    }
+  }
+
+  const scorerList = Array.from(scorerCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, count]) => (count > 1 ? `${name} (${count})` : name));
+
+  const summaryLines: string[] = [];
+  summaryLines.push(
+    `${teamName} spilte mot ${opponent} og kampen endte ${match.scoreFor}-${match.scoreAgainst}.`
+  );
+
+  if (goalEvents.length === 0) {
+    summaryLines.push("Det var en jevn og innsatsrik kamp med god lagmoral hele veien.");
+  } else if (scorerList.length > 0) {
+    summaryLines.push(`Scoringslisten ble fylt av ${scorerList.slice(0, 3).join(", ")}.`);
+  } else {
+    summaryLines.push("Laget fant veien til mål og skapte gode angrep gjennom hele kampen.");
+  }
+
+  if (assists.size > 0) {
+    summaryLines.push(`Flere bidro med målgivende pasninger, blant annet ${Array.from(assists).slice(0, 2).join(" og ")}.`);
+  }
+
+  summaryLines.push("Takk for innsatsen - dette var en fin lagprestasjon i ekte FairPlayr-stil.");
+  return summaryLines.slice(0, 4).join("\n");
+}
+
 export async function getTeamMatches(
   supabase: SupabaseClient,
   userId: string,
@@ -83,7 +197,7 @@ export async function getTeamMatches(
 
   const primaryQuery = supabase
     .from("matches")
-    .select(MATCH_SELECT_WITH_TIMESTAMPS)
+    .select(MATCH_SELECT_ENHANCED)
     .eq("team_id", teamId)
     .order("starts_at", { ascending: true })
     .returns<MatchRow[]>();
@@ -93,7 +207,7 @@ export async function getTeamMatches(
   if (isMissingMatchTimestampColumnError(matchError)) {
     const fallback = await supabase
       .from("matches")
-      .select(MATCH_SELECT_BASE)
+      .select(MATCH_SELECT_LEGACY)
       .eq("team_id", teamId)
       .order("starts_at", { ascending: true })
       .returns<MatchRow[]>();
@@ -135,7 +249,7 @@ export async function getMatchById(
 ): Promise<MatchListItem> {
   const primary = await supabase
     .from("matches")
-    .select(MATCH_SELECT_WITH_TIMESTAMPS)
+    .select(MATCH_SELECT_ENHANCED)
     .eq("id", matchId)
     .maybeSingle<MatchRow>();
 
@@ -144,7 +258,7 @@ export async function getMatchById(
   if (isMissingMatchTimestampColumnError(error)) {
     const fallback = await supabase
       .from("matches")
-      .select(MATCH_SELECT_BASE)
+      .select(MATCH_SELECT_LEGACY)
       .eq("id", matchId)
       .maybeSingle<MatchRow>();
 
@@ -185,7 +299,7 @@ export async function getActiveMatchForTeam(
 
   const primary = await supabase
     .from("matches")
-    .select(MATCH_SELECT_WITH_TIMESTAMPS)
+    .select(MATCH_SELECT_ENHANCED)
     .eq("team_id", teamId)
     .eq("status", "live")
     .order("started_at", { ascending: false })
@@ -196,7 +310,7 @@ export async function getActiveMatchForTeam(
   if (isMissingMatchTimestampColumnError(error)) {
     const fallback = await supabase
       .from("matches")
-      .select(MATCH_SELECT_BASE)
+      .select(MATCH_SELECT_LEGACY)
       .eq("team_id", teamId)
       .eq("status", "live")
       .order("updated_at", { ascending: false })
@@ -260,6 +374,38 @@ export async function updateMatchStatus(
     ...timestamps,
   };
 
+  if (input.scoreFor !== undefined) {
+    updatePayload.score_for = Math.max(0, Math.floor(input.scoreFor));
+  }
+
+  if (input.scoreAgainst !== undefined) {
+    updatePayload.score_against = Math.max(0, Math.floor(input.scoreAgainst));
+  }
+
+  if (input.reportEnabled !== undefined) {
+    updatePayload.report_enabled = input.reportEnabled;
+    if (!input.reportEnabled) {
+      updatePayload.report_status = "not_requested";
+      updatePayload.report_text = null;
+    }
+  }
+
+  if (input.reportStatus !== undefined) {
+    updatePayload.report_status = input.reportStatus;
+  }
+
+  if (input.reportText !== undefined) {
+    updatePayload.report_text = input.reportText;
+  }
+
+  const shouldGenerateReport =
+    input.status === "completed" &&
+    (input.reportEnabled ?? existing.reportEnabled) === true;
+
+  if (shouldGenerateReport) {
+    updatePayload.report_status = "pending";
+  }
+
   if (input.runtimeState !== undefined) {
     updatePayload.runtime_state = input.runtimeState;
   }
@@ -268,7 +414,7 @@ export async function updateMatchStatus(
     .from("matches")
     .update(updatePayload)
     .eq("id", input.matchId)
-    .select(MATCH_SELECT_WITH_TIMESTAMPS)
+    .select(MATCH_SELECT_ENHANCED)
     .single<MatchRow>();
 
   let { data: row, error } = primary;
@@ -280,7 +426,7 @@ export async function updateMatchStatus(
         status: nextStatus,
       })
       .eq("id", input.matchId)
-      .select(MATCH_SELECT_BASE)
+      .select(MATCH_SELECT_LEGACY)
       .single<MatchRow>();
 
     row = fallback.data;
@@ -295,8 +441,47 @@ export async function updateMatchStatus(
     throw new IntegrationError("MATCH_NOT_FOUND", "Fant ikke kampen.", 404);
   }
 
-  return mapMatchRows([row], [])[0];
+  let mapped = mapMatchRows([row], [])[0];
+
+  if (shouldGenerateReport) {
+    try {
+      const events = await getMatchEvents(supabase, userId, mapped.id);
+      const reportText = generateMatchReport(mapped, events);
+
+      const { data: reportRow, error: reportError } = await supabase
+        .from("matches")
+        .update({
+          report_status: "ready",
+          report_text: reportText,
+        })
+        .eq("id", mapped.id)
+        .select(MATCH_SELECT_ENHANCED)
+        .single<MatchRow>();
+
+      if (reportError) {
+        throw reportError;
+      }
+
+      if (reportRow) {
+        mapped = mapMatchRows([reportRow], [])[0];
+      }
+    } catch {
+      const { data: failedRow } = await supabase
+        .from("matches")
+        .update({ report_status: "failed" })
+        .eq("id", mapped.id)
+        .select(MATCH_SELECT_ENHANCED)
+        .single<MatchRow>();
+
+      if (failedRow) {
+        mapped = mapMatchRows([failedRow], [])[0];
+      }
+    }
+  }
+
+  return mapped;
 }
+
 export async function createManualMatch(
   supabase: SupabaseClient,
   userId: string,
@@ -312,10 +497,15 @@ export async function createManualMatch(
       opponent_name: input.opponentName ?? null,
       starts_at: input.startsAt,
       location: input.location ?? null,
+      format: input.format ?? "5v5",
+      report_enabled: input.reportEnabled ?? false,
+      report_status: input.reportEnabled ? "not_requested" : "not_requested",
+      score_for: 0,
+      score_against: 0,
       status: input.status ?? "upcoming",
       created_by: userId,
     })
-    .select(MATCH_SELECT_WITH_TIMESTAMPS)
+    .select(MATCH_SELECT_ENHANCED)
     .single<MatchRow>();
 
   let { data: row, error } = primary;
@@ -329,10 +519,15 @@ export async function createManualMatch(
         opponent_name: input.opponentName ?? null,
         starts_at: input.startsAt,
         location: input.location ?? null,
+        format: input.format ?? "5v5",
+        report_enabled: input.reportEnabled ?? false,
+        report_status: "not_requested",
+        score_for: 0,
+        score_against: 0,
         status: input.status ?? "upcoming",
         created_by: userId,
       })
-      .select(MATCH_SELECT_BASE)
+      .select(MATCH_SELECT_LEGACY)
       .single<MatchRow>();
 
     row = fallback.data;
@@ -348,4 +543,146 @@ export async function createManualMatch(
   }
 
   return mapMatchRows([row], [])[0];
+}
+
+export async function deleteMatch(
+  supabase: SupabaseClient,
+  userId: string,
+  matchId: string
+): Promise<void> {
+  const match = await getMatchById(supabase, userId, matchId);
+
+  const { error } = await supabase
+    .from("matches")
+    .delete()
+    .eq("id", match.id);
+
+  if (error) {
+    throw new IntegrationError("MATCH_DELETE_FAILED", error.message, 500);
+  }
+}
+
+export async function getMatchEvents(
+  supabase: SupabaseClient,
+  userId: string,
+  matchId: string
+): Promise<MatchEventItem[]> {
+  await getMatchById(supabase, userId, matchId);
+
+  const { data, error } = await supabase
+    .from("match_events")
+    .select(MATCH_EVENT_SELECT)
+    .eq("match_id", matchId)
+    .order("timestamp_ms", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: true })
+    .returns<MatchEventRow[]>();
+
+  if (error) {
+    throw new IntegrationError("MATCH_EVENTS_READ_FAILED", error.message, 500);
+  }
+
+  return mapMatchEventRows(data ?? []);
+}
+
+export async function createMatchEvent(
+  supabase: SupabaseClient,
+  userId: string,
+  input: CreateMatchEventInput
+): Promise<MatchEventItem> {
+  await getMatchById(supabase, userId, input.matchId);
+
+  const { data, error } = await supabase
+    .from("match_events")
+    .insert({
+      match_id: input.matchId,
+      type: input.type,
+      minute: input.minute ?? null,
+      timestamp_ms: input.timestampMs ?? null,
+      team_side: input.teamSide ?? null,
+      primary_player_id: input.primaryPlayerId ?? null,
+      secondary_player_id: input.secondaryPlayerId ?? null,
+      payload: input.payload ?? null,
+    })
+    .select(MATCH_EVENT_SELECT)
+    .single<MatchEventRow>();
+
+  if (error || !data) {
+    throw new IntegrationError("MATCH_EVENT_CREATE_FAILED", error?.message ?? "Kunne ikke opprette hendelse.", 500);
+  }
+
+  return mapMatchEventRows([data])[0];
+}
+
+export async function updateMatchEvent(
+  supabase: SupabaseClient,
+  userId: string,
+  input: UpdateMatchEventInput
+): Promise<MatchEventItem> {
+  const { data: existing, error: eventError } = await supabase
+    .from("match_events")
+    .select("id, match_id")
+    .eq("id", input.eventId)
+    .maybeSingle<{ id: string; match_id: string }>();
+
+  if (eventError) {
+    throw new IntegrationError("MATCH_EVENT_READ_FAILED", eventError.message, 500);
+  }
+
+  if (!existing) {
+    throw new IntegrationError("MATCH_EVENT_NOT_FOUND", "Fant ikke hendelsen.", 404);
+  }
+
+  await getMatchById(supabase, userId, existing.match_id);
+
+  const updatePayload: Record<string, unknown> = {};
+  if (input.minute !== undefined) updatePayload.minute = input.minute;
+  if (input.timestampMs !== undefined) updatePayload.timestamp_ms = input.timestampMs;
+  if (input.teamSide !== undefined) updatePayload.team_side = input.teamSide;
+  if (input.primaryPlayerId !== undefined) updatePayload.primary_player_id = input.primaryPlayerId;
+  if (input.secondaryPlayerId !== undefined) updatePayload.secondary_player_id = input.secondaryPlayerId;
+  if (input.payload !== undefined) updatePayload.payload = input.payload;
+
+  const { data, error } = await supabase
+    .from("match_events")
+    .update(updatePayload)
+    .eq("id", input.eventId)
+    .select(MATCH_EVENT_SELECT)
+    .single<MatchEventRow>();
+
+  if (error || !data) {
+    throw new IntegrationError("MATCH_EVENT_UPDATE_FAILED", error?.message ?? "Kunne ikke oppdatere hendelsen.", 500);
+  }
+
+  return mapMatchEventRows([data])[0];
+}
+
+export async function deleteMatchEvent(
+  supabase: SupabaseClient,
+  userId: string,
+  eventId: string
+): Promise<void> {
+  const { data: existing, error: eventError } = await supabase
+    .from("match_events")
+    .select("id, match_id")
+    .eq("id", eventId)
+    .maybeSingle<{ id: string; match_id: string }>();
+
+  if (eventError) {
+    throw new IntegrationError("MATCH_EVENT_READ_FAILED", eventError.message, 500);
+  }
+
+  if (!existing) {
+    throw new IntegrationError("MATCH_EVENT_NOT_FOUND", "Fant ikke hendelsen.", 404);
+  }
+
+  await getMatchById(supabase, userId, existing.match_id);
+
+  const { error } = await supabase
+    .from("match_events")
+    .delete()
+    .eq("id", eventId);
+
+  if (error) {
+    throw new IntegrationError("MATCH_EVENT_DELETE_FAILED", error.message, 500);
+  }
 }

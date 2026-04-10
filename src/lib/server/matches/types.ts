@@ -1,4 +1,21 @@
 export type MatchStatus = "draft" | "upcoming" | "live" | "completed";
+export type MatchFormat = "3v3" | "5v5" | "7v7" | "9v9" | "11v11";
+export type MatchReportStatus = "not_requested" | "pending" | "ready" | "failed";
+
+export type MatchEventType =
+  | "goal_for"
+  | "goal_against"
+  | "substitution"
+  | "penalty"
+  | "corner"
+  | "free_kick"
+  | "card_yellow"
+  | "card_red"
+  | "own_goal"
+  | "period_start"
+  | "period_end";
+
+export type MatchEventTeamSide = "own" | "opponent" | null;
 
 export interface MatchRow {
   id: string;
@@ -7,7 +24,13 @@ export interface MatchRow {
   opponent_name: string | null;
   starts_at: string;
   location: string | null;
+  format?: MatchFormat;
   status: MatchStatus;
+  report_enabled?: boolean;
+  report_status?: MatchReportStatus;
+  report_text?: string | null;
+  score_for?: number;
+  score_against?: number;
   started_at?: string | null;
   ended_at?: string | null;
   runtime_state?: Record<string, unknown> | null;
@@ -36,7 +59,13 @@ export interface MatchListItem {
   opponentName: string | null;
   startsAt: string;
   location: string | null;
+  format: MatchFormat;
   status: MatchStatus;
+  reportEnabled: boolean;
+  reportStatus: MatchReportStatus;
+  reportText: string | null;
+  scoreFor: number;
+  scoreAgainst: number;
   startedAt: string | null;
   endedAt: string | null;
   runtimeState: Record<string, unknown> | null;
@@ -53,6 +82,8 @@ export interface CreateMatchInput {
   opponentName?: string | null;
   startsAt: string;
   location?: string | null;
+  format?: MatchFormat;
+  reportEnabled?: boolean;
   status?: MatchStatus;
 }
 
@@ -60,4 +91,37 @@ export interface UpdateMatchStatusInput {
   matchId: string;
   status?: MatchStatus;
   runtimeState?: Record<string, unknown> | null;
+  scoreFor?: number;
+  scoreAgainst?: number;
+  reportEnabled?: boolean;
+  reportStatus?: MatchReportStatus;
+  reportText?: string | null;
+}
+
+export interface MatchEventRow {
+  id: string;
+  match_id: string;
+  type: MatchEventType;
+  minute: number | null;
+  timestamp_ms: number | null;
+  team_side: MatchEventTeamSide;
+  primary_player_id: string | null;
+  secondary_player_id: string | null;
+  payload: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MatchEventItem {
+  id: string;
+  matchId: string;
+  type: MatchEventType;
+  minute: number | null;
+  timestampMs: number | null;
+  teamSide: MatchEventTeamSide;
+  primaryPlayerId: string | null;
+  secondaryPlayerId: string | null;
+  payload: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
 }

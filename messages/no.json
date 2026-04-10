@@ -371,8 +371,13 @@
       "format": "Kampformat",
       "formation": "Formasjon",
       "duration": "Varighet",
+      "summary": "Kampoppsummering",
       "squad": "Velg tropp",
       "lineup": "Startoppstilling"
+    },
+    "reportToggle": {
+      "label": "Aktiver kampoppsummering",
+      "help": "Registrer målscorer og assist underveis, og få automatisk kampoppsummering etter kamp."
     },
     "format": {
       "fieldCount": "{count} på banen"
@@ -447,6 +452,12 @@
       "team": "Oss",
       "opponent": "Dem"
     },
+    "prompt": {
+      "scorerTitle": "Hvem scoret?",
+      "assistTitle": "Hvem hadde assist?",
+      "skip": "Hopp over",
+      "noAssist": "Ingen assist"
+    },
     "field": {
       "title": "På banen",
       "description": "Trykk på en spiller for å bytte ut.",
@@ -507,6 +518,8 @@
     "createdNotice": "Kamp opprettet.",
     "createdNowNotice": "Kamp opprettet. Fortsett til kampoppsett.",
     "listTitle": "Planlagte kamper",
+    "historyTitle": "Kamphistorikk",
+    "historyEmpty": "Ingen ferdige kamper ennå.",
     "empty": "Ingen planlagte kamper ennå.",
     "spondTitle": "Spond-hendelser",
     "refreshEvents": "Oppdater",
@@ -546,6 +559,33 @@
     "timeLabel": "Tid: {value}",
     "locationLabel": "Sted: {value}",
     "statusLabel": "Status: {value}",
+    "formatLabel": "Format: {value}",
+    "resultLabel": "Resultat: {scoreFor}-{scoreAgainst}",
+    "reportBadge": "Kampoppsummering",
+    "timelineTitle": "Kampforløp",
+    "timelineEmpty": "Ingen hendelser registrert.",
+    "reportTitle": "Kampoppsummering",
+    "actionsTitle": "Handlinger",
+    "delete": {
+      "cta": "Slett kamp",
+      "confirm": "Er du sikker på at du vil slette kampen? Dette sletter også kampforløp og kampoppsummering.",
+      "success": "Kampen ble slettet."
+    },
+    "event": {
+      "assistLabel": "Assist: {value}",
+      "opponentGoal": "Motstander",
+      "notRegistered": "Ikke registrert",
+      "noAssist": "Ingen assist",
+      "editTitle": "Rediger mål",
+      "minute": "Minutt",
+      "scorer": "Målscorer",
+      "assist": "Assist",
+      "save": "Lagre",
+      "saving": "Lagrer...",
+      "delete": "Slett hendelse",
+      "deleted": "Hendelsen ble slettet.",
+      "editSaved": "Hendelsen ble oppdatert."
+    },
     "status": {
       "planned": "Planlagt",
       "live": "Pågår",

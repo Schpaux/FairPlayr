@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { jsonError, requireAuthenticatedSupabaseClient } from "@/lib/server/integrations/spond/http";
 import { createManualMatch, getTeamMatches } from "@/lib/server/matches/service";
-import type { MatchStatus } from "@/lib/server/matches/types";
+import type { MatchFormat, MatchStatus } from "@/lib/server/matches/types";
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -13,6 +13,8 @@ function parseCreatePayload(value: unknown): {
   opponentName: string | null;
   startsAt: string;
   location: string | null;
+  format: MatchFormat;
+  reportEnabled: boolean;
   status: MatchStatus;
 } {
   if (typeof value !== "object" || value === null) {
@@ -34,6 +36,15 @@ function parseCreatePayload(value: unknown): {
   const status = payload.status === "draft" || payload.status === "live" || payload.status === "completed"
     ? payload.status
     : "upcoming";
+  const format =
+    payload.format === "3v3" ||
+    payload.format === "5v5" ||
+    payload.format === "7v7" ||
+    payload.format === "9v9" ||
+    payload.format === "11v11"
+      ? payload.format
+      : "5v5";
+  const reportEnabled = payload.reportEnabled === true;
 
   if (!isUuid(teamId) || !title || !startsAt || Number.isNaN(Date.parse(startsAt))) {
     throw new Error("INVALID_PAYLOAD");
@@ -45,6 +56,8 @@ function parseCreatePayload(value: unknown): {
     opponentName,
     startsAt,
     location,
+    format,
+    reportEnabled,
     status,
   };
 }

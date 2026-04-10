@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { jsonError, requireAuthenticatedSupabaseClient } from "@/lib/server/integrations/spond/http";
-import { getMatchById, updateMatchStatus } from "@/lib/server/matches/service";
-import type { MatchStatus } from "@/lib/server/matches/types";
+import { deleteMatch, getMatchById, updateMatchStatus } from "@/lib/server/matches/service";
+import type { MatchReportStatus, MatchStatus } from "@/lib/server/matches/types";
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -35,6 +35,11 @@ export async function GET(
 function parsePatchPayload(value: unknown): {
   status?: MatchStatus;
   runtimeState?: Record<string, unknown> | null;
+  scoreFor?: number;
+  scoreAgainst?: number;
+  reportEnabled?: boolean;
+  reportStatus?: MatchReportStatus;
+  reportText?: string | null;
 } {
   if (typeof value !== "object" || value === null) {
     throw new Error("INVALID_PAYLOAD");
@@ -45,8 +50,37 @@ function parsePatchPayload(value: unknown): {
   const hasStatus =
     status === "draft" || status === "upcoming" || status === "live" || status === "completed";
   const hasRuntimeState = "runtimeState" in payload;
+  const hasScoreFor = "scoreFor" in payload;
+  const hasScoreAgainst = "scoreAgainst" in payload;
+  const hasReportEnabled = "reportEnabled" in payload;
+  const hasReportStatus = "reportStatus" in payload;
+  const hasReportText = "reportText" in payload;
 
-  if (!hasStatus && !hasRuntimeState) {
+  if (!hasStatus && !hasRuntimeState && !hasScoreFor && !hasScoreAgainst && !hasReportEnabled && !hasReportStatus && !hasReportText) {
+    throw new Error("INVALID_PAYLOAD");
+  }
+
+  if (hasScoreFor && (typeof payload.scoreFor !== "number" || Number.isNaN(payload.scoreFor))) {
+    throw new Error("INVALID_PAYLOAD");
+  }
+
+  if (hasScoreAgainst && (typeof payload.scoreAgainst !== "number" || Number.isNaN(payload.scoreAgainst))) {
+    throw new Error("INVALID_PAYLOAD");
+  }
+
+  if (hasReportEnabled && typeof payload.reportEnabled !== "boolean") {
+    throw new Error("INVALID_PAYLOAD");
+  }
+
+  const reportStatus = payload.reportStatus;
+  const validReportStatus =
+    reportStatus === "not_requested" || reportStatus === "pending" || reportStatus === "ready" || reportStatus === "failed";
+
+  if (hasReportStatus && !validReportStatus) {
+    throw new Error("INVALID_PAYLOAD");
+  }
+
+  if (hasReportText && payload.reportText !== null && typeof payload.reportText !== "string") {
     throw new Error("INVALID_PAYLOAD");
   }
 
@@ -59,6 +93,11 @@ function parsePatchPayload(value: unknown): {
           : payload.runtimeState === null
             ? null
             : undefined,
+      scoreFor: hasScoreFor ? (payload.scoreFor as number) : undefined,
+      scoreAgainst: hasScoreAgainst ? (payload.scoreAgainst as number) : undefined,
+      reportEnabled: hasReportEnabled ? (payload.reportEnabled as boolean) : undefined,
+      reportStatus: hasReportStatus ? (payload.reportStatus as MatchReportStatus) : undefined,
+      reportText: hasReportText ? (payload.reportText as string | null) : undefined,
     };
   }
 
@@ -68,6 +107,11 @@ function parsePatchPayload(value: unknown): {
 
   return {
     runtimeState: payload.runtimeState === null ? null : (payload.runtimeState as Record<string, unknown>),
+    scoreFor: hasScoreFor ? (payload.scoreFor as number) : undefined,
+    scoreAgainst: hasScoreAgainst ? (payload.scoreAgainst as number) : undefined,
+    reportEnabled: hasReportEnabled ? (payload.reportEnabled as boolean) : undefined,
+    reportStatus: hasReportStatus ? (payload.reportStatus as MatchReportStatus) : undefined,
+    reportText: hasReportText ? (payload.reportText as string | null) : undefined,
   };
 }
 
@@ -94,6 +138,11 @@ export async function PATCH(
       matchId,
       status: payload.status,
       runtimeState: payload.runtimeState,
+      scoreFor: payload.scoreFor,
+      scoreAgainst: payload.scoreAgainst,
+      reportEnabled: payload.reportEnabled,
+      reportStatus: payload.reportStatus,
+      reportText: payload.reportText,
     });
 
     return NextResponse.json({ match });
@@ -108,6 +157,31 @@ export async function PATCH(
       );
     }
 
+    return jsonError(error);
+  }
+}
+
+export async function DELETE(
+  _request: Request,
+  context: { params: Promise<{ matchId: string }> }
+) {
+  try {
+    const { supabase, userId } = await requireAuthenticatedSupabaseClient();
+    const { matchId } = await context.params;
+
+    if (!isUuid(matchId)) {
+      return NextResponse.json(
+        {
+          errorCode: "INVALID_MATCH_ID",
+          message: "Ugyldig kamp-id.",
+        },
+        { status: 400 }
+      );
+    }
+
+    await deleteMatch(supabase, userId, matchId);
+    return new NextResponse(null, { status: 204 });
+  } catch (error) {
     return jsonError(error);
   }
 }

@@ -70,6 +70,7 @@ function toValidMatchConfig(v: unknown): MatchConfig | null {
   const id = readString(v.id);
   const teamId = readString(v.teamId);
   const format = readString(v.format);
+  const reportEnabled = typeof v.reportEnabled === "boolean" ? v.reportEnabled : false;
   const formationId = readString(v.formationId);
   const duration = isRecord(v.duration) ? v.duration : null;
   const durationMinutes = duration ? readNumber(duration.totalMinutes) : null;
@@ -116,6 +117,7 @@ function toValidMatchConfig(v: unknown): MatchConfig | null {
     id,
     teamId,
     format: format as MatchFormat,
+    reportEnabled,
     formationId,
     duration: {
       mode:
@@ -189,6 +191,7 @@ function migrateLegacySetup(legacy: LegacyEnvelope["setup"]): MatchConfig | null
   return {
     ...config,
     id: legacy.id,
+    reportEnabled: false,
     createdAt: legacy.createdAt,
     updatedAt: legacy.updatedAt,
   };

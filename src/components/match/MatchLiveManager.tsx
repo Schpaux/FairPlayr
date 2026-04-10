@@ -48,6 +48,20 @@ import { MatchTimerPanel } from "@/components/match/MatchTimerPanel";
 import { LivePlayerSection } from "@/components/match/LivePlayerSection";
 import { variants } from "@/lib/tokens";
 
+interface PromptPlayerOption {
+  id: string;
+  name: string;
+}
+
+interface GoalPromptState {
+  eventId: string;
+  minute: number | null;
+  options: PromptPlayerOption[];
+  step: "scorer" | "assist";
+  scorerId: string | null;
+  scorerName: string | null;
+}
+
 function mapPlayersById(players: Player[]) {
   return new Map(players.map((player) => [player.id, player]));
 }
@@ -99,6 +113,8 @@ export function MatchLiveManager() {
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [selectedBenchId, setSelectedBenchId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reportEnabled, setReportEnabled] = useState(false);
+  const [promptQueue, setPromptQueue] = useState<GoalPromptState[]>([]);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -163,7 +179,11 @@ export function MatchLiveManager() {
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ runtimeState: liveMatch }),
+        body: JSON.stringify({
+          runtimeState: liveMatch,
+          scoreFor: liveMatch.teamScore,
+          scoreAgainst: liveMatch.opponentScore,
+        }),
       });
     }, 600);
 
@@ -171,6 +191,59 @@ export function MatchLiveManager() {
       window.clearTimeout(timeout);
     };
   }, [activeMatchId, auth.status, isHydrated, liveMatch]);
+
+  useEffect(() => {
+    if (!isHydrated || auth.status !== "authenticated" || !activeMatchId) {
+      return;
+    }
+
+    void (async () => {
+      const response = await fetch(`/api/matches/${encodeURIComponent(activeMatchId)}`, {
+        method: "GET",
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const payload = (await response.json()) as {
+        match?: { reportEnabled?: boolean };
+      };
+
+      setReportEnabled(payload.match?.reportEnabled === true);
+    })();
+  }, [activeMatchId, auth.status, isHydrated]);
+
+  useEffect(() => {
+    if (promptQueue.length === 0) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      const current = promptQueue[0];
+      if (!current) {
+        return;
+      }
+
+      if (current.step === "scorer") {
+        setPromptQueue((previous) => {
+          if (previous.length === 0) {
+            return previous;
+          }
+
+          const [head, ...rest] = previous;
+          return [{ ...head, step: "assist" }, ...rest];
+        });
+        return;
+      }
+
+      setPromptQueue((previous) => previous.slice(1));
+    }, 5000);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [promptQueue]);
 
   useEffect(() => {
     if (!isHydrated || auth.status !== "authenticated" || !activeMatchId || liveMatch) {
@@ -326,7 +399,12 @@ export function MatchLiveManager() {
           headers: {
             "content-type": "application/json",
           },
-          body: JSON.stringify({ status: "completed" }),
+          body: JSON.stringify({
+            status: "completed",
+            scoreFor: liveMatch?.teamScore ?? 0,
+            scoreAgainst: liveMatch?.opponentScore ?? 0,
+            reportEnabled,
+          }),
         });
 
         if (!response.ok) {
@@ -380,16 +458,156 @@ export function MatchLiveManager() {
     router.push("/match/setup");
   };
 
+  const createGoalEvent = async (
+    type: "goal_for" | "goal_against",
+    minute: number | null
+  ) => {
+    if (!activeMatchId || auth.status !== "authenticated") {
+      return null;
+    }
+
+    const response = await fetch(`/api/matches/${encodeURIComponent(activeMatchId)}/events`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        type,
+        minute,
+        timestampMs: liveMatch ? liveMatch.elapsedSeconds * 1000 : null,
+        teamSide: type === "goal_for" ? "own" : "opponent",
+        payload: {},
+      }),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as {
+      event?: { id: string };
+    };
+
+    return payload.event?.id ?? null;
+  };
+
+  const patchGoalEvent = async (eventId: string, data: Record<string, unknown>) => {
+    if (!activeMatchId || auth.status !== "authenticated") {
+      return;
+    }
+
+    await fetch(`/api/matches/${encodeURIComponent(activeMatchId)}/events/${encodeURIComponent(eventId)}`, {
+      method: "PATCH",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+  };
+
+  const queueGoalPrompt = (eventId: string, minute: number | null) => {
+    if (!liveMatch) {
+      return;
+    }
+
+    const options = liveMatch.onFieldPlayerIds
+      .map((playerId) => playersById.get(playerId))
+      .filter((player): player is Player => Boolean(player))
+      .map((player) => ({ id: player.id, name: player.name }));
+
+    setPromptQueue((previous) => [
+      ...previous,
+      {
+        eventId,
+        minute,
+        options,
+        step: "scorer",
+        scorerId: null,
+        scorerName: null,
+      },
+    ]);
+  };
+
+  const handlePromptScorer = (playerId: string | null) => {
+    const current = promptQueue[0];
+    if (!current) {
+      return;
+    }
+
+    const player = playerId ? current.options.find((option) => option.id === playerId) : null;
+
+    void patchGoalEvent(current.eventId, {
+      primaryPlayerId: playerId,
+      payload: {
+        primaryPlayerName: player?.name ?? null,
+      },
+    });
+
+    setPromptQueue((previous) => {
+      if (previous.length === 0) {
+        return previous;
+      }
+
+      const [head, ...rest] = previous;
+      return [
+        {
+          ...head,
+          step: "assist",
+          scorerId: playerId,
+          scorerName: player?.name ?? null,
+        },
+        ...rest,
+      ];
+    });
+  };
+
+  const handlePromptAssist = (playerId: string | null) => {
+    const current = promptQueue[0];
+    if (!current) {
+      return;
+    }
+
+    const player = playerId ? current.options.find((option) => option.id === playerId) : null;
+
+    void patchGoalEvent(current.eventId, {
+      secondaryPlayerId: playerId,
+      payload: {
+        primaryPlayerName: current.scorerName,
+        secondaryPlayerName: player?.name ?? null,
+      },
+    });
+
+    setPromptQueue((previous) => previous.slice(1));
+  };
+
   const handleTeamScore = (delta: number) => {
     setLiveMatch((previous) =>
       previous ? updateScore(previous, "team", delta) : previous
     );
+
+    if (delta > 0) {
+      const minute = liveMatch ? Math.floor(liveMatch.elapsedSeconds / 60) : null;
+      void (async () => {
+        const eventId = await createGoalEvent("goal_for", minute);
+
+        if (!eventId || !reportEnabled) {
+          return;
+        }
+
+        queueGoalPrompt(eventId, minute);
+      })();
+    }
   };
 
   const handleOpponentScore = (delta: number) => {
     setLiveMatch((previous) =>
       previous ? updateScore(previous, "opponent", delta) : previous
     );
+
+    if (delta > 0) {
+      const minute = liveMatch ? Math.floor(liveMatch.elapsedSeconds / 60) : null;
+      void createGoalEvent("goal_against", minute);
+    }
   };
 
   if (!isHydrated) {
@@ -661,6 +879,54 @@ export function MatchLiveManager() {
           </motion.div>
         )}
       </motion.div>
+
+      {promptQueue[0] ? (
+        <div className="fixed inset-0 z-40 flex items-end bg-black/45 p-3">
+          <AppCard className="w-full space-y-3 p-4">
+            <p className="text-base font-semibold text-foreground">
+              {promptQueue[0].step === "scorer" ? t("prompt.scorerTitle") : t("prompt.assistTitle")}
+            </p>
+            <div className="grid grid-cols-1 gap-2">
+              {promptQueue[0].options.map((option) => (
+                <FpButton
+                  key={option.id}
+                  variant="secondary"
+                  size="lg"
+                  fullWidth
+                  onClick={() => {
+                    if (promptQueue[0]?.step === "scorer") {
+                      handlePromptScorer(option.id);
+                    } else {
+                      handlePromptAssist(option.id);
+                    }
+                  }}
+                >
+                  {option.name}
+                </FpButton>
+              ))}
+            </div>
+            {promptQueue[0].step === "scorer" ? (
+              <FpButton
+                variant="ghost"
+                size="md"
+                fullWidth
+                onClick={() => handlePromptScorer(null)}
+              >
+                {t("prompt.skip")}
+              </FpButton>
+            ) : (
+              <FpButton
+                variant="ghost"
+                size="md"
+                fullWidth
+                onClick={() => handlePromptAssist(null)}
+              >
+                {t("prompt.noAssist")}
+              </FpButton>
+            )}
+          </AppCard>
+        </div>
+      ) : null}
     </PageShell>
   );
 }

@@ -238,6 +238,7 @@ export interface MatchConfig {
   id: string;
   teamId: string;
   format: MatchFormat;
+  reportEnabled: boolean;
   formationId: string;
   duration: MatchDurationConfig;
   selectedPlayerIds: string[];
@@ -361,6 +362,7 @@ export function createMatchSetup(
     id: generateId(),
     teamId,
     format,
+    reportEnabled: false,
     formationId: formation.id,
     duration: createDurationFromPreset(getDefaultDurationPreset(format)),
     selectedPlayerIds: [],
@@ -369,6 +371,16 @@ export function createMatchSetup(
     createdAt: now,
     updatedAt: now,
   };
+}
+
+export function setReportEnabled(setup: MatchConfig, enabled: boolean): MatchConfig {
+  if (setup.reportEnabled === enabled) {
+    return setup;
+  }
+
+  return withUpdatedConfig(setup, {
+    reportEnabled: enabled,
+  });
 }
 
 export function setMatchFormat(setup: MatchConfig, format: MatchFormat): MatchConfig {
