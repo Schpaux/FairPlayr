@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { IntegrationError } from "@/lib/server/integrations/spond/errors";
+import { generateMatchSummaryByMatchId } from "@/lib/server/ai/match-summary";
 import type {
   CreateMatchInput,
   ExternalEventLinkRow,
@@ -16,7 +17,7 @@ import type {
 } from "@/lib/server/matches/types";
 
 const MATCH_SELECT_LEGACY = "id, team_id, title, opponent_name, starts_at, location, status, runtime_state, created_by, created_at, updated_at";
-const MATCH_SELECT_ENHANCED = `${MATCH_SELECT_LEGACY}, started_at, ended_at, format, report_enabled, report_status, report_text, score_for, score_against`;
+const MATCH_SELECT_ENHANCED = `${MATCH_SELECT_LEGACY}, started_at, ended_at, format, report_enabled, report_status, report_text, report_generated_at, score_for, score_against`;
 const MATCH_EVENT_SELECT = "id, match_id, type, minute, timestamp_ms, team_side, primary_player_id, secondary_player_id, payload, created_at, updated_at";
 
 interface CreateMatchEventInput {
@@ -49,7 +50,7 @@ function isMissingMatchTimestampColumnError(error: { code?: string; message?: st
     return true;
   }
 
-  return /column\s+matches\.(started_at|ended_at|format|report_enabled|report_status|report_text|score_for|score_against)\s+does\s+not\s+exist/i.test(error.message ?? "");
+  return /column\s+matches\.(started_at|ended_at|format|report_enabled|report_status|report_text|report_generated_at|score_for|score_against)\s+does\s+not\s+exist/i.test(error.message ?? "");
 }
 
 async function requireTeamMembership(
@@ -91,6 +92,7 @@ function mapMatchRows(rows: MatchRow[], links: ExternalEventLinkRow[]): MatchLis
       reportEnabled: row.report_enabled ?? false,
       reportStatus: (row.report_status ?? "not_requested") as MatchReportStatus,
       reportText: row.report_text ?? null,
+      reportGeneratedAt: row.report_generated_at ?? null,
       scoreFor: row.score_for ?? 0,
       scoreAgainst: row.score_against ?? 0,
       startedAt: row.started_at ?? null,
@@ -122,70 +124,6 @@ function mapMatchEventRows(rows: MatchEventRow[]): MatchEventItem[] {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }));
-}
-
-function extractScorerName(event: MatchEventItem): string | null {
-  const payload = event.payload;
-  if (!payload || typeof payload !== "object") {
-    return null;
-  }
-
-  const value = payload.primaryPlayerName;
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function extractAssistName(event: MatchEventItem): string | null {
-  const payload = event.payload;
-  if (!payload || typeof payload !== "object") {
-    return null;
-  }
-
-  const value = payload.secondaryPlayerName;
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function generateMatchReport(match: MatchListItem, events: MatchEventItem[]): string {
-  const teamName = match.title.trim() || "Laget";
-  const opponent = match.opponentName?.trim() || "motstanderen";
-  const goalEvents = events.filter((event) => event.type === "goal_for");
-
-  const scorerCounts = new Map<string, number>();
-  const assists = new Set<string>();
-
-  for (const event of goalEvents) {
-    const scorer = extractScorerName(event);
-    if (scorer) {
-      scorerCounts.set(scorer, (scorerCounts.get(scorer) ?? 0) + 1);
-    }
-    const assist = extractAssistName(event);
-    if (assist) {
-      assists.add(assist);
-    }
-  }
-
-  const scorerList = Array.from(scorerCounts.entries())
-    .sort((a, b) => b[1] - a[1])
-    .map(([name, count]) => (count > 1 ? `${name} (${count})` : name));
-
-  const summaryLines: string[] = [];
-  summaryLines.push(
-    `${teamName} spilte mot ${opponent} og kampen endte ${match.scoreFor}-${match.scoreAgainst}.`
-  );
-
-  if (goalEvents.length === 0) {
-    summaryLines.push("Det var en jevn og innsatsrik kamp med god lagmoral hele veien.");
-  } else if (scorerList.length > 0) {
-    summaryLines.push(`Scoringslisten ble fylt av ${scorerList.slice(0, 3).join(", ")}.`);
-  } else {
-    summaryLines.push("Laget fant veien til mål og skapte gode angrep gjennom hele kampen.");
-  }
-
-  if (assists.size > 0) {
-    summaryLines.push(`Flere bidro med målgivende pasninger, blant annet ${Array.from(assists).slice(0, 2).join(" og ")}.`);
-  }
-
-  summaryLines.push("Takk for innsatsen - dette var en fin lagprestasjon i ekte FairPlayr-stil.");
-  return summaryLines.slice(0, 4).join("\n");
 }
 
 export async function getTeamMatches(
@@ -387,6 +325,7 @@ export async function updateMatchStatus(
     if (!input.reportEnabled) {
       updatePayload.report_status = "not_requested";
       updatePayload.report_text = null;
+      updatePayload.report_generated_at = null;
     }
   }
 
@@ -398,12 +337,17 @@ export async function updateMatchStatus(
     updatePayload.report_text = input.reportText;
   }
 
+  if (input.reportGeneratedAt !== undefined) {
+    updatePayload.report_generated_at = input.reportGeneratedAt;
+  }
+
   const shouldGenerateReport =
     input.status === "completed" &&
     (input.reportEnabled ?? existing.reportEnabled) === true;
 
   if (shouldGenerateReport) {
     updatePayload.report_status = "pending";
+    updatePayload.report_generated_at = null;
   }
 
   if (input.runtimeState !== undefined) {
@@ -444,15 +388,20 @@ export async function updateMatchStatus(
   let mapped = mapMatchRows([row], [])[0];
 
   if (shouldGenerateReport) {
+    console.info("[match-report] generation requested", {
+      matchId: mapped.id,
+    });
+
     try {
-      const events = await getMatchEvents(supabase, userId, mapped.id);
-      const reportText = generateMatchReport(mapped, events);
+      const summary = await generateMatchSummaryByMatchId(supabase, userId, mapped.id);
+      const generatedAt = new Date().toISOString();
 
       const { data: reportRow, error: reportError } = await supabase
         .from("matches")
         .update({
           report_status: "ready",
-          report_text: reportText,
+          report_text: summary.result.text,
+          report_generated_at: generatedAt,
         })
         .eq("id", mapped.id)
         .select(MATCH_SELECT_ENHANCED)
@@ -465,10 +414,18 @@ export async function updateMatchStatus(
       if (reportRow) {
         mapped = mapMatchRows([reportRow], [])[0];
       }
+
+      console.info("[match-report] generation completed", {
+        matchId: mapped.id,
+        source: summary.result.source,
+      });
     } catch {
       const { data: failedRow } = await supabase
         .from("matches")
-        .update({ report_status: "failed" })
+        .update({
+          report_status: "failed",
+          report_generated_at: null,
+        })
         .eq("id", mapped.id)
         .select(MATCH_SELECT_ENHANCED)
         .single<MatchRow>();
@@ -476,6 +433,10 @@ export async function updateMatchStatus(
       if (failedRow) {
         mapped = mapMatchRows([failedRow], [])[0];
       }
+
+      console.error("[match-report] generation failed", {
+        matchId: mapped.id,
+      });
     }
   }
 

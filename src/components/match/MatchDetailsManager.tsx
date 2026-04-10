@@ -33,6 +33,7 @@ interface MatchDetails {
   reportEnabled: boolean;
   reportStatus: "not_requested" | "pending" | "ready" | "failed";
   reportText: string | null;
+  reportGeneratedAt?: string | null;
 }
 
 interface MatchEventItem {
@@ -496,10 +497,18 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
         )}
       </AppCard>
 
-      {match.reportEnabled && match.reportText ? (
+      {match.reportEnabled ? (
         <AppCard className="space-y-2 p-4">
           <p className="text-sm font-semibold text-foreground">{t("reportTitle")}</p>
-          <p className="whitespace-pre-line text-sm text-muted-foreground">{match.reportText}</p>
+          {match.reportStatus === "pending" ? (
+            <p className="text-sm text-muted-foreground">{t("reportPending")}</p>
+          ) : null}
+          {match.reportStatus === "failed" ? (
+            <p className="text-sm text-muted-foreground">{t("reportFailed")}</p>
+          ) : null}
+          {match.reportStatus === "ready" && match.reportText ? (
+            <p className="whitespace-pre-line text-sm text-muted-foreground">{match.reportText}</p>
+          ) : null}
         </AppCard>
       ) : null}
 

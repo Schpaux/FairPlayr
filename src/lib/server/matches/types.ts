@@ -29,6 +29,7 @@ export interface MatchRow {
   report_enabled?: boolean;
   report_status?: MatchReportStatus;
   report_text?: string | null;
+  report_generated_at?: string | null;
   score_for?: number;
   score_against?: number;
   started_at?: string | null;
@@ -64,6 +65,7 @@ export interface MatchListItem {
   reportEnabled: boolean;
   reportStatus: MatchReportStatus;
   reportText: string | null;
+  reportGeneratedAt: string | null;
   scoreFor: number;
   scoreAgainst: number;
   startedAt: string | null;
@@ -96,6 +98,7 @@ export interface UpdateMatchStatusInput {
   reportEnabled?: boolean;
   reportStatus?: MatchReportStatus;
   reportText?: string | null;
+  reportGeneratedAt?: string | null;
 }
 
 export interface MatchEventRow {

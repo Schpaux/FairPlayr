@@ -688,7 +688,7 @@ export function MatchPlannerManager() {
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    {match.reportText ? (
+                    {match.reportStatus === "ready" ? (
                       <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
                         {t("reportBadge")}
                       </span>
