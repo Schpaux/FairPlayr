@@ -45,6 +45,10 @@
   --color-fp-accent: #22c55e;
   --color-fp-warning: #f59e0b;
   --color-fp-danger: #ef4444;
+  --color-fp-spond: var(--fp-spond);
+  --color-fp-spond-soft: var(--fp-spond-soft);
+  --color-fp-spond-foreground: var(--fp-spond-foreground);
+  --color-fp-spond-border: var(--fp-spond-border);
 
   /* FairPlayr surface tokens — theme-aware */
   --color-fp-surface: var(--fp-surface);
@@ -102,6 +106,10 @@
   --fp-text-primary: #111827;
   --fp-text-secondary: #6b7280;
   --fp-border: rgba(0, 0, 0, 0.08);
+  --fp-spond: #e15a37;
+  --fp-spond-soft: rgba(225, 90, 55, 0.12);
+  --fp-spond-foreground: #7a2d1b;
+  --fp-spond-border: rgba(225, 90, 55, 0.35);
 
   /* Sidebar */
   --sidebar: #f9fafb;
@@ -153,6 +161,10 @@
   --fp-text-primary: #f9fafb;
   --fp-text-secondary: #9ca3af;
   --fp-border: rgba(255, 255, 255, 0.08);
+  --fp-spond: #ff815f;
+  --fp-spond-soft: rgba(255, 129, 95, 0.18);
+  --fp-spond-foreground: #ffd9cf;
+  --fp-spond-border: rgba(255, 129, 95, 0.45);
 
   /* Sidebar */
   --sidebar: #111827;

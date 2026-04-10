@@ -137,6 +137,13 @@
       "guest": "Guest mode: team data is stored on this device.",
       "cloud": "Signed-in mode: team data is stored in the cloud."
     },
+    "spondInfo": {
+      "badge": "Spond",
+      "title": "Using Spond for your teams?",
+      "description": "Connect Spond in settings to import players and events faster.",
+      "manageCta": "Open integrations",
+      "importCta": "Go to match planning"
+    },
     "teamList": {
       "title": "Your teams",
       "activeBadge": "Active"
@@ -473,6 +480,17 @@
     "timeLabel": "Time: {value}",
     "locationLabel": "Location: {value}",
     "statusLabel": "Status: {value}",
+    "status": {
+      "planned": "Planned",
+      "live": "Live",
+      "completed": "Completed"
+    },
+    "mode": {
+      "manual": "Manual match",
+      "spond": "From Spond",
+      "spondHint": "Connect Spond in settings to pull events directly here.",
+      "spondActiveHint": "Fetch events from Spond and import with one tap."
+    },
     "rsvpTitle": "Participation from Spond",
     "syncRsvpCta": "Update participation",
     "syncRsvpLoading": "Updating participation...",
@@ -487,6 +505,12 @@
       "unconfirmed": "unconfirmed",
       "waitinglist": "waiting list"
     },
+    "startMatchCta": "Start match",
+    "continueMatchCta": "Go to live match",
+    "finishMatchCta": "Finish match",
+    "statusUpdating": "Updating...",
+    "startedNotice": "Match started.",
+    "completedNotice": "Match completed.",
     "noLocation": "Not set",
     "errors": {
       "unauthorized": "You must be signed in.",
@@ -496,12 +520,13 @@
       "eventNotFound": "The event was not found in Spond.",
       "eventMissingStart": "The event has no start time and cannot be imported.",
       "matchNotSpond": "This match is not linked to Spond.",
+      "activeMatchExists": "Another match is already live for this team.",
       "generic": "Something went wrong while planning matches."
     }
   },
   "lineup": {
     "title": "Lineup",
-    "subtitle": "Build a clear visual lineup for your next match.",
+    "subtitle": "Pick your squad, place your starting lineup, and keep the bench ready.",
     "activeTeam": "Active team: {name}",
     "noTeam": {
       "title": "No team found",
@@ -515,8 +540,8 @@
     },
     "sections": {
       "format": "Match Format",
-      "field": "Field Layout",
-      "players": "Player Selection"
+      "field": "Place starting lineup",
+      "players": "Select squad"
     },
     "format": {
       "fieldCount": "{count} on field"
@@ -525,7 +550,7 @@
       "assigned": "{assigned} / {required} assigned"
     },
     "field": {
-      "hint": "Tap a slot, then tap a remaining player to place them.",
+      "hint": "Tap a position and choose the player who should start there. Unplaced players stay on the bench.",
       "slot": "Slot"
     },
     "remaining": {
@@ -552,12 +577,21 @@
     "title": "Settings",
     "subtitle": "Preferences and app configuration.",
     "account": "Account",
+    "storageSync": "Storage and sync",
+    "syncStatus": "Status",
+    "syncCloud": "Synced with cloud",
+    "syncLocal": "Working locally",
+    "syncAttention": "Sync needs attention",
+    "syncCloudHint": "Teams and players are saved in cloud storage for this account.",
+    "syncLocalHint": "You are in local mode. Sign in to sync across devices.",
     "appearance": "Appearance",
     "theme": "Theme",
     "lightMode": "Light",
     "darkMode": "Dark",
     "systemMode": "System",
-    "language": "Language"
+    "language": "Language",
+    "integrations": "Integrations",
+    "noTeamForIntegrations": "Select or create a team to configure Spond integration."
   },
   "teamSwitcher": {
     "label": "Active team",
@@ -567,5 +601,21 @@
     "switchToLight": "Switch to light mode",
     "switchToDark": "Switch to dark mode",
     "switchLanguage": "Switch language"
+  },
+  "profileMenu": {
+    "open": "Open profile menu",
+    "close": "Close profile menu",
+    "guestName": "Guest",
+    "guestEmail": "Not signed in",
+    "sync": {
+      "title": "Sync",
+      "cloud": "Synced with cloud",
+      "local": "Working locally",
+      "attention": "Needs attention"
+    }
+  },
+  "activeMatchBanner": {
+    "label": "Match in progress",
+    "open": "Open"
   }
 }

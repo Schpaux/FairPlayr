@@ -137,6 +137,13 @@
       "guest": "Gjestemodus: lagdata lagres på denne enheten.",
       "cloud": "Innlogget modus: lagdata lagres i skyen."
     },
+    "spondInfo": {
+      "badge": "Spond",
+      "title": "Har du lag i Spond?",
+      "description": "Koble til Spond i innstillinger for å importere spillere og arrangementer raskere.",
+      "manageCta": "Åpne integrasjoner",
+      "importCta": "Gå til kampplanlegging"
+    },
     "teamList": {
       "title": "Lagene dine",
       "activeBadge": "Aktivt"
@@ -473,6 +480,17 @@
     "timeLabel": "Tid: {value}",
     "locationLabel": "Sted: {value}",
     "statusLabel": "Status: {value}",
+    "status": {
+      "planned": "Planlagt",
+      "live": "Pågår",
+      "completed": "Ferdig"
+    },
+    "mode": {
+      "manual": "Manuell kamp",
+      "spond": "Fra Spond",
+      "spondHint": "Koble Spond i innstillinger for å hente arrangementer direkte her.",
+      "spondActiveHint": "Hent arrangementer fra Spond og importer med ett trykk."
+    },
     "rsvpTitle": "Deltakelse fra Spond",
     "syncRsvpCta": "Oppdater deltakelse",
     "syncRsvpLoading": "Oppdaterer deltakelse...",
@@ -487,6 +505,12 @@
       "unconfirmed": "ubekreftet",
       "waitinglist": "venteliste"
     },
+    "startMatchCta": "Start kamp",
+    "continueMatchCta": "Gå til pågående kamp",
+    "finishMatchCta": "Avslutt kamp",
+    "statusUpdating": "Oppdaterer...",
+    "startedNotice": "Kampen er startet.",
+    "completedNotice": "Kampen er avsluttet.",
     "noLocation": "Ikke satt",
     "errors": {
       "unauthorized": "Du må være logget inn.",
@@ -496,12 +520,13 @@
       "eventNotFound": "Fant ikke hendelsen i Spond.",
       "eventMissingStart": "Hendelsen mangler starttidspunkt og kan ikke importeres.",
       "matchNotSpond": "Denne kampen er ikke koblet til Spond.",
+      "activeMatchExists": "En annen kamp pågår allerede for dette laget.",
       "generic": "Noe gikk galt under kampplanlegging."
     }
   },
   "lineup": {
     "title": "Lagoppstilling",
-    "subtitle": "Bygg en tydelig visuell lagoppstilling til neste kamp.",
+    "subtitle": "Velg tropp, plasser startoppstillingen og få benken klar for kamp.",
     "activeTeam": "Aktivt lag: {name}",
     "noTeam": {
       "title": "Ingen lag funnet",
@@ -515,8 +540,8 @@
     },
     "sections": {
       "format": "Kampformat",
-      "field": "Baneoppsett",
-      "players": "Spillervalg"
+      "field": "Plasser startoppstilling",
+      "players": "Velg tropp"
     },
     "format": {
       "fieldCount": "{count} på banen"
@@ -525,7 +550,7 @@
       "assigned": "{assigned} / {required} plassert"
     },
     "field": {
-      "hint": "Trykk på en plass, og trykk deretter på en resterende spiller for å plassere.",
+      "hint": "Trykk en posisjon og velg spilleren som skal starte der. Spillere som ikke plasseres havner på benken.",
       "slot": "Plass"
     },
     "remaining": {
@@ -552,12 +577,21 @@
     "title": "Innstillinger",
     "subtitle": "Preferanser og appkonfigurasjon.",
     "account": "Konto",
+    "storageSync": "Lagring og synkronisering",
+    "syncStatus": "Status",
+    "syncCloud": "Synkronisert med skyen",
+    "syncLocal": "Jobber lokalt",
+    "syncAttention": "Synkronisering krever oppmerksomhet",
+    "syncCloudHint": "Lag og spillere lagres i skyen for denne kontoen.",
+    "syncLocalHint": "Du er i lokal modus. Logg inn for synkronisering på tvers av enheter.",
     "appearance": "Utseende",
     "theme": "Tema",
     "lightMode": "Lys",
     "darkMode": "Mørk",
     "systemMode": "System",
-    "language": "Språk"
+    "language": "Språk",
+    "integrations": "Integrasjoner",
+    "noTeamForIntegrations": "Velg eller opprett et lag for å konfigurere Spond-integrasjon."
   },
   "teamSwitcher": {
     "label": "Aktivt lag",
@@ -567,5 +601,21 @@
     "switchToLight": "Bytt til lyst modus",
     "switchToDark": "Bytt til mørkt modus",
     "switchLanguage": "Bytt språk"
+  },
+  "profileMenu": {
+    "open": "Åpne profilmeny",
+    "close": "Lukk profilmeny",
+    "guestName": "Gjest",
+    "guestEmail": "Ikke logget inn",
+    "sync": {
+      "title": "Synkronisering",
+      "cloud": "Synkronisert med skyen",
+      "local": "Jobber lokalt",
+      "attention": "Krever oppmerksomhet"
+    }
+  },
+  "activeMatchBanner": {
+    "label": "Kamp pågår",
+    "open": "Åpne"
   }
 }

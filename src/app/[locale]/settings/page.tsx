@@ -4,13 +4,16 @@ import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { useLocale } from "next-intl";
 import { useRouter, usePathname } from "@/i18n/navigation";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
 import { routing } from "@/i18n/routing";
 import { localeConfig } from "@/lib/locales";
-import { Sun, Moon, Monitor, Globe } from "lucide-react";
+import { Sun, Moon, Monitor, Globe, Cloud, Link2 } from "lucide-react";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { AppCard } from "@/components/ui/AppCard";
 import { AuthStatusCard } from "@/components/auth/AuthStatusCard";
+import { SpondIntegrationCard } from "@/components/team/SpondIntegrationCard";
 import { cn } from "@/lib/utils";
 
 type ThemeOption = "light" | "dark" | "system";
@@ -20,6 +23,8 @@ const themeIcons = { light: Sun, dark: Moon, system: Monitor } as const;
 export default function SettingsPage() {
   const t = useTranslations("settings");
   const { theme, setTheme } = useTheme();
+  const auth = useAuth();
+  const workspace = useTeamWorkspace();
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
@@ -39,6 +44,30 @@ export default function SettingsPage() {
           {t("account")}
         </p>
         <AuthStatusCard />
+      </section>
+
+      <section className="mb-6">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          {t("storageSync")}
+        </p>
+        <AppCard className="space-y-2 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Cloud size={14} className="text-muted-foreground" />
+              <p className="text-sm font-medium text-foreground">{t("syncStatus")}</p>
+            </div>
+            <span className={workspace.mode === "cloud" ? "text-xs font-medium text-fp-accent" : "text-xs font-medium text-fp-warning"}>
+              {workspace.mode === "cloud" ? t("syncCloud") : t("syncLocal")}
+            </span>
+          </div>
+          {workspace.error ? (
+            <p className="text-xs text-fp-warning">{t("syncAttention")}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              {workspace.mode === "cloud" ? t("syncCloudHint") : t("syncLocalHint")}
+            </p>
+          )}
+        </AppCard>
       </section>
 
       {/* Appearance */}
@@ -106,6 +135,29 @@ export default function SettingsPage() {
           </div>
         </AppCard>
       </section>
+
+      {auth.status === "authenticated" && workspace.mode === "cloud" ? (
+        <section className="mt-6">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {t("integrations")}
+          </p>
+          {workspace.activeTeam ? (
+            <SpondIntegrationCard
+              teamId={workspace.activeTeam.id}
+              mode={workspace.mode}
+              onImported={workspace.refresh}
+            />
+          ) : (
+            <AppCard className="space-y-2 p-4">
+              <div className="flex items-center gap-2">
+                <Link2 size={14} className="text-fp-spond" />
+                <p className="text-sm font-medium text-foreground">{t("integrations")}</p>
+              </div>
+              <p className="text-xs text-muted-foreground">{t("noTeamForIntegrations")}</p>
+            </AppCard>
+          )}
+        </section>
+      ) : null}
     </PageShell>
   );
 }

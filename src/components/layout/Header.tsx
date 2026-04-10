@@ -1,15 +1,13 @@
-import { ThemeToggle } from "./ThemeToggle";
-import { LanguageSwitcher } from "./LanguageSwitcher";
 import { Link } from "@/i18n/navigation";
-import { AuthActionButton } from "@/components/auth/AuthActionButton";
 import { ActiveTeamSwitcher } from "@/components/team/ActiveTeamSwitcher";
+import { ProfileMenu } from "@/components/layout/ProfileMenu";
 
 export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-fp-border bg-background/80 backdrop-blur-md pt-safe">
-      <div className="mx-auto flex h-14 max-w-screen-lg items-center justify-between px-4">
+      <div className="mx-auto flex h-14 max-w-screen-lg items-center justify-between gap-2 px-3 sm:px-4">
         {/* Logo / Wordmark */}
-        <Link href="/" className="flex items-center gap-2 group">
+        <Link href="/" className="flex min-w-0 items-center gap-2 group">
           {/* Icon mark */}
           <div className="relative h-8 w-8 rounded-lg bg-primary flex items-center justify-center glow-primary-sm overflow-hidden">
             {/* Simple football-field-inspired mark */}
@@ -28,17 +26,14 @@ export function Header() {
           </div>
 
           {/* Wordmark */}
-          <span className="font-semibold text-base tracking-tight text-foreground group-hover:text-primary transition-colors">
+          <span className="truncate font-semibold text-base tracking-tight text-foreground group-hover:text-primary transition-colors">
             FairPlayr
           </span>
         </Link>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
           <ActiveTeamSwitcher />
-          <AuthActionButton />
-          <LanguageSwitcher />
-          <ThemeToggle />
+          <ProfileMenu />
         </div>
       </div>
     </header>

@@ -21,6 +21,8 @@ interface MatchItem {
   location: string | null;
   status: "draft" | "upcoming" | "live" | "completed";
   source: "manual" | "spond";
+  startedAt?: string | null;
+  endedAt?: string | null;
 }
 
 interface SpondEventItem {
@@ -70,6 +72,8 @@ export function MatchPlannerManager() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [eventsLastSyncedAt, setEventsLastSyncedAt] = useState<string | null>(null);
+  const [entryMode, setEntryMode] = useState<"manual" | "spond">("manual");
+  const [hasSpondLink, setHasSpondLink] = useState(false);
 
   const [title, setTitle] = useState("");
   const [opponentName, setOpponentName] = useState("");
@@ -117,10 +121,28 @@ export function MatchPlannerManager() {
         return t("errors.eventNotFound");
       case "EVENT_MISSING_START":
         return t("errors.eventMissingStart");
+      case "ACTIVE_MATCH_EXISTS":
+        return t("errors.activeMatchExists");
       default:
         return fallback;
     }
   }, [t]);
+
+  const formatStatus = (status: MatchItem["status"]) => {
+    if (status === "upcoming") {
+      return t("status.planned");
+    }
+
+    if (status === "live") {
+      return t("status.live");
+    }
+
+    if (status === "completed") {
+      return t("status.completed");
+    }
+
+    return t("status.planned");
+  };
 
   const formatSyncedAt = (value: string | null) => {
     if (!value) {
@@ -206,6 +228,21 @@ export function MatchPlannerManager() {
     void (async () => {
       try {
         await loadMatches();
+
+        const statusResponse = await fetch(`/api/integrations/spond/status?teamId=${encodeURIComponent(team.id)}`);
+        const statusPayload = (await statusResponse.json()) as {
+          connected?: boolean;
+          teamLink?: { externalTeamId: string } | null;
+        };
+
+        if (statusResponse.ok) {
+          const linked = Boolean(statusPayload.connected && statusPayload.teamLink?.externalTeamId);
+          setHasSpondLink(linked);
+          setEntryMode(linked ? "spond" : "manual");
+        } else {
+          setHasSpondLink(false);
+          setEntryMode("manual");
+        }
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : t("errors.generic"));
       }
@@ -362,6 +399,37 @@ export function MatchPlannerManager() {
       {error ? <AppCard className="p-3 text-xs text-danger">{error}</AppCard> : null}
 
       <AppCard className="space-y-3 p-4">
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            className={
+              entryMode === "manual"
+                ? "tap-target rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary"
+                : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-xs font-semibold text-muted-foreground"
+            }
+            onClick={() => setEntryMode("manual")}
+          >
+            {t("mode.manual")}
+          </button>
+          <button
+            type="button"
+            className={
+              entryMode === "spond"
+                ? "tap-target rounded-xl border border-fp-spond-border bg-fp-spond-soft px-3 py-2 text-xs font-semibold text-fp-spond-foreground"
+                : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-xs font-semibold text-muted-foreground"
+            }
+            onClick={() => setEntryMode("spond")}
+            disabled={!hasSpondLink}
+          >
+            {t("mode.spond")}
+          </button>
+        </div>
+
+        {!hasSpondLink ? (
+          <p className="text-xs text-muted-foreground">{t("mode.spondHint")}</p>
+        ) : null}
+
+        {entryMode === "manual" ? (
         <div className="flex items-center gap-2">
           <PlusCircle size={16} className="text-primary" />
           <h3 className="text-sm font-semibold text-foreground">{t("createTitle")}</h3>
@@ -398,6 +466,9 @@ export function MatchPlannerManager() {
             {isCreating ? t("creating") : t("createCta")}
           </FpButton>
         </form>
+        ) : (
+          <p className="text-xs text-muted-foreground">{t("mode.spondActiveHint")}</p>
+        )}
       </AppCard>
 
       <AppCard className="space-y-3 p-4">
@@ -430,10 +501,13 @@ export function MatchPlannerManager() {
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     {match.source === "spond" ? (
-                      <span className="rounded-full border border-fp-accent/40 bg-fp-accent/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-accent">
+                      <span className="rounded-full border border-fp-spond-border bg-fp-spond-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-spond-foreground">
                         {t("spondBadge")}
                       </span>
                     ) : null}
+                    <span className="rounded-full border border-fp-border bg-background px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {formatStatus(match.status)}
+                    </span>
                     <Link href={`/match/${match.id}`}>
                       <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
                         {t("openMatch")}
@@ -448,6 +522,7 @@ export function MatchPlannerManager() {
         )}
       </AppCard>
 
+      {hasSpondLink ? (
       <AppCard className="space-y-3 p-4">
         <div className="flex items-center justify-between gap-2">
           <div className="space-y-1">
@@ -489,7 +564,7 @@ export function MatchPlannerManager() {
                   </div>
                   {event.importedMatchId ? (
                     <div className="flex flex-col items-end gap-1">
-                      <span className="rounded-full border border-fp-accent/40 bg-fp-accent/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-accent">
+                      <span className="rounded-full border border-fp-spond-border bg-fp-spond-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-spond-foreground">
                         {t("alreadyImported")}
                       </span>
                       <Link href={`/match/${event.importedMatchId}`}>
@@ -515,6 +590,7 @@ export function MatchPlannerManager() {
           </ul>
         )}
       </AppCard>
+      ) : null}
     </PageShell>
   );
 }

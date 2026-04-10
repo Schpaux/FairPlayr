@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeftRight, Play } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { Link, useRouter } from "@/i18n/navigation";
 import type { Player } from "@/domain/team";
 import {
@@ -33,6 +34,7 @@ import {
   saveStoredLiveMatch,
 } from "@/lib/storage/liveMatchStorage";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
+import { useActiveMatch } from "@/components/providers/ActiveMatchProvider";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -75,7 +77,10 @@ export function MatchLiveManager() {
   const t = useTranslations("matchLive");
   const common = useTranslations("common");
   const router = useRouter();
+  const searchParams = useSearchParams();
   const workspace = useTeamWorkspace();
+  const { refreshActiveMatch } = useActiveMatch();
+  const activeMatchId = searchParams.get("matchId");
 
   const isHydrated = useSyncExternalStore(
     () => () => {},
@@ -247,6 +252,20 @@ export function MatchLiveManager() {
     if (storedSetup) {
       endMatch(storedSetup.config);
       setSetupStatus("ended");
+    }
+
+    if (activeMatchId) {
+      void fetch(`/api/matches/${encodeURIComponent(activeMatchId)}`, {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ status: "completed" }),
+      }).finally(() => {
+        void refreshActiveMatch();
+      });
+    } else {
+      void refreshActiveMatch();
     }
 
     clearSelection();

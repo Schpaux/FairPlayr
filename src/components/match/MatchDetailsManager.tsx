@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ShieldAlert } from "lucide-react";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { useActiveMatch } from "@/components/providers/ActiveMatchProvider";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { AppCard } from "@/components/ui/AppCard";
@@ -21,6 +22,8 @@ interface MatchDetails {
   source: "manual" | "spond";
   externalEventId: string | null;
   rsvpLastSyncedAt: string | null;
+  startedAt: string | null;
+  endedAt: string | null;
 }
 
 interface RsvpSnapshot {
@@ -60,6 +63,8 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
   const common = useTranslations("common");
   const locale = useLocale();
   const auth = useAuth();
+  const router = useRouter();
+  const { refreshActiveMatch } = useActiveMatch();
 
   const [match, setMatch] = useState<MatchDetails | null>(null);
   const [snapshot, setSnapshot] = useState<RsvpSnapshot | null>(null);
@@ -67,6 +72,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncingRsvp, setIsSyncingRsvp] = useState(false);
   const [isLoadingRsvp, setIsLoadingRsvp] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   const formatDate = (value: string | null) => {
@@ -93,6 +99,22 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
 
     return message;
   }, [t]);
+
+  const formatStatus = (status: MatchDetails["status"]) => {
+    if (status === "upcoming") {
+      return t("status.planned");
+    }
+
+    if (status === "live") {
+      return t("status.live");
+    }
+
+    if (status === "completed") {
+      return t("status.completed");
+    }
+
+    return t("status.planned");
+  };
 
   useEffect(() => {
     if (auth.status !== "authenticated") {
@@ -199,6 +221,52 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
     }
   };
 
+  const handleStatusChange = async (status: "live" | "completed") => {
+    if (!match) {
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setIsUpdatingStatus(true);
+
+    try {
+      const response = await fetch(`/api/matches/${encodeURIComponent(match.id)}`, {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ status }),
+      });
+
+      const payload = (await response.json()) as { message?: string; match?: MatchDetails };
+
+      if (!response.ok) {
+        throw new Error(payload.message ?? t("errors.generic"));
+      }
+
+      const nextMatch = payload.match ?? null;
+
+      if (nextMatch) {
+        setMatch(nextMatch);
+      }
+
+      await refreshActiveMatch();
+
+      if (status === "live") {
+        setNotice(t("startedNotice"));
+        router.push(`/match/live?matchId=${encodeURIComponent(match.id)}`);
+      } else {
+        setNotice(t("completedNotice"));
+      }
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : t("errors.generic");
+      setError(mapError(message));
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   if (isLoading || auth.status === "loading") {
     return (
       <PageShell>
@@ -248,7 +316,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
 
       <AppCard className="space-y-2 p-4">
         {match.source === "spond" ? (
-          <span className="inline-flex rounded-full border border-fp-accent/40 bg-fp-accent/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-accent">
+          <span className="inline-flex rounded-full border border-fp-spond-border bg-fp-spond-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-spond-foreground">
             {t("spondBadge")}
           </span>
         ) : null}
@@ -256,12 +324,47 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
         {match.opponentName ? <p className="text-xs text-muted-foreground">{t("vs", { opponent: match.opponentName })}</p> : null}
         <p className="text-xs text-muted-foreground">{t("timeLabel", { value: startsAt })}</p>
         <p className="text-xs text-muted-foreground">{t("locationLabel", { value: match.location ?? t("noLocation") })}</p>
-        <p className="text-xs text-muted-foreground">{t("statusLabel", { value: match.status })}</p>
+        <p className="text-xs text-muted-foreground">{t("statusLabel", { value: formatStatus(match.status) })}</p>
         {match.source === "spond" ? (
           <p className="text-xs text-muted-foreground">
             {t("lastRsvpSync", { value: formatDate(match.rsvpLastSyncedAt ?? snapshot?.syncedAt ?? null) })}
           </p>
         ) : null}
+
+        <div className="flex flex-wrap gap-2 pt-1">
+          {(match.status === "upcoming" || match.status === "draft") ? (
+            <FpButton
+              type="button"
+              variant="primary"
+              size="sm"
+              disabled={isUpdatingStatus}
+              onClick={() => {
+                void handleStatusChange("live");
+              }}
+            >
+              {isUpdatingStatus ? t("statusUpdating") : t("startMatchCta")}
+            </FpButton>
+          ) : null}
+
+          {match.status === "live" ? (
+            <>
+              <Link href={`/match/live?matchId=${encodeURIComponent(match.id)}`}>
+                <FpButton variant="secondary" size="sm">{t("continueMatchCta")}</FpButton>
+              </Link>
+              <FpButton
+                type="button"
+                variant="danger"
+                size="sm"
+                disabled={isUpdatingStatus}
+                onClick={() => {
+                  void handleStatusChange("completed");
+                }}
+              >
+                {isUpdatingStatus ? t("statusUpdating") : t("finishMatchCta")}
+              </FpButton>
+            </>
+          ) : null}
+        </div>
       </AppCard>
 
       {match.source === "spond" ? (

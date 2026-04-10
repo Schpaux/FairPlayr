@@ -5,6 +5,8 @@ import type {
   ExternalEventLinkRow,
   MatchListItem,
   MatchRow,
+  MatchStatus,
+  UpdateMatchStatusInput,
 } from "@/lib/server/matches/types";
 
 async function requireTeamMembership(
@@ -42,6 +44,8 @@ function mapMatchRows(rows: MatchRow[], links: ExternalEventLinkRow[]): MatchLis
       startsAt: row.starts_at,
       location: row.location,
       status: row.status,
+      startedAt: row.started_at,
+      endedAt: row.ended_at,
       source: link ? "spond" : "manual",
       externalEventId: link?.external_event_id ?? null,
       rsvpLastSyncedAt: link?.rsvp_last_synced_at ?? null,
@@ -60,7 +64,7 @@ export async function getTeamMatches(
 
   const { data: matchRows, error: matchError } = await supabase
     .from("matches")
-    .select("id, team_id, title, opponent_name, starts_at, location, status, created_by, created_at, updated_at")
+    .select("id, team_id, title, opponent_name, starts_at, location, status, started_at, ended_at, created_by, created_at, updated_at")
     .eq("team_id", teamId)
     .order("starts_at", { ascending: true })
     .returns<MatchRow[]>();
@@ -98,10 +102,10 @@ export async function getMatchById(
 ): Promise<MatchListItem> {
   const { data: row, error } = await supabase
     .from("matches")
-    .select("id, team_id, title, opponent_name, starts_at, location, status, created_by, created_at, updated_at")
+    .select("id, team_id, title, opponent_name, starts_at, location, status, started_at, ended_at, created_by, created_at, updated_at")
     .eq("id", matchId)
     .maybeSingle<MatchRow>();
-
+  
   if (error) {
     throw new IntegrationError("MATCH_READ_FAILED", error.message, 500);
   }
@@ -126,6 +130,85 @@ export async function getMatchById(
   return mapMatchRows([row], link ? [link] : [])[0];
 }
 
+export async function getActiveMatchForTeam(
+  supabase: SupabaseClient,
+  userId: string,
+  teamId: string
+): Promise<MatchListItem | null> {
+  await requireTeamMembership(supabase, userId, teamId);
+
+  const { data: row, error } = await supabase
+    .from("matches")
+    .select("id, team_id, title, opponent_name, starts_at, location, status, started_at, ended_at, created_by, created_at, updated_at")
+    .eq("team_id", teamId)
+    .eq("status", "live")
+    .order("started_at", { ascending: false })
+    .maybeSingle<MatchRow>();
+
+  if (error) {
+    throw new IntegrationError("MATCH_READ_FAILED", error.message, 500);
+  }
+
+  if (!row) {
+    return null;
+  }
+
+  return mapMatchRows([row], [])[0];
+}
+
+function resolveStatusTimestamps(status: MatchStatus) {
+  if (status === "live") {
+    return {
+      started_at: new Date().toISOString(),
+      ended_at: null,
+    };
+  }
+
+  if (status === "completed") {
+    return {
+      ended_at: new Date().toISOString(),
+    };
+  }
+
+  return {
+    started_at: null,
+    ended_at: null,
+  };
+}
+
+export async function updateMatchStatus(
+  supabase: SupabaseClient,
+  userId: string,
+  input: UpdateMatchStatusInput
+): Promise<MatchListItem> {
+  const existing = await getMatchById(supabase, userId, input.matchId);
+
+  if (input.status === "live") {
+    const active = await getActiveMatchForTeam(supabase, userId, existing.teamId);
+
+    if (active && active.id !== existing.id) {
+      throw new IntegrationError("ACTIVE_MATCH_EXISTS", "En annen kamp pågår allerede.", 409);
+    }
+  }
+
+  const timestamps = resolveStatusTimestamps(input.status);
+
+  const { data: row, error } = await supabase
+    .from("matches")
+    .update({
+      status: input.status,
+      ...timestamps,
+    })
+    .eq("id", input.matchId)
+    .select("id, team_id, title, opponent_name, starts_at, location, status, started_at, ended_at, created_by, created_at, updated_at")
+    .single<MatchRow>();
+
+  if (error) {
+    throw new IntegrationError("MATCH_UPDATE_FAILED", error.message, 500);
+  }
+
+  return mapMatchRows([row], [])[0];
+}
 export async function createManualMatch(
   supabase: SupabaseClient,
   userId: string,
@@ -144,7 +227,7 @@ export async function createManualMatch(
       status: input.status ?? "upcoming",
       created_by: userId,
     })
-    .select("id, team_id, title, opponent_name, starts_at, location, status, created_by, created_at, updated_at")
+    .select("id, team_id, title, opponent_name, starts_at, location, status, started_at, ended_at, created_by, created_at, updated_at")
     .single<MatchRow>();
 
   if (error) {

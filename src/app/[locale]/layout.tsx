@@ -7,8 +7,10 @@ import { routing } from "@/i18n/routing";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { TeamWorkspaceProvider } from "@/components/providers/TeamWorkspaceProvider";
+import { ActiveMatchProvider } from "@/components/providers/ActiveMatchProvider";
 import { Header } from "@/components/layout/Header";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { ActiveMatchBanner } from "@/components/layout/ActiveMatchBanner";
 import "../globals.css";
 
 const geistSans = Geist({
@@ -80,11 +82,14 @@ export default async function LocaleLayout({ children, params }: Props) {
           >
             <AuthProvider>
               <TeamWorkspaceProvider>
-                <div className="relative flex min-h-screen flex-col">
-                  <Header />
-                  <main className="flex-1 pb-20">{children}</main>
-                  <BottomNav />
-                </div>
+                <ActiveMatchProvider>
+                  <div className="relative flex min-h-screen flex-col">
+                    <Header />
+                    <ActiveMatchBanner />
+                    <main className="flex-1 pb-20">{children}</main>
+                    <BottomNav />
+                  </div>
+                </ActiveMatchProvider>
               </TeamWorkspaceProvider>
             </AuthProvider>
           </ThemeProvider>

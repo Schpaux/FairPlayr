@@ -13,9 +13,9 @@ import { FpButton } from "@/components/ui/FpButton";
 import { PlayerList } from "@/components/team/PlayerList";
 import { PlayerQuickAddForm } from "@/components/team/PlayerQuickAddForm";
 import { TeamNameForm } from "@/components/team/TeamNameForm";
-import { SpondIntegrationCard } from "@/components/team/SpondIntegrationCard";
 import { variants } from "@/lib/tokens";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
+import { Link } from "@/i18n/navigation";
 
 export function TeamManager() {
   const t = useTranslations("team");
@@ -176,12 +176,6 @@ export function TeamManager() {
         <AppCard className="p-6 text-sm text-muted-foreground">{common("loading")}</AppCard>
       ) : null}
 
-      {!workspace.isLoading ? (
-        <AppCard className="p-3 text-xs text-muted-foreground">
-          {workspace.mode === "guest-local" ? t("storage.guest") : t("storage.cloud")}
-        </AppCard>
-      ) : null}
-
       {workspace.error ? (
         <AppCard className="p-3 text-xs text-danger">{workspace.error}</AppCard>
       ) : null}
@@ -317,15 +311,23 @@ export function TeamManager() {
                 </AppCard>
               </motion.div>
 
-              {workspace.mode === "cloud" ? (
-                <motion.div variants={variants.fadeInUp}>
-                  <SpondIntegrationCard
-                    teamId={team.id}
-                    mode={workspace.mode}
-                    onImported={workspace.refresh}
-                  />
-                </motion.div>
-              ) : null}
+              <motion.div variants={variants.fadeInUp}>
+                <AppCard className="space-y-3 p-4">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-fp-spond">{t("spondInfo.badge")}</p>
+                    <h3 className="text-base font-semibold text-foreground">{t("spondInfo.title")}</h3>
+                    <p className="text-xs text-muted-foreground">{t("spondInfo.description")}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Link href="/settings" className="tap-target inline-flex h-10 items-center rounded-xl border border-fp-spond-border bg-fp-spond-soft px-4 text-sm font-semibold text-fp-spond-foreground">
+                      {t("spondInfo.manageCta")}
+                    </Link>
+                    <Link href="/match" className="tap-target inline-flex h-10 items-center rounded-xl border border-fp-border bg-fp-surface-2 px-4 text-sm font-semibold text-foreground">
+                      {t("spondInfo.importCta")}
+                    </Link>
+                  </div>
+                </AppCard>
+              </motion.div>
 
               <motion.div variants={variants.fadeInUp}>
                 <AppCard className="space-y-4">

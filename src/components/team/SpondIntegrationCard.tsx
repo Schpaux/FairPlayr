@@ -560,7 +560,7 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
         </>
       ) : null}
 
-      {notice ? <p className="text-xs text-fp-accent">{notice}</p> : null}
+      {notice ? <p className="text-xs text-fp-spond-foreground">{notice}</p> : null}
       {error ? <p className="text-xs text-danger">{error}</p> : null}
     </AppCard>
   );
