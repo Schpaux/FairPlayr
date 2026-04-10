@@ -42,6 +42,7 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
   const [isLoadingGroups, setIsLoadingGroups] = useState(false);
   const [isSavingLink, setIsSavingLink] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isSyncingEvents, setIsSyncingEvents] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
@@ -49,6 +50,8 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
   const [groups, setGroups] = useState<SpondGroupOption[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
   const [linkedGroupId, setLinkedGroupId] = useState<string | null>(null);
+  const [membersLastSyncedAt, setMembersLastSyncedAt] = useState<string | null>(null);
+  const [eventsLastSyncedAt, setEventsLastSyncedAt] = useState<string | null>(null);
 
   const selectedGroup = useMemo(
     () => groups.find((group) => group.id === selectedGroupId) ?? null,
@@ -93,13 +96,36 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
     const data = payload as {
       connected: boolean;
       accountLabel: string | null;
-      teamLink: { externalTeamId: string } | null;
+      teamLink: {
+        externalTeamId: string;
+        membersLastSyncedAt: string | null;
+        eventsLastSyncedAt: string | null;
+      } | null;
     };
 
     setConnected(data.connected);
     setAccountLabel(data.accountLabel);
     setLinkedGroupId(data.teamLink?.externalTeamId ?? null);
+    setMembersLastSyncedAt(data.teamLink?.membersLastSyncedAt ?? null);
+    setEventsLastSyncedAt(data.teamLink?.eventsLastSyncedAt ?? null);
   }, [mapErrorMessage, teamId]);
+
+  const formatSyncedAt = (value: string | null) => {
+    if (!value) {
+      return t("neverSynced");
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return t("neverSynced");
+    }
+
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(date);
+  };
 
   const loadGroups = useCallback(async () => {
     setIsLoadingGroups(true);
@@ -256,13 +282,25 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
         throw new Error(mapErrorMessage(parsed.code, parsed.message));
       }
 
-      const data = payload as { created: number; updated: number; total: number };
+      const data = payload as {
+        created: number;
+        updated: number;
+        reactivated: number;
+        inactivated: number;
+        unchanged: number;
+        total: number;
+        syncedAt: string;
+      };
 
       await onImported();
+      setMembersLastSyncedAt(data.syncedAt ?? new Date().toISOString());
       setNotice(
-        t("importResult", {
+        t("syncMembersResult", {
           created: data.created,
           updated: data.updated,
+          reactivated: data.reactivated,
+          inactivated: data.inactivated,
+          unchanged: data.unchanged,
           total: data.total,
         })
       );
@@ -270,6 +308,41 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
       setError(cause instanceof Error ? cause.message : t("errors.generic"));
     } finally {
       setIsImporting(false);
+    }
+  };
+
+  const handleSyncEvents = async () => {
+    setError(null);
+    setNotice(null);
+    setIsSyncingEvents(true);
+
+    try {
+      const response = await fetch("/api/integrations/spond/sync-events", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ teamId }),
+      });
+
+      const payload = (await response.json()) as unknown;
+
+      if (!response.ok) {
+        const parsed = parseApiError(payload);
+        throw new Error(mapErrorMessage(parsed.code, parsed.message));
+      }
+
+      const data = payload as { total: number; syncedAt: string };
+      setEventsLastSyncedAt(data.syncedAt ?? new Date().toISOString());
+      setNotice(
+        data.total > 0
+          ? t("syncEventsResult", { total: data.total })
+          : t("syncEventsNoChanges")
+      );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t("errors.generic"));
+    } finally {
+      setIsSyncingEvents(false);
     }
   };
 
@@ -379,12 +452,34 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
                   }}
                   disabled={!linkedGroupId || isImporting}
                 >
-                  {isImporting ? t("importing") : t("importCta")}
+                  {isImporting ? t("syncMembersLoading") : t("syncMembersCta")}
+                </FpButton>
+                <FpButton
+                  type="button"
+                  variant="ghost"
+                  size="md"
+                  onClick={() => {
+                    void handleSyncEvents();
+                  }}
+                  disabled={!linkedGroupId || isSyncingEvents}
+                >
+                  {isSyncingEvents ? t("syncEventsLoading") : t("syncEventsCta")}
                 </FpButton>
               </div>
 
               {linkedGroupId ? (
-                <p className="text-xs text-muted-foreground">{t("linkedGroupReady")}</p>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">{t("linkedGroupReady")}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("lastMembersSync", { value: formatSyncedAt(membersLastSyncedAt) })}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("lastEventsSync", { value: formatSyncedAt(eventsLastSyncedAt) })}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("syncMembersInactiveNotice")}
+                  </p>
+                </div>
               ) : null}
             </div>
           )}

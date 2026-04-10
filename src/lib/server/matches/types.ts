@@ -21,6 +21,7 @@ export interface ExternalEventLinkRow {
   external_event_id: string;
   external_team_id: string | null;
   external_event_name: string | null;
+  rsvp_last_synced_at: string | null;
   imported_at: string;
   created_at: string;
 }
@@ -35,6 +36,7 @@ export interface MatchListItem {
   status: MatchStatus;
   source: "manual" | "spond";
   externalEventId: string | null;
+  rsvpLastSyncedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

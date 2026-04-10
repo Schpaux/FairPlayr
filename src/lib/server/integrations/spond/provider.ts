@@ -97,6 +97,23 @@ async function getEventsWithToken(token: string, groupId: string): Promise<Spond
   return readJsonResponse<SpondEvent[]>(response);
 }
 
+async function getEventWithToken(token: string, eventId: string): Promise<SpondEvent> {
+  const response = await fetch(`${SPOND_BASE_URL}sponds/${encodeURIComponent(eventId)}`, {
+    method: "GET",
+    headers: {
+      "content-type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new IntegrationError("SPOND_REQUEST_FAILED", "Feil ved henting av data fra Spond.", 502);
+  }
+
+  return readJsonResponse<SpondEvent>(response);
+}
+
 export const spondProvider = {
   async verifyCredentials(credentials: SpondCredentials): Promise<{ token: string; profile: SpondProfile }> {
     const token = await login(credentials);
@@ -112,5 +129,10 @@ export const spondProvider = {
   async getUpcomingEvents(credentials: SpondCredentials, groupId: string): Promise<SpondEvent[]> {
     const token = await login(credentials);
     return getEventsWithToken(token, groupId);
+  },
+
+  async getEvent(credentials: SpondCredentials, eventId: string): Promise<SpondEvent> {
+    const token = await login(credentials);
+    return getEventWithToken(token, eventId);
   },
 };

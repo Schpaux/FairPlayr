@@ -44,6 +44,7 @@ function mapMatchRows(rows: MatchRow[], links: ExternalEventLinkRow[]): MatchLis
       status: row.status,
       source: link ? "spond" : "manual",
       externalEventId: link?.external_event_id ?? null,
+      rsvpLastSyncedAt: link?.rsvp_last_synced_at ?? null,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
@@ -78,7 +79,7 @@ export async function getTeamMatches(
 
   const { data: links, error: linksError } = await supabase
     .from("external_event_links")
-    .select("id, match_id, team_id, provider, external_event_id, external_team_id, external_event_name, imported_at, created_at")
+    .select("id, match_id, team_id, provider, external_event_id, external_team_id, external_event_name, rsvp_last_synced_at, imported_at, created_at")
     .in("match_id", matchIds)
     .eq("provider", "spond")
     .returns<ExternalEventLinkRow[]>();
@@ -113,7 +114,7 @@ export async function getMatchById(
 
   const { data: link, error: linkError } = await supabase
     .from("external_event_links")
-    .select("id, match_id, team_id, provider, external_event_id, external_team_id, external_event_name, imported_at, created_at")
+    .select("id, match_id, team_id, provider, external_event_id, external_team_id, external_event_name, rsvp_last_synced_at, imported_at, created_at")
     .eq("match_id", row.id)
     .eq("provider", "spond")
     .maybeSingle<ExternalEventLinkRow>();

@@ -69,6 +69,7 @@ export function MatchPlannerManager() {
   const [loadingEventId, setLoadingEventId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [eventsLastSyncedAt, setEventsLastSyncedAt] = useState<string | null>(null);
 
   const [title, setTitle] = useState("");
   const [opponentName, setOpponentName] = useState("");
@@ -121,6 +122,23 @@ export function MatchPlannerManager() {
     }
   }, [t]);
 
+  const formatSyncedAt = (value: string | null) => {
+    if (!value) {
+      return t("neverSynced");
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return t("neverSynced");
+    }
+
+    return new Intl.DateTimeFormat(locale, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(date);
+  };
+
   const loadMatches = useCallback(async () => {
     if (!team) {
       return;
@@ -155,12 +173,13 @@ export function MatchPlannerManager() {
     setIsLoadingEvents(true);
 
     try {
-      const response = await fetch(
-        `/api/integrations/spond/events?teamId=${encodeURIComponent(team.id)}`,
-        {
-          method: "GET",
-        }
-      );
+      const response = await fetch("/api/integrations/spond/sync-events", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ teamId: team.id }),
+      });
 
       const payload = (await response.json()) as unknown;
 
@@ -169,8 +188,9 @@ export function MatchPlannerManager() {
         throw new Error(mapError(parsed.code, parsed.message));
       }
 
-      const data = payload as { events: SpondEventItem[] };
+      const data = payload as { events: SpondEventItem[]; syncedAt: string };
       setEvents(data.events ?? []);
+      setEventsLastSyncedAt(data.syncedAt ?? new Date().toISOString());
     } finally {
       setIsLoadingEvents(false);
     }
@@ -185,7 +205,7 @@ export function MatchPlannerManager() {
 
     void (async () => {
       try {
-        await Promise.all([loadMatches(), loadEvents()]);
+        await loadMatches();
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : t("errors.generic"));
       }
@@ -430,7 +450,12 @@ export function MatchPlannerManager() {
 
       <AppCard className="space-y-3 p-4">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold text-foreground">{t("spondTitle")}</h3>
+          <div className="space-y-1">
+            <h3 className="text-sm font-semibold text-foreground">{t("spondTitle")}</h3>
+            <p className="text-xs text-muted-foreground">
+              {t("lastEventsSync", { value: formatSyncedAt(eventsLastSyncedAt) })}
+            </p>
+          </div>
           <FpButton
             type="button"
             variant="ghost"
@@ -442,7 +467,7 @@ export function MatchPlannerManager() {
             }}
             disabled={isLoadingEvents}
           >
-            {t("refreshEvents")}
+            {isLoadingEvents ? t("syncEventsLoading") : t("syncEventsCta")}
           </FpButton>
         </div>
 

@@ -33,11 +33,29 @@ export interface SpondEvent {
   heading?: string;
   startTimestamp?: string;
   endTimestamp?: string;
+  responses?: {
+    acceptedIds?: string[];
+    declinedIds?: string[];
+    unansweredIds?: string[];
+    unconfirmedIds?: string[];
+    waitinglistIds?: string[];
+  };
+  owners?: Array<{
+    id: string;
+    response?: string;
+  }>;
   location?: {
     feature?: string;
     address?: string;
   };
 }
+
+export type SpondRsvpStatus =
+  | "accepted"
+  | "declined"
+  | "unanswered"
+  | "unconfirmed"
+  | "waitinglist";
 
 export interface NormalizedExternalGroup {
   id: string;
@@ -78,6 +96,14 @@ export interface ExternalTeamLinkRow {
   provider: IntegrationProvider;
   external_team_id: string;
   external_team_name: string;
+  members_last_synced_at: string | null;
+  events_last_synced_at: string | null;
   created_by: string;
   created_at: string;
+}
+
+export interface NormalizedExternalRsvpEntry {
+  externalMemberId: string;
+  response: SpondRsvpStatus;
+  isOwner: boolean;
 }
