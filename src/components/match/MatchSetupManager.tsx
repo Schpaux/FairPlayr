@@ -13,11 +13,9 @@ import {
   setMatchHalves,
   setMatchDurationPreset,
   setReportEnabled,
-  toggleSquadPlayer,
   setSelectedSquad,
-  selectAllSquad,
-  promoteToStarter,
-  demoteToBench,
+  assignStarterToSlot,
+  clearStarterSlot,
   autoFillLineup,
   getFormationPresets,
   setMatchFormation,
@@ -41,7 +39,6 @@ import { FpButton } from "@/components/ui/FpButton";
 import { Link } from "@/i18n/navigation";
 import { FormatSelector } from "@/components/match/FormatSelector";
 import { DurationPicker } from "@/components/match/DurationPicker";
-import { SquadSelector } from "@/components/match/SquadSelector";
 import { LineupAssigner } from "@/components/match/LineupAssigner";
 import { FormationSelector } from "@/components/match/FormationSelector";
 import { variants } from "@/lib/tokens";
@@ -104,10 +101,12 @@ export function MatchSetupManager() {
     const teamPlayerIds = team.players.map((player) => player.id);
 
     if (stored && stored.config.teamId === team.id) {
-      setSetup(reconcileWithTeam(stored.config, teamPlayerIds));
+      const reconciled = reconcileWithTeam(stored.config, teamPlayerIds);
+      setSetup(setSelectedSquad(reconciled, teamPlayerIds));
       return;
     }
-    setSetup(createMatchSetup(team.id));
+
+    setSetup(setSelectedSquad(createMatchSetup(team.id), teamPlayerIds));
   }, [isHydrated, team, workspace.isLoading]);
 
   // ── Auto-save draft on every setup change ──────────────────────────────
@@ -149,30 +148,12 @@ export function MatchSetupManager() {
     setSetup((prev) => (prev ? setReportEnabled(prev, enabled) : prev));
   };
 
-  const handleToggleSquad = (playerId: string) => {
-    setSetup((prev) => (prev ? toggleSquadPlayer(prev, playerId) : prev));
+  const handleAssignToSlot = (slotId: string, playerId: string) => {
+    setSetup((prev) => (prev ? assignStarterToSlot(prev, slotId, playerId) : prev));
   };
 
-  const handlePromote = (playerId: string) => {
-    setSetup((prev) => (prev ? promoteToStarter(prev, playerId) : prev));
-  };
-
-  const handleDemote = (playerId: string) => {
-    setSetup((prev) => (prev ? demoteToBench(prev, playerId) : prev));
-  };
-
-  const handleSelectAll = () => {
-    if (!team) {
-      return;
-    }
-
-    setSetup((prev) =>
-      prev ? selectAllSquad(prev, team.players.map((player) => player.id)) : prev
-    );
-  };
-
-  const handleClearSelection = () => {
-    setSetup((prev) => (prev ? setSelectedSquad(prev, []) : prev));
+  const handleClearSlot = (slotId: string) => {
+    setSetup((prev) => (prev ? clearStarterSlot(prev, slotId) : prev));
   };
 
   const handleAutoFill = () => {
@@ -340,6 +321,16 @@ export function MatchSetupManager() {
           />
         </SetupSection>
 
+        <SetupSection label={t("sections.lineup")}>
+          <LineupAssigner
+            setup={setup}
+            players={team.players}
+            onAssignToSlot={handleAssignToSlot}
+            onClearSlot={handleClearSlot}
+            onAutoFill={handleAutoFill}
+          />
+        </SetupSection>
+
         <SetupSection label={t("sections.summary")}> 
           <div className="rounded-xl border border-fp-border bg-fp-surface-2 p-3">
             <label className="flex items-start justify-between gap-3">
@@ -369,40 +360,6 @@ export function MatchSetupManager() {
             </label>
           </div>
         </SetupSection>
-
-        {/* Squad */}
-        <SetupSection label={t("sections.squad")}>
-          <SquadSelector
-            players={team.players}
-            selectedIds={setup.selectedPlayerIds}
-            onToggle={handleToggleSquad}
-            onSelectAll={handleSelectAll}
-            onClearSelection={handleClearSelection}
-            selectAllLabel={t("squad.selectAll")}
-            clearLabel={t("squad.clear")}
-          />
-        </SetupSection>
-
-        {/* Lineup — only shown once at least 1 player is in the squad */}
-        {setup.selectedPlayerIds.length > 0 && (
-          <SetupSection label={t("sections.lineup")}>
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={handleAutoFill}
-                className="tap-target rounded-lg border border-fp-border bg-fp-surface-2 px-3 py-1.5 text-xs font-medium text-muted-foreground"
-              >
-                {t("lineup.autoFill")}
-              </button>
-            </div>
-            <LineupAssigner
-              setup={setup}
-              players={team.players}
-              onPromote={handlePromote}
-              onDemote={handleDemote}
-            />
-          </SetupSection>
-        )}
 
         {/* Start Match CTA */}
         <motion.div variants={variants.fadeInUp} className="pt-2 pb-4">

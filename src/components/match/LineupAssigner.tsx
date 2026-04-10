@@ -1,156 +1,296 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { Search, UserPlus, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { ArrowDown, ArrowUp } from "lucide-react";
 import type { Player } from "@/domain/team";
 import type { MatchSetup } from "@/domain/match";
-import { getRequiredStarters, getBenchPlayerIds } from "@/domain/match";
+import { getBenchPlayerIds, getFormationSlots, getRequiredStarters } from "@/domain/match";
 import { cn } from "@/lib/utils";
 
 interface LineupAssignerProps {
   setup: MatchSetup;
   players: Player[];
-  onPromote: (playerId: string) => void;
-  onDemote: (playerId: string) => void;
+  onAssignToSlot: (slotId: string, playerId: string) => void;
+  onClearSlot: (slotId: string) => void;
+  onAutoFill: () => void;
 }
 
 export function LineupAssigner({
   setup,
   players,
-  onPromote,
-  onDemote,
+  onAssignToSlot,
+  onClearSlot,
+  onAutoFill,
 }: LineupAssignerProps) {
   const t = useTranslations("matchSetup.lineup");
   const required = getRequiredStarters(setup);
+  const slots = getFormationSlots(setup.format, setup.formationId);
   const currentStarters = setup.startingPlayerIds.length;
-  const isStartingFull = currentStarters >= required;
   const benchIds = getBenchPlayerIds(setup);
 
-  // Build lookup for fast name resolution
-  const playerMap = new Map(players.map((p) => [p.id, p]));
+  const playerMap = useMemo(() => new Map(players.map((player) => [player.id, player])), [players]);
+  const onFieldSet = useMemo(() => new Set(setup.startingPlayerIds), [setup.startingPlayerIds]);
+
+  const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [showAllBench, setShowAllBench] = useState(false);
+
+  const activeSlotPlayerId = activeSlotId ? setup.slotAssignments[activeSlotId] ?? null : null;
+
+  const filteredPlayers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) {
+      return players;
+    }
+
+    return players.filter((player) => player.name.toLowerCase().includes(q));
+  }, [players, search]);
+
+  const benchToShow = showAllBench ? benchIds : benchIds.slice(0, 8);
+
+  const firstEmptySlotId = useMemo(() => {
+    for (const slot of slots) {
+      if (!setup.slotAssignments[slot.id]) {
+        return slot.id;
+      }
+    }
+
+    return null;
+  }, [setup.slotAssignments, slots]);
+
+  const handleOpenPicker = (slotId: string) => {
+    setActiveSlotId(slotId);
+    setSearch("");
+  };
+
+  const handleAssign = (playerId: string) => {
+    if (!activeSlotId) {
+      return;
+    }
+
+    onAssignToSlot(activeSlotId, playerId);
+    setActiveSlotId(null);
+    setSearch("");
+  };
+
+  const handleBenchQuickAdd = (playerId: string) => {
+    if (!firstEmptySlotId) {
+      return;
+    }
+
+    onAssignToSlot(firstEmptySlotId, playerId);
+  };
 
   return (
-    <div className="space-y-4">
-      {/* ── Starting section ─────────────────────────────────────────── */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {t("starting")}
-          </span>
+          </p>
+          <p className="text-xs text-muted-foreground">{t("tapHint")}</p>
+        </div>
+        <div className="flex items-center gap-2">
           <span
             className={cn(
               "text-xs font-semibold tabular-nums",
-              currentStarters === required
-                ? "text-fp-accent"
-                : "text-muted-foreground"
+              currentStarters === required ? "text-fp-accent" : "text-muted-foreground"
             )}
           >
             {t("starterSlots", { current: currentStarters, required })}
           </span>
-        </div>
-
-        {/* Starter rows */}
-        <div className="flex flex-col divide-y divide-fp-border rounded-2xl border border-fp-border overflow-hidden">
-          {setup.startingPlayerIds.length === 0 ? (
-            <p className="px-4 py-3 text-sm text-muted-foreground italic">
-              {t("noStartersYet")}
-            </p>
-          ) : (
-            setup.startingPlayerIds.map((id) => {
-              const player = playerMap.get(id);
-              if (!player) return null;
-              return (
-                <div
-                  key={id}
-                  className="flex items-center justify-between gap-3 px-4 py-3 bg-primary/5"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/20 text-[10px] font-bold text-primary">
-                      S
-                    </span>
-                    <span className="text-sm font-medium text-foreground truncate">
-                      {player.name}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => onDemote(id)}
-                    aria-label={t("demoteLabel")}
-                    className="flex h-8 min-w-[64px] items-center justify-center gap-1 rounded-lg border border-fp-border bg-fp-surface-2 px-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors tap-target"
-                  >
-                    <ArrowDown size={12} />
-                    {t("demoteLabel")}
-                  </button>
-                </div>
-              );
-            })
-          )}
-
-          {/* Empty starter slots */}
-          {Array.from({ length: required - currentStarters }).map((_, i) => (
-            <div
-              key={`empty-${i}`}
-              className="flex items-center gap-2.5 px-4 py-3 opacity-40"
-            >
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground text-[10px] text-muted-foreground">
-                {currentStarters + i + 1}
-              </span>
-              <span className="text-xs text-muted-foreground italic">
-                {t("emptySlot")}
-              </span>
-            </div>
-          ))}
+          <button
+            type="button"
+            onClick={onAutoFill}
+            className="tap-target rounded-lg border border-fp-border bg-fp-surface-2 px-2 py-1 text-[11px] font-medium text-muted-foreground"
+          >
+            {t("autoFill")}
+          </button>
         </div>
       </div>
 
-      {/* ── Bench section ────────────────────────────────────────────── */}
-      {benchIds.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {t("bench")}
-            </span>
-            {isStartingFull && (
-              <span className="text-[10px] text-muted-foreground">
-                {t("startingFull")}
-              </span>
-            )}
-          </div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {slots.map((slot, index) => {
+          const playerId = setup.slotAssignments[slot.id] ?? null;
+          const player = playerId ? playerMap.get(playerId) ?? null : null;
 
-          <div className="flex flex-col divide-y divide-fp-border rounded-2xl border border-fp-border overflow-hidden">
-            {benchIds.map((id) => {
-              const player = playerMap.get(id);
-              if (!player) return null;
-              return (
-                <div
-                  key={id}
-                  className="flex items-center justify-between gap-3 px-4 py-3"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-fp-surface-2 text-[10px] font-bold text-muted-foreground">
-                      B
-                    </span>
-                    <span className="text-sm font-medium text-muted-foreground truncate">
-                      {player.name}
-                    </span>
-                  </div>
+          return (
+            <button
+              key={slot.id}
+              type="button"
+              onClick={() => handleOpenPicker(slot.id)}
+              className={cn(
+                "tap-target rounded-xl border px-3 py-3 text-left transition-colors",
+                player
+                  ? "border-primary/30 bg-primary/10"
+                  : "border-dashed border-fp-border bg-fp-surface-2"
+              )}
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {t("positionLabel", { value: index + 1 })}
+              </p>
+              <p className={cn("mt-1 text-sm font-semibold", player ? "text-foreground" : "text-muted-foreground")}> 
+                {player ? player.name : t("emptySlot")}
+              </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                {player ? t("changePlayer") : t("choosePlayer")}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="space-y-2 rounded-xl border border-fp-border bg-fp-surface-2 p-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("benchTitle")}</p>
+            <p className="text-xs text-muted-foreground">{t("benchSubtitle")}</p>
+          </div>
+          <span className="text-xs font-medium text-muted-foreground tabular-nums">
+            {benchIds.length}
+          </span>
+        </div>
+
+        {benchIds.length === 0 ? (
+          <p className="text-xs text-muted-foreground">{t("benchEmpty")}</p>
+        ) : (
+          <>
+            <div className="flex flex-wrap gap-2">
+              {benchToShow.map((playerId) => {
+                const player = playerMap.get(playerId);
+                if (!player) {
+                  return null;
+                }
+
+                return (
                   <button
-                    onClick={() => !isStartingFull && onPromote(id)}
-                    disabled={isStartingFull}
-                    aria-label={t("promoteLabel")}
+                    key={player.id}
+                    type="button"
+                    onClick={() => handleBenchQuickAdd(player.id)}
+                    disabled={!firstEmptySlotId}
                     className={cn(
-                      "flex h-8 min-w-[64px] items-center justify-center gap-1 rounded-lg border px-2 text-xs font-medium transition-colors tap-target",
-                      isStartingFull
-                        ? "border-fp-border bg-fp-surface-2 text-muted-foreground/40 cursor-not-allowed"
-                        : "border-fp-accent/30 bg-fp-accent/10 text-fp-accent hover:bg-fp-accent/20"
+                      "tap-target rounded-full border px-3 py-1.5 text-xs font-medium",
+                      firstEmptySlotId
+                        ? "border-fp-border bg-background text-foreground"
+                        : "cursor-not-allowed border-fp-border bg-background text-muted-foreground/60"
                     )}
                   >
-                    <ArrowUp size={12} />
-                    {t("promoteLabel")}
+                    {player.name}
                   </button>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+
+            {benchIds.length > 8 ? (
+              <button
+                type="button"
+                className="tap-target text-xs font-medium text-primary"
+                onClick={() => setShowAllBench((previous) => !previous)}
+              >
+                {showAllBench ? t("showLessBench") : t("showMoreBench", { count: benchIds.length - 8 })}
+              </button>
+            ) : null}
+          </>
+        )}
+      </div>
+
+      {activeSlotId ? (
+        <div className="fixed inset-0 z-40 flex items-end bg-black/45 p-3">
+          <div className="w-full max-h-[78vh] overflow-hidden rounded-2xl border border-fp-border bg-background shadow-xl">
+            <div className="flex items-center justify-between border-b border-fp-border px-4 py-3">
+              <div>
+                <p className="text-sm font-semibold text-foreground">{t("pickerTitle")}</p>
+                <p className="text-xs text-muted-foreground">{t("pickerSubtitle")}</p>
+              </div>
+              <button
+                type="button"
+                className="tap-target rounded-lg border border-fp-border bg-fp-surface-2 p-2 text-muted-foreground"
+                onClick={() => setActiveSlotId(null)}
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="border-b border-fp-border px-4 py-3">
+              <label className="flex items-center gap-2 rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2">
+                <Search size={14} className="text-muted-foreground" />
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={t("searchPlaceholder")}
+                  className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                />
+              </label>
+            </div>
+
+            <div className="max-h-[56vh] overflow-y-auto px-3 py-3">
+              <div className="space-y-2">
+                {filteredPlayers.map((player) => {
+                  const isOnField = onFieldSet.has(player.id);
+                  const isCurrent = activeSlotPlayerId === player.id;
+
+                  return (
+                    <button
+                      key={player.id}
+                      type="button"
+                      onClick={() => handleAssign(player.id)}
+                      className={cn(
+                        "tap-target flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left",
+                        isCurrent
+                          ? "border-primary/30 bg-primary/10"
+                          : "border-fp-border bg-fp-surface-2"
+                      )}
+                    >
+                      <span className="text-sm font-medium text-foreground">{player.name}</span>
+                      <span
+                        className={cn(
+                          "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                          isCurrent
+                            ? "bg-primary/15 text-primary"
+                            : isOnField
+                              ? "bg-fp-surface-3 text-muted-foreground"
+                              : "bg-fp-accent/15 text-fp-accent"
+                        )}
+                      >
+                        {isCurrent ? t("status.current") : isOnField ? t("status.onField") : t("status.bench")}
+                      </span>
+                    </button>
+                  );
+                })}
+
+                {filteredPlayers.length === 0 ? (
+                  <p className="px-2 py-3 text-xs text-muted-foreground">{t("noSearchResults")}</p>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 border-t border-fp-border p-3">
+              <button
+                type="button"
+                className="tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-xs font-medium text-muted-foreground"
+                onClick={() => setActiveSlotId(null)}
+              >
+                {t("closePicker")}
+              </button>
+              <button
+                type="button"
+                className="tap-target rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-xs font-medium text-danger"
+                onClick={() => {
+                  onClearSlot(activeSlotId);
+                  setActiveSlotId(null);
+                }}
+                disabled={!activeSlotPlayerId}
+              >
+                <span className="inline-flex items-center gap-1">
+                  <UserPlus size={12} />
+                  {t("sendToBench")}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -372,7 +372,6 @@
       "formation": "Formation",
       "duration": "Duration",
       "summary": "Match Summary",
-      "squad": "Select Squad",
       "lineup": "Starting Lineup"
     },
     "reportToggle": {
@@ -402,13 +401,28 @@
     "lineup": {
       "starterSlots": "{current} / {required}",
       "starting": "Starting",
-      "bench": "Bench",
       "autoFill": "Auto-fill",
-      "promoteLabel": "Start",
-      "demoteLabel": "Bench",
-      "startingFull": "Bench a starter first",
-      "noStartersYet": "No starters assigned yet",
-      "emptySlot": "Empty slot"
+      "emptySlot": "Empty slot",
+      "tapHint": "Tap a position to pick a player",
+      "positionLabel": "Position {value}",
+      "choosePlayer": "Choose player",
+      "changePlayer": "Change player",
+      "benchTitle": "Bench",
+      "benchSubtitle": "Available reserves",
+      "benchEmpty": "No reserves right now",
+      "showMoreBench": "Show {count} more",
+      "showLessBench": "Show less",
+      "pickerTitle": "Choose player",
+      "pickerSubtitle": "Tap to place the player directly",
+      "searchPlaceholder": "Search player",
+      "closePicker": "Close",
+      "sendToBench": "Send to bench",
+      "noSearchResults": "No players match your search",
+      "status": {
+        "current": "Selected",
+        "onField": "On field",
+        "bench": "Bench"
+      }
     },
     "validation": {
       "selectMoreStarters": "{needed, plural, one {# more starter needed} other {# more starters needed}}",

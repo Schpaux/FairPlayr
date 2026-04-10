@@ -372,7 +372,6 @@
       "formation": "Formasjon",
       "duration": "Varighet",
       "summary": "Kampoppsummering",
-      "squad": "Velg tropp",
       "lineup": "Startoppstilling"
     },
     "reportToggle": {
@@ -402,13 +401,28 @@
     "lineup": {
       "starterSlots": "{current} / {required}",
       "starting": "Starter",
-      "bench": "Benken",
       "autoFill": "Fyll automatisk",
-      "promoteLabel": "Start",
-      "demoteLabel": "Benk",
-      "startingFull": "Benk en starter først",
-      "noStartersYet": "Ingen startere valgt ennå",
-      "emptySlot": "Tom plass"
+      "emptySlot": "Tom plass",
+      "tapHint": "Trykk på en posisjon for å velge spiller",
+      "positionLabel": "Posisjon {value}",
+      "choosePlayer": "Velg spiller",
+      "changePlayer": "Bytt spiller",
+      "benchTitle": "Benk",
+      "benchSubtitle": "Tilgjengelige reserver",
+      "benchEmpty": "Ingen reserver akkurat nå",
+      "showMoreBench": "Vis {count} flere",
+      "showLessBench": "Vis færre",
+      "pickerTitle": "Velg spiller",
+      "pickerSubtitle": "Trykk for å plassere spilleren direkte",
+      "searchPlaceholder": "Søk spiller",
+      "closePicker": "Lukk",
+      "sendToBench": "Send til benk",
+      "noSearchResults": "Ingen spillere matcher søket",
+      "status": {
+        "current": "Valgt",
+        "onField": "På banen",
+        "bench": "Benk"
+      }
     },
     "validation": {
       "selectMoreStarters": "{needed, plural, one {Trenger # starter til} other {Trenger # startere til}}",

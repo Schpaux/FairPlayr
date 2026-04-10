@@ -247,10 +247,15 @@ The codebase currently reads these variables:
 | NEXT_PUBLIC_SUPABASE_URL | Yes | Supabase project URL for browser/server clients |
 | NEXT_PUBLIC_SUPABASE_ANON_KEY | Yes | Supabase anon key for app auth/data access |
 | SPOND_CREDENTIALS_SECRET | Required for Spond | AES-GCM encryption key material for stored Spond credentials |
+| GOOGLE_CLOUD_PROJECT | Required for AI | Google Cloud project id used by Vertex AI backend calls |
+| VERTEX_AI_LOCATION | Optional (default: `global`) | Vertex AI location for model endpoint selection |
+| VERTEX_AI_MODEL | Optional (default: `gemini-2.5-flash`) | Vertex AI Gemini model used by internal text generation |
+| AI_HEALTHCHECK_TOKEN | Optional (recommended in prod) | Protects internal AI health endpoint in production |
 
 Notes:
 
 - If SPOND_CREDENTIALS_SECRET is missing, Spond connect/import endpoints will fail with encryption configuration errors.
+- AI infrastructure setup notes are documented in `docs/ai-vertex-setup.md`.
 - Do not commit production secrets.
 
 ## Development Notes
