@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Player, Team } from "@/domain/team";
 import type { TeamRepository } from "@/lib/teamData/types";
+import { ensureUserProfile } from "@/lib/supabase/profile";
 
 interface TeamRow {
   id: string;
@@ -37,24 +38,6 @@ function toTeam(row: TeamRow, players: PlayerRow[]): Team {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
-}
-
-async function ensureProfile(supabase: SupabaseClient, userId: string, email?: string | null) {
-  const displayName = email?.split("@")[0] ?? null;
-
-  const { error } = await supabase.from("profiles").upsert(
-    {
-      id: userId,
-      display_name: displayName,
-      preferred_language: "en",
-      preferred_theme: "system",
-    },
-    { onConflict: "id" }
-  );
-
-  if (error) {
-    throw new Error(error.message);
-  }
 }
 
 async function getOwnedTeamRow(supabase: SupabaseClient, ownerId: string) {
@@ -118,7 +101,11 @@ export function createSupabaseTeamRepository({
       return readCloudTeam(supabase, userId);
     },
     async createTeam(name) {
-      await ensureProfile(supabase, userId, userEmail);
+      await ensureUserProfile({
+        supabase,
+        userId,
+        userEmail,
+      });
 
       const { data: teamRow, error: teamError } = await supabase
         .from("teams")

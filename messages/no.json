@@ -104,8 +104,30 @@
   "auth": {
     "actions": {
       "signIn": "Logg inn",
+      "signingIn": "Logger inn...",
+      "signInWithEmail": "Logg inn med e-post",
+      "signUpWithEmail": "Registrer med e-post",
+      "continueWithGoogle": "Fortsett med Google",
+      "continueWithMagicLink": "Fortsett med magisk lenke",
+      "continueAsGuest": "Fortsett som gjest",
+      "goToSignUp": "Opprett konto",
+      "goToSignIn": "Gå til innlogging",
+      "useMagicLinkInstead": "Bruk magisk lenke i stedet",
+      "connecting": "Kobler til...",
+      "creatingAccount": "Oppretter konto...",
       "signOut": "Logg ut",
       "signingOut": "Logger ut..."
+    },
+    "common": {
+      "or": "eller"
+    },
+    "fields": {
+      "email": "E-post",
+      "password": "Passord",
+      "confirmPassword": "Bekreft passord"
+    },
+    "optional": {
+      "subtitle": "Logg inn for å synkronisere data på tvers av enheter. Du kan alltid fortsette som gjest."
     },
     "status": {
       "loading": "Sjekker kontostatus...",
@@ -116,20 +138,46 @@
     },
     "signIn": {
       "title": "Logg inn",
-      "subtitle": "Skriv inn e-post, så sender vi deg en magisk lenke.",
+      "subtitle": "Velg innloggingsmetode. Innlogging er valgfritt.",
+      "magicTitle": "Magisk lenke",
+      "passwordTitle": "E-post og passord",
       "emailLabel": "E-post",
       "emailPlaceholder": "trener@eksempel.no",
+      "passwordPlaceholder": "Skriv inn passordet ditt",
       "submit": "Send magisk lenke",
       "submitting": "Sender...",
       "alreadySignedIn": "Du er allerede logget inn.",
       "goToTeam": "Gå til Lag",
-      "disclaimer": "Innlogging er valgfritt. Du kan fortsatt bruke appen i gjestemodus."
+      "disclaimer": "Innlogging er valgfritt. Du kan fortsatt bruke appen i gjestemodus.",
+      "noAccount": "Ingen konto ennå?"
+    },
+    "signUp": {
+      "title": "Opprett konto",
+      "subtitle": "Opprett konto for å synkronisere Lag og Spillere på tvers av enheter.",
+      "emailPlaceholder": "trener@eksempel.no",
+      "passwordPlaceholder": "Lag et passord",
+      "confirmPasswordPlaceholder": "Gjenta passordet",
+      "alreadySignedIn": "Du er allerede logget inn.",
+      "goToTeam": "Gå til Lag",
+      "magicAlternative": "Vil du heller slippe passord?",
+      "haveAccount": "Har du allerede konto?"
     },
     "messages": {
-      "magicLinkSent": "Magisk lenke sendt. Sjekk innboksen din."
+      "magicLinkSent": "Magisk lenke sendt. Sjekk innboksen din.",
+      "confirmEmail": "Konto opprettet. Sjekk e-posten din for å bekrefte kontoen."
+    },
+    "errors": {
+      "invalidCredentials": "Ugyldig e-post eller passord.",
+      "emailNotConfirmed": "Bekreft e-posten din før du logger inn.",
+      "userAlreadyRegistered": "Det finnes allerede en konto med denne e-posten.",
+      "weakPassword": "Passordet er for svakt. Bruk minst 6 tegn.",
+      "generic": "Autentisering feilet. Prøv igjen."
     },
     "validation": {
-      "emailRequired": "E-post er påkrevd."
+      "emailRequired": "E-post er påkrevd.",
+      "passwordRequired": "Passord er påkrevd.",
+      "passwordTooShort": "Passord må ha minst 6 tegn.",
+      "passwordMismatch": "Passordene er ikke like."
     }
   },
   "matchSetup": {

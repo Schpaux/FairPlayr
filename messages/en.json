@@ -104,8 +104,30 @@
   "auth": {
     "actions": {
       "signIn": "Sign in",
+      "signingIn": "Signing in...",
+      "signInWithEmail": "Sign in with email",
+      "signUpWithEmail": "Sign up with email",
+      "continueWithGoogle": "Continue with Google",
+      "continueWithMagicLink": "Continue with magic link",
+      "continueAsGuest": "Continue as guest",
+      "goToSignUp": "Create an account",
+      "goToSignIn": "Go to sign in",
+      "useMagicLinkInstead": "Use magic link instead",
+      "connecting": "Connecting...",
+      "creatingAccount": "Creating account...",
       "signOut": "Sign out",
       "signingOut": "Signing out..."
+    },
+    "common": {
+      "or": "or"
+    },
+    "fields": {
+      "email": "Email",
+      "password": "Password",
+      "confirmPassword": "Confirm password"
+    },
+    "optional": {
+      "subtitle": "Sign in to sync your data across devices. You can always continue as a guest."
     },
     "status": {
       "loading": "Checking account status...",
@@ -116,20 +138,46 @@
     },
     "signIn": {
       "title": "Sign in",
-      "subtitle": "Enter your email and we will send a magic link.",
+      "subtitle": "Choose any sign-in method. Login is optional.",
+      "magicTitle": "Magic link",
+      "passwordTitle": "Email and password",
       "emailLabel": "Email",
       "emailPlaceholder": "coach@example.com",
+      "passwordPlaceholder": "Enter your password",
       "submit": "Send magic link",
       "submitting": "Sending...",
       "alreadySignedIn": "You are already signed in.",
       "goToTeam": "Go to Team",
-      "disclaimer": "Signing in is optional. You can still use the app in guest mode."
+      "disclaimer": "Signing in is optional. You can still use the app in guest mode.",
+      "noAccount": "No account yet?"
+    },
+    "signUp": {
+      "title": "Create account",
+      "subtitle": "Create an account to sync Team and Players across devices.",
+      "emailPlaceholder": "coach@example.com",
+      "passwordPlaceholder": "Create a password",
+      "confirmPasswordPlaceholder": "Repeat your password",
+      "alreadySignedIn": "You are already signed in.",
+      "goToTeam": "Go to Team",
+      "magicAlternative": "Prefer not to use a password?",
+      "haveAccount": "Already have an account?"
     },
     "messages": {
-      "magicLinkSent": "Magic link sent. Check your inbox."
+      "magicLinkSent": "Magic link sent. Check your inbox.",
+      "confirmEmail": "Account created. Check your email to confirm your account."
+    },
+    "errors": {
+      "invalidCredentials": "Invalid email or password.",
+      "emailNotConfirmed": "Please confirm your email before signing in.",
+      "userAlreadyRegistered": "An account with this email already exists.",
+      "weakPassword": "Password is too weak. Use at least 6 characters.",
+      "generic": "Authentication failed. Please try again."
     },
     "validation": {
-      "emailRequired": "Email is required."
+      "emailRequired": "Email is required.",
+      "passwordRequired": "Password is required.",
+      "passwordTooShort": "Password must be at least 6 characters.",
+      "passwordMismatch": "Passwords do not match."
     }
   },
   "matchSetup": {

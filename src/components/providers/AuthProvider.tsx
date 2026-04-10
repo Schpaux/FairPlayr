@@ -5,11 +5,14 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
+import { useLocale } from "next-intl";
 import type { Session, SupabaseClient, User } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { ensureUserProfile } from "@/lib/supabase/profile";
 
 type AuthStatus = "loading" | "guest" | "authenticated";
 
@@ -25,9 +28,11 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const locale = useLocale();
 
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [session, setSession] = useState<Session | null>(null);
+  const bootstrappedUserRef = useRef<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -54,6 +59,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe();
     };
   }, [supabase]);
+
+  useEffect(() => {
+    const user = session?.user;
+
+    if (!user || status !== "authenticated") {
+      bootstrappedUserRef.current = null;
+      return;
+    }
+
+    if (bootstrappedUserRef.current === user.id) {
+      return;
+    }
+
+    bootstrappedUserRef.current = user.id;
+
+    void ensureUserProfile({
+      supabase,
+      userId: user.id,
+      userEmail: user.email,
+      userMetadata: user.user_metadata,
+      preferredLanguage: locale,
+    }).catch((error) => {
+      console.error("Failed to bootstrap user profile", error);
+    });
+  }, [locale, session, status, supabase]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
