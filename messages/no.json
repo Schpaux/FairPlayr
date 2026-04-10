@@ -137,13 +137,105 @@
   },
   "matchLive": {
     "title": "Live kamp",
-    "subtitle": "Spor spilletid og administrer bytter i sanntid.",
-    "empty": "Ingen aktiv kamp. Sett opp en kamp for å komme i gang."
+    "subtitle": "Kjør kampen live med raske manuelle bytter.",
+    "empty": "Ingen aktiv kamp.",
+    "emptyDescription": "Start en kamp fra kampoppsett for å begynne live-sporing.",
+    "status": {
+      "notStarted": "Klar",
+      "running": "Pågår",
+      "paused": "Pauset",
+      "ended": "Avsluttet"
+    },
+    "timer": {
+      "remaining": "Tid igjen",
+      "elapsed": "Spilt: {elapsed}",
+      "duration": "Varighet: {duration} min"
+    },
+    "field": {
+      "title": "På banen",
+      "description": "Trykk på en spiller for å bytte ut.",
+      "empty": "Ingen spillere på banen"
+    },
+    "bench": {
+      "title": "Benken",
+      "description": "Trykk på en spiller for å sette inn.",
+      "empty": "Ingen spillere på benken"
+    },
+    "player": {
+      "playtime": "Spilletid"
+    },
+    "selection": {
+      "selected": "Valgt",
+      "suggestedOut": "Foreslå ut",
+      "suggestedIn": "Foreslå inn",
+      "clear": "Tøm valg"
+    },
+    "suggestion": {
+      "title": "Forslag for fair spilletid",
+      "reason": "Bytt {outgoing} ({outgoingTime}) med {incoming} ({incomingTime}) for å jevne ut spilletiden.",
+      "accept": "Bruk foreslått bytte",
+      "unavailable": "Ingen tydelig anbefaling akkurat nå."
+    },
+    "substitution": {
+      "manualTitle": "Manuelt bytte",
+      "hint": "Velg én spiller fra banen og én fra benken.",
+      "action": "Utfør bytte"
+    },
+    "ended": {
+      "title": "Kampen er avsluttet",
+      "description": "Live-sporing er stoppet. Du kan sette opp en ny kamp."
+    },
+    "actions": {
+      "start": "Start kamp",
+      "pause": "Pause",
+      "resume": "Fortsett",
+      "end": "Avslutt kamp",
+      "confirmEnd": "Avslutte kampen nå?",
+      "toSetup": "Gå til kampoppsett",
+      "setupNext": "Sett opp neste kamp"
+    }
   },
   "lineup": {
     "title": "Lagoppstilling",
-    "subtitle": "Bygg og administrer startformasjonen din.",
-    "empty": "Ingen lagoppstilling ennå. Sett opp en kamp for å lage lagoppstillingen din."
+    "subtitle": "Bygg en tydelig visuell lagoppstilling til neste kamp.",
+    "noTeam": {
+      "title": "Ingen lag funnet",
+      "description": "Opprett laget ditt før du bygger lagoppstilling.",
+      "action": "Gå til Lag"
+    },
+    "noPlayers": {
+      "title": "Ingen spillere tilgjengelig",
+      "description": "Legg til spillere på laget ditt før du bygger lagoppstilling.",
+      "action": "Legg til spillere"
+    },
+    "sections": {
+      "format": "Kampformat",
+      "field": "Baneoppsett",
+      "remaining": "Resterende spillere",
+      "players": "Spillervalg"
+    },
+    "format": {
+      "fieldCount": "{count} på banen"
+    },
+    "status": {
+      "assigned": "{assigned} / {required} plassert"
+    },
+    "field": {
+      "hint": "Trykk på en plass, og trykk deretter på en resterende spiller for å plassere.",
+      "slot": "Plass"
+    },
+    "remaining": {
+      "hint": "Disse valgte spillerne er ikke plassert på banen enda.",
+      "empty": "Ingen resterende valgte spillere."
+    },
+    "players": {
+      "selectedCount": "{selected} av {total} valgt",
+      "assigned": "På banen"
+    },
+    "actions": {
+      "clearSlot": "Tøm aktiv plass",
+      "selectSlotFirst": "Velg først en plass på banen for å plassere en spiller."
+    }
   },
   "settings": {
     "title": "Innstillinger",

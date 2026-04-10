@@ -7,10 +7,15 @@ import { cn } from "@/lib/utils";
 interface FormatSelectorProps {
   value: MatchFormat;
   onChange: (format: MatchFormat) => void;
+  i18nNamespace?: "matchSetup.format" | "lineup.format";
 }
 
-export function FormatSelector({ value, onChange }: FormatSelectorProps) {
-  const t = useTranslations("matchSetup.format");
+export function FormatSelector({
+  value,
+  onChange,
+  i18nNamespace = "matchSetup.format",
+}: FormatSelectorProps) {
+  const t = useTranslations(i18nNamespace);
 
   return (
     <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">

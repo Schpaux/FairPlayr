@@ -137,13 +137,105 @@
   },
   "matchLive": {
     "title": "Live Match",
-    "subtitle": "Track playtime and manage substitutions in real time.",
-    "empty": "No active match. Set up a match to get started."
+    "subtitle": "Run the match live with fast manual substitutions.",
+    "empty": "No active match.",
+    "emptyDescription": "Start a match from setup to begin live tracking.",
+    "status": {
+      "notStarted": "Ready",
+      "running": "Running",
+      "paused": "Paused",
+      "ended": "Ended"
+    },
+    "timer": {
+      "remaining": "Time remaining",
+      "elapsed": "Elapsed: {elapsed}",
+      "duration": "Duration: {duration} min"
+    },
+    "field": {
+      "title": "On Field",
+      "description": "Tap a player to swap out.",
+      "empty": "No players on the field"
+    },
+    "bench": {
+      "title": "Bench",
+      "description": "Tap a player to bring in.",
+      "empty": "No players on the bench"
+    },
+    "player": {
+      "playtime": "Playtime"
+    },
+    "selection": {
+      "selected": "Selected",
+      "suggestedOut": "Suggest out",
+      "suggestedIn": "Suggest in",
+      "clear": "Clear selection"
+    },
+    "suggestion": {
+      "title": "Fairness Suggestion",
+      "reason": "Swap {outgoing} ({outgoingTime}) with {incoming} ({incomingTime}) to balance playtime.",
+      "accept": "Use Suggested Substitution",
+      "unavailable": "No clear suggestion right now."
+    },
+    "substitution": {
+      "manualTitle": "Manual Substitution",
+      "hint": "Select one player from the field and one from the bench.",
+      "action": "Make Substitution"
+    },
+    "ended": {
+      "title": "Match ended",
+      "description": "Live tracking has stopped. You can set up a new match."
+    },
+    "actions": {
+      "start": "Start Match",
+      "pause": "Pause",
+      "resume": "Resume",
+      "end": "End Match",
+      "confirmEnd": "End this match now?",
+      "toSetup": "Go to Match Setup",
+      "setupNext": "Set Up Next Match"
+    }
   },
   "lineup": {
     "title": "Lineup",
-    "subtitle": "Build and manage your starting formation.",
-    "empty": "No lineup yet. Set up a match to create your lineup."
+    "subtitle": "Build a clear visual lineup for your next match.",
+    "noTeam": {
+      "title": "No team found",
+      "description": "Create your team before building a lineup.",
+      "action": "Go to Team"
+    },
+    "noPlayers": {
+      "title": "No players available",
+      "description": "Add players to your team before building a lineup.",
+      "action": "Add players"
+    },
+    "sections": {
+      "format": "Match Format",
+      "field": "Field Layout",
+      "remaining": "Remaining Players",
+      "players": "Player Selection"
+    },
+    "format": {
+      "fieldCount": "{count} on field"
+    },
+    "status": {
+      "assigned": "{assigned} / {required} assigned"
+    },
+    "field": {
+      "hint": "Tap a slot, then tap a remaining player to place them.",
+      "slot": "Slot"
+    },
+    "remaining": {
+      "hint": "These selected players are not currently placed on the field.",
+      "empty": "No remaining selected players."
+    },
+    "players": {
+      "selectedCount": "{selected} of {total} selected",
+      "assigned": "On field"
+    },
+    "actions": {
+      "clearSlot": "Clear Active Slot",
+      "selectSlotFirst": "Select a field slot first to place a player."
+    }
   },
   "settings": {
     "title": "Settings",

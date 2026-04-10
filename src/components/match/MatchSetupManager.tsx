@@ -23,6 +23,7 @@ import {
   saveMatchSetupDraft,
   activateMatch,
 } from "@/lib/storage/matchStorage";
+import { clearStoredLiveMatch } from "@/lib/storage/liveMatchStorage";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -71,32 +72,23 @@ export function MatchSetupManager() {
   );
 
   // ── State ──────────────────────────────────────────────────────────────
-  const [team, setTeam] = useState(() => getStoredTeam());
-  const [setup, setSetup] = useState<MatchSetup | null>(null);
-
-  // ── Initialise setup once hydrated ─────────────────────────────────────
-  useEffect(() => {
-    if (!isHydrated) return;
-
+  const [team] = useState(() => getStoredTeam());
+  const [setup, setSetup] = useState<MatchSetup | null>(() => {
     const currentTeam = getStoredTeam();
-    setTeam(currentTeam);
 
     if (!currentTeam) {
-      setSetup(null);
-      return;
+      return null;
     }
 
     const stored = getStoredMatchSetup();
     const teamPlayerIds = currentTeam.players.map((p) => p.id);
 
     if (stored && stored.setup.teamId === currentTeam.id) {
-      // Restore draft, but reconcile against current players
-      setSetup(reconcileWithTeam(stored.setup, teamPlayerIds));
-    } else {
-      // New team or no stored setup — start fresh
-      setSetup(createMatchSetup(currentTeam.id));
+      return reconcileWithTeam(stored.setup, teamPlayerIds);
     }
-  }, [isHydrated]);
+
+    return createMatchSetup(currentTeam.id);
+  });
 
   // ── Auto-save draft on every setup change ──────────────────────────────
   useEffect(() => {
@@ -131,6 +123,7 @@ export function MatchSetupManager() {
 
   const handleStartMatch = () => {
     if (!setup || !canStartMatch(setup)) return;
+    clearStoredLiveMatch();
     activateMatch(setup);
     router.push("/match/live");
   };

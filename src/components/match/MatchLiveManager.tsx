@@ -1,0 +1,460 @@
+"use client";
+
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { motion } from "framer-motion";
+import { ArrowLeftRight, Play } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Link, useRouter } from "@/i18n/navigation";
+import type { Player } from "@/domain/team";
+import {
+  createLiveMatchFromSetup,
+  endLiveMatch,
+  formatClock,
+  formatPlaytime,
+  getRemainingSeconds,
+  pauseLiveMatch,
+  resumeLiveMatch,
+  startLiveMatch,
+  substitutePlayers,
+  tickLiveMatch,
+  reconcileLiveMatchWithSquad,
+  type LiveMatchState,
+} from "@/domain/liveMatch";
+import { getSubstitutionSuggestion } from "@/domain/substitutionSuggestion";
+import { getStoredTeam } from "@/lib/storage/teamStorage";
+import {
+  endMatch,
+  getStoredMatchSetup,
+  type MatchStatus,
+} from "@/lib/storage/matchStorage";
+import {
+  clearStoredLiveMatch,
+  getStoredLiveMatch,
+  saveStoredLiveMatch,
+} from "@/lib/storage/liveMatchStorage";
+import { PageShell } from "@/components/ui/PageShell";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { AppCard } from "@/components/ui/AppCard";
+import { FpButton } from "@/components/ui/FpButton";
+import { MatchTimerPanel } from "@/components/match/MatchTimerPanel";
+import { LivePlayerSection } from "@/components/match/LivePlayerSection";
+import { variants } from "@/lib/tokens";
+
+interface InitialLiveSnapshot {
+  teamPlayers: Player[];
+  liveMatch: LiveMatchState | null;
+  setupStatus: MatchStatus | null;
+}
+
+function mapPlayersById(players: Player[]) {
+  return new Map(players.map((player) => [player.id, player]));
+}
+
+function resolvePlayers(ids: string[], byId: Map<string, Player>): Player[] {
+  return ids
+    .map((id) => byId.get(id))
+    .filter((player): player is Player => Boolean(player));
+}
+
+function statusLabel(
+  status: LiveMatchState["status"],
+  t: (key: string) => string
+) {
+  if (status === "running") {
+    return t("status.running");
+  }
+
+  if (status === "paused") {
+    return t("status.paused");
+  }
+
+  if (status === "ended") {
+    return t("status.ended");
+  }
+
+  return t("status.notStarted");
+}
+
+function readInitialLiveSnapshot(): InitialLiveSnapshot {
+  const team = getStoredTeam();
+  const storedSetup = getStoredMatchSetup();
+  const storedLiveMatch = getStoredLiveMatch();
+
+  if (!team || !storedSetup) {
+    return {
+      teamPlayers: [],
+      liveMatch: null,
+      setupStatus: null,
+    };
+  }
+
+  if (storedLiveMatch && storedLiveMatch.setupId === storedSetup.setup.id) {
+    return {
+      teamPlayers: team.players,
+      liveMatch: reconcileLiveMatchWithSquad(
+        storedLiveMatch,
+        storedSetup.setup.squadPlayerIds
+      ),
+      setupStatus: storedSetup.status,
+    };
+  }
+
+  if (storedSetup.status === "active") {
+    return {
+      teamPlayers: team.players,
+      liveMatch: createLiveMatchFromSetup(storedSetup.setup),
+      setupStatus: storedSetup.status,
+    };
+  }
+
+  return {
+    teamPlayers: team.players,
+    liveMatch: null,
+    setupStatus: storedSetup.status,
+  };
+}
+
+export function MatchLiveManager() {
+  const t = useTranslations("matchLive");
+  const common = useTranslations("common");
+  const router = useRouter();
+
+  const isHydrated = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
+
+  const [initialSnapshot] = useState<InitialLiveSnapshot>(() => readInitialLiveSnapshot());
+  const [teamPlayers] = useState<Player[]>(initialSnapshot.teamPlayers);
+  const [liveMatch, setLiveMatch] = useState<LiveMatchState | null>(
+    initialSnapshot.liveMatch
+  );
+  const [setupStatus, setSetupStatus] = useState<MatchStatus | null>(
+    initialSnapshot.setupStatus
+  );
+  const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
+  const [selectedBenchId, setSelectedBenchId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isHydrated || !liveMatch) {
+      return;
+    }
+
+    saveStoredLiveMatch(liveMatch);
+  }, [liveMatch, isHydrated]);
+
+  useEffect(() => {
+    if (!isHydrated || liveMatch?.status !== "running") {
+      return;
+    }
+
+    const id = window.setInterval(() => {
+      setLiveMatch((previous) =>
+        previous ? tickLiveMatch(previous, Date.now()) : previous
+      );
+    }, 1000);
+
+    return () => window.clearInterval(id);
+  }, [isHydrated, liveMatch?.status]);
+
+  const playersById = useMemo(() => mapPlayersById(teamPlayers), [teamPlayers]);
+
+  const onFieldPlayers = useMemo(
+    () => (liveMatch ? resolvePlayers(liveMatch.onFieldPlayerIds, playersById) : []),
+    [liveMatch, playersById]
+  );
+
+  const benchPlayers = useMemo(
+    () => (liveMatch ? resolvePlayers(liveMatch.benchPlayerIds, playersById) : []),
+    [liveMatch, playersById]
+  );
+
+  const remainingClock = liveMatch ? formatClock(getRemainingSeconds(liveMatch)) : "00:00";
+  const elapsedClock = liveMatch ? formatClock(liveMatch.elapsedSeconds) : "00:00";
+
+  const selectedPlayersReady = Boolean(selectedFieldId && selectedBenchId);
+  const suggestion = liveMatch ? getSubstitutionSuggestion(liveMatch) : null;
+  const suggestedOutgoingPlayer = suggestion
+    ? playersById.get(suggestion.outgoingPlayerId) ?? null
+    : null;
+  const suggestedIncomingPlayer = suggestion
+    ? playersById.get(suggestion.incomingPlayerId) ?? null
+    : null;
+
+  const getPlayerPlaytime = (playerId: string) => {
+    if (!liveMatch) {
+      return "0:00";
+    }
+
+    return formatPlaytime(liveMatch.playerAccumulatedSeconds[playerId] ?? 0);
+  };
+
+  const clearSelection = () => {
+    setSelectedFieldId(null);
+    setSelectedBenchId(null);
+  };
+
+  const handleStart = () => {
+    setLiveMatch((previous) =>
+      previous ? startLiveMatch(previous, Date.now()) : previous
+    );
+  };
+
+  const handlePause = () => {
+    setLiveMatch((previous) =>
+      previous ? pauseLiveMatch(previous, Date.now()) : previous
+    );
+  };
+
+  const handleResume = () => {
+    setLiveMatch((previous) =>
+      previous ? resumeLiveMatch(previous, Date.now()) : previous
+    );
+  };
+
+  const handleEnd = () => {
+    if (!window.confirm(t("actions.confirmEnd"))) {
+      return;
+    }
+
+    const storedSetup = getStoredMatchSetup();
+
+    setLiveMatch((previous) =>
+      previous ? endLiveMatch(previous, Date.now()) : previous
+    );
+
+    if (storedSetup) {
+      endMatch(storedSetup.setup);
+      setSetupStatus("ended");
+    }
+
+    clearSelection();
+  };
+
+  const handleSubstitute = () => {
+    if (!selectedFieldId || !selectedBenchId) {
+      return;
+    }
+
+    setLiveMatch((previous) =>
+      previous
+        ? substitutePlayers(previous, selectedFieldId, selectedBenchId, Date.now())
+        : previous
+    );
+
+    clearSelection();
+  };
+
+  const handleApplySuggestion = () => {
+    if (!suggestion) {
+      return;
+    }
+
+    setLiveMatch((previous) =>
+      previous
+        ? substitutePlayers(
+            previous,
+            suggestion.outgoingPlayerId,
+            suggestion.incomingPlayerId,
+            Date.now()
+          )
+        : previous
+    );
+
+    clearSelection();
+  };
+
+  const handleResetView = () => {
+    clearStoredLiveMatch();
+    router.push("/match/setup");
+  };
+
+  if (!isHydrated) {
+    return (
+      <PageShell>
+        <AppCard className="p-6 text-sm text-muted-foreground">{common("loading")}</AppCard>
+      </PageShell>
+    );
+  }
+
+  if (!liveMatch || (setupStatus !== "active" && liveMatch.status !== "ended")) {
+    return (
+      <PageShell>
+        <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
+        <EmptyState
+          icon={Play}
+          title={t("empty")}
+          description={t("emptyDescription")}
+          action={
+            <Link href="/match/setup">
+              <FpButton variant="primary" size="md">
+                {t("actions.toSetup")}
+              </FpButton>
+            </Link>
+          }
+        />
+      </PageShell>
+    );
+  }
+
+  return (
+    <PageShell className="space-y-4 pb-6">
+      <SectionHeader
+        title={t("title")}
+        subtitle={t("subtitle")}
+        accent
+        action={
+          <Link href="/match/setup">
+            <FpButton variant="ghost" size="sm" className="tap-target">
+              {common("back")}
+            </FpButton>
+          </Link>
+        }
+      />
+
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={variants.staggerContainer}
+        className="space-y-4"
+      >
+        <motion.div variants={variants.fadeInUp}>
+          <MatchTimerPanel
+            status={liveMatch.status}
+            statusLabel={statusLabel(liveMatch.status, t)}
+            timerLabel={t("timer.remaining")}
+            durationLabel={t("timer.duration", {
+              duration: Math.floor(liveMatch.durationSeconds / 60),
+            })}
+            remainingClock={remainingClock}
+            elapsedClock={t("timer.elapsed", { elapsed: elapsedClock })}
+            onStart={handleStart}
+            onPause={handlePause}
+            onResume={handleResume}
+            onEnd={handleEnd}
+            startLabel={t("actions.start")}
+            pauseLabel={t("actions.pause")}
+            resumeLabel={t("actions.resume")}
+            endLabel={t("actions.end")}
+          />
+        </motion.div>
+
+        <motion.div variants={variants.fadeInUp} className="space-y-4">
+          <LivePlayerSection
+            title={t("field.title")}
+            description={t("field.description")}
+            players={onFieldPlayers}
+            selectedPlayerId={selectedFieldId}
+            suggestedPlayerId={suggestion?.outgoingPlayerId}
+            selectedLabel={t("selection.selected")}
+            suggestedLabel={t("selection.suggestedOut")}
+            emptyText={t("field.empty")}
+            playtimeLabel={t("player.playtime")}
+            getPlaytime={getPlayerPlaytime}
+            onSelectPlayer={(playerId) =>
+              setSelectedFieldId((previous) =>
+                previous === playerId ? null : playerId
+              )
+            }
+          />
+
+          <LivePlayerSection
+            title={t("bench.title")}
+            description={t("bench.description")}
+            players={benchPlayers}
+            selectedPlayerId={selectedBenchId}
+            suggestedPlayerId={suggestion?.incomingPlayerId}
+            selectedLabel={t("selection.selected")}
+            suggestedLabel={t("selection.suggestedIn")}
+            emptyText={t("bench.empty")}
+            playtimeLabel={t("player.playtime")}
+            getPlaytime={getPlayerPlaytime}
+            onSelectPlayer={(playerId) =>
+              setSelectedBenchId((previous) =>
+                previous === playerId ? null : playerId
+              )
+            }
+          />
+        </motion.div>
+
+        <motion.div variants={variants.fadeInUp}>
+          <AppCard glow="accent" className="space-y-3 border-fp-accent/25 p-4">
+            <p className="text-sm font-semibold text-foreground">{t("suggestion.title")}</p>
+            {suggestion && suggestedOutgoingPlayer && suggestedIncomingPlayer ? (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  {t("suggestion.reason", {
+                    outgoing: suggestedOutgoingPlayer.name,
+                    outgoingTime: formatPlaytime(suggestion.outgoingSeconds),
+                    incoming: suggestedIncomingPlayer.name,
+                    incomingTime: formatPlaytime(suggestion.incomingSeconds),
+                  })}
+                </p>
+                <FpButton
+                  variant="secondary"
+                  size="md"
+                  fullWidth
+                  className="tap-target border-fp-accent/30"
+                  onClick={handleApplySuggestion}
+                  disabled={liveMatch.status === "ended"}
+                >
+                  {t("suggestion.accept")}
+                </FpButton>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">{t("suggestion.unavailable")}</p>
+            )}
+          </AppCard>
+        </motion.div>
+
+        <motion.div variants={variants.fadeInUp}>
+          <AppCard className="space-y-3 p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <ArrowLeftRight size={16} className="text-primary" />
+              {t("substitution.manualTitle")}
+            </div>
+
+            <p className="text-xs text-muted-foreground">{t("substitution.hint")}</p>
+
+            <FpButton
+              variant="primary"
+              size="lg"
+              fullWidth
+              className="tap-target"
+              onClick={handleSubstitute}
+              disabled={!selectedPlayersReady || liveMatch.status === "ended"}
+            >
+              {t("substitution.action")}
+            </FpButton>
+
+            {(selectedFieldId || selectedBenchId) && (
+              <FpButton
+                variant="ghost"
+                size="md"
+                fullWidth
+                className="tap-target"
+                onClick={clearSelection}
+              >
+                {t("selection.clear")}
+              </FpButton>
+            )}
+          </AppCard>
+        </motion.div>
+
+        {liveMatch.status === "ended" && (
+          <motion.div variants={variants.fadeInUp}>
+            <AppCard className="space-y-3 border-danger/30 bg-danger/5 p-4">
+              <p className="text-sm font-semibold text-foreground">{t("ended.title")}</p>
+              <p className="text-xs text-muted-foreground">{t("ended.description")}</p>
+              <FpButton variant="secondary" size="md" fullWidth onClick={handleResetView}>
+                {t("actions.setupNext")}
+              </FpButton>
+            </AppCard>
+          </motion.div>
+        )}
+      </motion.div>
+    </PageShell>
+  );
+}
