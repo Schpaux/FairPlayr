@@ -1,0 +1,94 @@
+{
+  "common": {
+    "appName": "FairPlayr",
+    "loading": "Laster...",
+    "save": "Lagre",
+    "cancel": "Avbryt",
+    "back": "Tilbake",
+    "next": "Neste",
+    "edit": "Rediger",
+    "delete": "Slett",
+    "confirm": "Bekreft",
+    "comingSoon": "Kommer snart"
+  },
+  "nav": {
+    "home": "Hjem",
+    "team": "Lag",
+    "match": "Kamp",
+    "lineup": "Oppstilling",
+    "settings": "Innstillinger"
+  },
+  "home": {
+    "hero": {
+      "badge": "Kampdagstyring",
+      "title": "Rettferdig spilletid,",
+      "titleAccent": "hver kamp.",
+      "subtitle": "Sidestokkappen som sporer spilletid, bygger rettferdige lagoppstillinger og foreslår smarte bytter — slik at alle spillere får sin sjanse.",
+      "ctaPrimary": "Kom i gang",
+      "ctaSecondary": "Les mer",
+      "stat1Value": "3–11v11",
+      "stat1Label": "Alle formater",
+      "stat2Value": "Sanntid",
+      "stat2Label": "Spilletidssporing",
+      "stat3Value": "Alle spillere",
+      "stat3Label": "Får rettferdig tid"
+    },
+    "features": {
+      "title": "Alt du trenger på sidelinjen",
+      "subtitle": "Laget for frivillige trenere og foreldre som vil at kampen skal være rettferdig.",
+      "lineup": {
+        "title": "Smart lagbygger",
+        "description": "Bygg raskt balanserte lagoppstillinger for alle kampformater — fra 3v3 til 11v11."
+      },
+      "playtime": {
+        "title": "Rettferdig spilletidssporing",
+        "description": "Sanntidssporing slik at du alltid vet hvem som har spilt, og hvem som fortjener mer tid."
+      },
+      "substitutions": {
+        "title": "Smarte bytter",
+        "description": "Bytteanbefalinger basert på live spilletidsdata, slik at roteringen alltid er rettferdig."
+      }
+    },
+    "cta": {
+      "title": "Klar for kampdagen?",
+      "subtitle": "Bli med trenere som setter alle spillere først.",
+      "button": "Begynn å administrere laget ditt"
+    }
+  },
+  "team": {
+    "title": "Lag",
+    "subtitle": "Administrer spillergruppen din og spillerprofiler.",
+    "empty": "Ingen spillere ennå. Legg til din første spiller for å komme i gang.",
+    "addPlayer": "Legg til spiller"
+  },
+  "matchSetup": {
+    "title": "Kampoppsett",
+    "subtitle": "Konfigurer kampen din før avspark.",
+    "empty": "Sett opp en kamp for å forberede lagoppstillingen og spore spilletid."
+  },
+  "matchLive": {
+    "title": "Live kamp",
+    "subtitle": "Spor spilletid og administrer bytter i sanntid.",
+    "empty": "Ingen aktiv kamp. Sett opp en kamp for å komme i gang."
+  },
+  "lineup": {
+    "title": "Lagoppstilling",
+    "subtitle": "Bygg og administrer startformasjonen din.",
+    "empty": "Ingen lagoppstilling ennå. Sett opp en kamp for å lage lagoppstillingen din."
+  },
+  "settings": {
+    "title": "Innstillinger",
+    "subtitle": "Preferanser og appkonfigurasjon.",
+    "appearance": "Utseende",
+    "theme": "Tema",
+    "lightMode": "Lys",
+    "darkMode": "Mørk",
+    "systemMode": "System",
+    "language": "Språk"
+  },
+  "a11y": {
+    "switchToLight": "Bytt til lyst modus",
+    "switchToDark": "Bytt til mørkt modus",
+    "switchLanguage": "Bytt språk"
+  }
+}

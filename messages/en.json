@@ -1,0 +1,94 @@
+{
+  "common": {
+    "appName": "FairPlayr",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "back": "Back",
+    "next": "Next",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "comingSoon": "Coming soon"
+  },
+  "nav": {
+    "home": "Home",
+    "team": "Team",
+    "match": "Match",
+    "lineup": "Lineup",
+    "settings": "Settings"
+  },
+  "home": {
+    "hero": {
+      "badge": "Matchday Management",
+      "title": "Fair Playtime,",
+      "titleAccent": "Every Match.",
+      "subtitle": "The sideline app that tracks playtime, builds fair lineups, and suggests smart substitutions — so every player gets their moment.",
+      "ctaPrimary": "Get Started",
+      "ctaSecondary": "Learn More",
+      "stat1Value": "3–11v11",
+      "stat1Label": "All formats",
+      "stat2Value": "Real-time",
+      "stat2Label": "Playtime tracking",
+      "stat3Value": "Every player",
+      "stat3Label": "Gets fair time"
+    },
+    "features": {
+      "title": "Everything you need on the sideline",
+      "subtitle": "Built for volunteer coaches and parents who just want the game to be fair.",
+      "lineup": {
+        "title": "Smart Lineup Builder",
+        "description": "Quickly build balanced lineups for any match format — 3v3 all the way to 11v11."
+      },
+      "playtime": {
+        "title": "Fair Playtime Tracking",
+        "description": "Real-time tracking so you always know who has played, and who deserves more time."
+      },
+      "substitutions": {
+        "title": "Smart Substitutions",
+        "description": "Substitution suggestions based on live playtime data, so the rotation is always fair."
+      }
+    },
+    "cta": {
+      "title": "Ready for matchday?",
+      "subtitle": "Join coaches who put every player first.",
+      "button": "Start Managing Your Team"
+    }
+  },
+  "team": {
+    "title": "Team",
+    "subtitle": "Manage your squad and player profiles.",
+    "empty": "No players yet. Add your first player to get started.",
+    "addPlayer": "Add Player"
+  },
+  "matchSetup": {
+    "title": "Match Setup",
+    "subtitle": "Configure your match before kick-off.",
+    "empty": "Set up a match to prepare your lineup and track playtime."
+  },
+  "matchLive": {
+    "title": "Live Match",
+    "subtitle": "Track playtime and manage substitutions in real time.",
+    "empty": "No active match. Set up a match to get started."
+  },
+  "lineup": {
+    "title": "Lineup",
+    "subtitle": "Build and manage your starting formation.",
+    "empty": "No lineup yet. Set up a match to create your lineup."
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Preferences and app configuration.",
+    "appearance": "Appearance",
+    "theme": "Theme",
+    "lightMode": "Light",
+    "darkMode": "Dark",
+    "systemMode": "System",
+    "language": "Language"
+  },
+  "a11y": {
+    "switchToLight": "Switch to light mode",
+    "switchToDark": "Switch to dark mode",
+    "switchLanguage": "Switch language"
+  }
+}
