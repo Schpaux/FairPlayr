@@ -34,6 +34,24 @@ interface TeamWorkspaceContextValue {
 
 const TeamWorkspaceContext = createContext<TeamWorkspaceContextValue | null>(null);
 
+function toWorkspaceErrorMessage(cause: unknown): string {
+  if (!(cause instanceof Error)) {
+    return "Failed to load teams.";
+  }
+
+  const message = cause.message.toLowerCase();
+
+  if (message.includes("infinite recursion detected in policy") && message.includes("team_members")) {
+    return "Team access policy error. Please try again shortly.";
+  }
+
+  if (message.includes("row-level security") || message.includes("permission denied")) {
+    return "You do not have access to this team data.";
+  }
+
+  return cause.message;
+}
+
 export function TeamWorkspaceProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
 
@@ -79,7 +97,7 @@ export function TeamWorkspaceProvider({ children }: { children: ReactNode }) {
       setActiveTeamId(resolvedActiveTeamId);
       setError(null);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Failed to load teams.");
+      setError(toWorkspaceErrorMessage(cause));
       setTeams([]);
       setActiveTeamId(null);
     } finally {
