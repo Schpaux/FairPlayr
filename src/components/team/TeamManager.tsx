@@ -68,6 +68,20 @@ export function TeamManager() {
     setIsEditingTeamName(false);
   };
 
+  const handleDeleteTeam = async (teamId: string) => {
+    if (!window.confirm(t("actions.confirmDeleteTeam"))) {
+      return;
+    }
+
+    try {
+      await workspace.deleteTeam(teamId);
+      setTeamError(null);
+      setIsEditingTeamName(false);
+    } catch (error) {
+      setTeamError(error instanceof Error ? error.message : t("errors.generic"));
+    }
+  };
+
   const handleAddPlayer = async (name: string): Promise<boolean> => {
     if (!team) {
       return false;
@@ -189,21 +203,9 @@ export function TeamManager() {
         >
           <motion.div variants={variants.fadeInUp}>
             <AppCard className="space-y-3 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t("teamList.title")}
-                </p>
-                <div className="w-full max-w-[14rem]">
-                  <TeamNameForm
-                    mode="create"
-                    label={t("forms.teamNameLabel")}
-                    placeholder={t("forms.teamNamePlaceholder")}
-                    submitLabel={t("actions.createTeam")}
-                    validationMessage={t("validation.teamNameRequired")}
-                    onSubmit={handleCreateTeam}
-                  />
-                </div>
-              </div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {t("teamList.title")}
+              </p>
 
               <div className="grid grid-cols-1 gap-2">
                 {workspace.teams.map((candidate) => {
@@ -233,6 +235,20 @@ export function TeamManager() {
                     </button>
                   );
                 })}
+              </div>
+
+              <div className="pt-2 border-t border-fp-border">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t("actions.createTeam")}
+                </p>
+                <TeamNameForm
+                  mode="create"
+                  label={t("forms.teamNameLabel")}
+                  placeholder={t("forms.teamNamePlaceholder")}
+                  submitLabel={t("actions.createTeam")}
+                  validationMessage={t("validation.teamNameRequired")}
+                  onSubmit={handleCreateTeam}
+                />
               </div>
             </AppCard>
           </motion.div>
@@ -269,6 +285,17 @@ export function TeamManager() {
                       </FpButton>
                     </div>
                   )}
+
+                  <FpButton
+                    type="button"
+                    variant="danger"
+                    size="md"
+                    className="tap-target"
+                    onClick={() => handleDeleteTeam(team.id)}
+                    disabled={workspace.teams.length <= 1}
+                  >
+                    {t("actions.deleteTeam")}
+                  </FpButton>
                 </AppCard>
               </motion.div>
 

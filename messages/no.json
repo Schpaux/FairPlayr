@@ -96,10 +96,12 @@
     },
     "actions": {
       "createTeam": "Opprett lag",
+      "deleteTeam": "Slett lag",
       "addPlayer": "Legg til spiller",
       "moveUp": "Flytt spiller opp",
       "moveDown": "Flytt spiller ned",
-      "confirmDeletePlayer": "Slette denne spilleren?"
+      "confirmDeletePlayer": "Slette denne spilleren?",
+      "confirmDeleteTeam": "Slette dette laget? Dette kan ikke angres."
     },
     "errors": {
       "generic": "Noe gikk galt. Prøv igjen."

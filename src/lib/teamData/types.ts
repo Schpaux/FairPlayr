@@ -9,6 +9,7 @@ export interface TeamRepository {
   getActiveTeamId: () => Promise<string | null>;
   setActiveTeam: (teamId: string) => Promise<string | null>;
   createTeam: (name: string) => Promise<Team>;
+  deleteTeam: (teamId: string) => Promise<{ deletedTeamId: string; nextActiveTeamId: string | null }>;
   renameTeam: (teamId: string, name: string) => Promise<Team>;
   addPlayer: (teamId: string, name: string) => Promise<Team>;
   renamePlayer: (teamId: string, playerId: string, name: string) => Promise<Team>;

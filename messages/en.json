@@ -96,10 +96,12 @@
     },
     "actions": {
       "createTeam": "Create Team",
+      "deleteTeam": "Delete Team",
       "addPlayer": "Add Player",
       "moveUp": "Move player up",
       "moveDown": "Move player down",
-      "confirmDeletePlayer": "Delete this player?"
+      "confirmDeletePlayer": "Delete this player?",
+      "confirmDeleteTeam": "Delete this team? This cannot be undone."
     },
     "errors": {
       "generic": "Something went wrong. Please try again."

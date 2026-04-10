@@ -18,7 +18,7 @@ export function AuthActionButton() {
     return (
       <Link
         href="/auth/sign-in"
-        className="tap-target rounded-lg border border-fp-border bg-fp-surface-2 px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+        className="h-9 px-3 rounded-xl surface-2 border border-fp-border flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors tap-target"
       >
         {t("actions.signIn")}
       </Link>
@@ -34,7 +34,7 @@ export function AuthActionButton() {
         });
       }}
       disabled={isPending}
-      className="tap-target rounded-lg border border-fp-border bg-fp-surface-2 px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-60"
+      className="h-9 px-3 rounded-xl surface-2 border border-fp-border flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors tap-target disabled:opacity-60"
     >
       {isPending ? t("actions.signingOut") : t("actions.signOut")}
     </button>

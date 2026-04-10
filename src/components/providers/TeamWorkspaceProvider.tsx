@@ -23,6 +23,7 @@ interface TeamWorkspaceContextValue {
   error: string | null;
   refresh: () => Promise<void>;
   createTeam: (name: string) => Promise<Team>;
+  deleteTeam: (teamId: string) => Promise<void>;
   renameTeam: (teamId: string, name: string) => Promise<Team>;
   setActiveTeam: (teamId: string) => Promise<void>;
   addPlayer: (teamId: string, name: string) => Promise<Team>;
@@ -119,6 +120,12 @@ export function TeamWorkspaceProvider({ children }: { children: ReactNode }) {
         const nextActiveTeamId = await repository.setActiveTeam(team.id);
         setActiveTeamId(nextActiveTeamId);
         return team;
+      },
+      deleteTeam: async (teamId) => {
+        const result = await repository.deleteTeam(teamId);
+
+        setTeams((previous) => previous.filter((team) => team.id !== result.deletedTeamId));
+        setActiveTeamId(result.nextActiveTeamId);
       },
       renameTeam: async (teamId, name) => {
         const team = await repository.renameTeam(teamId, name);

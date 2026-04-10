@@ -72,6 +72,32 @@ export function createLocalTeamRepository(): TeamRepository {
       const team = createTeam(name);
       return persistTeam(team, true);
     },
+    async deleteTeam(teamId) {
+      const teams = getStoredTeams();
+
+      if (teams.length <= 1) {
+        throw new Error("At least one team is required.");
+      }
+
+      if (!teams.some((team) => team.id === teamId)) {
+        throw new Error("Team not found in local storage.");
+      }
+
+      const remainingTeams = teams.filter((team) => team.id !== teamId);
+      const currentActiveTeamId = getStoredActiveTeamId();
+      const nextActiveTeamId =
+        currentActiveTeamId === teamId ? remainingTeams[0]?.id ?? null : currentActiveTeamId;
+
+      saveStoredTeamWorkspace({
+        teams: remainingTeams,
+        activeTeamId: nextActiveTeamId,
+      });
+
+      return {
+        deletedTeamId: teamId,
+        nextActiveTeamId,
+      };
+    },
     async renameTeam(teamId, name) {
       const team = readTeamOrThrow(teamId);
       return persistTeam(renameTeam(team, name));

@@ -1,7 +1,6 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
 
 export function ActiveTeamSwitcher() {
@@ -13,14 +12,7 @@ export function ActiveTeamSwitcher() {
   }
 
   if (teams.length === 0) {
-    return (
-      <Link
-        href="/team"
-        className="tap-target rounded-lg border border-fp-border bg-fp-surface-2 px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground"
-      >
-        {t("create")}
-      </Link>
-    );
+    return null;
   }
 
   return (

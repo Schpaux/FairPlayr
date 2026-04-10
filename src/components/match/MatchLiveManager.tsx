@@ -142,6 +142,29 @@ export function MatchLiveManager() {
   }, [liveMatch, isHydrated]);
 
   useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+
+    const shouldWarn = liveMatch?.status === "running" || liveMatch?.status === "paused";
+
+    if (!shouldWarn) {
+      return;
+    }
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [isHydrated, liveMatch?.status]);
+
+  useEffect(() => {
     if (!isHydrated || liveMatch?.status !== "running") {
       return;
     }

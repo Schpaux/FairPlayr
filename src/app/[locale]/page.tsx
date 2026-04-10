@@ -57,13 +57,6 @@ export default function HomePage() {
             className="flex flex-col items-center text-center gap-6"
           >
             {/* Badge */}
-            <motion.div variants={heroItem}>
-              <span className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                <span className="h-1.5 w-1.5 rounded-full bg-fp-accent animate-pulse" />
-                {t("hero.badge")}
-              </span>
-            </motion.div>
-
             {/* Headline */}
             <motion.div variants={heroItem} className="space-y-1">
               <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">

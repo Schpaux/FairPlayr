@@ -112,6 +112,22 @@ async function persistActiveTeamId(
   return teamId;
 }
 
+async function resolveNextActiveTeamId(
+  supabase: SupabaseClient,
+  userId: string,
+  deletedTeamId: string
+): Promise<string | null> {
+  const teamIds = await getMemberTeamIds(supabase, userId);
+  const remainingTeamIds = teamIds.filter((teamId) => teamId !== deletedTeamId);
+
+  if (remainingTeamIds.length === 0) {
+    return null;
+  }
+
+  const teamRows = await getTeamsByIds(supabase, remainingTeamIds);
+  return teamRows[0]?.id ?? null;
+}
+
 async function getPlayersByTeamId(supabase: SupabaseClient, teamId: string) {
   const { data, error } = await supabase
     .from("players")
@@ -243,6 +259,40 @@ export function createSupabaseTeamRepository({
       }
 
       return toTeam(teamRow, []);
+    },
+    async deleteTeam(teamId) {
+      const teamIds = await getMemberTeamIds(supabase, userId);
+
+      if (!teamIds.includes(teamId)) {
+        throw new Error("Team not found for this user.");
+      }
+
+      if (teamIds.length <= 1) {
+        throw new Error("At least one team is required.");
+      }
+
+      const { error } = await supabase
+        .from("teams")
+        .delete()
+        .eq("id", teamId)
+        .eq("owner_id", userId);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      const currentActiveTeamId = await readProfileActiveTeamId(supabase, userId);
+      const nextActiveTeamId =
+        currentActiveTeamId === teamId
+          ? await resolveNextActiveTeamId(supabase, userId, teamId)
+          : currentActiveTeamId;
+
+      await persistActiveTeamId(supabase, userId, nextActiveTeamId);
+
+      return {
+        deletedTeamId: teamId,
+        nextActiveTeamId,
+      };
     },
     async renameTeam(teamId, name) {
       const { error } = await supabase
