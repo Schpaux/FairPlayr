@@ -141,6 +141,10 @@ export function MatchSetupManager() {
   };
 
   const handleSelectAll = () => {
+    if (!team) {
+      return;
+    }
+
     setSetup((prev) =>
       prev ? selectAllSquad(prev, team.players.map((player) => player.id)) : prev
     );
