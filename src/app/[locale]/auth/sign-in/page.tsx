@@ -3,7 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { Link, useRouter } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { AppCard } from "@/components/ui/AppCard";
@@ -11,17 +11,17 @@ import { FpButton } from "@/components/ui/FpButton";
 import { teamTextInputClassName } from "@/components/team/styles";
 import { useAuth } from "@/components/providers/AuthProvider";
 
-type ActiveAction = "google" | "magic" | "password" | null;
+type ActiveAction = "google" | "email" | null;
+
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
 
 function mapAuthError(message: string, t: ReturnType<typeof useTranslations>) {
   const normalized = message.toLowerCase();
 
-  if (normalized.includes("invalid login credentials")) {
-    return t("errors.invalidCredentials");
-  }
-
-  if (normalized.includes("email not confirmed")) {
-    return t("errors.emailNotConfirmed");
+  if (normalized.includes("invalid email")) {
+    return t("validation.emailInvalid");
   }
 
   return t("errors.generic");
@@ -31,12 +31,9 @@ export default function SignInPage() {
   const t = useTranslations("auth");
   const locale = useLocale();
   const searchParams = useSearchParams();
-  const router = useRouter();
   const { supabase, status } = useAuth();
 
-  const [magicEmail, setMagicEmail] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeAction, setActiveAction] = useState<ActiveAction>(null);
@@ -58,6 +55,8 @@ export default function SignInPage() {
   }, [locale, nextPath]);
 
   const isBusy = activeAction !== null;
+  const normalizedEmail = email.trim();
+  const canSubmit = !isBusy && normalizedEmail.length > 0;
 
   const handleGoogleSignIn = async () => {
     setError(null);
@@ -77,22 +76,25 @@ export default function SignInPage() {
     }
   };
 
-  const handleMagicSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleEmailSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const normalized = magicEmail.trim();
-
-    if (!normalized) {
+    if (!normalizedEmail) {
       setError(t("validation.emailRequired"));
+      return;
+    }
+
+    if (!isValidEmail(normalizedEmail)) {
+      setError(t("validation.emailInvalid"));
       return;
     }
 
     setError(null);
     setMessage(null);
-    setActiveAction("magic");
+    setActiveAction("email");
 
     const { error: signInError } = await supabase.auth.signInWithOtp({
-      email: normalized,
+      email: normalizedEmail,
       options: {
         emailRedirectTo: callbackUrl,
       },
@@ -104,41 +106,8 @@ export default function SignInPage() {
       return;
     }
 
-    setMessage(t("messages.magicLinkSent"));
+    setMessage(t("messages.emailLinkSent"));
     setActiveAction(null);
-  };
-
-  const handlePasswordSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const normalized = email.trim();
-
-    if (!normalized) {
-      setError(t("validation.emailRequired"));
-      return;
-    }
-
-    if (!password) {
-      setError(t("validation.passwordRequired"));
-      return;
-    }
-
-    setError(null);
-    setMessage(null);
-    setActiveAction("password");
-
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: normalized,
-      password,
-    });
-
-    if (signInError) {
-      setError(mapAuthError(signInError.message, t));
-      setActiveAction(null);
-      return;
-    }
-
-    router.push(nextPath);
   };
 
   return (
@@ -156,41 +125,16 @@ export default function SignInPage() {
         </AppCard>
       ) : (
         <AppCard className="space-y-4 p-4">
-          <p className="text-xs text-muted-foreground">{t("optional.subtitle")}</p>
-
-          <FpButton
-            type="button"
-            variant="secondary"
-            size="lg"
-            fullWidth
-            className="tap-target"
-            disabled={isBusy}
-            onClick={handleGoogleSignIn}
-          >
-            {activeAction === "google" ? t("actions.connecting") : t("actions.continueWithGoogle")}
-          </FpButton>
-
-          <div className="flex items-center gap-2">
-            <div className="h-px flex-1 bg-fp-border" />
-            <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              {t("common.or")}
-            </span>
-            <div className="h-px flex-1 bg-fp-border" />
-          </div>
-
-          <form onSubmit={handleMagicSubmit} className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {t("signIn.magicTitle")}
-            </p>
+          <form onSubmit={handleEmailSubmit} className="space-y-3">
             <label htmlFor="magic-email" className="text-xs font-medium text-muted-foreground">
               {t("signIn.emailLabel")}
             </label>
             <input
               id="magic-email"
               type="email"
-              value={magicEmail}
+              value={email}
               onChange={(event) => {
-                setMagicEmail(event.target.value);
+                setEmail(event.target.value);
                 if (error) {
                   setError(null);
                 }
@@ -207,78 +151,36 @@ export default function SignInPage() {
               size="md"
               className="tap-target"
               fullWidth
-              disabled={isBusy}
+              disabled={!canSubmit}
             >
-              {activeAction === "magic" ? t("signIn.submitting") : t("actions.continueWithMagicLink")}
+              {activeAction === "email" ? t("signIn.submitting") : t("signIn.submit")}
             </FpButton>
+
+            <p className="text-xs text-muted-foreground">{t("signIn.helpText")}</p>
           </form>
 
-          <form onSubmit={handlePasswordSubmit} className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {t("signIn.passwordTitle")}
-            </p>
-            <label htmlFor="email" className="text-xs font-medium text-muted-foreground">
-              {t("signIn.emailLabel")}
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(event) => {
-                setEmail(event.target.value);
-                if (error) {
-                  setError(null);
-                }
-              }}
-              placeholder={t("signIn.emailPlaceholder")}
-              className={teamTextInputClassName}
-              autoComplete="email"
-              inputMode="email"
-            />
+          <div className="flex items-center gap-2">
+            <div className="h-px flex-1 bg-fp-border" />
+            <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              {t("signIn.separator")}
+            </span>
+            <div className="h-px flex-1 bg-fp-border" />
+          </div>
 
-            <label htmlFor="password" className="text-xs font-medium text-muted-foreground">
-              {t("fields.password")}
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(event) => {
-                setPassword(event.target.value);
-                if (error) {
-                  setError(null);
-                }
-              }}
-              placeholder={t("signIn.passwordPlaceholder")}
-              className={teamTextInputClassName}
-              autoComplete="current-password"
-            />
-
-            <FpButton
-              type="submit"
-              variant="secondary"
-              size="md"
-              className="tap-target"
-              fullWidth
-              disabled={isBusy}
-            >
-              {activeAction === "password" ? t("actions.signingIn") : t("actions.signInWithEmail")}
-            </FpButton>
-          </form>
+          <FpButton
+            type="button"
+            variant="secondary"
+            size="lg"
+            fullWidth
+            className="tap-target"
+            disabled={isBusy}
+            onClick={handleGoogleSignIn}
+          >
+            {activeAction === "google" ? t("actions.connecting") : t("actions.continueWithGoogle")}
+          </FpButton>
 
           {error ? <p className="text-xs text-danger">{error}</p> : null}
           {message ? <p className="text-xs text-fp-accent">{message}</p> : null}
-
-          <div className="space-y-2 text-xs text-muted-foreground">
-            <p>{t("signIn.noAccount")}</p>
-            <Link href={{ pathname: "/auth/sign-up", query: { next: nextPath } }} className="text-primary">
-              {t("actions.goToSignUp")}
-            </Link>
-          </div>
-
-          <Link href={nextPath} className="text-xs text-muted-foreground underline underline-offset-2">
-            {t("actions.continueAsGuest")}
-          </Link>
         </AppCard>
       )}
     </PageShell>

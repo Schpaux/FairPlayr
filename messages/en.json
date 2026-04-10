@@ -275,18 +275,15 @@
     },
     "signIn": {
       "title": "Sign in",
-      "subtitle": "Choose any sign-in method. Login is optional.",
-      "magicTitle": "Magic link",
-      "passwordTitle": "Email and password",
+      "subtitle": "Pick up where you left off and sync your data across devices.",
       "emailLabel": "Email",
       "emailPlaceholder": "coach@example.com",
-      "passwordPlaceholder": "Enter your password",
-      "submit": "Send magic link",
+      "submit": "Continue",
       "submitting": "Sending...",
+      "helpText": "We will send you a sign-in link by email. No password needed.",
+      "separator": "OR",
       "alreadySignedIn": "You are already signed in.",
-      "goToTeam": "Go to Team",
-      "disclaimer": "Signing in is optional. You can still use the app in guest mode.",
-      "noAccount": "No account yet?"
+      "goToTeam": "Go to Team"
     },
     "signUp": {
       "title": "Create account",
@@ -301,6 +298,7 @@
     },
     "messages": {
       "magicLinkSent": "Magic link sent. Check your inbox.",
+      "emailLinkSent": "Sign-in link sent. Check your inbox.",
       "confirmEmail": "Account created. Check your email to confirm your account."
     },
     "errors": {
@@ -312,6 +310,7 @@
     },
     "validation": {
       "emailRequired": "Email is required.",
+      "emailInvalid": "Enter a valid email address.",
       "passwordRequired": "Password is required.",
       "passwordTooShort": "Password must be at least 6 characters.",
       "passwordMismatch": "Passwords do not match."

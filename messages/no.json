@@ -275,18 +275,15 @@
     },
     "signIn": {
       "title": "Logg inn",
-      "subtitle": "Velg innloggingsmetode. Innlogging er valgfritt.",
-      "magicTitle": "Magisk lenke",
-      "passwordTitle": "E-post og passord",
+      "subtitle": "Fortsett der du slapp og synkroniser data på tvers av enheter.",
       "emailLabel": "E-post",
       "emailPlaceholder": "trener@eksempel.no",
-      "passwordPlaceholder": "Skriv inn passordet ditt",
-      "submit": "Send magisk lenke",
+      "submit": "Fortsett",
       "submitting": "Sender...",
+      "helpText": "Vi sender deg en innloggingslenke på e-post. Ingen passord nødvendig.",
+      "separator": "ELLER",
       "alreadySignedIn": "Du er allerede logget inn.",
-      "goToTeam": "Gå til Lag",
-      "disclaimer": "Innlogging er valgfritt. Du kan fortsatt bruke appen i gjestemodus.",
-      "noAccount": "Ingen konto ennå?"
+      "goToTeam": "Gå til Lag"
     },
     "signUp": {
       "title": "Opprett konto",
@@ -301,6 +298,7 @@
     },
     "messages": {
       "magicLinkSent": "Magisk lenke sendt. Sjekk innboksen din.",
+      "emailLinkSent": "Innloggingslenke sendt. Sjekk innboksen din.",
       "confirmEmail": "Konto opprettet. Sjekk e-posten din for å bekrefte kontoen."
     },
     "errors": {
@@ -312,6 +310,7 @@
     },
     "validation": {
       "emailRequired": "E-post er påkrevd.",
+      "emailInvalid": "Skriv inn en gyldig e-postadresse.",
       "passwordRequired": "Passord er påkrevd.",
       "passwordTooShort": "Passord må ha minst 6 tegn.",
       "passwordMismatch": "Passordene er ikke like."
