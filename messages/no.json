@@ -83,6 +83,44 @@
       "emptyTitle": "Ingen spillere ennå",
       "emptyDescription": "Legg til den første spilleren for å begynne å bygge troppen."
     },
+    "playerSource": {
+      "spondBadge": "Spond",
+      "managedDeleteHint": "Denne spilleren er importert fra Spond og kan ikke slettes manuelt."
+    },
+    "spond": {
+      "title": "Integrasjoner",
+      "subtitle": "Koble laget til Spond og importer medlemmer som spillere.",
+      "guestModeHint": "Spond-integrasjon krever at du er logget inn.",
+      "statusConnected": "Tilkoblet",
+      "statusDisconnected": "Ikke tilkoblet",
+      "connectCta": "Koble til Spond",
+      "connecting": "Kobler til...",
+      "emailLabel": "Spond e-post",
+      "emailPlaceholder": "epost@eksempel.no",
+      "passwordLabel": "Spond passord",
+      "passwordPlaceholder": "Spond-passord",
+      "connected": "Spond-konto koblet til.",
+      "refreshGroups": "Oppdater grupper",
+      "groupLabel": "Velg Spond-gruppe",
+      "noGroups": "Ingen grupper funnet.",
+      "saveLinkCta": "Lagre gruppekobling",
+      "savingLink": "Lagrer...",
+      "groupLinked": "Spond-gruppe er koblet til laget.",
+      "linkedGroupReady": "Spillere importert fra Spond blir merket og låst for manuell sletting.",
+      "importCta": "Importer spillere",
+      "importing": "Importerer...",
+      "importResult": "Import fullført: {created} nye, {updated} oppdaterte, {total} medlemmer behandlet.",
+      "errors": {
+        "unauthorized": "Du må være logget inn.",
+        "invalidCredentials": "Ugyldig Spond-bruker eller passord.",
+        "notConnected": "Spond er ikke koblet til ennå.",
+        "groupNotLinked": "Velg og lagre Spond-gruppe først.",
+        "groupNotFound": "Fant ikke valgt Spond-gruppe.",
+        "noMembers": "Fant ingen medlemmer i valgt gruppe.",
+        "encryptionNotConfigured": "Server mangler krypteringsnøkkel for Spond-tilkobling.",
+        "generic": "Noe gikk galt under Spond-integrasjonen."
+      }
+    },
     "forms": {
       "teamNameLabel": "Lagnavn",
       "teamNamePlaceholder": "Eksempel: FairPlayr FC",
@@ -104,7 +142,8 @@
       "confirmDeleteTeam": "Slette dette laget? Dette kan ikke angres."
     },
     "errors": {
-      "generic": "Noe gikk galt. Prøv igjen."
+      "generic": "Noe gikk galt. Prøv igjen.",
+      "playerManagedCannotDelete": "Denne spilleren er importert fra Spond og kan ikke slettes manuelt."
     }
   },
   "auth": {

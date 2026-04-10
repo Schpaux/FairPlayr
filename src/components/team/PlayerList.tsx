@@ -14,6 +14,8 @@ interface PlayerListCopy {
   delete: string;
   moveUp: string;
   moveDown: string;
+  sourceSpondBadge: string;
+  managedDeleteHint: string;
   save: string;
   cancel: string;
   playerNameLabel: string;
@@ -79,6 +81,7 @@ export function PlayerList({
     <ul className="space-y-3">
       {players.map((player, index) => {
         const isEditing = editingPlayerId === player.id;
+        const isManagedPlayer = player.isManaged || player.source === "spond";
 
         return (
           <motion.li
@@ -131,9 +134,19 @@ export function PlayerList({
               ) : (
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {index + 1}. {player.name}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {index + 1}. {player.name}
+                      </p>
+                      {player.source === "spond" ? (
+                        <span className="rounded-full border border-fp-accent/40 bg-fp-accent/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-accent">
+                          {copy.sourceSpondBadge}
+                        </span>
+                      ) : null}
+                    </div>
+                    {isManagedPlayer ? (
+                      <p className="mt-1 text-[11px] text-muted-foreground">{copy.managedDeleteHint}</p>
+                    ) : null}
                   </div>
                   <div className="flex items-center gap-1">
                     {allowReorder ? (
@@ -179,6 +192,8 @@ export function PlayerList({
                       className="tap-target px-2"
                       aria-label={copy.delete}
                       onClick={() => onDeletePlayer(player.id)}
+                      disabled={isManagedPlayer}
+                      title={isManagedPlayer ? copy.managedDeleteHint : undefined}
                     >
                       <Trash2 size={16} />
                     </FpButton>

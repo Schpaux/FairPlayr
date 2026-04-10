@@ -3,6 +3,10 @@ export interface Player {
   name: string;
   number?: number;
   preferredPosition?: string;
+  source: "manual" | "spond";
+  externalProvider: string | null;
+  externalId: string | null;
+  isManaged: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -59,6 +63,10 @@ export function createPlayer(name: string): Player {
   return {
     id: createId(),
     name: normalizedName,
+    source: "manual",
+    externalProvider: null,
+    externalId: null,
+    isManaged: false,
     createdAt: timestamp,
     updatedAt: timestamp,
   };
@@ -93,6 +101,12 @@ export function renamePlayer(team: Team, playerId: string, name: string): Team {
 }
 
 export function deletePlayer(team: Team, playerId: string): Team {
+  const player = team.players.find((candidate) => candidate.id === playerId);
+
+  if (player?.isManaged || player?.source === "spond") {
+    throw new Error("PLAYER_MANAGED");
+  }
+
   return {
     ...team,
     players: team.players.filter((player) => player.id !== playerId),

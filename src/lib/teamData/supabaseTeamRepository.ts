@@ -23,6 +23,10 @@ interface PlayerRow {
   name: string;
   number: number | null;
   preferred_position: string | null;
+  source: "manual" | "spond";
+  external_provider: string | null;
+  external_id: string | null;
+  is_managed: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -33,6 +37,10 @@ function toPlayer(row: PlayerRow): Player {
     name: row.name,
     number: row.number ?? undefined,
     preferredPosition: row.preferred_position ?? undefined,
+    source: row.source,
+    externalProvider: row.external_provider,
+    externalId: row.external_id,
+    isManaged: row.is_managed,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -131,7 +139,7 @@ async function resolveNextActiveTeamId(
 async function getPlayersByTeamId(supabase: SupabaseClient, teamId: string) {
   const { data, error } = await supabase
     .from("players")
-    .select("id, name, number, preferred_position, created_at, updated_at")
+    .select("id, name, number, preferred_position, source, external_provider, external_id, is_managed, created_at, updated_at")
     .eq("team_id", teamId)
     .eq("is_active", true)
     .order("created_at", { ascending: true })
@@ -318,6 +326,8 @@ export function createSupabaseTeamRepository({
         team_id: teamId,
         name,
         is_active: true,
+        source: "manual",
+        is_managed: false,
       });
 
       if (error) {
@@ -351,13 +361,19 @@ export function createSupabaseTeamRepository({
       return next;
     },
     async deletePlayer(teamId, playerId) {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("players")
         .delete()
-        .eq("id", playerId);
+        .eq("id", playerId)
+        .eq("source", "manual")
+        .select("id");
 
       if (error) {
         throw new Error(error.message);
+      }
+
+      if (!data || data.length === 0) {
+        throw new Error("PLAYER_MANAGED");
       }
 
       const next = await readCloudTeam(supabase, teamId);

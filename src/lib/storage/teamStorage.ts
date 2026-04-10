@@ -57,6 +57,12 @@ function toValidPlayer(value: unknown): Player | null {
     return null;
   }
 
+  const source = value.source === "spond" ? "spond" : "manual";
+  const externalProvider = typeof value.externalProvider === "string" ? value.externalProvider : null;
+  const externalId = typeof value.externalId === "string" ? value.externalId : null;
+  const isManaged =
+    typeof value.isManaged === "boolean" ? value.isManaged : source === "spond";
+
   return {
     id,
     name,
@@ -65,6 +71,10 @@ function toValidPlayer(value: unknown): Player | null {
       typeof value.preferredPosition === "string"
         ? value.preferredPosition
         : undefined,
+    source,
+    externalProvider,
+    externalId,
+    isManaged,
     createdAt,
     updatedAt,
   };

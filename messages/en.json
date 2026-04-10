@@ -83,6 +83,44 @@
       "emptyTitle": "No players yet",
       "emptyDescription": "Add your first player to begin building your squad."
     },
+    "playerSource": {
+      "spondBadge": "Spond",
+      "managedDeleteHint": "This player is imported from Spond and cannot be deleted manually."
+    },
+    "spond": {
+      "title": "Integrations",
+      "subtitle": "Connect this team to Spond and import members as players.",
+      "guestModeHint": "Spond integration requires sign-in.",
+      "statusConnected": "Connected",
+      "statusDisconnected": "Not connected",
+      "connectCta": "Connect to Spond",
+      "connecting": "Connecting...",
+      "emailLabel": "Spond email",
+      "emailPlaceholder": "email@example.com",
+      "passwordLabel": "Spond password",
+      "passwordPlaceholder": "Spond password",
+      "connected": "Spond account connected.",
+      "refreshGroups": "Refresh groups",
+      "groupLabel": "Select Spond group",
+      "noGroups": "No groups found.",
+      "saveLinkCta": "Save group link",
+      "savingLink": "Saving...",
+      "groupLinked": "Spond group linked to team.",
+      "linkedGroupReady": "Players imported from Spond remain tagged and protected from manual deletion.",
+      "importCta": "Import players",
+      "importing": "Importing...",
+      "importResult": "Import completed: {created} new, {updated} updated, {total} members processed.",
+      "errors": {
+        "unauthorized": "You must be signed in.",
+        "invalidCredentials": "Invalid Spond email or password.",
+        "notConnected": "Spond is not connected yet.",
+        "groupNotLinked": "Select and save a Spond group first.",
+        "groupNotFound": "Selected Spond group was not found.",
+        "noMembers": "No members found in selected group.",
+        "encryptionNotConfigured": "Server is missing Spond encryption key configuration.",
+        "generic": "Something went wrong in Spond integration."
+      }
+    },
     "forms": {
       "teamNameLabel": "Team name",
       "teamNamePlaceholder": "Example: FairPlayr FC",
@@ -104,7 +142,8 @@
       "confirmDeleteTeam": "Delete this team? This cannot be undone."
     },
     "errors": {
-      "generic": "Something went wrong. Please try again."
+      "generic": "Something went wrong. Please try again.",
+      "playerManagedCannotDelete": "This player is imported from Spond and cannot be deleted manually."
     }
   },
   "auth": {

@@ -13,6 +13,7 @@ import { FpButton } from "@/components/ui/FpButton";
 import { PlayerList } from "@/components/team/PlayerList";
 import { PlayerQuickAddForm } from "@/components/team/PlayerQuickAddForm";
 import { TeamNameForm } from "@/components/team/TeamNameForm";
+import { SpondIntegrationCard } from "@/components/team/SpondIntegrationCard";
 import { variants } from "@/lib/tokens";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
 
@@ -28,12 +29,22 @@ export function TeamManager() {
 
   const allowReorder = workspace.mode === "guest-local";
 
+  const resolveTeamErrorMessage = (error: unknown) => {
+    if (error instanceof Error && error.message === "PLAYER_MANAGED") {
+      return t("errors.playerManagedCannotDelete");
+    }
+
+    return error instanceof Error ? error.message : t("errors.generic");
+  };
+
   const playerCopy = useMemo(
     () => ({
       rename: common("edit"),
       delete: common("delete"),
       moveUp: t("actions.moveUp"),
       moveDown: t("actions.moveDown"),
+      sourceSpondBadge: t("playerSource.spondBadge"),
+      managedDeleteHint: t("playerSource.managedDeleteHint"),
       save: common("save"),
       cancel: common("cancel"),
       playerNameLabel: t("forms.playerNameLabel"),
@@ -49,7 +60,7 @@ export function TeamManager() {
       await workspace.createTeam(name);
       setTeamError(null);
     } catch (error) {
-      setTeamError(error instanceof Error ? error.message : t("errors.generic"));
+      setTeamError(resolveTeamErrorMessage(error));
     }
   };
 
@@ -62,7 +73,7 @@ export function TeamManager() {
       await workspace.renameTeam(team.id, name);
       setTeamError(null);
     } catch (error) {
-      setTeamError(error instanceof Error ? error.message : t("errors.generic"));
+      setTeamError(resolveTeamErrorMessage(error));
     }
 
     setIsEditingTeamName(false);
@@ -78,7 +89,7 @@ export function TeamManager() {
       setTeamError(null);
       setIsEditingTeamName(false);
     } catch (error) {
-      setTeamError(error instanceof Error ? error.message : t("errors.generic"));
+      setTeamError(resolveTeamErrorMessage(error));
     }
   };
 
@@ -96,7 +107,7 @@ export function TeamManager() {
       setTeamError(null);
       return true;
     } catch (error) {
-      setTeamError(error instanceof Error ? error.message : t("errors.generic"));
+      setTeamError(resolveTeamErrorMessage(error));
       return false;
     }
   };
@@ -115,17 +126,24 @@ export function TeamManager() {
       setTeamError(null);
       return true;
     } catch (error) {
-      setTeamError(error instanceof Error ? error.message : t("errors.generic"));
+      setTeamError(resolveTeamErrorMessage(error));
       return false;
     }
   };
 
   const handleDeletePlayer = async (playerId: string) => {
-    if (!window.confirm(t("actions.confirmDeletePlayer"))) {
+    if (!team) {
       return;
     }
 
-    if (!team) {
+    const player = team.players.find((candidate) => candidate.id === playerId);
+
+    if (player && (player.isManaged || player.source === "spond")) {
+      setTeamError(t("errors.playerManagedCannotDelete"));
+      return;
+    }
+
+    if (!window.confirm(t("actions.confirmDeletePlayer"))) {
       return;
     }
 
@@ -133,7 +151,7 @@ export function TeamManager() {
       await workspace.deletePlayer(team.id, playerId);
       setTeamError(null);
     } catch (error) {
-      setTeamError(error instanceof Error ? error.message : t("errors.generic"));
+      setTeamError(resolveTeamErrorMessage(error));
     }
   };
 
@@ -146,7 +164,7 @@ export function TeamManager() {
       await workspace.reorderPlayer(team.id, playerId, direction);
       setTeamError(null);
     } catch (error) {
-      setTeamError(error instanceof Error ? error.message : t("errors.generic"));
+      setTeamError(resolveTeamErrorMessage(error));
     }
   };
 
@@ -297,6 +315,14 @@ export function TeamManager() {
                     {t("actions.deleteTeam")}
                   </FpButton>
                 </AppCard>
+              </motion.div>
+
+              <motion.div variants={variants.fadeInUp}>
+                <SpondIntegrationCard
+                  teamId={team.id}
+                  mode={workspace.mode}
+                  onImported={workspace.refresh}
+                />
               </motion.div>
 
               <motion.div variants={variants.fadeInUp}>
