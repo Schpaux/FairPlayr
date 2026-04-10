@@ -25,7 +25,7 @@ jobs:
 
       # Reporting scan: generate SARIF for GitHub code scanning.
       - name: Run Trivy filesystem reporting scan (SARIF)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: fs
           scan-ref: .
@@ -44,7 +44,7 @@ jobs:
 
       # Gating scan: fail only on HIGH/CRITICAL vulnerabilities.
       - name: Run Trivy filesystem gating scan (table)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: fs
           scan-ref: .
@@ -79,7 +79,7 @@ jobs:
 
       # Reporting scan: generate SARIF for GitHub code scanning.
       - name: Run Trivy image reporting scan (SARIF)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: fairplayr:${{ github.sha }}
           format: sarif
@@ -97,7 +97,7 @@ jobs:
 
       # Gating scan: fail only on HIGH/CRITICAL vulnerabilities.
       - name: Run Trivy image gating scan (table)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: fairplayr:${{ github.sha }}
           format: table
