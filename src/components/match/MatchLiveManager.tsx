@@ -18,6 +18,7 @@ import {
   substitutePlayers,
   tickLiveMatch,
   reconcileLiveMatchWithSquad,
+  updateScore,
   type LiveMatchState,
 } from "@/domain/liveMatch";
 import { getSubstitutionSuggestion } from "@/domain/substitutionSuggestion";
@@ -89,12 +90,12 @@ function readInitialLiveSnapshot(): InitialLiveSnapshot {
     };
   }
 
-  if (storedLiveMatch && storedLiveMatch.setupId === storedSetup.setup.id) {
+  if (storedLiveMatch && storedLiveMatch.setupId === storedSetup.config.id) {
     return {
       teamPlayers: team.players,
       liveMatch: reconcileLiveMatchWithSquad(
         storedLiveMatch,
-        storedSetup.setup.squadPlayerIds
+        storedSetup.config.selectedPlayerIds
       ),
       setupStatus: storedSetup.status,
     };
@@ -103,7 +104,7 @@ function readInitialLiveSnapshot(): InitialLiveSnapshot {
   if (storedSetup.status === "active") {
     return {
       teamPlayers: team.players,
-      liveMatch: createLiveMatchFromSetup(storedSetup.setup),
+      liveMatch: createLiveMatchFromSetup(storedSetup.config),
       setupStatus: storedSetup.status,
     };
   }
@@ -226,7 +227,7 @@ export function MatchLiveManager() {
     );
 
     if (storedSetup) {
-      endMatch(storedSetup.setup);
+      endMatch(storedSetup.config);
       setSetupStatus("ended");
     }
 
@@ -269,6 +270,18 @@ export function MatchLiveManager() {
   const handleResetView = () => {
     clearStoredLiveMatch();
     router.push("/match/setup");
+  };
+
+  const handleTeamScore = (delta: number) => {
+    setLiveMatch((previous) =>
+      previous ? updateScore(previous, "team", delta) : previous
+    );
+  };
+
+  const handleOpponentScore = (delta: number) => {
+    setLiveMatch((previous) =>
+      previous ? updateScore(previous, "opponent", delta) : previous
+    );
   };
 
   if (!isHydrated) {
@@ -320,6 +333,61 @@ export function MatchLiveManager() {
         variants={variants.staggerContainer}
         className="space-y-4"
       >
+        <motion.div variants={variants.fadeInUp}>
+          <AppCard className="space-y-3 p-4">
+            <p className="text-sm font-semibold text-foreground">{t("score.title")}</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-fp-border bg-fp-surface-2 p-3 text-center">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {t("score.team")}
+                </p>
+                <p className="mt-1 text-2xl font-bold text-foreground">{liveMatch.teamScore}</p>
+                <div className="mt-2 flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    className="tap-target rounded-lg border border-fp-border bg-background px-2 py-1 text-sm"
+                    onClick={() => handleTeamScore(-1)}
+                  >
+                    -
+                  </button>
+                  <button
+                    type="button"
+                    className="tap-target rounded-lg border border-fp-border bg-background px-2 py-1 text-sm"
+                    onClick={() => handleTeamScore(1)}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-fp-border bg-fp-surface-2 p-3 text-center">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {t("score.opponent")}
+                </p>
+                <p className="mt-1 text-2xl font-bold text-foreground">
+                  {liveMatch.opponentScore}
+                </p>
+                <div className="mt-2 flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    className="tap-target rounded-lg border border-fp-border bg-background px-2 py-1 text-sm"
+                    onClick={() => handleOpponentScore(-1)}
+                  >
+                    -
+                  </button>
+                  <button
+                    type="button"
+                    className="tap-target rounded-lg border border-fp-border bg-background px-2 py-1 text-sm"
+                    onClick={() => handleOpponentScore(1)}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+          </AppCard>
+        </motion.div>
+
         <motion.div variants={variants.fadeInUp}>
           <MatchTimerPanel
             status={liveMatch.status}

@@ -105,6 +105,7 @@
     },
     "sections": {
       "format": "Match Format",
+      "formation": "Formation",
       "duration": "Duration",
       "squad": "Select Squad",
       "lineup": "Starting Lineup"
@@ -112,16 +113,25 @@
     "format": {
       "fieldCount": "{count} on the field"
     },
+    "formation": {
+      "presetLabel": "{shape}"
+    },
     "duration": {
-      "presetLabel": "{minutes} min"
+      "presetLabel": "{halves}x{minutes}",
+      "customTitle": "Custom total duration",
+      "customSuffix": "minutes total",
+      "totalLabel": "Total: {minutes} min"
     },
     "squad": {
-      "selectedCount": "{selected} of {total} players selected"
+      "selectedCount": "{selected} of {total} players selected",
+      "selectAll": "Select all",
+      "clear": "Clear"
     },
     "lineup": {
       "starterSlots": "{current} / {required}",
       "starting": "Starting",
       "bench": "Bench",
+      "autoFill": "Auto-fill",
       "promoteLabel": "Start",
       "demoteLabel": "Bench",
       "startingFull": "Bench a starter first",
@@ -150,6 +160,11 @@
       "remaining": "Time remaining",
       "elapsed": "Elapsed: {elapsed}",
       "duration": "Duration: {duration} min"
+    },
+    "score": {
+      "title": "Score",
+      "team": "Us",
+      "opponent": "Them"
     },
     "field": {
       "title": "On Field",
@@ -211,7 +226,6 @@
     "sections": {
       "format": "Match Format",
       "field": "Field Layout",
-      "remaining": "Remaining Players",
       "players": "Player Selection"
     },
     "format": {
@@ -230,10 +244,17 @@
     },
     "players": {
       "selectedCount": "{selected} of {total} selected",
-      "assigned": "On field"
+      "assigned": "On field",
+      "selectAll": "Select all",
+      "clear": "Clear"
+    },
+    "picker": {
+      "title": "Pick player",
+      "slot": "Slot {slot}"
     },
     "actions": {
       "clearSlot": "Clear Active Slot",
+      "autoFill": "Auto-fill lineup",
       "selectSlotFirst": "Select a field slot first to place a player."
     }
   },

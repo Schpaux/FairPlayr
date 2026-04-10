@@ -1,7 +1,14 @@
-import type { MatchFormat, MatchSetup } from "@/domain/match";
+import {
+  assignStarterToSlot,
+  createMatchSetup,
+  setDurationFromLegacy,
+  setSelectedSquad,
+  type MatchFormat,
+  type MatchConfig,
+} from "@/domain/match";
 
 const MATCH_SETUP_KEY = "fairplayr.matchSetup.v1";
-const STORAGE_VERSION = 1;
+const STORAGE_VERSION = 2;
 
 // ─── Status ───────────────────────────────────────────────────────────────────
 
@@ -12,8 +19,8 @@ const STORAGE_VERSION = 1;
  */
 export type MatchStatus = "draft" | "active" | "ended";
 
-export interface StoredMatchSetup {
-  setup: MatchSetup;
+export interface StoredMatchConfig {
+  config: MatchConfig;
   status: MatchStatus;
 }
 
@@ -21,7 +28,22 @@ export interface StoredMatchSetup {
 
 interface StorageEnvelope {
   version: number;
-  setup: MatchSetup;
+  config: MatchConfig;
+  status: MatchStatus;
+}
+
+interface LegacyEnvelope {
+  version: number;
+  setup: {
+    id: string;
+    teamId: string;
+    format: MatchFormat;
+    durationMinutes: number;
+    squadPlayerIds: string[];
+    startingPlayerIds: string[];
+    createdAt: string;
+    updatedAt: string;
+  };
   status: MatchStatus;
 }
 
@@ -42,41 +64,81 @@ function readNumber(v: unknown): number | null {
 const VALID_FORMATS: MatchFormat[] = ["3v3", "5v5", "7v7", "9v9", "11v11"];
 const VALID_STATUSES: MatchStatus[] = ["draft", "active", "ended"];
 
-function toValidMatchSetup(v: unknown): MatchSetup | null {
+function toValidMatchConfig(v: unknown): MatchConfig | null {
   if (!isRecord(v)) return null;
 
   const id = readString(v.id);
   const teamId = readString(v.teamId);
   const format = readString(v.format);
-  const durationMinutes = readNumber(v.durationMinutes);
+  const formationId = readString(v.formationId);
+  const duration = isRecord(v.duration) ? v.duration : null;
+  const durationMinutes = duration ? readNumber(duration.totalMinutes) : null;
   const createdAt = readString(v.createdAt);
   const updatedAt = readString(v.updatedAt);
 
-  if (!id || !teamId || !format || !durationMinutes || !createdAt || !updatedAt) {
+  if (
+    !id ||
+    !teamId ||
+    !format ||
+    !formationId ||
+    durationMinutes === null ||
+    !createdAt ||
+    !updatedAt
+  ) {
     return null;
   }
 
   if (!VALID_FORMATS.includes(format as MatchFormat)) return null;
 
-  const rawSquad = Array.isArray(v.squadPlayerIds) ? v.squadPlayerIds : [];
+  const rawSquad = Array.isArray(v.selectedPlayerIds) ? v.selectedPlayerIds : [];
   const rawStarters = Array.isArray(v.startingPlayerIds)
     ? v.startingPlayerIds
     : [];
+  const rawAssignments = isRecord(v.slotAssignments) ? v.slotAssignments : {};
 
-  const squadPlayerIds = rawSquad.filter(
+  const selectedPlayerIds = rawSquad.filter(
     (x): x is string => typeof x === "string"
   );
   const startingPlayerIds = rawStarters.filter(
-    (x): x is string => typeof x === "string" && squadPlayerIds.includes(x)
+    (x): x is string => typeof x === "string" && selectedPlayerIds.includes(x)
   );
+
+  const slotAssignments: Record<string, string | null> = {};
+
+  for (const [slotId, playerId] of Object.entries(rawAssignments)) {
+    slotAssignments[slotId] =
+      typeof playerId === "string" && selectedPlayerIds.includes(playerId)
+        ? playerId
+        : null;
+  }
 
   return {
     id,
     teamId,
     format: format as MatchFormat,
-    durationMinutes,
-    squadPlayerIds,
+    formationId,
+    duration: {
+      mode:
+        duration && duration.mode === "custom"
+          ? "custom"
+          : "preset",
+      presetId:
+        duration && typeof duration.presetId === "string"
+          ? (duration.presetId as MatchConfig["duration"]["presetId"])
+          : null,
+      halves:
+        duration && typeof duration.halves === "number"
+          ? duration.halves
+          : 2,
+      minutesPerHalf:
+        duration && typeof duration.minutesPerHalf === "number"
+          ? duration.minutesPerHalf
+          : Math.max(1, Math.round(durationMinutes / 2)),
+      totalMinutes: durationMinutes,
+    },
+    selectedPlayerIds,
     startingPlayerIds,
+    slotAssignments,
     createdAt,
     updatedAt,
   };
@@ -86,15 +148,55 @@ function isValidEnvelope(v: unknown): v is StorageEnvelope {
   if (!isRecord(v)) return false;
   return (
     typeof v.version === "number" &&
+    isRecord(v.config) &&
+    typeof v.status === "string" &&
+    VALID_STATUSES.includes(v.status as MatchStatus)
+  );
+}
+
+function isLegacyEnvelope(v: unknown): v is LegacyEnvelope {
+  if (!isRecord(v)) {
+    return false;
+  }
+
+  return (
+    typeof v.version === "number" &&
     isRecord(v.setup) &&
     typeof v.status === "string" &&
     VALID_STATUSES.includes(v.status as MatchStatus)
   );
 }
 
+function migrateLegacySetup(legacy: LegacyEnvelope["setup"]): MatchConfig | null {
+  if (!legacy || !VALID_FORMATS.includes(legacy.format)) {
+    return null;
+  }
+
+  let config = createMatchSetup(legacy.teamId, legacy.format);
+  config = setDurationFromLegacy(config, legacy.durationMinutes);
+  config = setSelectedSquad(config, legacy.squadPlayerIds);
+
+  legacy.startingPlayerIds.forEach((playerId, index) => {
+    const slotId = Object.keys(config.slotAssignments)[index];
+
+    if (!slotId) {
+      return;
+    }
+
+    config = assignStarterToSlot(config, slotId, playerId);
+  });
+
+  return {
+    ...config,
+    id: legacy.id,
+    createdAt: legacy.createdAt,
+    updatedAt: legacy.updatedAt,
+  };
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-export function getStoredMatchSetup(): StoredMatchSetup | null {
+export function getStoredMatchSetup(): StoredMatchConfig | null {
   if (typeof window === "undefined") return null;
 
   try {
@@ -102,34 +204,64 @@ export function getStoredMatchSetup(): StoredMatchSetup | null {
     if (!raw) return null;
 
     const parsed = JSON.parse(raw) as unknown;
-    if (!isValidEnvelope(parsed)) return null;
-    if (parsed.version !== STORAGE_VERSION) return null;
+    if (isValidEnvelope(parsed)) {
+      if (parsed.version !== STORAGE_VERSION) return null;
 
-    const setup = toValidMatchSetup(parsed.setup);
-    if (!setup) return null;
+      const config = toValidMatchConfig(parsed.config);
+      if (!config) return null;
 
-    return { setup, status: parsed.status };
+      return { config, status: parsed.status };
+    }
+
+    if (!isLegacyEnvelope(parsed)) {
+      return null;
+    }
+
+    const config = migrateLegacySetup(parsed.setup);
+    if (!config) {
+      return null;
+    }
+
+    const migrated: StoredMatchConfig = {
+      config,
+      status: parsed.status,
+    };
+
+    writeEnvelope(config, parsed.status);
+
+    return migrated;
   } catch {
     return null;
   }
 }
 
 /** Save the current setup as a draft (coach is still configuring). */
-export function saveMatchSetupDraft(setup: MatchSetup): void {
-  writeEnvelope(setup, "draft");
+export function saveMatchSetupDraft(config: MatchConfig): void {
+  writeEnvelope(config, "draft");
 }
 
 /**
  * Mark the match as active (coach tapped "Start Match").
  * The live match screen reads this to know a match is in progress.
  */
-export function activateMatch(setup: MatchSetup): void {
-  writeEnvelope(setup, "active");
+export function activateMatch(config: MatchConfig): void {
+  writeEnvelope(config, "active");
 }
 
 /** Mark the match as ended. */
-export function endMatch(setup: MatchSetup): void {
-  writeEnvelope(setup, "ended");
+export function endMatch(config: MatchConfig): void {
+  writeEnvelope(config, "ended");
+}
+
+export function updateMatchConfig(config: MatchConfig): void {
+  const stored = getStoredMatchSetup();
+
+  if (stored) {
+    writeEnvelope(config, stored.status);
+    return;
+  }
+
+  writeEnvelope(config, "draft");
 }
 
 export function clearStoredMatchSetup(): void {
@@ -139,11 +271,11 @@ export function clearStoredMatchSetup(): void {
 
 // ─── Internal ─────────────────────────────────────────────────────────────────
 
-function writeEnvelope(setup: MatchSetup, status: MatchStatus): void {
+function writeEnvelope(config: MatchConfig, status: MatchStatus): void {
   if (typeof window === "undefined") return;
   const envelope: StorageEnvelope = {
     version: STORAGE_VERSION,
-    setup,
+    config,
     status,
   };
   window.localStorage.setItem(MATCH_SETUP_KEY, JSON.stringify(envelope));

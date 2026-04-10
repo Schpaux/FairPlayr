@@ -8,11 +8,14 @@ export interface LiveMatchState {
   teamId: string;
   durationSeconds: number;
   elapsedSeconds: number;
+  elapsedBaseSeconds: number;
   status: LiveMatchStatus;
+  teamScore: number;
+  opponentScore: number;
   onFieldPlayerIds: string[];
   benchPlayerIds: string[];
   playerAccumulatedSeconds: Record<string, number>;
-  lastTickAtMs: number | null;
+  runStartedAtMs: number | null;
   startedAt: string | null;
   endedAt: string | null;
   createdAt: string;
@@ -35,6 +38,16 @@ function clampElapsed(seconds: number, durationSeconds: number) {
   return Math.max(0, Math.min(seconds, durationSeconds));
 }
 
+function getDerivedElapsedSeconds(state: LiveMatchState, nowMs: number): number {
+  if (state.status !== "running" || state.runStartedAtMs === null) {
+    return clampElapsed(state.elapsedBaseSeconds, state.durationSeconds);
+  }
+
+  const runningDelta = Math.floor(Math.max(0, nowMs - state.runStartedAtMs) / 1000);
+
+  return clampElapsed(state.elapsedBaseSeconds + runningDelta, state.durationSeconds);
+}
+
 function applyDelta(state: LiveMatchState, deltaSeconds: number): LiveMatchState {
   if (deltaSeconds <= 0 || state.status !== "running") {
     return state;
@@ -47,8 +60,9 @@ function applyDelta(state: LiveMatchState, deltaSeconds: number): LiveMatchState
     return {
       ...state,
       elapsedSeconds: state.durationSeconds,
+      elapsedBaseSeconds: state.durationSeconds,
       status: "ended",
-      lastTickAtMs: null,
+      runStartedAtMs: null,
       endedAt: state.endedAt ?? nowIso(),
       updatedAt: nowIso(),
     };
@@ -70,9 +84,10 @@ function applyDelta(state: LiveMatchState, deltaSeconds: number): LiveMatchState
   return {
     ...state,
     elapsedSeconds: nextElapsed,
+    elapsedBaseSeconds: nextElapsed,
     status: didFinish ? "ended" : state.status,
     playerAccumulatedSeconds: updatedPlaytime,
-    lastTickAtMs: didFinish ? null : state.lastTickAtMs,
+    runStartedAtMs: didFinish ? null : state.runStartedAtMs,
     endedAt: didFinish ? state.endedAt ?? nowIso() : state.endedAt,
     updatedAt: nowIso(),
   };
@@ -82,7 +97,7 @@ export function createLiveMatchFromSetup(setup: MatchSetup): LiveMatchState {
   const timestamp = nowIso();
   const playtime: Record<string, number> = {};
 
-  for (const playerId of setup.squadPlayerIds) {
+  for (const playerId of setup.selectedPlayerIds) {
     playtime[playerId] = 0;
   }
 
@@ -90,15 +105,18 @@ export function createLiveMatchFromSetup(setup: MatchSetup): LiveMatchState {
     id: generateId(),
     setupId: setup.id,
     teamId: setup.teamId,
-    durationSeconds: setup.durationMinutes * 60,
+    durationSeconds: setup.duration.totalMinutes * 60,
     elapsedSeconds: 0,
+    elapsedBaseSeconds: 0,
     status: "not_started",
+    teamScore: 0,
+    opponentScore: 0,
     onFieldPlayerIds: [...setup.startingPlayerIds],
-    benchPlayerIds: setup.squadPlayerIds.filter(
+    benchPlayerIds: setup.selectedPlayerIds.filter(
       (playerId) => !setup.startingPlayerIds.includes(playerId)
     ),
     playerAccumulatedSeconds: playtime,
-    lastTickAtMs: null,
+    runStartedAtMs: null,
     startedAt: null,
     endedAt: null,
     createdAt: timestamp,
@@ -111,32 +129,14 @@ export function tickLiveMatch(state: LiveMatchState, nowMs: number): LiveMatchSt
     return state;
   }
 
-  if (state.lastTickAtMs === null) {
-    return {
-      ...state,
-      lastTickAtMs: nowMs,
-      updatedAt: nowIso(),
-    };
-  }
-
-  const deltaMs = Math.max(0, nowMs - state.lastTickAtMs);
-  const deltaSeconds = Math.floor(deltaMs / 1000);
+  const derivedElapsed = getDerivedElapsedSeconds(state, nowMs);
+  const deltaSeconds = Math.max(0, derivedElapsed - state.elapsedSeconds);
 
   if (deltaSeconds <= 0) {
     return state;
   }
 
-  const updated = applyDelta(state, deltaSeconds);
-
-  if (updated.status !== "running") {
-    return updated;
-  }
-
-  return {
-    ...updated,
-    lastTickAtMs: state.lastTickAtMs + deltaSeconds * 1000,
-    updatedAt: nowIso(),
-  };
+  return applyDelta(state, deltaSeconds);
 }
 
 export function startLiveMatch(state: LiveMatchState, nowMs: number): LiveMatchState {
@@ -147,7 +147,7 @@ export function startLiveMatch(state: LiveMatchState, nowMs: number): LiveMatchS
   return {
     ...state,
     status: "running",
-    lastTickAtMs: nowMs,
+    runStartedAtMs: nowMs,
     startedAt: state.startedAt ?? nowIso(),
     updatedAt: nowIso(),
   };
@@ -167,7 +167,8 @@ export function pauseLiveMatch(state: LiveMatchState, nowMs: number): LiveMatchS
   return {
     ...ticked,
     status: "paused",
-    lastTickAtMs: null,
+    elapsedBaseSeconds: ticked.elapsedSeconds,
+    runStartedAtMs: null,
     updatedAt: nowIso(),
   };
 }
@@ -180,7 +181,7 @@ export function resumeLiveMatch(state: LiveMatchState, nowMs: number): LiveMatch
   return {
     ...state,
     status: "running",
-    lastTickAtMs: nowMs,
+    runStartedAtMs: nowMs,
     updatedAt: nowIso(),
   };
 }
@@ -195,9 +196,33 @@ export function endLiveMatch(state: LiveMatchState, nowMs: number): LiveMatchSta
   return {
     ...maybeTicked,
     status: "ended",
-    elapsedSeconds: maybeTicked.durationSeconds,
-    lastTickAtMs: null,
+    elapsedBaseSeconds: maybeTicked.elapsedSeconds,
+    runStartedAtMs: null,
     endedAt: maybeTicked.endedAt ?? nowIso(),
+    updatedAt: nowIso(),
+  };
+}
+
+export function updateScore(
+  state: LiveMatchState,
+  side: "team" | "opponent",
+  delta: number
+): LiveMatchState {
+  if (delta === 0) {
+    return state;
+  }
+
+  if (side === "team") {
+    return {
+      ...state,
+      teamScore: Math.max(0, state.teamScore + delta),
+      updatedAt: nowIso(),
+    };
+  }
+
+  return {
+    ...state,
+    opponentScore: Math.max(0, state.opponentScore + delta),
     updatedAt: nowIso(),
   };
 }

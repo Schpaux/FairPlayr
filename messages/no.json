@@ -105,6 +105,7 @@
     },
     "sections": {
       "format": "Kampformat",
+      "formation": "Formasjon",
       "duration": "Varighet",
       "squad": "Velg tropp",
       "lineup": "Startoppstilling"
@@ -112,16 +113,25 @@
     "format": {
       "fieldCount": "{count} på banen"
     },
+    "formation": {
+      "presetLabel": "{shape}"
+    },
     "duration": {
-      "presetLabel": "{minutes} min"
+      "presetLabel": "{halves}x{minutes}",
+      "customTitle": "Egendefinert totalvarighet",
+      "customSuffix": "minutter totalt",
+      "totalLabel": "Totalt: {minutes} min"
     },
     "squad": {
-      "selectedCount": "{selected} av {total} spillere valgt"
+      "selectedCount": "{selected} av {total} spillere valgt",
+      "selectAll": "Velg alle",
+      "clear": "Tøm"
     },
     "lineup": {
       "starterSlots": "{current} / {required}",
       "starting": "Starter",
       "bench": "Benken",
+      "autoFill": "Fyll automatisk",
       "promoteLabel": "Start",
       "demoteLabel": "Benk",
       "startingFull": "Benk en starter først",
@@ -150,6 +160,11 @@
       "remaining": "Tid igjen",
       "elapsed": "Spilt: {elapsed}",
       "duration": "Varighet: {duration} min"
+    },
+    "score": {
+      "title": "Resultat",
+      "team": "Oss",
+      "opponent": "Dem"
     },
     "field": {
       "title": "På banen",
@@ -211,7 +226,6 @@
     "sections": {
       "format": "Kampformat",
       "field": "Baneoppsett",
-      "remaining": "Resterende spillere",
       "players": "Spillervalg"
     },
     "format": {
@@ -230,10 +244,17 @@
     },
     "players": {
       "selectedCount": "{selected} av {total} valgt",
-      "assigned": "På banen"
+      "assigned": "På banen",
+      "selectAll": "Velg alle",
+      "clear": "Tøm"
+    },
+    "picker": {
+      "title": "Velg spiller",
+      "slot": "Plass {slot}"
     },
     "actions": {
       "clearSlot": "Tøm aktiv plass",
+      "autoFill": "Fyll oppstilling automatisk",
       "selectSlotFirst": "Velg først en plass på banen for å plassere en spiller."
     }
   },

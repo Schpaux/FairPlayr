@@ -7,12 +7,20 @@ interface SquadSelectorProps {
   players: Player[];
   selectedIds: string[];
   onToggle: (playerId: string) => void;
+  onSelectAll: () => void;
+  onClearSelection: () => void;
+  selectAllLabel: string;
+  clearLabel: string;
 }
 
 export function SquadSelector({
   players,
   selectedIds,
   onToggle,
+  onSelectAll,
+  onClearSelection,
+  selectAllLabel,
+  clearLabel,
 }: SquadSelectorProps) {
   const t = useTranslations("matchSetup.squad");
   const selectedCount = selectedIds.length;
@@ -20,9 +28,27 @@ export function SquadSelector({
   return (
     <div className="space-y-3">
       {/* Count indicator */}
-      <p className="text-xs text-muted-foreground">
-        {t("selectedCount", { selected: selectedCount, total: players.length })}
-      </p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">
+          {t("selectedCount", { selected: selectedCount, total: players.length })}
+        </p>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={onSelectAll}
+            className="tap-target rounded-lg border border-fp-border bg-fp-surface-2 px-2 py-1 text-[11px] font-medium text-muted-foreground"
+          >
+            {selectAllLabel}
+          </button>
+          <button
+            type="button"
+            onClick={onClearSelection}
+            className="tap-target rounded-lg border border-fp-border bg-fp-surface-2 px-2 py-1 text-[11px] font-medium text-muted-foreground"
+          >
+            {clearLabel}
+          </button>
+        </div>
+      </div>
 
       {/* Player list */}
       <div className="flex flex-col divide-y divide-fp-border">

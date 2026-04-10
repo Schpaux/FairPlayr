@@ -9,14 +9,20 @@ import {
   createMatchSetup,
   setMatchFormat,
   setMatchDuration,
+  setMatchDurationPreset,
   toggleSquadPlayer,
+  setSelectedSquad,
+  selectAllSquad,
   promoteToStarter,
   demoteToBench,
+  autoFillLineup,
+  getFormationPresets,
+  setMatchFormation,
   getStarterDeficit,
   canStartMatch,
   reconcileWithTeam,
 } from "@/domain/match";
-import type { MatchSetup } from "@/domain/match";
+import type { MatchConfig } from "@/domain/match";
 import { getStoredTeam } from "@/lib/storage/teamStorage";
 import {
   getStoredMatchSetup,
@@ -34,6 +40,7 @@ import { FormatSelector } from "@/components/match/FormatSelector";
 import { DurationPicker } from "@/components/match/DurationPicker";
 import { SquadSelector } from "@/components/match/SquadSelector";
 import { LineupAssigner } from "@/components/match/LineupAssigner";
+import { FormationSelector } from "@/components/match/FormationSelector";
 import { variants } from "@/lib/tokens";
 import { cn } from "@/lib/utils";
 
@@ -73,7 +80,7 @@ export function MatchSetupManager() {
 
   // ── State ──────────────────────────────────────────────────────────────
   const [team] = useState(() => getStoredTeam());
-  const [setup, setSetup] = useState<MatchSetup | null>(() => {
+  const [setup, setSetup] = useState<MatchConfig | null>(() => {
     const currentTeam = getStoredTeam();
 
     if (!currentTeam) {
@@ -83,8 +90,8 @@ export function MatchSetupManager() {
     const stored = getStoredMatchSetup();
     const teamPlayerIds = currentTeam.players.map((p) => p.id);
 
-    if (stored && stored.setup.teamId === currentTeam.id) {
-      return reconcileWithTeam(stored.setup, teamPlayerIds);
+    if (stored && stored.config.teamId === currentTeam.id) {
+      return reconcileWithTeam(stored.config, teamPlayerIds);
     }
 
     return createMatchSetup(currentTeam.id);
@@ -105,8 +112,20 @@ export function MatchSetupManager() {
 
   const handleDurationChange: React.ComponentProps<
     typeof DurationPicker
-  >["onChange"] = (minutes) => {
+  >["onCustomChange"] = (minutes) => {
     setSetup((prev) => (prev ? setMatchDuration(prev, minutes) : prev));
+  };
+
+  const handleDurationPresetChange: React.ComponentProps<
+    typeof DurationPicker
+  >["onPresetChange"] = (presetId) => {
+    setSetup((prev) => (prev ? setMatchDurationPreset(prev, presetId) : prev));
+  };
+
+  const handleFormationChange: React.ComponentProps<
+    typeof FormationSelector
+  >["onChange"] = (formationId) => {
+    setSetup((prev) => (prev ? setMatchFormation(prev, formationId) : prev));
   };
 
   const handleToggleSquad = (playerId: string) => {
@@ -119,6 +138,20 @@ export function MatchSetupManager() {
 
   const handleDemote = (playerId: string) => {
     setSetup((prev) => (prev ? demoteToBench(prev, playerId) : prev));
+  };
+
+  const handleSelectAll = () => {
+    setSetup((prev) =>
+      prev ? selectAllSquad(prev, team.players.map((player) => player.id)) : prev
+    );
+  };
+
+  const handleClearSelection = () => {
+    setSetup((prev) => (prev ? setSelectedSquad(prev, []) : prev));
+  };
+
+  const handleAutoFill = () => {
+    setSetup((prev) => (prev ? autoFillLineup(prev) : prev));
   };
 
   const handleStartMatch = () => {
@@ -203,12 +236,20 @@ export function MatchSetupManager() {
           <FormatSelector value={setup.format} onChange={handleFormatChange} />
         </SetupSection>
 
+        <SetupSection label={t("sections.formation")}>
+          <FormationSelector
+            formations={getFormationPresets(setup.format)}
+            value={setup.formationId}
+            onChange={handleFormationChange}
+          />
+        </SetupSection>
+
         {/* Duration */}
         <SetupSection label={t("sections.duration")}>
           <DurationPicker
-            format={setup.format}
-            value={setup.durationMinutes}
-            onChange={handleDurationChange}
+            value={setup.duration}
+            onPresetChange={handleDurationPresetChange}
+            onCustomChange={handleDurationChange}
           />
         </SetupSection>
 
@@ -216,14 +257,27 @@ export function MatchSetupManager() {
         <SetupSection label={t("sections.squad")}>
           <SquadSelector
             players={team.players}
-            selectedIds={setup.squadPlayerIds}
+            selectedIds={setup.selectedPlayerIds}
             onToggle={handleToggleSquad}
+            onSelectAll={handleSelectAll}
+            onClearSelection={handleClearSelection}
+            selectAllLabel={t("squad.selectAll")}
+            clearLabel={t("squad.clear")}
           />
         </SetupSection>
 
         {/* Lineup — only shown once at least 1 player is in the squad */}
-        {setup.squadPlayerIds.length > 0 && (
+        {setup.selectedPlayerIds.length > 0 && (
           <SetupSection label={t("sections.lineup")}>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleAutoFill}
+                className="tap-target rounded-lg border border-fp-border bg-fp-surface-2 px-3 py-1.5 text-xs font-medium text-muted-foreground"
+              >
+                {t("lineup.autoFill")}
+              </button>
+            </div>
             <LineupAssigner
               setup={setup}
               players={team.players}
@@ -246,7 +300,7 @@ export function MatchSetupManager() {
               <span className="text-sm text-muted-foreground">
                 {t("validation.selectMoreStarters", { needed: deficit })}
               </span>
-            ) : setup.squadPlayerIds.length === 0 ? (
+            ) : setup.selectedPlayerIds.length === 0 ? (
               <span className="text-sm text-muted-foreground">
                 {t("startMatchHint")}
               </span>

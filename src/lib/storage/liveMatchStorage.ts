@@ -1,11 +1,28 @@
 import type { LiveMatchState } from "@/domain/liveMatch";
 
 const LIVE_MATCH_STORAGE_KEY = "fairplayr.liveMatch.v1";
-const STORAGE_VERSION = 1;
+const STORAGE_VERSION = 2;
 
 interface LiveMatchStorageEnvelope {
   version: number;
   liveMatch: LiveMatchState;
+}
+
+interface LegacyLiveMatch {
+  id: string;
+  setupId: string;
+  teamId: string;
+  durationSeconds: number;
+  elapsedSeconds: number;
+  status: LiveMatchState["status"];
+  onFieldPlayerIds: string[];
+  benchPlayerIds: string[];
+  playerAccumulatedSeconds: Record<string, number>;
+  lastTickAtMs: number | null;
+  startedAt: string | null;
+  endedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -42,6 +59,72 @@ function readStringArray(value: unknown): string[] {
 }
 
 function toValidLiveMatch(value: unknown): LiveMatchState | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const id = readString(value.id);
+  const setupId = readString(value.setupId);
+  const teamId = readString(value.teamId);
+  const durationSeconds = readNumber(value.durationSeconds);
+  const elapsedSeconds = readNumber(value.elapsedSeconds);
+  const elapsedBaseSeconds = readNumber(value.elapsedBaseSeconds);
+  const teamScore = readNumber(value.teamScore);
+  const opponentScore = readNumber(value.opponentScore);
+  const status = readStatus(value.status);
+  const createdAt = readString(value.createdAt);
+  const updatedAt = readString(value.updatedAt);
+
+  if (
+    !id ||
+    !setupId ||
+    !teamId ||
+    durationSeconds === null ||
+    elapsedSeconds === null ||
+    elapsedBaseSeconds === null ||
+    teamScore === null ||
+    opponentScore === null ||
+    !status ||
+    !createdAt ||
+    !updatedAt
+  ) {
+    return null;
+  }
+
+  const onFieldPlayerIds = readStringArray(value.onFieldPlayerIds);
+  const benchPlayerIds = readStringArray(value.benchPlayerIds);
+  const playerAccumulatedSeconds: Record<string, number> = {};
+
+  if (isRecord(value.playerAccumulatedSeconds)) {
+    for (const [playerId, seconds] of Object.entries(value.playerAccumulatedSeconds)) {
+      if (typeof seconds === "number" && isFinite(seconds) && seconds >= 0) {
+        playerAccumulatedSeconds[playerId] = seconds;
+      }
+    }
+  }
+
+  return {
+    id,
+    setupId,
+    teamId,
+    durationSeconds,
+    elapsedSeconds,
+    elapsedBaseSeconds,
+    status,
+    teamScore,
+    opponentScore,
+    onFieldPlayerIds,
+    benchPlayerIds,
+    playerAccumulatedSeconds,
+    runStartedAtMs: readNumber(value.runStartedAtMs),
+    startedAt: readString(value.startedAt),
+    endedAt: readString(value.endedAt),
+    createdAt,
+    updatedAt,
+  };
+}
+
+function toLegacyLiveMatch(value: unknown): LegacyLiveMatch | null {
   if (!isRecord(value)) {
     return null;
   }
@@ -98,6 +181,17 @@ function toValidLiveMatch(value: unknown): LiveMatchState | null {
   };
 }
 
+function migrateLegacyLiveMatch(legacy: LegacyLiveMatch): LiveMatchState {
+  return {
+    ...legacy,
+    elapsedBaseSeconds: legacy.elapsedSeconds,
+    teamScore: 0,
+    opponentScore: 0,
+    runStartedAtMs:
+      legacy.status === "running" ? Date.now() : null,
+  };
+}
+
 function isEnvelope(value: unknown): value is LiveMatchStorageEnvelope {
   return (
     isRecord(value) &&
@@ -124,11 +218,24 @@ export function getStoredLiveMatch(): LiveMatchState | null {
       return null;
     }
 
-    if (parsed.version !== STORAGE_VERSION) {
+    if (parsed.version === STORAGE_VERSION) {
+      return toValidLiveMatch(parsed.liveMatch);
+    }
+
+    if (parsed.version !== 1) {
       return null;
     }
 
-    return toValidLiveMatch(parsed.liveMatch);
+    const legacy = toLegacyLiveMatch(parsed.liveMatch);
+
+    if (!legacy) {
+      return null;
+    }
+
+    const migrated = migrateLegacyLiveMatch(legacy);
+    saveStoredLiveMatch(migrated);
+
+    return migrated;
   } catch {
     return null;
   }

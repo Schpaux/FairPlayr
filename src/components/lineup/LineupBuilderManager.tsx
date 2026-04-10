@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, ShieldAlert, Users } from "lucide-react";
+import { CheckCircle2, ShieldAlert, Users, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { PageShell } from "@/components/ui/PageShell";
@@ -12,68 +12,44 @@ import { AppCard } from "@/components/ui/AppCard";
 import { FpButton } from "@/components/ui/FpButton";
 import { LineupField } from "@/components/lineup/LineupField";
 import { FormatSelector } from "@/components/match/FormatSelector";
+import { FormationSelector } from "@/components/match/FormationSelector";
 import type { Player } from "@/domain/team";
 import { getStoredTeam } from "@/lib/storage/teamStorage";
-import { getStoredMatchSetup } from "@/lib/storage/matchStorage";
 import {
-  assignPlayerToSlot,
-  clearSlotAssignment,
-  createLineupDraft,
-  getAssignedPlayerIds,
-  getRemainingSelectedPlayerIds,
-  reconcileLineupWithTeam,
-  setLineupFormat,
-  setSelectedPlayers,
-  toggleSelectedPlayer,
-  type LineupDraft,
-} from "@/domain/lineup";
-import { getLineupSlots } from "@/domain/lineupLayouts";
+  getStoredMatchSetup,
+  saveMatchSetupDraft,
+  updateMatchConfig,
+} from "@/lib/storage/matchStorage";
 import {
-  getStoredLineupDraft,
-  saveStoredLineupDraft,
-} from "@/lib/storage/lineupStorage";
+  assignStarterToSlot,
+  autoFillLineup,
+  clearStarterSlot,
+  createMatchSetup,
+  getBenchPlayerIds,
+  getFormationPresets,
+  getFormationSlots,
+  reconcileWithTeam,
+  setMatchFormat,
+  setMatchFormation,
+  selectAllSquad,
+  setSelectedSquad,
+  toggleSquadPlayer,
+  type MatchConfig,
+} from "@/domain/match";
 import { variants } from "@/lib/tokens";
+import { cn } from "@/lib/utils";
 
-function buildInitialLineupDraft(team: { id: string; players: Player[] }): LineupDraft {
-  const storedDraft = getStoredLineupDraft();
+function buildInitialConfig(team: { id: string; players: Player[] }): MatchConfig {
   const storedSetup = getStoredMatchSetup();
+  const teamPlayerIds = team.players.map((player) => player.id);
 
-  if (storedDraft && storedDraft.teamId === team.id) {
-    return reconcileLineupWithTeam(
-      storedDraft,
-      team.players.map((player) => player.id)
-    );
+  if (storedSetup && storedSetup.config.teamId === team.id) {
+    return reconcileWithTeam(storedSetup.config, teamPlayerIds);
   }
 
-  const initialFormat =
-    storedSetup && storedSetup.setup.teamId === team.id
-      ? storedSetup.setup.format
-      : "5v5";
-
-  let draft = createLineupDraft(team.id, initialFormat);
-
-  const selectedIds =
-    storedSetup && storedSetup.setup.teamId === team.id
-      ? storedSetup.setup.squadPlayerIds
-      : team.players.map((player) => player.id);
-
-  draft = setSelectedPlayers(draft, selectedIds);
-
-  if (storedSetup && storedSetup.setup.teamId === team.id) {
-    const slots = getLineupSlots(draft.format);
-
-    storedSetup.setup.startingPlayerIds.forEach((playerId, index) => {
-      const slot = slots[index];
-
-      if (!slot) {
-        return;
-      }
-
-      draft = assignPlayerToSlot(draft, slot.id, playerId);
-    });
-  }
-
-  return draft;
+  let config = createMatchSetup(team.id, "5v5");
+  config = selectAllSquad(config, teamPlayerIds);
+  return config;
 }
 
 export function LineupBuilderManager() {
@@ -87,51 +63,74 @@ export function LineupBuilderManager() {
   );
 
   const [team] = useState(() => getStoredTeam());
-  const [draft, setDraft] = useState<LineupDraft | null>(() => {
+  const [config, setConfig] = useState<MatchConfig | null>(() => {
     const storedTeam = getStoredTeam();
 
     if (!storedTeam) {
       return null;
     }
 
-    return buildInitialLineupDraft(storedTeam);
+    return buildInitialConfig(storedTeam);
   });
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isHydrated || !draft) {
+    if (!isHydrated || !config) {
       return;
     }
 
-    saveStoredLineupDraft(draft);
-  }, [draft, isHydrated]);
+    saveMatchSetupDraft(config);
+    updateMatchConfig(config);
+  }, [config, isHydrated]);
 
   const playersById = useMemo(
     () => new Map((team?.players ?? []).map((player) => [player.id, player])),
     [team?.players]
   );
 
-  const slots = useMemo(() => (draft ? getLineupSlots(draft.format) : []), [draft]);
-  const assignedPlayerIds = useMemo(() => (draft ? getAssignedPlayerIds(draft) : []), [draft]);
-  const remainingSelectedIds = useMemo(
-    () => (draft ? getRemainingSelectedPlayerIds(draft) : []),
-    [draft]
+  const slots = useMemo(
+    () => (config ? getFormationSlots(config.format, config.formationId) : []),
+    [config]
   );
 
-  const remainingSelectedPlayers = useMemo(
+  const assignedPlayerIds = useMemo(
     () =>
-      remainingSelectedIds
+      config
+        ? slots
+            .map((slot) => config.slotAssignments[slot.id])
+            .filter((id): id is string => typeof id === "string")
+        : [],
+    [config, slots]
+  );
+
+  const benchPlayerIds = useMemo(
+    () => (config ? getBenchPlayerIds(config) : []),
+    [config]
+  );
+
+  const benchPlayers = useMemo(
+    () =>
+      benchPlayerIds
         .map((id) => playersById.get(id))
         .filter((player): player is Player => Boolean(player)),
-    [playersById, remainingSelectedIds]
+    [playersById, benchPlayerIds]
   );
 
+  const selectedSlotLabel = useMemo(() => {
+    if (!activeSlotId) {
+      return null;
+    }
+
+    return slots.find((slot) => slot.id === activeSlotId)?.label ?? null;
+  }, [slots, activeSlotId]);
+
   const handleAssignFromPool = (playerId: string) => {
-    if (!draft || !activeSlotId) {
+    if (!config || !activeSlotId) {
       return;
     }
 
-    setDraft(assignPlayerToSlot(draft, activeSlotId, playerId));
+    setConfig(assignStarterToSlot(config, activeSlotId, playerId));
+    setActiveSlotId(null);
   };
 
   if (!isHydrated) {
@@ -162,7 +161,7 @@ export function LineupBuilderManager() {
     );
   }
 
-  if (!draft) {
+  if (!config) {
     return null;
   }
 
@@ -202,11 +201,22 @@ export function LineupBuilderManager() {
               {t("sections.format")}
             </p>
               <FormatSelector
-              value={draft.format}
+              value={config.format}
                 i18nNamespace="lineup.format"
               onChange={(format) => {
-                setDraft((previous) =>
-                  previous ? setLineupFormat(previous, format) : previous
+                setConfig((previous) =>
+                  previous ? setMatchFormat(previous, format) : previous
+                );
+                setActiveSlotId(null);
+              }}
+            />
+
+            <FormationSelector
+              formations={getFormationPresets(config.format)}
+              value={config.formationId}
+              onChange={(formationId) => {
+                setConfig((previous) =>
+                  previous ? setMatchFormation(previous, formationId) : previous
                 );
                 setActiveSlotId(null);
               }}
@@ -230,7 +240,7 @@ export function LineupBuilderManager() {
 
             <LineupField
               slots={slots}
-              slotAssignments={draft.slotAssignments}
+              slotAssignments={config.slotAssignments}
               playersById={playersById}
               activeSlotId={activeSlotId}
               slotEmptyLabel={t("field.slot")}
@@ -245,48 +255,25 @@ export function LineupBuilderManager() {
                 size="md"
                 fullWidth
                 onClick={() =>
-                  setDraft((previous) =>
-                    previous ? clearSlotAssignment(previous, activeSlotId) : previous
+                  setConfig((previous) =>
+                    previous ? clearStarterSlot(previous, activeSlotId) : previous
                   )
                 }
               >
                 {t("actions.clearSlot")}
               </FpButton>
             )}
-          </AppCard>
-        </motion.div>
 
-        <motion.div variants={variants.fadeInUp}>
-          <AppCard className="space-y-3 p-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Users size={16} className="text-primary" />
-              {t("sections.remaining")}
-            </div>
-            <p className="text-xs text-muted-foreground">{t("remaining.hint")}</p>
-
-            {remainingSelectedPlayers.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-fp-border bg-fp-surface-2 p-3 text-sm text-muted-foreground">
-                {t("remaining.empty")}
-              </p>
-            ) : (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {remainingSelectedPlayers.map((player) => (
-                  <button
-                    key={player.id}
-                    type="button"
-                    onClick={() => handleAssignFromPool(player.id)}
-                    className="tap-target rounded-xl border border-fp-border bg-fp-surface-2 p-3 text-left transition-all hover:border-primary/25"
-                    disabled={!activeSlotId}
-                  >
-                    <p className="text-sm font-semibold text-foreground">{player.name}</p>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {!activeSlotId && (
-              <p className="text-xs text-muted-foreground">{t("actions.selectSlotFirst")}</p>
-            )}
+            <FpButton
+              variant="secondary"
+              size="md"
+              fullWidth
+              onClick={() =>
+                setConfig((previous) => (previous ? autoFillLineup(previous) : previous))
+              }
+            >
+              {t("actions.autoFill")}
+            </FpButton>
           </AppCard>
         </motion.div>
 
@@ -296,15 +283,45 @@ export function LineupBuilderManager() {
               <p className="text-sm font-semibold text-foreground">{t("sections.players")}</p>
               <span className="text-xs text-muted-foreground">
                 {t("players.selectedCount", {
-                  selected: draft.selectedPlayerIds.length,
+                  selected: config.selectedPlayerIds.length,
                   total: team.players.length,
                 })}
               </span>
             </div>
 
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setConfig((previous) =>
+                    previous
+                      ? selectAllSquad(
+                          previous,
+                          team.players.map((player) => player.id)
+                        )
+                      : previous
+                  )
+                }
+                className="tap-target rounded-lg border border-fp-border bg-fp-surface-2 px-2 py-1 text-[11px] font-medium text-muted-foreground"
+              >
+                {t("players.selectAll")}
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setConfig((previous) =>
+                    previous ? setSelectedSquad(previous, []) : previous
+                  )
+                }
+                className="tap-target rounded-lg border border-fp-border bg-fp-surface-2 px-2 py-1 text-[11px] font-medium text-muted-foreground"
+              >
+                {t("players.clear")}
+              </button>
+            </div>
+
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {team.players.map((player) => {
-                const selected = draft.selectedPlayerIds.includes(player.id);
+                const selected = config.selectedPlayerIds.includes(player.id);
                 const assigned = assignedPlayerIds.includes(player.id);
 
                 return (
@@ -312,8 +329,8 @@ export function LineupBuilderManager() {
                     key={player.id}
                     type="button"
                     onClick={() =>
-                      setDraft((previous) =>
-                        previous ? toggleSelectedPlayer(previous, player.id) : previous
+                      setConfig((previous) =>
+                        previous ? toggleSquadPlayer(previous, player.id) : previous
                       )
                     }
                     className={`tap-target rounded-xl border p-3 text-left transition-all ${
@@ -338,6 +355,54 @@ export function LineupBuilderManager() {
           </AppCard>
         </motion.div>
       </motion.div>
+
+      {activeSlotId && (
+        <div className="fixed inset-0 z-40 bg-black/45 p-3" onClick={() => setActiveSlotId(null)}>
+          <div
+            className="absolute inset-x-3 bottom-3 rounded-2xl border border-fp-border bg-background p-4 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {t("picker.title")}
+                </p>
+                <p className="text-sm font-semibold text-foreground">
+                  {t("picker.slot", { slot: selectedSlotLabel ?? "" })}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="tap-target rounded-lg border border-fp-border bg-fp-surface-2 p-2 text-muted-foreground"
+                onClick={() => setActiveSlotId(null)}
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            {benchPlayers.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-fp-border bg-fp-surface-2 p-3 text-sm text-muted-foreground">
+                {t("remaining.empty")}
+              </p>
+            ) : (
+              <div className="max-h-[44vh] space-y-2 overflow-y-auto pr-1">
+                {benchPlayers.map((player) => (
+                  <button
+                    key={player.id}
+                    type="button"
+                    onClick={() => handleAssignFromPool(player.id)}
+                    className={cn(
+                      "tap-target w-full rounded-xl border border-fp-border bg-fp-surface-2 p-3 text-left transition-all hover:border-primary/25"
+                    )}
+                  >
+                    <p className="text-sm font-semibold text-foreground">{player.name}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </PageShell>
   );
 }
