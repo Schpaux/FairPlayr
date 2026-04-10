@@ -93,7 +93,47 @@
   "matchSetup": {
     "title": "Kampoppsett",
     "subtitle": "Konfigurer kampen din før avspark.",
-    "empty": "Sett opp en kamp for å forberede lagoppstillingen og spore spilletid."
+    "noTeam": {
+      "title": "Ingen lag funnet",
+      "description": "Du trenger et lag før du kan sette opp en kamp.",
+      "action": "Opprett laget ditt"
+    },
+    "noPlayers": {
+      "title": "Legg til spillere først",
+      "description": "Laget ditt har ingen spillere ennå. Legg til minst én spiller før du setter opp en kamp.",
+      "action": "Legg til spillere"
+    },
+    "sections": {
+      "format": "Kampformat",
+      "duration": "Varighet",
+      "squad": "Velg tropp",
+      "lineup": "Startoppstilling"
+    },
+    "format": {
+      "fieldCount": "{count} på banen"
+    },
+    "duration": {
+      "presetLabel": "{minutes} min"
+    },
+    "squad": {
+      "selectedCount": "{selected} av {total} spillere valgt"
+    },
+    "lineup": {
+      "starterSlots": "{current} / {required}",
+      "starting": "Starter",
+      "bench": "Benken",
+      "promoteLabel": "Start",
+      "demoteLabel": "Benk",
+      "startingFull": "Benk en starter først",
+      "noStartersYet": "Ingen startere valgt ennå",
+      "emptySlot": "Tom plass"
+    },
+    "validation": {
+      "selectMoreStarters": "{needed, plural, one {Trenger # starter til} other {Trenger # startere til}}",
+      "ready": "Startoppstilling klar"
+    },
+    "startMatch": "Start kamp",
+    "startMatchHint": "Velg spillere og fyll startoppstillingen"
   },
   "matchLive": {
     "title": "Live kamp",

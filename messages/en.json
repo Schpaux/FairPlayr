@@ -93,7 +93,47 @@
   "matchSetup": {
     "title": "Match Setup",
     "subtitle": "Configure your match before kick-off.",
-    "empty": "Set up a match to prepare your lineup and track playtime."
+    "noTeam": {
+      "title": "No team found",
+      "description": "You need a team before setting up a match.",
+      "action": "Set up your team"
+    },
+    "noPlayers": {
+      "title": "Add players first",
+      "description": "Your team has no players yet. Add at least one player before setting up a match.",
+      "action": "Add players"
+    },
+    "sections": {
+      "format": "Match Format",
+      "duration": "Duration",
+      "squad": "Select Squad",
+      "lineup": "Starting Lineup"
+    },
+    "format": {
+      "fieldCount": "{count} on the field"
+    },
+    "duration": {
+      "presetLabel": "{minutes} min"
+    },
+    "squad": {
+      "selectedCount": "{selected} of {total} players selected"
+    },
+    "lineup": {
+      "starterSlots": "{current} / {required}",
+      "starting": "Starting",
+      "bench": "Bench",
+      "promoteLabel": "Start",
+      "demoteLabel": "Bench",
+      "startingFull": "Bench a starter first",
+      "noStartersYet": "No starters assigned yet",
+      "emptySlot": "Empty slot"
+    },
+    "validation": {
+      "selectMoreStarters": "{needed, plural, one {# more starter needed} other {# more starters needed}}",
+      "ready": "Lineup complete"
+    },
+    "startMatch": "Start Match",
+    "startMatchHint": "Select players and fill the starting lineup"
   },
   "matchLive": {
     "title": "Live Match",
