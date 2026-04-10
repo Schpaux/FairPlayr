@@ -3,7 +3,15 @@
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import { Link } from "@/i18n/navigation";
-import { ArrowRight, Timer, LayoutGrid, Shuffle, ChevronRight } from "lucide-react";
+import {
+  ArrowRight,
+  Timer,
+  LayoutGrid,
+  Shuffle,
+  ChevronRight,
+  ShieldCheck,
+  Link2,
+} from "lucide-react";
 import type { ElementType } from "react";
 import { AppCard } from "@/components/ui/AppCard";
 import { FpButton } from "@/components/ui/FpButton";
@@ -18,17 +26,26 @@ const heroItem = {
 };
 
 /* ─── Feature card configuration ─────────────────────────────────────────── */
-type FeatureKey = "lineup" | "playtime" | "substitutions";
+type ValueKey = "format" | "realtime" | "fair";
+type ProblemKey = "overview" | "randomSubs" | "unevenTime" | "parentQuestions";
+type FeatureKey = "smartBuilder" | "livePlaytime" | "smartSubs" | "alwaysFair";
+type SpondBenefitKey = "autoImport" | "attendance" | "lessDoubleWork" | "fasterSetup";
 
 const features: Array<{
   key: FeatureKey;
   icon: ElementType;
   glow: AppCardProps["glow"];
 }> = [
-  { key: "lineup", icon: LayoutGrid, glow: "primary" },
-  { key: "playtime", icon: Timer, glow: "none" },
-  { key: "substitutions", icon: Shuffle, glow: "accent" },
+  { key: "smartBuilder", icon: LayoutGrid, glow: "primary" },
+  { key: "livePlaytime", icon: Timer, glow: "none" },
+  { key: "smartSubs", icon: Shuffle, glow: "accent" },
+  { key: "alwaysFair", icon: ShieldCheck, glow: "none" },
 ];
+
+const valueProps: ValueKey[] = ["format", "realtime", "fair"];
+const problems: ProblemKey[] = ["overview", "randomSubs", "unevenTime", "parentQuestions"];
+const spondBenefits: SpondBenefitKey[] = ["autoImport", "attendance", "lessDoubleWork", "fasterSetup"];
+const spondSteps = [1, 2, 3] as const;
 
 const featureIconClass: Record<NonNullable<AppCardProps["glow"]>, string> = {
   primary: "bg-primary/10 text-primary",
@@ -57,13 +74,20 @@ export default function HomePage() {
             className="flex flex-col items-center text-center gap-6"
           >
             {/* Badge */}
+            <motion.div variants={heroItem}>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-fp-accent/35 bg-fp-accent/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-fp-accent">
+                <Link2 size={12} />
+                {t("hero.spondBadge")}
+              </span>
+            </motion.div>
+
             {/* Headline */}
             <motion.div variants={heroItem} className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t("hero.eyebrow")}
+              </p>
               <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-                {t("hero.title")}
-              </h1>
-              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl gradient-text-primary">
-                {t("hero.titleAccent")}
+                {t("hero.headline")}
               </h1>
             </motion.div>
 
@@ -96,22 +120,65 @@ export default function HomePage() {
               </Link>
             </motion.div>
 
-            {/* Stats strip */}
+            {/* Value props */}
             <motion.div
               variants={heroItem}
               className="grid grid-cols-3 gap-4 w-full max-w-xs mt-2"
             >
-              {([1, 2, 3] as const).map((n) => (
-                <div key={n} className="flex flex-col items-center gap-0.5">
+              {valueProps.map((item) => (
+                <div key={item} className="flex flex-col items-center gap-0.5">
                   <span className="text-sm font-semibold text-foreground">
-                    {t(`hero.stat${n}Value`)}
+                    {t(`valueProps.${item}.value`)}
                   </span>
                   <span className="text-[10px] text-muted-foreground text-center leading-tight">
-                    {t(`hero.stat${n}Label`)}
+                    {t(`valueProps.${item}.label`)}
                   </span>
                 </div>
               ))}
             </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── Problem -> solution ───────────────────────────────────────────── */}
+      <section className="px-4 pb-16">
+        <div className="mx-auto w-full max-w-screen-sm">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+            variants={variants.staggerContainer}
+          >
+            <motion.div variants={heroItem} className="text-center mb-8">
+              <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                {t("problem.title")}
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground max-w-xs mx-auto">
+                {t("problem.intro")}
+              </p>
+            </motion.div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {problems.map((item) => (
+                <motion.div key={item} variants={heroItem}>
+                  <AppCard className="space-y-2 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-danger">
+                      {t("problem.problemLabel")}
+                    </p>
+                    <p className="text-sm font-medium text-foreground">
+                      {t(`problem.items.${item}.problem`)}
+                    </p>
+                    <div className="h-px bg-fp-border" />
+                    <p className="text-xs font-semibold uppercase tracking-wide text-fp-accent">
+                      {t("problem.solutionLabel")}
+                    </p>
+                    <p className="text-sm text-foreground">
+                      {t(`problem.items.${item}.solution`)}
+                    </p>
+                  </AppCard>
+                </motion.div>
+              ))}
+            </div>
           </motion.div>
         </div>
       </section>
@@ -125,7 +192,6 @@ export default function HomePage() {
             viewport={{ once: true, amount: 0.2 }}
             variants={variants.staggerContainer}
           >
-            {/* Section header */}
             <motion.div variants={heroItem} className="text-center mb-8">
               <h2 className="text-2xl font-bold tracking-tight text-foreground">
                 {t("features.title")}
@@ -135,7 +201,6 @@ export default function HomePage() {
               </p>
             </motion.div>
 
-            {/* Feature cards */}
             <div className="flex flex-col gap-3">
               {features.map(({ key, icon: Icon, glow }) => (
                 <motion.div key={key} variants={heroItem}>
@@ -147,10 +212,10 @@ export default function HomePage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-foreground text-sm">
-                        {t(`features.${key}.title`)}
+                        {t(`features.items.${key}.title`)}
                       </h3>
                       <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                        {t(`features.${key}.description`)}
+                        {t(`features.items.${key}.description`)}
                       </p>
                     </div>
                     <ChevronRight size={16} className="shrink-0 text-muted-foreground mt-0.5" />
@@ -158,6 +223,54 @@ export default function HomePage() {
                 </motion.div>
               ))}
             </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── Spond section ───────────────────────────────────────────────── */}
+      <section className="px-4 pb-16">
+        <div className="mx-auto w-full max-w-screen-sm">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+            variants={variants.staggerContainer}
+          >
+            <motion.div variants={heroItem}>
+              <AppCard glow="accent" className="space-y-5 p-5">
+                <div className="space-y-2">
+                  <span className="inline-flex rounded-full border border-fp-accent/35 bg-fp-accent/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-fp-accent">
+                    {t("spond.badge")}
+                  </span>
+                  <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                    {t("spond.title")}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">{t("spond.subtitle")}</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2">
+                  {spondBenefits.map((item) => (
+                    <div key={item} className="rounded-xl border border-fp-border bg-fp-surface-2 p-3">
+                      <p className="text-sm font-semibold text-foreground">{t(`spond.benefits.${item}.title`)}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{t(`spond.benefits.${item}.description`)}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  {spondSteps.map((step) => (
+                    <div key={step} className="rounded-xl border border-fp-border bg-background px-3 py-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        {t("spond.stepLabel", { number: step })}
+                      </p>
+                      <p className="mt-1 text-sm font-medium text-foreground">
+                        {t(`spond.steps.${step}`)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </AppCard>
+            </motion.div>
           </motion.div>
         </div>
       </section>
@@ -185,13 +298,13 @@ export default function HomePage() {
               />
               <div className="space-y-2 mb-6">
                 <h2 className="text-xl font-bold tracking-tight text-foreground">
-                  {t("cta.title")}
+                  {t("finalCta.title")}
                 </h2>
-                <p className="text-sm text-muted-foreground">{t("cta.subtitle")}</p>
+                <p className="text-sm text-muted-foreground">{t("finalCta.subtitle")}</p>
               </div>
-              <Link href="/team">
+              <Link href="/match/setup">
                 <FpButton variant="primary" size="lg" fullWidth className="group">
-                  {t("cta.button")}
+                  {t("finalCta.button")}
                   <ArrowRight
                     size={18}
                     className="transition-transform group-hover:translate-x-0.5"

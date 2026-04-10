@@ -20,39 +20,106 @@
   },
   "home": {
     "hero": {
-      "badge": "Matchday Management",
-      "title": "Fair Playtime,",
-      "titleAccent": "Every Match.",
-      "subtitle": "The sideline app that tracks playtime, builds fair lineups, and suggests smart substitutions — so every player gets their moment.",
-      "ctaPrimary": "Get Started",
-      "ctaSecondary": "Learn More",
-      "stat1Value": "3–11v11",
-      "stat1Label": "All formats",
-      "stat2Value": "Real-time",
-      "stat2Label": "Playtime tracking",
-      "stat3Value": "Every player",
-      "stat3Label": "Gets fair time"
+      "eyebrow": "Your assistant coach in your pocket.",
+      "headline": "Full control on matchday.",
+      "subtitle": "Stay in control, make smart substitutions, and give every player the minutes they deserve - without sideline chaos.",
+      "ctaPrimary": "Get started for free",
+      "ctaSecondary": "See how it works",
+      "spondBadge": "Works with Spond"
+    },
+    "valueProps": {
+      "format": {
+        "value": "3-11 players",
+        "label": "All match formats"
+      },
+      "realtime": {
+        "value": "Real-time",
+        "label": "Full control during matches"
+      },
+      "fair": {
+        "value": "Fair",
+        "label": "Everyone gets to play"
+      }
+    },
+    "problem": {
+      "title": "Does this sound familiar?",
+      "intro": "Many coaches lose overview in the heat of the match. FairPlayr makes better in-game decisions easier.",
+      "problemLabel": "Problem",
+      "solutionLabel": "Solution",
+      "items": {
+        "overview": {
+          "problem": "You lose track of playtime",
+          "solution": "Complete overview - all game long"
+        },
+        "randomSubs": {
+          "problem": "Substitutions feel random",
+          "solution": "Structure for substitutions"
+        },
+        "unevenTime": {
+          "problem": "Some players get more time than others",
+          "solution": "More even playtime"
+        },
+        "parentQuestions": {
+          "problem": "Parents ask questions",
+          "solution": "Less stress"
+        }
+      }
     },
     "features": {
       "title": "Everything you need on the sideline",
-      "subtitle": "Built for volunteer coaches and parents who just want the game to be fair.",
-      "lineup": {
-        "title": "Smart Lineup Builder",
-        "description": "Quickly build balanced lineups for any match format — 3v3 all the way to 11v11."
-      },
-      "playtime": {
-        "title": "Fair Playtime Tracking",
-        "description": "Real-time tracking so you always know who has played, and who deserves more time."
-      },
-      "substitutions": {
-        "title": "Smart Substitutions",
-        "description": "Substitution suggestions based on live playtime data, so the rotation is always fair."
+      "subtitle": "Built for coaches who want to make matchday simpler.",
+      "items": {
+        "smartBuilder": {
+          "title": "Smart lineup builder",
+          "description": "Set up your team in seconds, already adapted to format and squad size."
+        },
+        "livePlaytime": {
+          "title": "Live playtime",
+          "description": "See exactly who has played, and who should come on next."
+        },
+        "smartSubs": {
+          "title": "Smart substitutions",
+          "description": "Get suggestions for who to substitute based on actual playtime."
+        },
+        "alwaysFair": {
+          "title": "Always fair",
+          "description": "FairPlayr helps distribute playtime evenly, without extra mental load."
+        }
       }
     },
-    "cta": {
-      "title": "Ready for matchday?",
-      "subtitle": "Join coaches who put every player first.",
-      "button": "Start Managing Your Team"
+    "spond": {
+      "badge": "Integrates with Spond",
+      "title": "Using Spond? Perfect.",
+      "subtitle": "Connect FairPlayr to Spond and bring your players straight into match setup in seconds.",
+      "benefits": {
+        "autoImport": {
+          "title": "Import players automatically",
+          "description": "No need to add your squad manually"
+        },
+        "attendance": {
+          "title": "See who is coming",
+          "description": "Use attendance directly in team selection"
+        },
+        "lessDoubleWork": {
+          "title": "Less double work",
+          "description": "Spond for organizing, FairPlayr for matchday"
+        },
+        "fasterSetup": {
+          "title": "Faster setup",
+          "description": "Go from squad to ready lineup in seconds"
+        }
+      },
+      "stepLabel": "Step {number}",
+      "steps": {
+        "1": "Connect to Spond",
+        "2": "Pick match and players",
+        "3": "Start the match with full overview"
+      }
+    },
+    "finalCta": {
+      "title": "Ready for a simpler matchday?",
+      "subtitle": "Spend less time tracking details and more time coaching.",
+      "button": "Get started for free"
     }
   },
   "team": {
