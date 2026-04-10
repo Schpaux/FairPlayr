@@ -430,42 +430,44 @@ export function MatchPlannerManager() {
         ) : null}
 
         {entryMode === "manual" ? (
-        <div className="flex items-center gap-2">
-          <PlusCircle size={16} className="text-primary" />
-          <h3 className="text-sm font-semibold text-foreground">{t("createTitle")}</h3>
-        </div>
+          <>
+            <div className="flex items-center gap-2">
+              <PlusCircle size={16} className="text-primary" />
+              <h3 className="text-sm font-semibold text-foreground">{t("createTitle")}</h3>
+            </div>
 
-        <form onSubmit={handleCreateMatch} className="space-y-2">
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder={t("fields.title")}
-            className={teamTextInputClassName}
-            required
-          />
-          <input
-            value={opponentName}
-            onChange={(e) => setOpponentName(e.target.value)}
-            placeholder={t("fields.opponent")}
-            className={teamTextInputClassName}
-          />
-          <input
-            type="datetime-local"
-            value={startsAt}
-            onChange={(e) => setStartsAt(e.target.value)}
-            className={teamTextInputClassName}
-            required
-          />
-          <input
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            placeholder={t("fields.location")}
-            className={teamTextInputClassName}
-          />
-          <FpButton type="submit" variant="primary" size="md" disabled={isCreating}>
-            {isCreating ? t("creating") : t("createCta")}
-          </FpButton>
-        </form>
+            <form onSubmit={handleCreateMatch} className="space-y-2">
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={t("fields.title")}
+                className={teamTextInputClassName}
+                required
+              />
+              <input
+                value={opponentName}
+                onChange={(e) => setOpponentName(e.target.value)}
+                placeholder={t("fields.opponent")}
+                className={teamTextInputClassName}
+              />
+              <input
+                type="datetime-local"
+                value={startsAt}
+                onChange={(e) => setStartsAt(e.target.value)}
+                className={teamTextInputClassName}
+                required
+              />
+              <input
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder={t("fields.location")}
+                className={teamTextInputClassName}
+              />
+              <FpButton type="submit" variant="primary" size="md" disabled={isCreating}>
+                {isCreating ? t("creating") : t("createCta")}
+              </FpButton>
+            </form>
+          </>
         ) : (
           <p className="text-xs text-muted-foreground">{t("mode.spondActiveHint")}</p>
         )}

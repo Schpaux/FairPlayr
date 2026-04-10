@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
 
@@ -23,36 +23,59 @@ export function ActiveMatchProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
   const workspace = useTeamWorkspace();
   const [activeMatch, setActiveMatch] = useState<ActiveMatchItem | null>(null);
+  const activeTeamId = workspace.activeTeamId;
 
-  const refreshActiveMatch = async () => {
-    if (auth.status !== "authenticated" || !workspace.activeTeamId) {
-      setActiveMatch(null);
-      return;
-    }
-
-    const response = await fetch(`/api/matches/active?teamId=${encodeURIComponent(workspace.activeTeamId)}`);
+  const fetchActiveMatch = useCallback(async (teamId: string) => {
+    const response = await fetch(`/api/matches/active?teamId=${encodeURIComponent(teamId)}`);
     const payload = (await response.json()) as {
       match?: ActiveMatchItem | null;
     };
 
     if (!response.ok) {
-      setActiveMatch(null);
+      return null;
+    }
+
+    return payload.match ?? null;
+  }, []);
+
+  const refreshActiveMatch = useCallback(async () => {
+    if (auth.status !== "authenticated" || !activeTeamId) {
       return;
     }
 
-    setActiveMatch(payload.match ?? null);
-  };
+    const match = await fetchActiveMatch(activeTeamId);
+    setActiveMatch(match);
+  }, [activeTeamId, auth.status, fetchActiveMatch]);
 
   useEffect(() => {
-    void refreshActiveMatch();
-  }, [auth.status, workspace.activeTeamId]);
+    if (auth.status !== "authenticated" || !activeTeamId) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const run = async () => {
+      const match = await fetchActiveMatch(activeTeamId);
+      if (!cancelled) {
+        setActiveMatch(match);
+      }
+    };
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTeamId, auth.status, fetchActiveMatch]);
+
+  const resolvedActiveMatch = auth.status === "authenticated" && activeTeamId ? activeMatch : null;
 
   const value = useMemo<ActiveMatchContextValue>(
     () => ({
-      activeMatch,
+      activeMatch: resolvedActiveMatch,
       refreshActiveMatch,
     }),
-    [activeMatch]
+    [refreshActiveMatch, resolvedActiveMatch]
   );
 
   return <ActiveMatchContext.Provider value={value}>{children}</ActiveMatchContext.Provider>;
