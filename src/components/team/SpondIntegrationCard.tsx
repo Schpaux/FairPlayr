@@ -8,6 +8,8 @@ import { FpButton } from "@/components/ui/FpButton";
 import { teamTextInputClassName } from "@/components/team/styles";
 import type { TeamStorageMode } from "@/lib/teamData/types";
 
+type SpondResetAction = "delete-imported-data" | "disconnect-and-delete";
+
 interface SpondGroupOption {
   id: string;
   name: string;
@@ -20,6 +22,22 @@ interface SpondEventOption {
   startsAt: string | null;
   location: string | null;
   importedMatchId: string | null;
+}
+
+type SpondImportPreviewStatus = "already-imported" | "existing-player" | "new";
+type SpondImportClassification = "likely_player" | "likely_staff" | "unknown";
+
+interface SpondImportPreviewCandidate {
+  externalId: string;
+  name: string;
+  email: string | null;
+  alreadyImported: boolean;
+  existingPlayerId: string | null;
+  existingPlayerName: string | null;
+  status: SpondImportPreviewStatus;
+  importClassification: SpondImportClassification;
+  recommendedSelected: boolean;
+  selectable: boolean;
 }
 
 interface SpondIntegrationCardProps {
@@ -50,6 +68,7 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
   const [isLoadingGroups, setIsLoadingGroups] = useState(false);
   const [isSavingLink, setIsSavingLink] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isLoadingImportPreview, setIsLoadingImportPreview] = useState(false);
   const [isSyncingEvents, setIsSyncingEvents] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -62,6 +81,9 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
   const [membersLastSyncedAt, setMembersLastSyncedAt] = useState<string | null>(null);
   const [eventsLastSyncedAt, setEventsLastSyncedAt] = useState<string | null>(null);
   const [events, setEvents] = useState<SpondEventOption[]>([]);
+  const [importPreviewCandidates, setImportPreviewCandidates] = useState<SpondImportPreviewCandidate[]>([]);
+  const [selectedCandidateExternalIds, setSelectedCandidateExternalIds] = useState<string[]>([]);
+  const [pendingResetAction, setPendingResetAction] = useState<SpondResetAction | null>(null);
 
   const selectedGroup = useMemo(
     () => groups.find((group) => group.id === selectedGroupId) ?? null,
@@ -84,6 +106,15 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
         return t("errors.groupNotLinked");
       case "ENCRYPTION_NOT_CONFIGURED":
         return t("errors.encryptionNotConfigured");
+      case "NO_SELECTED_MEMBERS":
+        return t("errors.noSelectedMembers");
+      case "MATCH_CLEANUP_FAILED":
+      case "EVENT_LINK_DELETE_FAILED":
+      case "RSVP_SNAPSHOT_DELETE_FAILED":
+      case "PLAYER_DEACTIVATE_FAILED":
+      case "TEAM_LINK_DELETE_FAILED":
+      case "TEAM_LINK_SYNC_MARK_FAILED":
+        return t("errors.cleanupFailed");
       default:
         return fallback;
     }
@@ -297,6 +328,71 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
   const handleImport = async () => {
     setError(null);
     setNotice(null);
+    setIsLoadingImportPreview(true);
+
+    try {
+      const response = await fetch(`/api/integrations/spond/import-members/preview?teamId=${encodeURIComponent(teamId)}`, {
+        method: "GET",
+      });
+
+      const payload = (await response.json()) as unknown;
+
+      if (!response.ok) {
+        const parsed = parseApiError(payload);
+        throw new Error(mapErrorMessage(parsed.code, parsed.message));
+      }
+
+      const data = payload as {
+        candidates: SpondImportPreviewCandidate[];
+      };
+
+      const candidates = data.candidates ?? [];
+      setImportPreviewCandidates(candidates);
+      setSelectedCandidateExternalIds(
+        candidates
+          .filter((candidate) => candidate.selectable && candidate.recommendedSelected)
+          .map((candidate) => candidate.externalId)
+      );
+
+      if (candidates.length === 0) {
+        setNotice(t("preview.empty"));
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t("errors.generic"));
+    } finally {
+      setIsLoadingImportPreview(false);
+    }
+  };
+
+  const handleToggleCandidate = (externalId: string) => {
+    setSelectedCandidateExternalIds((previous) => {
+      if (previous.includes(externalId)) {
+        return previous.filter((value) => value !== externalId);
+      }
+
+      return [...previous, externalId];
+    });
+  };
+
+  const handleSelectAllCandidates = () => {
+    setSelectedCandidateExternalIds(
+      importPreviewCandidates
+        .filter((candidate) => candidate.selectable)
+        .map((candidate) => candidate.externalId)
+    );
+  };
+
+  const handleClearAllCandidates = () => {
+    setSelectedCandidateExternalIds([]);
+  };
+
+  const handleConfirmSelectedImport = async () => {
+    if (selectedCandidateExternalIds.length === 0) {
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
     setIsImporting(true);
 
     try {
@@ -305,7 +401,10 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ teamId }),
+        body: JSON.stringify({
+          teamId,
+          selectedExternalIds: selectedCandidateExternalIds,
+        }),
       });
 
       const payload = (await response.json()) as unknown;
@@ -317,24 +416,26 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
 
       const data = payload as {
         created: number;
+        reused: number;
         updated: number;
         reactivated: number;
-        inactivated: number;
-        unchanged: number;
-        total: number;
+        skipped: number;
+        totalSelected: number;
         syncedAt: string;
       };
 
       await onImported();
       setMembersLastSyncedAt(data.syncedAt ?? new Date().toISOString());
+      setImportPreviewCandidates([]);
+      setSelectedCandidateExternalIds([]);
       setNotice(
-        t("syncMembersResult", {
+        t("preview.importSummary", {
           created: data.created,
+          reused: data.reused,
           updated: data.updated,
           reactivated: data.reactivated,
-          inactivated: data.inactivated,
-          unchanged: data.unchanged,
-          total: data.total,
+          skipped: data.skipped,
+          total: data.totalSelected,
         })
       );
     } catch (cause) {
@@ -343,6 +444,8 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
       setIsImporting(false);
     }
   };
+
+  const selectedCount = selectedCandidateExternalIds.length;
 
   const handleSyncEvents = async () => {
     setError(null);
@@ -382,6 +485,62 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
       setError(cause instanceof Error ? cause.message : t("errors.generic"));
     } finally {
       setIsSyncingEvents(false);
+    }
+  };
+
+  const handleResetAction = async (action: SpondResetAction) => {
+    const confirmMessage =
+      action === "delete-imported-data"
+        ? `${t("cleanup.deleteImportedConfirmTitle")}\n\n${t("cleanup.deleteImportedConfirmText")}`
+        : `${t("cleanup.disconnectConfirmTitle")}\n\n${t("cleanup.disconnectConfirmText")}`;
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    setError(null);
+    setNotice(null);
+    setPendingResetAction(action);
+
+    try {
+      const response = await fetch("/api/integrations/spond/reset", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          teamId,
+          action,
+        }),
+      });
+
+      const payload = (await response.json()) as unknown;
+
+      if (!response.ok) {
+        const parsed = parseApiError(payload);
+        throw new Error(mapErrorMessage(parsed.code, parsed.message));
+      }
+
+      await onImported();
+      await loadStatus();
+
+      if (action === "disconnect-and-delete") {
+        setEvents([]);
+        setLinkedGroupId(null);
+        setLinkedGroupName(null);
+        setMembersLastSyncedAt(null);
+        setEventsLastSyncedAt(null);
+        setNotice(t("cleanup.disconnectSuccess"));
+      } else {
+        setEvents([]);
+        setMembersLastSyncedAt(null);
+        setEventsLastSyncedAt(null);
+        setNotice(t("cleanup.deleteImportedSuccess"));
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t("errors.generic"));
+    } finally {
+      setPendingResetAction(null);
     }
   };
 
@@ -489,9 +648,9 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
                   onClick={() => {
                     void handleImport();
                   }}
-                  disabled={!linkedGroupId || isImporting}
+                  disabled={!linkedGroupId || isLoadingImportPreview || isImporting}
                 >
-                  {isImporting ? t("syncMembersLoading") : t("syncMembersCta")}
+                  {isLoadingImportPreview ? t("preview.loading") : t("syncMembersCta")}
                 </FpButton>
                 <FpButton
                   type="button"
@@ -526,6 +685,104 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
                 </div>
               ) : null}
 
+              {linkedGroupId ? (
+                <div className="space-y-3 rounded-xl border border-fp-border bg-fp-surface-2 p-3">
+                  <p className="text-sm font-semibold text-foreground">{t("preview.title")}</p>
+                  <p className="text-xs text-muted-foreground">{t("preview.subtitle")}</p>
+                  <p className="text-xs text-muted-foreground">{t("preview.helperText")}</p>
+
+                  {importPreviewCandidates.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">{t("preview.empty")}</p>
+                  ) : (
+                    <>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <FpButton
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleSelectAllCandidates}
+                          disabled={isImporting}
+                        >
+                          {t("preview.selectAll")}
+                        </FpButton>
+                        <FpButton
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleClearAllCandidates}
+                          disabled={isImporting}
+                        >
+                          {t("preview.clearAll")}
+                        </FpButton>
+                        <p className="text-xs font-medium text-muted-foreground">
+                          {t("preview.selectedCount", { count: selectedCount })}
+                        </p>
+                      </div>
+
+                      <ul className="max-h-56 space-y-2 overflow-y-auto">
+                        {importPreviewCandidates.map((candidate) => (
+                          <li
+                            key={candidate.externalId}
+                            className="rounded-lg border border-fp-border bg-background px-3 py-2"
+                          >
+                            <label className="flex items-start gap-3">
+                              <input
+                                type="checkbox"
+                                checked={selectedCandidateExternalIds.includes(candidate.externalId)}
+                                onChange={() => handleToggleCandidate(candidate.externalId)}
+                                disabled={!candidate.selectable || isImporting}
+                                className="mt-0.5 h-4 w-4 rounded border-fp-border"
+                              />
+                              <span className="min-w-0 space-y-1">
+                                <span className="block truncate text-sm font-medium text-foreground">
+                                  {candidate.name}
+                                </span>
+                                <span className="flex flex-wrap items-center gap-1 text-xs">
+                                  <span
+                                    className={
+                                      candidate.importClassification === "likely_player"
+                                        ? "rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-emerald-700 dark:text-emerald-300"
+                                        : candidate.importClassification === "likely_staff"
+                                          ? "rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-amber-700 dark:text-amber-300"
+                                          : "rounded-full border border-fp-border bg-fp-surface-2 px-2 py-0.5 text-muted-foreground"
+                                    }
+                                  >
+                                    {candidate.importClassification === "likely_player"
+                                      ? t("preview.classificationPlayer")
+                                      : candidate.importClassification === "likely_staff"
+                                        ? t("preview.classificationStaff")
+                                        : t("preview.classificationUnknown")}
+                                  </span>
+                                  <span className="text-muted-foreground">
+                                    {candidate.status === "already-imported"
+                                      ? t("preview.statusAlreadyImported")
+                                      : candidate.status === "existing-player"
+                                        ? t("preview.statusExisting")
+                                        : t("preview.statusNew")}
+                                  </span>
+                                </span>
+                              </span>
+                            </label>
+                          </li>
+                        ))}
+                      </ul>
+
+                      <FpButton
+                        type="button"
+                        variant="primary"
+                        size="md"
+                        onClick={() => {
+                          void handleConfirmSelectedImport();
+                        }}
+                        disabled={selectedCount === 0 || isImporting}
+                      >
+                        {isImporting ? t("preview.importing") : t("preview.importSelected")}
+                      </FpButton>
+                    </>
+                  )}
+                </div>
+              ) : null}
+
               <div className="space-y-2">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {t("eventsTitle")}
@@ -554,6 +811,42 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
                     ))}
                   </ul>
                 )}
+              </div>
+
+              <div className="space-y-2 rounded-xl border border-fp-border bg-fp-surface-2 p-3">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-foreground">{t("cleanup.deleteImportedTitle")}</p>
+                  <p className="text-xs text-muted-foreground">{t("cleanup.deleteImportedHelp")}</p>
+                </div>
+                <FpButton
+                  type="button"
+                  variant="secondary"
+                  size="md"
+                  onClick={() => {
+                    void handleResetAction("delete-imported-data");
+                  }}
+                  disabled={pendingResetAction !== null}
+                >
+                  {pendingResetAction === "delete-imported-data" ? t("cleanup.running") : t("cleanup.deleteImportedCta")}
+                </FpButton>
+
+                <div className="h-px bg-fp-border" />
+
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-foreground">{t("cleanup.disconnectTitle")}</p>
+                  <p className="text-xs text-muted-foreground">{t("cleanup.disconnectHelp")}</p>
+                </div>
+                <FpButton
+                  type="button"
+                  variant="danger"
+                  size="md"
+                  onClick={() => {
+                    void handleResetAction("disconnect-and-delete");
+                  }}
+                  disabled={pendingResetAction !== null}
+                >
+                  {pendingResetAction === "disconnect-and-delete" ? t("cleanup.running") : t("cleanup.disconnectCta")}
+                </FpButton>
               </div>
             </div>
           )}

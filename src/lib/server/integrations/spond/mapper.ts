@@ -52,6 +52,7 @@ export function toNormalizedMembers(group: SpondGroup): NormalizedExternalMember
       return {
         externalId,
         name: displayName(member.firstName, member.lastName),
+        email: member.email?.trim() || null,
       };
     })
     .filter((member): member is NormalizedExternalMember => member !== null);

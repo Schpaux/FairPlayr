@@ -8,6 +8,7 @@ import type {
   IntegrationConnectionRow,
   NormalizedExternalEvent,
   NormalizedExternalGroup,
+  NormalizedExternalMember,
   NormalizedExternalRsvpEntry,
   SpondRsvpStatus,
   SpondCredentials,
@@ -18,6 +19,24 @@ interface PlayerRow {
   external_id: string | null;
   name: string;
   is_active: boolean;
+  source?: string | null;
+  external_provider?: string | null;
+}
+
+type SpondPreviewStatus = "already-imported" | "existing-player" | "new";
+type SpondImportClassification = "likely_player" | "likely_staff" | "unknown";
+
+interface SpondMemberImportPreviewCandidate {
+  externalId: string;
+  name: string;
+  email: string | null;
+  alreadyImported: boolean;
+  existingPlayerId: string | null;
+  existingPlayerName: string | null;
+  status: SpondPreviewStatus;
+  importClassification: SpondImportClassification;
+  recommendedSelected: boolean;
+  selectable: boolean;
 }
 
 interface MatchInsertRow {
@@ -89,6 +108,12 @@ interface MatchRsvpSnapshotResult {
     response: SpondRsvpStatus;
     isOwner: boolean;
   }>;
+}
+
+export type SpondResetAction = "delete-imported-data" | "disconnect-and-delete";
+
+interface MatchIdRow {
+  match_id: string;
 }
 
 function normalizeOwnerResponse(value: string | undefined): SpondRsvpStatus | null {
@@ -364,6 +389,330 @@ export async function getSpondStatus(
     connected: Boolean(connection && connection.status === "connected"),
     accountLabel: connection?.account_label ?? null,
     teamLink,
+  };
+}
+
+function normalizePlayerName(value: string): string {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+const STAFF_KEYWORDS = [
+  "trener",
+  "hjelpetrener",
+  "keepertrener",
+  "coach",
+  "assistant coach",
+  "lagleder",
+  "oppmann",
+  "manager",
+  "staff",
+  "admin",
+  "support",
+  "foresatt",
+  "parent",
+  "guardian",
+  "fysioterapeut",
+  "physio",
+];
+
+function normalizeHeuristicText(value: string | null): string {
+  return (value ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function hasStaffSignal(name: string, email: string | null): boolean {
+  const normalizedName = normalizeHeuristicText(name);
+  const normalizedEmailLocalPart = normalizeHeuristicText(email?.split("@")[0] ?? null);
+
+  return STAFF_KEYWORDS.some((keyword) => {
+    const normalizedKeyword = normalizeHeuristicText(keyword);
+    return (
+      normalizedName.includes(normalizedKeyword) ||
+      normalizedEmailLocalPart.includes(normalizedKeyword)
+    );
+  });
+}
+
+function inferImportClassification(
+  existingSpondPlayer: PlayerRow | null,
+  existingNameMatch: PlayerRow | null,
+  memberName: string,
+  memberEmail: string | null
+): SpondImportClassification {
+  if (existingSpondPlayer || existingNameMatch) {
+    return "likely_player";
+  }
+
+  if (hasStaffSignal(memberName, memberEmail)) {
+    return "likely_staff";
+  }
+
+  return "unknown";
+}
+
+async function getLinkedSpondMembersForTeam(
+  supabase: SupabaseClient,
+  userId: string,
+  teamId: string
+): Promise<{
+  connection: IntegrationConnectionRow;
+  link: ExternalTeamLinkRow;
+  members: NormalizedExternalMember[];
+}> {
+  await requireTeamMembership(supabase, userId, teamId);
+
+  const connection = await getConnection(supabase, userId);
+
+  if (!connection) {
+    throw new IntegrationError("CONNECTION_NOT_FOUND", "Spond er ikke koblet til ennå.", 404);
+  }
+
+  const link = await getTeamLink(supabase, teamId);
+
+  if (!link) {
+    throw new IntegrationError("TEAM_LINK_NOT_FOUND", "Velg en Spond-gruppe først.", 400);
+  }
+
+  const credentials = decryptJson<SpondCredentials>(connection.credentials_encrypted);
+  const groups = await spondProvider.getGroups(credentials);
+  const selectedGroup = groups.find((group) => group.id === link.external_team_id);
+
+  if (!selectedGroup) {
+    throw new IntegrationError("GROUP_NOT_FOUND", "Fant ikke valgt Spond-gruppe.", 404);
+  }
+
+  const members = toNormalizedMembers(selectedGroup);
+
+  if (members.length === 0) {
+    throw new IntegrationError("NO_MEMBERS_FOUND", "Fant ingen medlemmer i valgt gruppe.", 400);
+  }
+
+  return {
+    connection,
+    link,
+    members,
+  };
+}
+
+export async function getSpondMemberImportPreview(
+  supabase: SupabaseClient,
+  userId: string,
+  teamId: string
+): Promise<{
+  candidates: SpondMemberImportPreviewCandidate[];
+  total: number;
+}> {
+  const { members } = await getLinkedSpondMembersForTeam(supabase, userId, teamId);
+
+  const uniqueMembersByExternalId = new Map<string, NormalizedExternalMember>();
+
+  for (const member of members) {
+    if (!uniqueMembersByExternalId.has(member.externalId)) {
+      uniqueMembersByExternalId.set(member.externalId, member);
+    }
+  }
+
+  const uniqueMembers = Array.from(uniqueMembersByExternalId.values());
+
+  const { data: teamPlayers, error: teamPlayersError } = await supabase
+    .from("players")
+    .select("id, name, external_id, external_provider, source, is_active")
+    .eq("team_id", teamId)
+    .returns<PlayerRow[]>();
+
+  if (teamPlayersError) {
+    throw new IntegrationError("PLAYER_LOOKUP_FAILED", teamPlayersError.message, 500);
+  }
+
+  const existingSpondByExternalId = new Map(
+    (teamPlayers ?? [])
+      .filter(
+        (row) =>
+          row.external_provider === "spond" &&
+          typeof row.external_id === "string" &&
+          row.external_id.length > 0
+      )
+      .map((row) => [row.external_id as string, row])
+  );
+
+  const existingByNormalizedName = new Map<string, PlayerRow>();
+
+  for (const player of teamPlayers ?? []) {
+    const normalizedName = normalizePlayerName(player.name);
+
+    if (!existingByNormalizedName.has(normalizedName)) {
+      existingByNormalizedName.set(normalizedName, player);
+    }
+  }
+
+  const candidates = uniqueMembers.map((member) => {
+    const existingSpondPlayer = existingSpondByExternalId.get(member.externalId) ?? null;
+    const existingNameMatch = existingByNormalizedName.get(normalizePlayerName(member.name)) ?? null;
+    const existingPlayer = existingSpondPlayer ?? existingNameMatch;
+    const status: SpondPreviewStatus = existingSpondPlayer
+      ? "already-imported"
+      : existingNameMatch
+        ? "existing-player"
+        : "new";
+    const importClassification = inferImportClassification(
+      existingSpondPlayer,
+      existingNameMatch,
+      member.name,
+      member.email
+    );
+    const recommendedSelected = importClassification === "likely_player";
+
+    return {
+      externalId: member.externalId,
+      name: member.name,
+      email: member.email,
+      alreadyImported: status === "already-imported",
+      existingPlayerId: existingPlayer?.id ?? null,
+      existingPlayerName: existingPlayer?.name ?? null,
+      status,
+      importClassification,
+      recommendedSelected,
+      selectable: true,
+    };
+  });
+
+  return {
+    candidates,
+    total: candidates.length,
+  };
+}
+
+export async function importSelectedSpondMembersToTeam(
+  supabase: SupabaseClient,
+  userId: string,
+  teamId: string,
+  selectedExternalIds: string[]
+): Promise<{
+  created: number;
+  reused: number;
+  updated: number;
+  reactivated: number;
+  skipped: number;
+  totalSelected: number;
+  syncedAt: string;
+}> {
+  const uniqueRequestedExternalIds = Array.from(
+    new Set(
+      selectedExternalIds
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0)
+    )
+  );
+
+  if (uniqueRequestedExternalIds.length === 0) {
+    throw new IntegrationError("NO_SELECTED_MEMBERS", "Velg minst én person å importere.", 400);
+  }
+
+  const { connection, link, members } = await getLinkedSpondMembersForTeam(supabase, userId, teamId);
+  const membersByExternalId = new Map(members.map((member) => [member.externalId, member]));
+
+  const selectedMembers = uniqueRequestedExternalIds
+    .map((externalId) => membersByExternalId.get(externalId) ?? null)
+    .filter((member): member is NormalizedExternalMember => member !== null);
+
+  if (selectedMembers.length === 0) {
+    throw new IntegrationError("NO_SELECTED_MEMBERS", "Velg minst én person å importere.", 400);
+  }
+
+  const selectedExternalIdSet = new Set(selectedMembers.map((member) => member.externalId));
+  const skipped = uniqueRequestedExternalIds.filter((externalId) => !selectedExternalIdSet.has(externalId)).length;
+
+  const { data: existingRows, error: existingError } = await supabase
+    .from("players")
+    .select("id, external_id, name, is_active")
+    .eq("team_id", teamId)
+    .eq("external_provider", "spond")
+    .in("external_id", Array.from(selectedExternalIdSet))
+    .returns<PlayerRow[]>();
+
+  if (existingError) {
+    throw new IntegrationError("PLAYER_LOOKUP_FAILED", existingError.message, 500);
+  }
+
+  const existingByExternalId = new Map(
+    (existingRows ?? [])
+      .filter((row) => typeof row.external_id === "string" && row.external_id.length > 0)
+      .map((row) => [row.external_id as string, row])
+  );
+
+  let created = 0;
+  let reused = 0;
+  let updated = 0;
+  let reactivated = 0;
+
+  for (const member of selectedMembers) {
+    const existing = existingByExternalId.get(member.externalId);
+
+    if (existing) {
+      reused += 1;
+
+      const shouldRename = existing.name !== member.name;
+      const shouldReactivate = !existing.is_active;
+
+      if (shouldRename || shouldReactivate) {
+        const { error } = await supabase
+          .from("players")
+          .update({ name: member.name, is_active: true })
+          .eq("id", existing.id);
+
+        if (error) {
+          throw new IntegrationError("PLAYER_UPDATE_FAILED", error.message, 500);
+        }
+
+        if (shouldRename) {
+          updated += 1;
+        }
+
+        if (shouldReactivate) {
+          reactivated += 1;
+        }
+      }
+
+      continue;
+    }
+
+    const { error } = await supabase.from("players").insert({
+      team_id: teamId,
+      name: member.name,
+      is_active: true,
+      source: "spond",
+      external_provider: "spond",
+      external_id: member.externalId,
+      is_managed: true,
+    });
+
+    if (error) {
+      throw new IntegrationError("PLAYER_IMPORT_FAILED", error.message, 500);
+    }
+
+    created += 1;
+  }
+
+  const syncedAt = new Date().toISOString();
+
+  const { error: linkSyncError } = await supabase
+    .from("external_team_links")
+    .update({ members_last_synced_at: syncedAt })
+    .eq("id", link.id);
+
+  if (linkSyncError) {
+    throw new IntegrationError("TEAM_LINK_SYNC_MARK_FAILED", linkSyncError.message, 500);
+  }
+
+  await markIntegrationConnectionSynced(supabase, connection.id);
+
+  return {
+    created,
+    reused,
+    updated,
+    reactivated,
+    skipped,
+    totalSelected: selectedMembers.length,
+    syncedAt,
   };
 }
 
@@ -974,5 +1323,129 @@ export async function getLatestSpondRsvpSnapshotForMatch(
       response: entry.response_status,
       isOwner: entry.is_owner,
     })),
+  };
+}
+
+export async function resetSpondDataForTeam(
+  supabase: SupabaseClient,
+  userId: string,
+  teamId: string,
+  action: SpondResetAction
+): Promise<{
+  action: SpondResetAction;
+  playersInactivated: number;
+  spondMatchesDeleted: number;
+  rsvpSnapshotsDeleted: number;
+  eventLinksDeleted: number;
+  disconnected: boolean;
+}> {
+  await requireTeamMembership(supabase, userId, teamId);
+
+  const link = await getTeamLink(supabase, teamId);
+
+  const { data: linkedRows, error: linkedRowsError } = await supabase
+    .from("external_event_links")
+    .select("match_id")
+    .eq("team_id", teamId)
+    .eq("provider", "spond")
+    .returns<MatchIdRow[]>();
+
+  if (linkedRowsError) {
+    throw new IntegrationError("EVENT_LINK_LOOKUP_FAILED", linkedRowsError.message, 500);
+  }
+
+  const linkedMatchIds = Array.from(new Set((linkedRows ?? []).map((row) => row.match_id)));
+
+  const { data: updatedPlayers, error: playersError } = await supabase
+    .from("players")
+    .update({ is_active: false })
+    .eq("team_id", teamId)
+    .eq("source", "spond")
+    .eq("is_active", true)
+    .select("id");
+
+  if (playersError) {
+    throw new IntegrationError("PLAYER_DEACTIVATE_FAILED", playersError.message, 500);
+  }
+
+  const { data: deletedSnapshots, error: snapshotError } = await supabase
+    .from("match_rsvp_snapshots")
+    .delete()
+    .eq("team_id", teamId)
+    .eq("provider", "spond")
+    .select("id");
+
+  if (snapshotError) {
+    throw new IntegrationError("RSVP_SNAPSHOT_DELETE_FAILED", snapshotError.message, 500);
+  }
+
+  const { data: deletedLinks, error: eventLinksError } = await supabase
+    .from("external_event_links")
+    .delete()
+    .eq("team_id", teamId)
+    .eq("provider", "spond")
+    .select("id");
+
+  if (eventLinksError) {
+    throw new IntegrationError("EVENT_LINK_DELETE_FAILED", eventLinksError.message, 500);
+  }
+
+  let deletedMatchCount = 0;
+
+  if (linkedMatchIds.length > 0) {
+    const { data: deletedMatches, error: deleteMatchesError } = await supabase
+      .from("matches")
+      .delete()
+      .eq("team_id", teamId)
+      .in("id", linkedMatchIds)
+      .select("id");
+
+    if (!deleteMatchesError) {
+      deletedMatchCount = deletedMatches?.length ?? 0;
+    } else {
+      const { error: archiveMatchesError } = await supabase
+        .from("matches")
+        .update({ status: "completed" })
+        .eq("team_id", teamId)
+        .in("id", linkedMatchIds);
+
+      if (archiveMatchesError) {
+        throw new IntegrationError("MATCH_CLEANUP_FAILED", archiveMatchesError.message, 500);
+      }
+    }
+  }
+
+  if (action === "disconnect-and-delete") {
+    if (link?.id) {
+      const { error: deleteLinkError } = await supabase
+        .from("external_team_links")
+        .delete()
+        .eq("id", link.id);
+
+      if (deleteLinkError) {
+        throw new IntegrationError("TEAM_LINK_DELETE_FAILED", deleteLinkError.message, 500);
+      }
+    }
+  } else if (link?.id) {
+    const { error: linkSyncResetError } = await supabase
+      .from("external_team_links")
+      .update({
+        members_last_synced_at: null,
+        events_last_synced_at: null,
+      })
+      .eq("id", link.id);
+
+    if (linkSyncResetError) {
+      throw new IntegrationError("TEAM_LINK_SYNC_MARK_FAILED", linkSyncResetError.message, 500);
+    }
+  }
+
+  return {
+    action,
+    playersInactivated: updatedPlayers?.length ?? 0,
+    spondMatchesDeleted: deletedMatchCount,
+    rsvpSnapshotsDeleted: deletedSnapshots?.length ?? 0,
+    eventLinksDeleted: deletedLinks?.length ?? 0,
+    disconnected: action === "disconnect-and-delete",
   };
 }

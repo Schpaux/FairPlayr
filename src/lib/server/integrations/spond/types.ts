@@ -66,6 +66,7 @@ export interface NormalizedExternalGroup {
 export interface NormalizedExternalMember {
   externalId: string;
   name: string;
+  email: string | null;
 }
 
 export interface NormalizedExternalEvent {
