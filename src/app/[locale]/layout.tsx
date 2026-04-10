@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { AuthProvider } from "@/components/providers/AuthProvider";
+import { TeamWorkspaceProvider } from "@/components/providers/TeamWorkspaceProvider";
 import { Header } from "@/components/layout/Header";
 import { BottomNav } from "@/components/layout/BottomNav";
 import "../globals.css";
@@ -78,11 +79,13 @@ export default async function LocaleLayout({ children, params }: Props) {
             disableTransitionOnChange={false}
           >
             <AuthProvider>
-              <div className="relative flex min-h-screen flex-col">
-                <Header />
-                <main className="flex-1 pb-20">{children}</main>
-                <BottomNav />
-              </div>
+              <TeamWorkspaceProvider>
+                <div className="relative flex min-h-screen flex-col">
+                  <Header />
+                  <main className="flex-1 pb-20">{children}</main>
+                  <BottomNav />
+                </div>
+              </TeamWorkspaceProvider>
             </AuthProvider>
           </ThemeProvider>
         </NextIntlClientProvider>

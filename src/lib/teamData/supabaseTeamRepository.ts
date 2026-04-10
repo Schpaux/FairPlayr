@@ -10,6 +10,14 @@ interface TeamRow {
   updated_at: string;
 }
 
+interface TeamMemberRow {
+  team_id: string;
+}
+
+interface ProfilePreferenceRow {
+  active_team_id: string | null;
+}
+
 interface PlayerRow {
   id: string;
   name: string;
@@ -40,20 +48,68 @@ function toTeam(row: TeamRow, players: PlayerRow[]): Team {
   };
 }
 
-async function getOwnedTeamRow(supabase: SupabaseClient, ownerId: string) {
+async function getMemberTeamIds(supabase: SupabaseClient, userId: string): Promise<string[]> {
   const { data, error } = await supabase
-    .from("teams")
-    .select("id, name, created_at, updated_at")
-    .eq("owner_id", ownerId)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle<TeamRow>();
+    .from("team_members")
+    .select("team_id")
+    .eq("user_id", userId)
+    .returns<TeamMemberRow[]>();
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return data;
+  return Array.from(new Set((data ?? []).map((row) => row.team_id)));
+}
+
+async function getTeamsByIds(supabase: SupabaseClient, teamIds: string[]): Promise<TeamRow[]> {
+  if (teamIds.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("teams")
+    .select("id, name, created_at, updated_at")
+    .in("id", teamIds)
+    .order("created_at", { ascending: true })
+    .returns<TeamRow[]>();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data ?? [];
+}
+
+async function readProfileActiveTeamId(supabase: SupabaseClient, userId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("active_team_id")
+    .eq("id", userId)
+    .maybeSingle<ProfilePreferenceRow>();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data?.active_team_id ?? null;
+}
+
+async function persistActiveTeamId(
+  supabase: SupabaseClient,
+  userId: string,
+  teamId: string | null
+): Promise<string | null> {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ active_team_id: teamId })
+    .eq("id", userId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return teamId;
 }
 
 async function getPlayersByTeamId(supabase: SupabaseClient, teamId: string) {
@@ -74,9 +130,17 @@ async function getPlayersByTeamId(supabase: SupabaseClient, teamId: string) {
 
 async function readCloudTeam(
   supabase: SupabaseClient,
-  userId: string
+  teamId: string
 ): Promise<Team | null> {
-  const teamRow = await getOwnedTeamRow(supabase, userId);
+  const { data: teamRow, error: teamError } = await supabase
+    .from("teams")
+    .select("id, name, created_at, updated_at")
+    .eq("id", teamId)
+    .maybeSingle<TeamRow>();
+
+  if (teamError) {
+    throw new Error(teamError.message);
+  }
 
   if (!teamRow) {
     return null;
@@ -84,6 +148,26 @@ async function readCloudTeam(
 
   const players = await getPlayersByTeamId(supabase, teamRow.id);
   return toTeam(teamRow, players);
+}
+
+async function readCloudTeams(supabase: SupabaseClient, userId: string): Promise<Team[]> {
+  const teamIds = await getMemberTeamIds(supabase, userId);
+  const teamRows = await getTeamsByIds(supabase, teamIds);
+
+  if (teamRows.length === 0) {
+    return [];
+  }
+
+  const players = await Promise.all(
+    teamRows.map(async (teamRow) => {
+      const teamPlayers = await getPlayersByTeamId(supabase, teamRow.id);
+      return [teamRow.id, teamPlayers] as const;
+    })
+  );
+
+  const playersByTeamId = new Map(players);
+
+  return teamRows.map((teamRow) => toTeam(teamRow, playersByTeamId.get(teamRow.id) ?? []));
 }
 
 export function createSupabaseTeamRepository({
@@ -97,8 +181,29 @@ export function createSupabaseTeamRepository({
 }): TeamRepository {
   return {
     mode: "cloud",
-    async getTeam() {
-      return readCloudTeam(supabase, userId);
+    async getTeams() {
+      return readCloudTeams(supabase, userId);
+    },
+    async getTeam(teamId) {
+      return readCloudTeam(supabase, teamId);
+    },
+    async getActiveTeamId() {
+      return readProfileActiveTeamId(supabase, userId);
+    },
+    async setActiveTeam(teamId) {
+      const teamIds = await getMemberTeamIds(supabase, userId);
+
+      if (!teamIds.includes(teamId)) {
+        throw new Error("Team not found for this user.");
+      }
+
+      await ensureUserProfile({
+        supabase,
+        userId,
+        userEmail,
+      });
+
+      return persistActiveTeamId(supabase, userId, teamId);
     },
     async createTeam(name) {
       await ensureUserProfile({
@@ -131,6 +236,12 @@ export function createSupabaseTeamRepository({
         throw new Error(membershipError.message);
       }
 
+      const activeTeamId = await readProfileActiveTeamId(supabase, userId);
+
+      if (!activeTeamId) {
+        await persistActiveTeamId(supabase, userId, teamRow.id);
+      }
+
       return toTeam(teamRow, []);
     },
     async renameTeam(teamId, name) {
@@ -144,7 +255,7 @@ export function createSupabaseTeamRepository({
         throw new Error(error.message);
       }
 
-      const next = await readCloudTeam(supabase, userId);
+      const next = await readCloudTeam(supabase, teamId);
 
       if (!next) {
         throw new Error("Team not found.");
@@ -163,7 +274,7 @@ export function createSupabaseTeamRepository({
         throw new Error(error.message);
       }
 
-      const next = await readCloudTeam(supabase, userId);
+      const next = await readCloudTeam(supabase, teamId);
 
       if (!next) {
         throw new Error("Team not found.");
@@ -171,7 +282,7 @@ export function createSupabaseTeamRepository({
 
       return next;
     },
-    async renamePlayer(_teamId, playerId, name) {
+    async renamePlayer(teamId, playerId, name) {
       const { error } = await supabase
         .from("players")
         .update({ name })
@@ -181,7 +292,7 @@ export function createSupabaseTeamRepository({
         throw new Error(error.message);
       }
 
-      const next = await readCloudTeam(supabase, userId);
+      const next = await readCloudTeam(supabase, teamId);
 
       if (!next) {
         throw new Error("Team not found.");
@@ -189,7 +300,7 @@ export function createSupabaseTeamRepository({
 
       return next;
     },
-    async deletePlayer(_teamId, playerId) {
+    async deletePlayer(teamId, playerId) {
       const { error } = await supabase
         .from("players")
         .delete()
@@ -199,7 +310,7 @@ export function createSupabaseTeamRepository({
         throw new Error(error.message);
       }
 
-      const next = await readCloudTeam(supabase, userId);
+      const next = await readCloudTeam(supabase, teamId);
 
       if (!next) {
         throw new Error("Team not found.");
@@ -207,8 +318,8 @@ export function createSupabaseTeamRepository({
 
       return next;
     },
-    async reorderPlayer() {
-      const next = await readCloudTeam(supabase, userId);
+    async reorderPlayer(teamId) {
+      const next = await readCloudTeam(supabase, teamId);
 
       if (!next) {
         throw new Error("Team not found.");

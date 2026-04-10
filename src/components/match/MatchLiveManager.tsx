@@ -22,7 +22,6 @@ import {
   type LiveMatchState,
 } from "@/domain/liveMatch";
 import { getSubstitutionSuggestion } from "@/domain/substitutionSuggestion";
-import { getStoredTeam } from "@/lib/storage/teamStorage";
 import {
   endMatch,
   getStoredMatchSetup,
@@ -33,6 +32,7 @@ import {
   getStoredLiveMatch,
   saveStoredLiveMatch,
 } from "@/lib/storage/liveMatchStorage";
+import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -41,12 +41,6 @@ import { FpButton } from "@/components/ui/FpButton";
 import { MatchTimerPanel } from "@/components/match/MatchTimerPanel";
 import { LivePlayerSection } from "@/components/match/LivePlayerSection";
 import { variants } from "@/lib/tokens";
-
-interface InitialLiveSnapshot {
-  teamPlayers: Player[];
-  liveMatch: LiveMatchState | null;
-  setupStatus: MatchStatus | null;
-}
 
 function mapPlayersById(players: Player[]) {
   return new Map(players.map((player) => [player.id, player]));
@@ -77,49 +71,11 @@ function statusLabel(
   return t("status.notStarted");
 }
 
-function readInitialLiveSnapshot(): InitialLiveSnapshot {
-  const team = getStoredTeam();
-  const storedSetup = getStoredMatchSetup();
-  const storedLiveMatch = getStoredLiveMatch();
-
-  if (!team || !storedSetup) {
-    return {
-      teamPlayers: [],
-      liveMatch: null,
-      setupStatus: null,
-    };
-  }
-
-  if (storedLiveMatch && storedLiveMatch.setupId === storedSetup.config.id) {
-    return {
-      teamPlayers: team.players,
-      liveMatch: reconcileLiveMatchWithSquad(
-        storedLiveMatch,
-        storedSetup.config.selectedPlayerIds
-      ),
-      setupStatus: storedSetup.status,
-    };
-  }
-
-  if (storedSetup.status === "active") {
-    return {
-      teamPlayers: team.players,
-      liveMatch: createLiveMatchFromSetup(storedSetup.config),
-      setupStatus: storedSetup.status,
-    };
-  }
-
-  return {
-    teamPlayers: team.players,
-    liveMatch: null,
-    setupStatus: storedSetup.status,
-  };
-}
-
 export function MatchLiveManager() {
   const t = useTranslations("matchLive");
   const common = useTranslations("common");
   const router = useRouter();
+  const workspace = useTeamWorkspace();
 
   const isHydrated = useSyncExternalStore(
     () => () => {},
@@ -127,16 +83,55 @@ export function MatchLiveManager() {
     () => false
   );
 
-  const [initialSnapshot] = useState<InitialLiveSnapshot>(() => readInitialLiveSnapshot());
-  const [teamPlayers] = useState<Player[]>(initialSnapshot.teamPlayers);
-  const [liveMatch, setLiveMatch] = useState<LiveMatchState | null>(
-    initialSnapshot.liveMatch
-  );
-  const [setupStatus, setSetupStatus] = useState<MatchStatus | null>(
-    initialSnapshot.setupStatus
-  );
+  const [teamPlayers, setTeamPlayers] = useState<Player[]>([]);
+  const [liveMatch, setLiveMatch] = useState<LiveMatchState | null>(null);
+  const [setupStatus, setSetupStatus] = useState<MatchStatus | null>(null);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [selectedBenchId, setSelectedBenchId] = useState<string | null>(null);
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!isHydrated || workspace.isLoading) {
+      return;
+    }
+
+    const storedSetup = getStoredMatchSetup();
+    const storedLiveMatch = getStoredLiveMatch();
+
+    if (!storedSetup) {
+      setTeamPlayers([]);
+      setLiveMatch(null);
+      setSetupStatus(null);
+      return;
+    }
+
+    const setupTeam = workspace.teams.find((team) => team.id === storedSetup.config.teamId) ?? null;
+
+    if (!setupTeam) {
+      setTeamPlayers([]);
+      setLiveMatch(null);
+      setSetupStatus(storedSetup.status);
+      return;
+    }
+    setTeamPlayers(setupTeam.players);
+
+    if (storedLiveMatch && storedLiveMatch.setupId === storedSetup.config.id) {
+      setLiveMatch(
+        reconcileLiveMatchWithSquad(storedLiveMatch, storedSetup.config.selectedPlayerIds)
+      );
+      setSetupStatus(storedSetup.status);
+      return;
+    }
+
+    if (storedSetup.status === "active") {
+      setLiveMatch(createLiveMatchFromSetup(storedSetup.config));
+      setSetupStatus(storedSetup.status);
+      return;
+    }
+    setLiveMatch(null);
+    setSetupStatus(storedSetup.status);
+  }, [isHydrated, workspace.isLoading, workspace.teams]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!isHydrated || !liveMatch) {
@@ -288,6 +283,22 @@ export function MatchLiveManager() {
     return (
       <PageShell>
         <AppCard className="p-6 text-sm text-muted-foreground">{common("loading")}</AppCard>
+      </PageShell>
+    );
+  }
+
+  if (workspace.isLoading) {
+    return (
+      <PageShell>
+        <AppCard className="p-6 text-sm text-muted-foreground">{common("loading")}</AppCard>
+      </PageShell>
+    );
+  }
+
+  if (workspace.error) {
+    return (
+      <PageShell>
+        <AppCard className="p-3 text-xs text-danger">{workspace.error}</AppCard>
       </PageShell>
     );
   }

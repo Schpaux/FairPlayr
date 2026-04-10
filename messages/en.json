@@ -70,6 +70,10 @@
       "guest": "Guest mode: team data is stored on this device.",
       "cloud": "Signed-in mode: team data is stored in the cloud."
     },
+    "teamList": {
+      "title": "Your teams",
+      "activeBadge": "Active"
+    },
     "teamCard": {
       "label": "Team name"
     },
@@ -183,6 +187,7 @@
   "matchSetup": {
     "title": "Match Setup",
     "subtitle": "Configure your match before kick-off.",
+    "activeTeam": "Active team: {name}",
     "noTeam": {
       "title": "No team found",
       "description": "You need a team before setting up a match.",
@@ -303,6 +308,7 @@
   "lineup": {
     "title": "Lineup",
     "subtitle": "Build a clear visual lineup for your next match.",
+    "activeTeam": "Active team: {name}",
     "noTeam": {
       "title": "No team found",
       "description": "Create your team before building a lineup.",
@@ -358,6 +364,10 @@
     "darkMode": "Dark",
     "systemMode": "System",
     "language": "Language"
+  },
+  "teamSwitcher": {
+    "label": "Active team",
+    "create": "Create team"
   },
   "a11y": {
     "switchToLight": "Switch to light mode",

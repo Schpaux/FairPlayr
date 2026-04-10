@@ -14,7 +14,6 @@ import { LineupField } from "@/components/lineup/LineupField";
 import { FormatSelector } from "@/components/match/FormatSelector";
 import { FormationSelector } from "@/components/match/FormationSelector";
 import type { Player } from "@/domain/team";
-import { getStoredTeam } from "@/lib/storage/teamStorage";
 import {
   getStoredMatchSetup,
   saveMatchSetupDraft,
@@ -38,6 +37,7 @@ import {
 } from "@/domain/match";
 import { variants } from "@/lib/tokens";
 import { cn } from "@/lib/utils";
+import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
 
 function buildInitialConfig(team: { id: string; players: Player[] }): MatchConfig {
   const storedSetup = getStoredMatchSetup();
@@ -55,6 +55,7 @@ function buildInitialConfig(team: { id: string; players: Player[] }): MatchConfi
 export function LineupBuilderManager() {
   const t = useTranslations("lineup");
   const common = useTranslations("common");
+  const workspace = useTeamWorkspace();
 
   const isHydrated = useSyncExternalStore(
     () => () => {},
@@ -62,17 +63,24 @@ export function LineupBuilderManager() {
     () => false
   );
 
-  const [team] = useState(() => getStoredTeam());
-  const [config, setConfig] = useState<MatchConfig | null>(() => {
-    const storedTeam = getStoredTeam();
+  const [config, setConfig] = useState<MatchConfig | null>(null);
+  const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
 
-    if (!storedTeam) {
-      return null;
+  const team = workspace.activeTeam;
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!isHydrated || workspace.isLoading) {
+      return;
     }
 
-    return buildInitialConfig(storedTeam);
-  });
-  const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
+    if (!team) {
+      setConfig(null);
+      return;
+    }
+    setConfig(buildInitialConfig(team));
+  }, [isHydrated, team, workspace.isLoading]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!isHydrated || !config) {
@@ -141,6 +149,22 @@ export function LineupBuilderManager() {
     );
   }
 
+  if (workspace.isLoading) {
+    return (
+      <PageShell>
+        <AppCard className="p-6 text-sm text-muted-foreground">{common("loading")}</AppCard>
+      </PageShell>
+    );
+  }
+
+  if (workspace.error) {
+    return (
+      <PageShell>
+        <AppCard className="p-3 text-xs text-danger">{workspace.error}</AppCard>
+      </PageShell>
+    );
+  }
+
   if (!team) {
     return (
       <PageShell>
@@ -188,6 +212,10 @@ export function LineupBuilderManager() {
   return (
     <PageShell className="space-y-4 pb-6">
       <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
+
+      <AppCard className="p-3 text-xs text-muted-foreground">
+        {t("activeTeam", { name: team.name })}
+      </AppCard>
 
       <motion.div
         initial="hidden"

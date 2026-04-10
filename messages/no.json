@@ -70,6 +70,10 @@
       "guest": "Gjestemodus: lagdata lagres på denne enheten.",
       "cloud": "Innlogget modus: lagdata lagres i skyen."
     },
+    "teamList": {
+      "title": "Lagene dine",
+      "activeBadge": "Aktivt"
+    },
     "teamCard": {
       "label": "Lagnavn"
     },
@@ -183,6 +187,7 @@
   "matchSetup": {
     "title": "Kampoppsett",
     "subtitle": "Konfigurer kampen din før avspark.",
+    "activeTeam": "Aktivt lag: {name}",
     "noTeam": {
       "title": "Ingen lag funnet",
       "description": "Du trenger et lag før du kan sette opp en kamp.",
@@ -303,6 +308,7 @@
   "lineup": {
     "title": "Lagoppstilling",
     "subtitle": "Bygg en tydelig visuell lagoppstilling til neste kamp.",
+    "activeTeam": "Aktivt lag: {name}",
     "noTeam": {
       "title": "Ingen lag funnet",
       "description": "Opprett laget ditt før du bygger lagoppstilling.",
@@ -358,6 +364,10 @@
     "darkMode": "Mørk",
     "systemMode": "System",
     "language": "Språk"
+  },
+  "teamSwitcher": {
+    "label": "Aktivt lag",
+    "create": "Opprett lag"
   },
   "a11y": {
     "switchToLight": "Bytt til lyst modus",

@@ -4,7 +4,10 @@ export type TeamStorageMode = "guest-local" | "cloud";
 
 export interface TeamRepository {
   mode: TeamStorageMode;
-  getTeam: () => Promise<Team | null>;
+  getTeams: () => Promise<Team[]>;
+  getTeam: (teamId: string) => Promise<Team | null>;
+  getActiveTeamId: () => Promise<string | null>;
+  setActiveTeam: (teamId: string) => Promise<string | null>;
   createTeam: (name: string) => Promise<Team>;
   renameTeam: (teamId: string, name: string) => Promise<Team>;
   addPlayer: (teamId: string, name: string) => Promise<Team>;

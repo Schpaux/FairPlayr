@@ -23,7 +23,6 @@ import {
   reconcileWithTeam,
 } from "@/domain/match";
 import type { MatchConfig } from "@/domain/match";
-import { getStoredTeam } from "@/lib/storage/teamStorage";
 import {
   getStoredMatchSetup,
   saveMatchSetupDraft,
@@ -43,6 +42,7 @@ import { LineupAssigner } from "@/components/match/LineupAssigner";
 import { FormationSelector } from "@/components/match/FormationSelector";
 import { variants } from "@/lib/tokens";
 import { cn } from "@/lib/utils";
+import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
 
 // ─── Section wrapper ──────────────────────────────────────────────────────────
 
@@ -70,6 +70,7 @@ function SetupSection({
 export function MatchSetupManager() {
   const t = useTranslations("matchSetup");
   const router = useRouter();
+  const workspace = useTeamWorkspace();
 
   // ── Hydration guard (avoids SSR/client mismatch on localStorage reads) ──
   const isHydrated = useSyncExternalStore(
@@ -79,23 +80,31 @@ export function MatchSetupManager() {
   );
 
   // ── State ──────────────────────────────────────────────────────────────
-  const [team] = useState(() => getStoredTeam());
-  const [setup, setSetup] = useState<MatchConfig | null>(() => {
-    const currentTeam = getStoredTeam();
+  const [setup, setSetup] = useState<MatchConfig | null>(null);
 
-    if (!currentTeam) {
-      return null;
+  const team = workspace.activeTeam;
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!isHydrated || workspace.isLoading) {
+      return;
+    }
+
+    if (!team) {
+      setSetup(null);
+      return;
     }
 
     const stored = getStoredMatchSetup();
-    const teamPlayerIds = currentTeam.players.map((p) => p.id);
+    const teamPlayerIds = team.players.map((player) => player.id);
 
-    if (stored && stored.config.teamId === currentTeam.id) {
-      return reconcileWithTeam(stored.config, teamPlayerIds);
+    if (stored && stored.config.teamId === team.id) {
+      setSetup(reconcileWithTeam(stored.config, teamPlayerIds));
+      return;
     }
-
-    return createMatchSetup(currentTeam.id);
-  });
+    setSetup(createMatchSetup(team.id));
+  }, [isHydrated, team, workspace.isLoading]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // ── Auto-save draft on every setup change ──────────────────────────────
   useEffect(() => {
@@ -180,6 +189,22 @@ export function MatchSetupManager() {
     );
   }
 
+  if (workspace.isLoading) {
+    return (
+      <PageShell>
+        <AppCard className="p-6 text-sm text-muted-foreground animate-pulse">&nbsp;</AppCard>
+      </PageShell>
+    );
+  }
+
+  if (workspace.error) {
+    return (
+      <PageShell>
+        <AppCard className="p-3 text-xs text-danger">{workspace.error}</AppCard>
+      </PageShell>
+    );
+  }
+
   // ── No team ────────────────────────────────────────────────────────────
   if (!team) {
     return (
@@ -235,6 +260,12 @@ export function MatchSetupManager() {
         variants={variants.staggerContainer}
         className="space-y-4"
       >
+        <motion.div variants={variants.fadeInUp}>
+          <AppCard className="p-3 text-xs text-muted-foreground">
+            {t("activeTeam", { name: team.name })}
+          </AppCard>
+        </motion.div>
+
         {/* Format */}
         <SetupSection label={t("sections.format")}>
           <FormatSelector value={setup.format} onChange={handleFormatChange} />
