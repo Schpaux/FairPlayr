@@ -1,0 +1,46 @@
+name: Security - CodeQL
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  schedule:
+    - cron: "30 2 * * 1"
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  analyze:
+    name: CodeQL Analyze
+    if: ${{ vars.TRIVY_UPLOAD_SARIF == 'true' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout source code for analysis.
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Initialize CodeQL for JavaScript/TypeScript.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+
+      # Build project automatically for deeper analysis.
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v4
+
+      # Upload CodeQL results to GitHub code scanning.
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v4

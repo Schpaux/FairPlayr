@@ -2,6 +2,7 @@ name: Security - Trivy
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  TRIVY_UPLOAD_SARIF: ${{ vars.TRIVY_UPLOAD_SARIF || 'false' }}
 
 on:
   push:
@@ -41,7 +42,7 @@ jobs:
 
       # Upload SARIF even if findings exist.
       - name: Upload filesystem SARIF
-        if: always() && hashFiles('trivy-fs-results.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        if: always() && env.TRIVY_UPLOAD_SARIF == 'true' && hashFiles('trivy-fs-results.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: github/codeql-action/upload-sarif@v4
         continue-on-error: true
         with:
@@ -93,7 +94,7 @@ jobs:
         uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: image
-          input: fairplayr-image.tar
+          image-ref: docker-archive:fairplayr-image.tar
           format: sarif
           output: trivy-image-results.sarif
           cache: "false"
@@ -102,7 +103,7 @@ jobs:
 
       # Upload SARIF even if findings exist.
       - name: Upload image SARIF
-        if: always() && hashFiles('trivy-image-results.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        if: always() && env.TRIVY_UPLOAD_SARIF == 'true' && hashFiles('trivy-image-results.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: github/codeql-action/upload-sarif@v4
         continue-on-error: true
         with:
@@ -114,7 +115,7 @@ jobs:
         uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: image
-          input: fairplayr-image.tar
+          image-ref: docker-archive:fairplayr-image.tar
           format: table
           severity: HIGH,CRITICAL
           cache: "false"

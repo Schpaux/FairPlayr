@@ -266,6 +266,8 @@ Notes:
 
 This project includes continuous Trivy scanning in GitHub Actions via `.github/workflows/security-trivy.yml`.
 
+Code scanning is also configured with CodeQL via `.github/workflows/codeql.yml`.
+
 - Triggers:
 - Push to `main` and `develop`
 - All pull requests
@@ -275,6 +277,9 @@ This project includes continuous Trivy scanning in GitHub Actions via `.github/w
 - Built Docker image scan (`build-and-scan-image` job)
 - Reporting:
 - Both jobs generate SARIF files and upload them to GitHub code scanning/security results.
+- SARIF upload is controlled by the repository variable `TRIVY_UPLOAD_SARIF`.
+- Set `TRIVY_UPLOAD_SARIF=true` after GitHub Code Scanning is enabled in repository settings.
+- If you do not have admin rights to enable Code Scanning, keep `TRIVY_UPLOAD_SARIF=false` and scans will still run with HIGH/CRITICAL gating.
 - Gating:
 - A separate gating scan runs after SARIF upload in each job.
 - Pipelines only fail on `HIGH` and `CRITICAL` findings.

@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Link, useRouter } from "@/i18n/navigation";
 import type { Player } from "@/domain/team";
+import { autoFillLineup, createMatchSetup, setSelectedSquad, type MatchFormat } from "@/domain/match";
 import {
   createLiveMatchFromSetup,
   endLiveMatch,
@@ -24,6 +25,8 @@ import {
 } from "@/domain/liveMatch";
 import { getSubstitutionSuggestion } from "@/domain/substitutionSuggestion";
 import {
+  activateMatch,
+  saveMatchSetupDraft,
   endMatch,
   getStoredMatchSetup,
   type MatchStatus,
@@ -73,14 +76,35 @@ function statusLabel(
   return t("status.notStarted");
 }
 
+function inferFormatFromSquadSize(playerCount: number): MatchFormat {
+  if (playerCount >= 11) return "11v11";
+  if (playerCount >= 9) return "9v9";
+  if (playerCount >= 7) return "7v7";
+  if (playerCount >= 5) return "5v5";
+  return "3v3";
+}
+
+function createAutoLiveSession(teamId: string, playerIds: string[]) {
+  const format = inferFormatFromSquadSize(playerIds.length);
+  let setup = createMatchSetup(teamId, format);
+  setup = setSelectedSquad(setup, playerIds);
+  setup = autoFillLineup(setup);
+  const live = startLiveMatch(createLiveMatchFromSetup(setup), Date.now());
+
+  return {
+    setup,
+    live,
+  };
+}
+
 export function MatchLiveManager() {
   const t = useTranslations("matchLive");
   const common = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
   const workspace = useTeamWorkspace();
-  const { refreshActiveMatch } = useActiveMatch();
-  const activeMatchId = searchParams.get("matchId");
+  const { activeMatch, refreshActiveMatch } = useActiveMatch();
+  const activeMatchId = searchParams.get("matchId") ?? activeMatch?.id ?? null;
 
   const isHydrated = useSyncExternalStore(
     () => () => {},
@@ -102,6 +126,25 @@ export function MatchLiveManager() {
 
     const storedSetup = getStoredMatchSetup();
     const storedLiveMatch = getStoredLiveMatch();
+
+    const requestedTeamId = activeMatch?.teamId ?? workspace.activeTeamId;
+    const requestedTeam = requestedTeamId
+      ? workspace.teams.find((team) => team.id === requestedTeamId) ?? null
+      : null;
+
+    if ((!storedSetup || storedSetup.status !== "active") && activeMatchId && requestedTeam && requestedTeam.players.length > 0) {
+      const playerIds = requestedTeam.players.map((player) => player.id);
+      const session = createAutoLiveSession(requestedTeam.id, playerIds);
+
+      saveMatchSetupDraft(session.setup);
+      activateMatch(session.setup);
+      saveStoredLiveMatch(session.live);
+
+      setTeamPlayers(requestedTeam.players);
+      setLiveMatch(session.live);
+      setSetupStatus("active");
+      return;
+    }
 
     if (!storedSetup) {
       setTeamPlayers([]);
@@ -135,7 +178,7 @@ export function MatchLiveManager() {
     }
     setLiveMatch(null);
     setSetupStatus(storedSetup.status);
-  }, [isHydrated, workspace.isLoading, workspace.teams]);
+  }, [activeMatch?.teamId, activeMatchId, isHydrated, workspace.activeTeamId, workspace.isLoading, workspace.teams]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {

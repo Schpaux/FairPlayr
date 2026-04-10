@@ -68,119 +68,123 @@ export function ProfileMenu() {
             onClick={() => setOpen(false)}
           />
 
-          <div className="absolute inset-x-0 bottom-0 max-h-[85svh] overflow-y-auto rounded-t-2xl border border-fp-border bg-background p-4 pb-8 shadow-xl">
-            <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-fp-border" />
+          <div className="absolute inset-x-0 bottom-0 top-0 flex items-end px-2 pb-2 pt-2">
+            <div className="mx-auto flex max-h-[min(92svh,44rem)] w-full max-w-screen-sm flex-col overflow-hidden rounded-2xl border border-fp-border bg-background shadow-xl">
+              <div className="flex-1 overflow-y-auto px-4 pb-4 pt-3">
+                <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-fp-border" />
 
-            <div className="flex items-center gap-3 rounded-xl border border-fp-border bg-fp-surface-2 p-3">
-              <UserAvatar
-                name={profile.name}
-                email={user?.email ?? null}
-                photoUrl={profile.photoUrl}
-                isGuest={isGuest}
-              />
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-foreground">
-                  {profile.name ?? (isGuest ? t("guestName") : user?.email ?? "-")}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {isGuest ? t("guestEmail") : user?.email ?? "-"}
-                </p>
-              </div>
-            </div>
+                <div className="flex items-center gap-3 rounded-xl border border-fp-border bg-fp-surface-2 p-3">
+                  <UserAvatar
+                    name={profile.name}
+                    email={user?.email ?? null}
+                    photoUrl={profile.photoUrl}
+                    isGuest={isGuest}
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-foreground">
+                      {profile.name ?? (isGuest ? t("guestName") : user?.email ?? "-")}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {isGuest ? t("guestEmail") : user?.email ?? "-"}
+                    </p>
+                  </div>
+                </div>
 
-            <div className="mt-3 space-y-2">
-              <SyncStatusRow mode={workspace.mode} hasError={Boolean(workspace.error)} />
+                <div className="mt-3 space-y-2">
+                  <SyncStatusRow mode={workspace.mode} hasError={Boolean(workspace.error)} />
 
-              <Link
-                href="/settings"
-                className="tap-target flex items-center justify-between rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-sm font-medium text-foreground"
-                onClick={() => setOpen(false)}
-              >
-                <span>{settingsT("title")}</span>
-                <span className="text-xs text-muted-foreground">›</span>
-              </Link>
-            </div>
+                  <Link
+                    href="/settings"
+                    className="tap-target flex items-center justify-between rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-sm font-medium text-foreground"
+                    onClick={() => setOpen(false)}
+                  >
+                    <span>{settingsT("title")}</span>
+                    <span className="text-xs text-muted-foreground">›</span>
+                  </Link>
+                </div>
 
-            <div className="mt-4 space-y-3">
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {settingsT("language")}
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {routing.locales.map((l) => {
-                    const meta = localeConfig[l as keyof typeof localeConfig];
-                    const active = l === locale;
-                    return (
-                      <button
-                        key={l}
-                        type="button"
-                        className={
-                          active
-                            ? "tap-target rounded-xl border border-primary/35 bg-primary/10 px-3 py-2 text-sm font-medium text-primary"
-                            : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-sm font-medium text-muted-foreground"
-                        }
-                        onClick={() => {
-                          router.replace(pathname, { locale: l });
-                          setOpen(false);
-                        }}
-                      >
-                        {meta?.full ?? l}
-                      </button>
-                    );
-                  })}
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {settingsT("language")}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {routing.locales.map((l) => {
+                        const meta = localeConfig[l as keyof typeof localeConfig];
+                        const active = l === locale;
+                        return (
+                          <button
+                            key={l}
+                            type="button"
+                            className={
+                              active
+                                ? "tap-target rounded-xl border border-primary/35 bg-primary/10 px-3 py-2 text-sm font-medium text-primary"
+                                : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-sm font-medium text-muted-foreground"
+                            }
+                            onClick={() => {
+                              router.replace(pathname, { locale: l });
+                              setOpen(false);
+                            }}
+                          >
+                            {meta?.full ?? l}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {settingsT("theme")}
+                    </p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { value: "light", label: settingsT("lightMode") },
+                        { value: "dark", label: settingsT("darkMode") },
+                        { value: "system", label: settingsT("systemMode") },
+                      ].map((option) => {
+                        const active = theme === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            className={
+                              active
+                                ? "tap-target rounded-xl border border-primary/35 bg-primary/10 px-2 py-2 text-xs font-semibold text-primary"
+                                : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-2 py-2 text-xs font-semibold text-muted-foreground"
+                            }
+                            onClick={() => setTheme(option.value)}
+                          >
+                            {option.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {settingsT("theme")}
-                </p>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { value: "light", label: settingsT("lightMode") },
-                    { value: "dark", label: settingsT("darkMode") },
-                    { value: "system", label: settingsT("systemMode") },
-                  ].map((option) => {
-                    const active = theme === option.value;
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        className={
-                          active
-                            ? "tap-target rounded-xl border border-primary/35 bg-primary/10 px-2 py-2 text-xs font-semibold text-primary"
-                            : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-2 py-2 text-xs font-semibold text-muted-foreground"
-                        }
-                        onClick={() => setTheme(option.value)}
-                      >
-                        {option.label}
-                      </button>
-                    );
-                  })}
-                </div>
+              <div className="border-t border-fp-border px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3">
+                {isGuest ? (
+                  <Link
+                    href="/auth/sign-in"
+                    onClick={() => setOpen(false)}
+                    className="tap-target inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-primary/35 bg-primary/10 px-4 text-sm font-semibold text-primary"
+                  >
+                    {authT("signIn")}
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    className="tap-target inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-fp-border bg-fp-surface-2 px-4 text-sm font-semibold text-foreground"
+                    onClick={() => {
+                      void signOut().finally(() => setOpen(false));
+                    }}
+                  >
+                    {authT("signOut")}
+                  </button>
+                )}
               </div>
-            </div>
-
-            <div className="mt-5">
-              {isGuest ? (
-                <Link
-                  href="/auth/sign-in"
-                  onClick={() => setOpen(false)}
-                  className="tap-target inline-flex h-11 w-full items-center justify-center rounded-xl border border-primary/35 bg-primary/10 px-4 text-sm font-semibold text-primary"
-                >
-                  {authT("signIn")}
-                </Link>
-              ) : (
-                <button
-                  type="button"
-                  className="tap-target inline-flex h-11 w-full items-center justify-center rounded-xl border border-fp-border bg-fp-surface-2 px-4 text-sm font-semibold text-foreground"
-                  onClick={() => {
-                    void signOut().finally(() => setOpen(false));
-                  }}
-                >
-                  {authT("signOut")}
-                </button>
-              )}
             </div>
           </div>
         </div>
