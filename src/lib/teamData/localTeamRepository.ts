@@ -75,10 +75,6 @@ export function createLocalTeamRepository(): TeamRepository {
     async deleteTeam(teamId) {
       const teams = getStoredTeams();
 
-      if (teams.length <= 1) {
-        throw new Error("At least one team is required.");
-      }
-
       if (!teams.some((team) => team.id === teamId)) {
         throw new Error("Team not found in local storage.");
       }

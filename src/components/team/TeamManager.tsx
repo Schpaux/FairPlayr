@@ -304,30 +304,31 @@ export function TeamManager() {
                     size="md"
                     className="tap-target"
                     onClick={() => handleDeleteTeam(team.id)}
-                    disabled={workspace.teams.length <= 1}
                   >
                     {t("actions.deleteTeam")}
                   </FpButton>
                 </AppCard>
               </motion.div>
 
-              <motion.div variants={variants.fadeInUp}>
-                <AppCard className="space-y-3 p-4">
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-fp-spond">{t("spondInfo.badge")}</p>
-                    <h3 className="text-base font-semibold text-foreground">{t("spondInfo.title")}</h3>
-                    <p className="text-xs text-muted-foreground">{t("spondInfo.description")}</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Link href="/settings" className="tap-target inline-flex h-10 items-center rounded-xl border border-fp-spond-border bg-fp-spond-soft px-4 text-sm font-semibold text-fp-spond-foreground">
-                      {t("spondInfo.manageCta")}
-                    </Link>
-                    <Link href="/match" className="tap-target inline-flex h-10 items-center rounded-xl border border-fp-border bg-fp-surface-2 px-4 text-sm font-semibold text-foreground">
-                      {t("spondInfo.importCta")}
-                    </Link>
-                  </div>
-                </AppCard>
-              </motion.div>
+              {workspace.mode === "cloud" ? (
+                <motion.div variants={variants.fadeInUp}>
+                  <AppCard className="space-y-3 p-4">
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-fp-spond">{t("spondInfo.badge")}</p>
+                      <h3 className="text-base font-semibold text-foreground">{t("spondInfo.title")}</h3>
+                      <p className="text-xs text-muted-foreground">{t("spondInfo.description")}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Link href="/settings" className="tap-target inline-flex h-10 items-center rounded-xl border border-fp-spond-border bg-fp-spond-soft px-4 text-sm font-semibold text-fp-spond-foreground">
+                        {t("spondInfo.manageCta")}
+                      </Link>
+                      <Link href="/match" className="tap-target inline-flex h-10 items-center rounded-xl border border-fp-border bg-fp-surface-2 px-4 text-sm font-semibold text-foreground">
+                        {t("spondInfo.importCta")}
+                      </Link>
+                    </div>
+                  </AppCard>
+                </motion.div>
+              ) : null}
 
               <motion.div variants={variants.fadeInUp}>
                 <AppCard className="space-y-4">

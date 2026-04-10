@@ -385,49 +385,56 @@ export function LineupBuilderManager() {
       </motion.div>
 
       {activeSlotId && (
-        <div className="fixed inset-0 z-40 bg-black/45 p-3" onClick={() => setActiveSlotId(null)}>
+        <div className="fixed inset-0 z-40 bg-black/45" onClick={() => setActiveSlotId(null)}>
           <div
-            className="absolute inset-x-3 bottom-3 rounded-2xl border border-fp-border bg-background p-4 shadow-xl"
+            className="absolute inset-x-0 bottom-0 top-0 flex items-end px-2 pb-2"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  {t("picker.title")}
-                </p>
-                <p className="text-sm font-semibold text-foreground">
-                  {t("picker.slot", { slot: selectedSlotLabel ?? "" })}
-                </p>
-              </div>
-              <button
-                type="button"
-                className="tap-target rounded-lg border border-fp-border bg-fp-surface-2 p-2 text-muted-foreground"
-                onClick={() => setActiveSlotId(null)}
-              >
-                <X size={14} />
-              </button>
-            </div>
-
-            {benchPlayers.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-fp-border bg-fp-surface-2 p-3 text-sm text-muted-foreground">
-                {t("remaining.empty")}
-              </p>
-            ) : (
-              <div className="max-h-[44vh] space-y-2 overflow-y-auto pr-1">
-                {benchPlayers.map((player) => (
+            <div className="mx-auto flex max-h-[min(90svh,44rem)] w-full max-w-screen-sm flex-col overflow-hidden rounded-2xl border border-fp-border bg-background shadow-xl">
+              <div className="border-b border-fp-border px-4 pb-3 pt-3">
+                <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-fp-border" />
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                      {t("picker.title")}
+                    </p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {t("picker.slot", { slot: selectedSlotLabel ?? "" })}
+                    </p>
+                  </div>
                   <button
-                    key={player.id}
                     type="button"
-                    onClick={() => handleAssignFromPool(player.id)}
-                    className={cn(
-                      "tap-target w-full rounded-xl border border-fp-border bg-fp-surface-2 p-3 text-left transition-all hover:border-primary/25"
-                    )}
+                    className="tap-target rounded-lg border border-fp-border bg-fp-surface-2 p-2 text-muted-foreground"
+                    onClick={() => setActiveSlotId(null)}
                   >
-                    <p className="text-sm font-semibold text-foreground">{player.name}</p>
+                    <X size={14} />
                   </button>
-                ))}
+                </div>
               </div>
-            )}
+
+              <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3">
+                {benchPlayers.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-fp-border bg-fp-surface-2 p-3 text-sm text-muted-foreground">
+                    {t("remaining.empty")}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {benchPlayers.map((player) => (
+                      <button
+                        key={player.id}
+                        type="button"
+                        onClick={() => handleAssignFromPool(player.id)}
+                        className={cn(
+                          "tap-target w-full rounded-xl border border-fp-border bg-fp-surface-2 p-3 text-left transition-all hover:border-primary/25"
+                        )}
+                      >
+                        <p className="text-sm font-semibold text-foreground">{player.name}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

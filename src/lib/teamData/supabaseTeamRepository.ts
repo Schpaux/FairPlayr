@@ -275,10 +275,6 @@ export function createSupabaseTeamRepository({
         throw new Error("Team not found for this user.");
       }
 
-      if (teamIds.length <= 1) {
-        throw new Error("At least one team is required.");
-      }
-
       const { error } = await supabase
         .from("teams")
         .delete()

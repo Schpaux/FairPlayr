@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import { UserPlus2 } from "lucide-react";
 import { FpButton } from "@/components/ui/FpButton";
 import { teamTextInputClassName } from "@/components/team/styles";
@@ -24,6 +24,13 @@ export function PlayerQuickAddForm({
 }: PlayerQuickAddFormProps) {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const focusInput = () => {
+    window.requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -32,6 +39,7 @@ export function PlayerQuickAddForm({
 
     if (!trimmedName) {
       setError(validationMessage);
+      focusInput();
       return;
     }
 
@@ -39,11 +47,13 @@ export function PlayerQuickAddForm({
 
     if (!didAdd) {
       setError(duplicateMessage);
+      focusInput();
       return;
     }
 
     setName("");
     setError(null);
+    focusInput();
   };
 
   return (
@@ -53,6 +63,7 @@ export function PlayerQuickAddForm({
       </label>
       <div className="flex items-center gap-2">
         <input
+          ref={inputRef}
           id="player-name-input"
           value={name}
           onChange={(event) => {

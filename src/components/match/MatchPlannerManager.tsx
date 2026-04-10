@@ -1,11 +1,12 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { CalendarClock, MapPin, ShieldAlert, PlusCircle, ExternalLink } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
+import { getStoredMatchSetup } from "@/lib/storage/matchStorage";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { AppCard } from "@/components/ui/AppCard";
@@ -62,6 +63,11 @@ export function MatchPlannerManager() {
   const locale = useLocale();
   const auth = useAuth();
   const workspace = useTeamWorkspace();
+  const isHydrated = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
   const [matches, setMatches] = useState<MatchItem[]>([]);
   const [events, setEvents] = useState<SpondEventItem[]>([]);
@@ -84,6 +90,15 @@ export function MatchPlannerManager() {
   const [location, setLocation] = useState("");
 
   const team = workspace.activeTeam;
+  const isGuestMode = workspace.mode === "guest-local" || auth.status !== "authenticated";
+  const hasActiveLocalMatch = useMemo(() => {
+    if (!isHydrated) {
+      return false;
+    }
+
+    const stored = getStoredMatchSetup();
+    return Boolean(stored?.status === "active");
+  }, [isHydrated]);
 
   const sortedMatches = useMemo(
     () => [...matches].sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()),
@@ -247,7 +262,7 @@ export function MatchPlannerManager() {
         setError(cause instanceof Error ? cause.message : t("errors.generic"));
       }
     })();
-  }, [auth.status, loadEvents, loadMatches, team, t]);
+  }, [auth.status, loadMatches, team, t]);
 
   const handleCreateMatch = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -335,7 +350,7 @@ export function MatchPlannerManager() {
     }
   };
 
-  if (auth.status === "loading" || workspace.isLoading) {
+  if (!isHydrated || auth.status === "loading" || workspace.isLoading) {
     return (
       <PageShell>
         <AppCard className="p-6 text-sm text-muted-foreground">{common("loading")}</AppCard>
@@ -343,20 +358,43 @@ export function MatchPlannerManager() {
     );
   }
 
-  if (auth.status !== "authenticated") {
+  if (isGuestMode && !team) {
     return (
       <PageShell className="space-y-4">
         <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
         <EmptyState
           icon={ShieldAlert}
-          title={t("loginRequiredTitle")}
-          description={t("loginRequiredDescription")}
+          title={t("noTeamTitle")}
+          description={t("noTeamDescription")}
           action={
-            <Link href="/auth/sign-in">
-              <FpButton variant="primary" size="md">{t("loginCta")}</FpButton>
+            <Link href="/team">
+              <FpButton variant="primary" size="md">{t("goToTeam")}</FpButton>
             </Link>
           }
         />
+      </PageShell>
+    );
+  }
+
+  if (isGuestMode) {
+    return (
+      <PageShell className="space-y-4">
+        <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
+        <AppCard className="space-y-3 p-4">
+          <h3 className="text-sm font-semibold text-foreground">{t("guest.title")}</h3>
+          <p className="text-xs text-muted-foreground">{t("guest.description")}</p>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/match/setup">
+              <FpButton variant="primary" size="md">{t("guest.startCta")}</FpButton>
+            </Link>
+            {hasActiveLocalMatch ? (
+              <Link href="/match/live">
+                <FpButton variant="secondary" size="md">{t("guest.resumeCta")}</FpButton>
+              </Link>
+            ) : null}
+          </div>
+        </AppCard>
+        <AppCard className="p-3 text-xs text-muted-foreground">{t("guest.cloudHint")}</AppCard>
       </PageShell>
     );
   }

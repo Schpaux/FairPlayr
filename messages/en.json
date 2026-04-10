@@ -473,6 +473,13 @@
     "loginRequiredTitle": "Sign in to plan matches",
     "loginRequiredDescription": "You must sign in to plan matches and import from Spond.",
     "loginCta": "Sign in",
+    "guest": {
+      "title": "Start a regular match as guest",
+      "description": "You can run a full local match flow without signing in.",
+      "startCta": "Set up match",
+      "resumeCta": "Resume live match",
+      "cloudHint": "Planning, cloud sync, and Spond import require sign-in."
+    },
     "noTeamTitle": "No active team",
     "noTeamDescription": "Choose or create a team before planning matches.",
     "goToTeam": "Go to Team",

@@ -473,6 +473,13 @@
     "loginRequiredTitle": "Logg inn for kampplanlegging",
     "loginRequiredDescription": "Du må være logget inn for å planlegge kamper og importere fra Spond.",
     "loginCta": "Logg inn",
+    "guest": {
+      "title": "Start en vanlig kamp som gjest",
+      "description": "Du kan gjennomføre hele kampflyten lokalt uten innlogging.",
+      "startCta": "Sett opp kamp",
+      "resumeCta": "Fortsett pågående kamp",
+      "cloudHint": "Planlegging, skysynk og Spond-import krever innlogging."
+    },
     "noTeamTitle": "Ingen aktivt lag",
     "noTeamDescription": "Velg eller opprett et lag før du planlegger kamp.",
     "goToTeam": "Gå til lag",
