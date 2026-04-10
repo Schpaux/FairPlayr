@@ -89,12 +89,16 @@ jobs:
       - name: Export Docker image tarball
         run: docker save "fairplayr:${GITHUB_SHA}" -o fairplayr-image.tar
 
+      # Verify tarball exists before running Trivy image scans.
+      - name: Verify image tarball
+        run: ls -lh fairplayr-image.tar
+
       # Reporting scan: generate SARIF for GitHub code scanning.
       - name: Run Trivy image reporting scan (SARIF)
         uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: image
-          image-ref: docker-archive:fairplayr-image.tar
+          input: fairplayr-image.tar
           format: sarif
           output: trivy-image-results.sarif
           cache: "false"
@@ -115,7 +119,7 @@ jobs:
         uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: image
-          image-ref: docker-archive:fairplayr-image.tar
+          input: fairplayr-image.tar
           format: table
           severity: HIGH,CRITICAL
           cache: "false"
