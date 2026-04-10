@@ -262,6 +262,24 @@ Notes:
 - RLS and policy changes are high-impact: validate both API behavior and policy behavior when touching migrations.
 - Spond API calls run server-side in the provider/service layer; credentials are never exposed to the client after submit.
 
+## Security Scanning (Trivy)
+
+This project includes continuous Trivy scanning in GitHub Actions via `.github/workflows/security-trivy.yml`.
+
+- Triggers:
+- Push to `main` and `develop`
+- All pull requests
+- Nightly scheduled run (cron)
+- Coverage:
+- Filesystem/repository scan (`trivy-fs` job)
+- Built Docker image scan (`build-and-scan-image` job)
+- Reporting:
+- Both jobs generate SARIF files and upload them to GitHub code scanning/security results.
+- Gating:
+- A separate gating scan runs after SARIF upload in each job.
+- Pipelines only fail on `HIGH` and `CRITICAL` findings.
+- `ignore-unfixed=true` is enabled for both reporting and gating scans.
+
 ## Status
 
 ### Working now

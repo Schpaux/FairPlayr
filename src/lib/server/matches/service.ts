@@ -9,6 +9,21 @@ import type {
   UpdateMatchStatusInput,
 } from "@/lib/server/matches/types";
 
+const MATCH_SELECT_BASE = "id, team_id, title, opponent_name, starts_at, location, status, created_by, created_at, updated_at";
+const MATCH_SELECT_WITH_TIMESTAMPS = `${MATCH_SELECT_BASE}, started_at, ended_at`;
+
+function isMissingMatchTimestampColumnError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) {
+    return false;
+  }
+
+  if (error.code === "42703") {
+    return true;
+  }
+
+  return /column\s+matches\.(started_at|ended_at)\s+does\s+not\s+exist/i.test(error.message ?? "");
+}
+
 async function requireTeamMembership(
   supabase: SupabaseClient,
   userId: string,
@@ -44,8 +59,8 @@ function mapMatchRows(rows: MatchRow[], links: ExternalEventLinkRow[]): MatchLis
       startsAt: row.starts_at,
       location: row.location,
       status: row.status,
-      startedAt: row.started_at,
-      endedAt: row.ended_at,
+      startedAt: row.started_at ?? null,
+      endedAt: row.ended_at ?? null,
       source: link ? "spond" : "manual",
       externalEventId: link?.external_event_id ?? null,
       rsvpLastSyncedAt: link?.rsvp_last_synced_at ?? null,
@@ -62,12 +77,26 @@ export async function getTeamMatches(
 ): Promise<MatchListItem[]> {
   await requireTeamMembership(supabase, userId, teamId);
 
-  const { data: matchRows, error: matchError } = await supabase
+  const primaryQuery = supabase
     .from("matches")
-    .select("id, team_id, title, opponent_name, starts_at, location, status, started_at, ended_at, created_by, created_at, updated_at")
+    .select(MATCH_SELECT_WITH_TIMESTAMPS)
     .eq("team_id", teamId)
     .order("starts_at", { ascending: true })
     .returns<MatchRow[]>();
+
+  let { data: matchRows, error: matchError } = await primaryQuery;
+
+  if (isMissingMatchTimestampColumnError(matchError)) {
+    const fallback = await supabase
+      .from("matches")
+      .select(MATCH_SELECT_BASE)
+      .eq("team_id", teamId)
+      .order("starts_at", { ascending: true })
+      .returns<MatchRow[]>();
+
+    matchRows = fallback.data;
+    matchError = fallback.error;
+  }
 
   if (matchError) {
     throw new IntegrationError("MATCH_LIST_FAILED", matchError.message, 500);
@@ -100,11 +129,24 @@ export async function getMatchById(
   userId: string,
   matchId: string
 ): Promise<MatchListItem> {
-  const { data: row, error } = await supabase
+  const primary = await supabase
     .from("matches")
-    .select("id, team_id, title, opponent_name, starts_at, location, status, started_at, ended_at, created_by, created_at, updated_at")
+    .select(MATCH_SELECT_WITH_TIMESTAMPS)
     .eq("id", matchId)
     .maybeSingle<MatchRow>();
+
+  let { data: row, error } = primary;
+
+  if (isMissingMatchTimestampColumnError(error)) {
+    const fallback = await supabase
+      .from("matches")
+      .select(MATCH_SELECT_BASE)
+      .eq("id", matchId)
+      .maybeSingle<MatchRow>();
+
+    row = fallback.data;
+    error = fallback.error;
+  }
   
   if (error) {
     throw new IntegrationError("MATCH_READ_FAILED", error.message, 500);
@@ -137,13 +179,28 @@ export async function getActiveMatchForTeam(
 ): Promise<MatchListItem | null> {
   await requireTeamMembership(supabase, userId, teamId);
 
-  const { data: row, error } = await supabase
+  const primary = await supabase
     .from("matches")
-    .select("id, team_id, title, opponent_name, starts_at, location, status, started_at, ended_at, created_by, created_at, updated_at")
+    .select(MATCH_SELECT_WITH_TIMESTAMPS)
     .eq("team_id", teamId)
     .eq("status", "live")
     .order("started_at", { ascending: false })
     .maybeSingle<MatchRow>();
+
+  let { data: row, error } = primary;
+
+  if (isMissingMatchTimestampColumnError(error)) {
+    const fallback = await supabase
+      .from("matches")
+      .select(MATCH_SELECT_BASE)
+      .eq("team_id", teamId)
+      .eq("status", "live")
+      .order("updated_at", { ascending: false })
+      .maybeSingle<MatchRow>();
+
+    row = fallback.data;
+    error = fallback.error;
+  }
 
   if (error) {
     throw new IntegrationError("MATCH_READ_FAILED", error.message, 500);
@@ -193,18 +250,38 @@ export async function updateMatchStatus(
 
   const timestamps = resolveStatusTimestamps(input.status);
 
-  const { data: row, error } = await supabase
+  const primary = await supabase
     .from("matches")
     .update({
       status: input.status,
       ...timestamps,
     })
     .eq("id", input.matchId)
-    .select("id, team_id, title, opponent_name, starts_at, location, status, started_at, ended_at, created_by, created_at, updated_at")
+    .select(MATCH_SELECT_WITH_TIMESTAMPS)
     .single<MatchRow>();
+
+  let { data: row, error } = primary;
+
+  if (isMissingMatchTimestampColumnError(error)) {
+    const fallback = await supabase
+      .from("matches")
+      .update({
+        status: input.status,
+      })
+      .eq("id", input.matchId)
+      .select(MATCH_SELECT_BASE)
+      .single<MatchRow>();
+
+    row = fallback.data;
+    error = fallback.error;
+  }
 
   if (error) {
     throw new IntegrationError("MATCH_UPDATE_FAILED", error.message, 500);
+  }
+
+  if (!row) {
+    throw new IntegrationError("MATCH_NOT_FOUND", "Fant ikke kampen.", 404);
   }
 
   return mapMatchRows([row], [])[0];
@@ -216,7 +293,7 @@ export async function createManualMatch(
 ): Promise<MatchListItem> {
   await requireTeamMembership(supabase, userId, input.teamId);
 
-  const { data: row, error } = await supabase
+  const primary = await supabase
     .from("matches")
     .insert({
       team_id: input.teamId,
@@ -227,11 +304,36 @@ export async function createManualMatch(
       status: input.status ?? "upcoming",
       created_by: userId,
     })
-    .select("id, team_id, title, opponent_name, starts_at, location, status, started_at, ended_at, created_by, created_at, updated_at")
+    .select(MATCH_SELECT_WITH_TIMESTAMPS)
     .single<MatchRow>();
+
+  let { data: row, error } = primary;
+
+  if (isMissingMatchTimestampColumnError(error)) {
+    const fallback = await supabase
+      .from("matches")
+      .insert({
+        team_id: input.teamId,
+        title: input.title,
+        opponent_name: input.opponentName ?? null,
+        starts_at: input.startsAt,
+        location: input.location ?? null,
+        status: input.status ?? "upcoming",
+        created_by: userId,
+      })
+      .select(MATCH_SELECT_BASE)
+      .single<MatchRow>();
+
+    row = fallback.data;
+    error = fallback.error;
+  }
 
   if (error) {
     throw new IntegrationError("MATCH_CREATE_FAILED", error.message, 500);
+  }
+
+  if (!row) {
+    throw new IntegrationError("MATCH_CREATE_FAILED", "Kunne ikke opprette kamp.", 500);
   }
 
   return mapMatchRows([row], [])[0];

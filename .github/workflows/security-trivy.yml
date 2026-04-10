@@ -1,0 +1,106 @@
+name: Security - Trivy
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+  schedule:
+    - cron: "0 2 * * *"
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  trivy-fs:
+    name: Trivy Filesystem Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      # Get repository content for scanning.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Reporting scan: generate SARIF for GitHub code scanning.
+      - name: Run Trivy filesystem reporting scan (SARIF)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-fs-results.sarif
+          ignore-unfixed: true
+          exit-code: "0"
+
+      # Upload SARIF even if findings exist.
+      - name: Upload filesystem SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-fs-results.sarif
+          category: trivy-fs
+
+      # Gating scan: fail only on HIGH/CRITICAL vulnerabilities.
+      - name: Run Trivy filesystem gating scan (table)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+  build-and-scan-image:
+    name: Build And Scan Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      # Get repository content for image build and scan.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Build a Docker image tagged with the current commit SHA.
+      - name: Build Docker image
+        run: |
+          IMAGE_REF="fairplayr:${GITHUB_SHA}"
+          if [ -f Dockerfile ]; then
+            docker build --tag "${IMAGE_REF}" .
+          else
+            cat > Dockerfile.trivy <<'EOF'
+            FROM alpine:3.20
+            WORKDIR /workspace
+            COPY . .
+            EOF
+            docker build -f Dockerfile.trivy --tag "${IMAGE_REF}" .
+          fi
+
+      # Reporting scan: generate SARIF for GitHub code scanning.
+      - name: Run Trivy image reporting scan (SARIF)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: fairplayr:${{ github.sha }}
+          format: sarif
+          output: trivy-image-results.sarif
+          ignore-unfixed: true
+          exit-code: "0"
+
+      # Upload SARIF even if findings exist.
+      - name: Upload image SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-image-results.sarif
+          category: trivy-image
+
+      # Gating scan: fail only on HIGH/CRITICAL vulnerabilities.
+      - name: Run Trivy image gating scan (table)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: fairplayr:${{ github.sha }}
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"

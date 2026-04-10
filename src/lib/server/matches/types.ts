@@ -8,8 +8,8 @@ export interface MatchRow {
   starts_at: string;
   location: string | null;
   status: MatchStatus;
-  started_at: string | null;
-  ended_at: string | null;
+  started_at?: string | null;
+  ended_at?: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
