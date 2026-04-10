@@ -32,19 +32,43 @@ export async function GET(
   }
 }
 
-function parsePatchPayload(value: unknown): { status: MatchStatus } {
+function parsePatchPayload(value: unknown): {
+  status?: MatchStatus;
+  runtimeState?: Record<string, unknown> | null;
+} {
   if (typeof value !== "object" || value === null) {
     throw new Error("INVALID_PAYLOAD");
   }
 
   const payload = value as Record<string, unknown>;
   const status = payload.status;
+  const hasStatus =
+    status === "draft" || status === "upcoming" || status === "live" || status === "completed";
+  const hasRuntimeState = "runtimeState" in payload;
 
-  if (status !== "draft" && status !== "upcoming" && status !== "live" && status !== "completed") {
+  if (!hasStatus && !hasRuntimeState) {
     throw new Error("INVALID_PAYLOAD");
   }
 
-  return { status };
+  if (hasStatus) {
+    return {
+      status,
+      runtimeState:
+        hasRuntimeState && typeof payload.runtimeState === "object"
+          ? (payload.runtimeState as Record<string, unknown>)
+          : payload.runtimeState === null
+            ? null
+            : undefined,
+    };
+  }
+
+  if (hasRuntimeState && payload.runtimeState !== null && typeof payload.runtimeState !== "object") {
+    throw new Error("INVALID_PAYLOAD");
+  }
+
+  return {
+    runtimeState: payload.runtimeState === null ? null : (payload.runtimeState as Record<string, unknown>),
+  };
 }
 
 export async function PATCH(
@@ -69,6 +93,7 @@ export async function PATCH(
     const match = await updateMatchStatus(supabase, userId, {
       matchId,
       status: payload.status,
+      runtimeState: payload.runtimeState,
     });
 
     return NextResponse.json({ match });

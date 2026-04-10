@@ -3,7 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { CalendarClock, MapPin, ShieldAlert, PlusCircle, ExternalLink } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
 import { getStoredMatchSetup } from "@/lib/storage/matchStorage";
@@ -61,6 +61,7 @@ export function MatchPlannerManager() {
   const t = useTranslations("matchPlanner");
   const common = useTranslations("common");
   const locale = useLocale();
+  const router = useRouter();
   const auth = useAuth();
   const workspace = useTeamWorkspace();
   const isHydrated = useSyncExternalStore(
@@ -74,18 +75,19 @@ export function MatchPlannerManager() {
   const [isLoadingMatches, setIsLoadingMatches] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
+  const [isResolvingEntryMode, setIsResolvingEntryMode] = useState(false);
   const [loadingEventId, setLoadingEventId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [eventsLastSyncedAt, setEventsLastSyncedAt] = useState<string | null>(null);
-  const [entryMode, setEntryMode] = useState<"manual" | "spond">("manual");
+  const [entryMode, setEntryMode] = useState<"manual" | "spond" | null>(null);
   const [hasSpondLink, setHasSpondLink] = useState(false);
+  const [manualStartMode, setManualStartMode] = useState<"now" | "scheduled">("now");
 
   const [title, setTitle] = useState("");
   const [opponentName, setOpponentName] = useState("");
   const [startsAt, setStartsAt] = useState(() => {
-    const oneHourAhead = new Date(Date.now() + 60 * 60 * 1000);
-    return toLocalDateTimeInputValue(oneHourAhead);
+    return toLocalDateTimeInputValue(new Date());
   });
   const [location, setLocation] = useState("");
 
@@ -239,6 +241,7 @@ export function MatchPlannerManager() {
     }
 
     setError(null);
+    setIsResolvingEntryMode(true);
 
     void (async () => {
       try {
@@ -260,6 +263,9 @@ export function MatchPlannerManager() {
         }
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : t("errors.generic"));
+        setEntryMode("manual");
+      } finally {
+        setIsResolvingEntryMode(false);
       }
     })();
   }, [auth.status, loadMatches, team, t]);
@@ -276,7 +282,11 @@ export function MatchPlannerManager() {
     setIsCreating(true);
 
     try {
-      const startsAtIso = new Date(startsAt).toISOString();
+      const startsAtIso =
+        manualStartMode === "now"
+          ? new Date().toISOString()
+          : new Date(startsAt).toISOString();
+      const status = manualStartMode === "now" ? "draft" : "upcoming";
 
       const response = await fetch("/api/matches", {
         method: "POST",
@@ -289,7 +299,7 @@ export function MatchPlannerManager() {
           opponentName,
           startsAt: startsAtIso,
           location,
-          status: "upcoming",
+          status,
         }),
       });
 
@@ -300,11 +310,19 @@ export function MatchPlannerManager() {
         throw new Error(mapError(parsed.code, parsed.message));
       }
 
+      const data = payload as { match: MatchItem };
+
       setTitle("");
       setOpponentName("");
       setLocation("");
-      setNotice(t("createdNotice"));
+      setNotice(
+        manualStartMode === "now" ? t("createdNowNotice") : t("createdNotice")
+      );
       await loadMatches();
+
+      if (manualStartMode === "now") {
+        router.push(`/match/setup?matchId=${encodeURIComponent(data.match.id)}`);
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t("errors.generic"));
     } finally {
@@ -437,6 +455,11 @@ export function MatchPlannerManager() {
       {error ? <AppCard className="p-3 text-xs text-danger">{error}</AppCard> : null}
 
       <AppCard className="space-y-3 p-4">
+        {isResolvingEntryMode ? (
+          <div className="rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-4 text-xs text-muted-foreground">
+            {common("loading")}
+          </div>
+        ) : (
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -462,12 +485,15 @@ export function MatchPlannerManager() {
             {t("mode.spond")}
           </button>
         </div>
+        )}
 
         {!hasSpondLink ? (
           <p className="text-xs text-muted-foreground">{t("mode.spondHint")}</p>
         ) : null}
 
-        {entryMode === "manual" ? (
+        {isResolvingEntryMode ? (
+          <p className="text-xs text-muted-foreground">{common("loading")}</p>
+        ) : entryMode === "manual" ? (
           <>
             <div className="flex items-center gap-2">
               <PlusCircle size={16} className="text-primary" />
@@ -475,6 +501,31 @@ export function MatchPlannerManager() {
             </div>
 
             <form onSubmit={handleCreateMatch} className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  className={
+                    manualStartMode === "now"
+                      ? "tap-target rounded-xl border border-primary/35 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary"
+                      : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-xs font-semibold text-muted-foreground"
+                  }
+                  onClick={() => setManualStartMode("now")}
+                >
+                  {t("manualStart.now")}
+                </button>
+                <button
+                  type="button"
+                  className={
+                    manualStartMode === "scheduled"
+                      ? "tap-target rounded-xl border border-primary/35 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary"
+                      : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-xs font-semibold text-muted-foreground"
+                  }
+                  onClick={() => setManualStartMode("scheduled")}
+                >
+                  {t("manualStart.scheduled")}
+                </button>
+              </div>
+
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -488,13 +539,19 @@ export function MatchPlannerManager() {
                 placeholder={t("fields.opponent")}
                 className={teamTextInputClassName}
               />
-              <input
-                type="datetime-local"
-                value={startsAt}
-                onChange={(e) => setStartsAt(e.target.value)}
-                className={teamTextInputClassName}
-                required
-              />
+              {manualStartMode === "scheduled" ? (
+                <input
+                  type="datetime-local"
+                  value={startsAt}
+                  onChange={(e) => setStartsAt(e.target.value)}
+                  className={teamTextInputClassName}
+                  required
+                />
+              ) : (
+                <p className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-primary">
+                  {t("manualStart.nowHint")}
+                </p>
+              )}
               <input
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}

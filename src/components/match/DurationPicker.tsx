@@ -11,12 +11,14 @@ interface DurationPickerProps {
   value: MatchDurationConfig;
   onPresetChange: (presetId: MatchDurationPresetId) => void;
   onCustomChange: (minutes: number) => void;
+  onHalvesChange: (halves: 1 | 2) => void;
 }
 
 export function DurationPicker({
   value,
   onPresetChange,
   onCustomChange,
+  onHalvesChange,
 }: DurationPickerProps) {
   const t = useTranslations("matchSetup.duration");
 
@@ -49,6 +51,38 @@ export function DurationPicker({
       </div>
 
       <div className="space-y-2 rounded-xl border border-fp-border bg-fp-surface-2 p-3">
+        <div className="space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {t("halvesTitle")}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className={cn(
+                "h-9 rounded-xl border px-3 text-xs font-semibold",
+                value.halves === 2
+                  ? "border-primary/30 bg-primary/10 text-primary"
+                  : "border-fp-border bg-background text-muted-foreground"
+              )}
+              onClick={() => onHalvesChange(2)}
+            >
+              {t("halvesOn")}
+            </button>
+            <button
+              type="button"
+              className={cn(
+                "h-9 rounded-xl border px-3 text-xs font-semibold",
+                value.halves === 1
+                  ? "border-primary/30 bg-primary/10 text-primary"
+                  : "border-fp-border bg-background text-muted-foreground"
+              )}
+              onClick={() => onHalvesChange(1)}
+            >
+              {t("halvesOff")}
+            </button>
+          </div>
+        </div>
+
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {t("customTitle")}
         </p>

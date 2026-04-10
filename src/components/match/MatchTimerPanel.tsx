@@ -10,16 +10,23 @@ interface MatchTimerPanelProps {
   statusLabel: string;
   timerLabel: string;
   durationLabel: string;
-  remainingClock: string;
-  elapsedClock: string;
+  primaryClock: string;
+  secondaryLabel: string;
+  phaseLabel?: string;
+  stoppageLabel?: string | null;
   onStart: () => void;
   onPause: () => void;
   onResume: () => void;
   onEnd: () => void;
+  onEndHalf?: () => void;
   startLabel: string;
   pauseLabel: string;
   resumeLabel: string;
   endLabel: string;
+  endHalfLabel?: string;
+  startSecondHalfLabel?: string;
+  canEndHalf?: boolean;
+  canStartSecondHalf?: boolean;
 }
 
 function statusClassName(status: LiveMatchStatus) {
@@ -39,16 +46,23 @@ export function MatchTimerPanel({
   statusLabel,
   timerLabel,
   durationLabel,
-  remainingClock,
-  elapsedClock,
+  primaryClock,
+  secondaryLabel,
+  phaseLabel,
+  stoppageLabel,
   onStart,
   onPause,
   onResume,
   onEnd,
+  onEndHalf,
   startLabel,
   pauseLabel,
   resumeLabel,
   endLabel,
+  endHalfLabel,
+  startSecondHalfLabel,
+  canEndHalf,
+  canStartSecondHalf,
 }: MatchTimerPanelProps) {
   return (
     <AppCard glow={status === "running" ? "primary" : "none"} className="space-y-4 p-5">
@@ -62,24 +76,47 @@ export function MatchTimerPanel({
       </div>
 
       <div className="text-center">
+        {phaseLabel ? (
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {phaseLabel}
+          </p>
+        ) : null}
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {timerLabel}
         </p>
         <p className="mt-1 text-5xl font-bold tracking-tight text-foreground tabular-nums">
-          {remainingClock}
+          {primaryClock}
         </p>
         <p className="mt-1 text-sm text-muted-foreground tabular-nums">
-          {elapsedClock}
+          {secondaryLabel}
         </p>
+        {stoppageLabel ? (
+          <p className="mt-1 text-xs font-semibold text-danger tabular-nums">
+            {stoppageLabel}
+          </p>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-2 gap-2">
+        {canStartSecondHalf ? (
+          <FpButton
+            variant="primary"
+            size="lg"
+            className="tap-target col-span-2"
+            onClick={onStart}
+          >
+            <Play size={18} />
+            {startSecondHalfLabel ?? startLabel}
+          </FpButton>
+        ) : null}
+
         {(status === "not_started" || status === "paused") && (
           <FpButton
             variant="primary"
             size="lg"
             className="tap-target col-span-2"
             onClick={status === "not_started" ? onStart : onResume}
+            disabled={Boolean(canStartSecondHalf)}
           >
             {status === "not_started" ? <Play size={18} /> : <RotateCcw size={18} />}
             {status === "not_started" ? startLabel : resumeLabel}
@@ -109,6 +146,17 @@ export function MatchTimerPanel({
             {endLabel}
           </FpButton>
         )}
+
+        {canEndHalf && onEndHalf ? (
+          <FpButton
+            variant="secondary"
+            size="md"
+            className="tap-target col-span-2"
+            onClick={onEndHalf}
+          >
+            {endHalfLabel ?? endLabel}
+          </FpButton>
+        ) : null}
       </div>
     </AppCard>
   );

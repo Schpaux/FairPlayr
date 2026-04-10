@@ -13,6 +13,34 @@ import { useAuth } from "@/components/providers/AuthProvider";
 
 type ActiveAction = "google" | "email" | null;
 
+function GoogleMark() {
+  return (
+    <span
+      aria-hidden
+      className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white"
+    >
+      <svg viewBox="0 0 24 24" className="h-4 w-4" role="presentation">
+        <path
+          fill="#4285F4"
+          d="M23.49 12.27c0-.79-.07-1.55-.2-2.27H12v4.3h6.45a5.51 5.51 0 0 1-2.39 3.62v3h3.86c2.26-2.08 3.57-5.14 3.57-8.65z"
+        />
+        <path
+          fill="#34A853"
+          d="M12 24c3.24 0 5.95-1.08 7.93-2.92l-3.86-3c-1.07.72-2.44 1.15-4.07 1.15-3.13 0-5.78-2.12-6.72-4.97H1.3v3.11A11.99 11.99 0 0 0 12 24z"
+        />
+        <path
+          fill="#FBBC05"
+          d="M5.28 14.26A7.2 7.2 0 0 1 4.9 12c0-.78.13-1.54.38-2.26V6.63H1.3A12 12 0 0 0 0 12c0 1.93.46 3.75 1.3 5.37l3.98-3.11z"
+        />
+        <path
+          fill="#EA4335"
+          d="M12 4.77c1.76 0 3.34.6 4.58 1.76l3.43-3.43C17.95 1.17 15.24 0 12 0A11.99 11.99 0 0 0 1.3 6.63l3.98 3.11c.94-2.85 3.59-4.97 6.72-4.97z"
+        />
+      </svg>
+    </span>
+  );
+}
+
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
@@ -172,10 +200,11 @@ export default function SignInPage() {
             variant="secondary"
             size="lg"
             fullWidth
-            className="tap-target"
+            className="tap-target border border-fp-border bg-white text-foreground hover:bg-zinc-50 dark:bg-zinc-950 dark:hover:bg-zinc-900"
             disabled={isBusy}
             onClick={handleGoogleSignIn}
           >
+            <GoogleMark />
             {activeAction === "google" ? t("actions.connecting") : t("actions.continueWithGoogle")}
           </FpButton>
 

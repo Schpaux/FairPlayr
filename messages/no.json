@@ -238,6 +238,7 @@
       },
       "errors": {
         "unauthorized": "Du må være logget inn.",
+        "teamAccess": "Du har ikke tilgang til laget.",
         "invalidCredentials": "Ugyldig Spond-bruker eller passord.",
         "notConnected": "Spond er ikke koblet til ennå.",
         "groupNotLinked": "Velg og lagre Spond-gruppe først.",
@@ -381,6 +382,9 @@
     },
     "duration": {
       "presetLabel": "{halves}x{minutes}",
+      "halvesTitle": "Kampmodus",
+      "halvesOn": "2 omganger",
+      "halvesOff": "1 omgang",
       "customTitle": "Egendefinert totalvarighet",
       "customSuffix": "minutter totalt",
       "totalLabel": "Totalt: {minutes} min"
@@ -405,6 +409,12 @@
       "selectMoreStarters": "{needed, plural, one {Trenger # starter til} other {Trenger # startere til}}",
       "ready": "Startoppstilling klar"
     },
+    "actions": {
+      "starting": "Starter..."
+    },
+    "errors": {
+      "startFailed": "Kunne ikke starte kampen. Prøv igjen."
+    },
     "startMatch": "Start kamp",
     "startMatchHint": "Velg spillere og fyll startoppstillingen"
   },
@@ -422,7 +432,15 @@
     "timer": {
       "remaining": "Tid igjen",
       "elapsed": "Spilt: {elapsed}",
+      "elapsedPrimary": "Tid spilt",
+      "remainingSecondary": "Tid igjen: {remaining}",
+      "stoppage": "Tilleggstid: +{value}",
       "duration": "Varighet: {duration} min"
+    },
+    "phase": {
+      "firstHalf": "1. omgang",
+      "halfTime": "Pause",
+      "secondHalf": "2. omgang"
     },
     "score": {
       "title": "Resultat",
@@ -468,9 +486,14 @@
       "pause": "Pause",
       "resume": "Fortsett",
       "end": "Avslutt kamp",
+      "endHalf": "Avslutt omgang",
+      "startSecondHalf": "Start 2. omgang",
       "confirmEnd": "Avslutte kampen nå?",
       "toSetup": "Gå til kampoppsett",
       "setupNext": "Sett opp neste kamp"
+    },
+    "errors": {
+      "endFailed": "Kunne ikke avslutte kampen."
     }
   },
   "matchPlanner": {
@@ -482,6 +505,7 @@
     "createCta": "Opprett kamp",
     "creating": "Oppretter...",
     "createdNotice": "Kamp opprettet.",
+    "createdNowNotice": "Kamp opprettet. Fortsett til kampoppsett.",
     "listTitle": "Planlagte kamper",
     "empty": "Ingen planlagte kamper ennå.",
     "spondTitle": "Spond-hendelser",
@@ -532,6 +556,11 @@
       "spond": "Fra Spond",
       "spondHint": "Koble Spond i innstillinger for å hente arrangementer direkte her.",
       "spondActiveHint": "Hent arrangementer fra Spond og importer med ett trykk."
+    },
+    "manualStart": {
+      "now": "Nå",
+      "scheduled": "Planlagt",
+      "nowHint": "Kampen opprettes for oppsett nå. Klokka starter først når du trykker Start kamp i live-skjermen."
     },
     "rsvpTitle": "Deltakelse fra Spond",
     "syncRsvpCta": "Oppdater deltakelse",

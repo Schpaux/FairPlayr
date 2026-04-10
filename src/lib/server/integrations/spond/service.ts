@@ -1426,6 +1426,22 @@ export async function resetSpondDataForTeam(
         throw new IntegrationError("TEAM_LINK_DELETE_FAILED", deleteLinkError.message, 500);
       }
     }
+
+    const connection = await getConnection(supabase, userId);
+
+    if (connection?.id) {
+      const { error: disconnectError } = await supabase
+        .from("integration_connections")
+        .update({
+          status: "disconnected",
+          last_error: null,
+        })
+        .eq("id", connection.id);
+
+      if (disconnectError) {
+        throw new IntegrationError("CONNECTION_SAVE_FAILED", disconnectError.message, 500);
+      }
+    }
   } else if (link?.id) {
     const { error: linkSyncResetError } = await supabase
       .from("external_team_links")

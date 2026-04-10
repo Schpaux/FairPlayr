@@ -68,8 +68,8 @@ export function ProfileMenu() {
             onClick={() => setOpen(false)}
           />
 
-          <div className="absolute inset-x-0 bottom-0 top-0 flex items-end px-2 pb-2 pt-2">
-            <div className="mx-auto flex max-h-[min(92svh,44rem)] w-full max-w-screen-sm flex-col overflow-hidden rounded-2xl border border-fp-border bg-background shadow-xl">
+          <div className="absolute inset-x-0 bottom-0 top-[max(env(safe-area-inset-top),0.5rem)] flex items-end px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)]">
+            <div className="mx-auto flex h-full w-full max-w-screen-sm flex-col overflow-hidden rounded-2xl border border-fp-border bg-background shadow-xl">
               <div className="flex-1 overflow-y-auto px-4 pb-4 pt-3">
                 <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-fp-border" />
 
@@ -164,7 +164,7 @@ export function ProfileMenu() {
                 </div>
               </div>
 
-              <div className="border-t border-fp-border px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3">
+              <div className="border-t border-fp-border px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3">
                 {isGuest ? (
                   <Link
                     href="/auth/sign-in"

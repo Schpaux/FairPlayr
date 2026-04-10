@@ -108,6 +108,29 @@ function toValidLiveMatch(value: unknown): LiveMatchState | null {
     setupId,
     teamId,
     durationSeconds,
+    halves: value.halves === 2 ? 2 : 1,
+    regularSecondsPerHalf:
+      readNumber(value.regularSecondsPerHalf) ??
+      (value.halves === 2 ? Math.max(1, Math.round(durationSeconds / 2)) : durationSeconds),
+    phase:
+      value.phase === "first_half" ||
+      value.phase === "half_time" ||
+      value.phase === "second_half" ||
+      value.phase === "full_time"
+        ? value.phase
+        : "first_half",
+    currentHalf:
+      value.currentHalf === 2
+        ? 2
+        : value.currentHalf === 1
+          ? 1
+          : 1,
+    phaseElapsedSeconds: readNumber(value.phaseElapsedSeconds) ?? elapsedSeconds,
+    phaseElapsedBaseSeconds: readNumber(value.phaseElapsedBaseSeconds) ?? elapsedBaseSeconds,
+    phaseRegularElapsedSeconds:
+      readNumber(value.phaseRegularElapsedSeconds) ??
+      Math.min(elapsedSeconds, readNumber(value.regularSecondsPerHalf) ?? durationSeconds),
+    phaseStoppageElapsedSeconds: readNumber(value.phaseStoppageElapsedSeconds) ?? 0,
     elapsedSeconds,
     elapsedBaseSeconds,
     status,
@@ -182,8 +205,18 @@ function toLegacyLiveMatch(value: unknown): LegacyLiveMatch | null {
 }
 
 function migrateLegacyLiveMatch(legacy: LegacyLiveMatch): LiveMatchState {
+  const regularSecondsPerHalf = Math.max(1, Math.round(legacy.durationSeconds / 2));
+
   return {
     ...legacy,
+    halves: 2,
+    regularSecondsPerHalf,
+    phase: "first_half",
+    currentHalf: 1,
+    phaseElapsedSeconds: legacy.elapsedSeconds,
+    phaseElapsedBaseSeconds: legacy.elapsedSeconds,
+    phaseRegularElapsedSeconds: Math.min(legacy.elapsedSeconds, regularSecondsPerHalf),
+    phaseStoppageElapsedSeconds: Math.max(0, legacy.elapsedSeconds - regularSecondsPerHalf),
     elapsedBaseSeconds: legacy.elapsedSeconds,
     teamScore: 0,
     opponentScore: 0,

@@ -1,12 +1,21 @@
 import type { MatchSetup } from "@/domain/match";
 
 export type LiveMatchStatus = "not_started" | "running" | "paused" | "ended";
+export type LiveMatchPhase = "first_half" | "half_time" | "second_half" | "full_time";
 
 export interface LiveMatchState {
   id: string;
   setupId: string;
   teamId: string;
   durationSeconds: number;
+  halves: 1 | 2;
+  regularSecondsPerHalf: number;
+  phase: LiveMatchPhase;
+  currentHalf: 1 | 2 | null;
+  phaseElapsedSeconds: number;
+  phaseElapsedBaseSeconds: number;
+  phaseRegularElapsedSeconds: number;
+  phaseStoppageElapsedSeconds: number;
   elapsedSeconds: number;
   elapsedBaseSeconds: number;
   status: LiveMatchStatus;
@@ -34,18 +43,22 @@ function generateId() {
   return `id-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
-function clampElapsed(seconds: number, durationSeconds: number) {
-  return Math.max(0, Math.min(seconds, durationSeconds));
+function getPhaseDurationSeconds(state: LiveMatchState): number {
+  if (state.phase === "first_half" || state.phase === "second_half") {
+    return state.regularSecondsPerHalf;
+  }
+
+  return state.durationSeconds;
 }
 
 function getDerivedElapsedSeconds(state: LiveMatchState, nowMs: number): number {
   if (state.status !== "running" || state.runStartedAtMs === null) {
-    return clampElapsed(state.elapsedBaseSeconds, state.durationSeconds);
+    return Math.max(0, state.elapsedBaseSeconds);
   }
 
   const runningDelta = Math.floor(Math.max(0, nowMs - state.runStartedAtMs) / 1000);
 
-  return clampElapsed(state.elapsedBaseSeconds + runningDelta, state.durationSeconds);
+  return Math.max(0, state.elapsedBaseSeconds + runningDelta);
 }
 
 function applyDelta(state: LiveMatchState, deltaSeconds: number): LiveMatchState {
@@ -53,20 +66,7 @@ function applyDelta(state: LiveMatchState, deltaSeconds: number): LiveMatchState
     return state;
   }
 
-  const remaining = state.durationSeconds - state.elapsedSeconds;
-  const appliedSeconds = Math.max(0, Math.min(deltaSeconds, remaining));
-
-  if (appliedSeconds <= 0) {
-    return {
-      ...state,
-      elapsedSeconds: state.durationSeconds,
-      elapsedBaseSeconds: state.durationSeconds,
-      status: "ended",
-      runStartedAtMs: null,
-      endedAt: state.endedAt ?? nowIso(),
-      updatedAt: nowIso(),
-    };
-  }
+  const appliedSeconds = Math.max(0, deltaSeconds);
 
   const updatedPlaytime = { ...state.playerAccumulatedSeconds };
 
@@ -74,21 +74,22 @@ function applyDelta(state: LiveMatchState, deltaSeconds: number): LiveMatchState
     updatedPlaytime[playerId] = (updatedPlaytime[playerId] ?? 0) + appliedSeconds;
   }
 
-  const nextElapsed = clampElapsed(
-    state.elapsedSeconds + appliedSeconds,
-    state.durationSeconds
-  );
-
-  const didFinish = nextElapsed >= state.durationSeconds;
+  const nextElapsed = state.elapsedSeconds + appliedSeconds;
+  const phaseDurationSeconds = getPhaseDurationSeconds(state);
+  const nextPhaseElapsed = state.phaseElapsedSeconds + appliedSeconds;
+  const nextPhaseRegularElapsed = Math.min(nextPhaseElapsed, phaseDurationSeconds);
+  const nextPhaseStoppageElapsed = Math.max(0, nextPhaseElapsed - phaseDurationSeconds);
 
   return {
     ...state,
     elapsedSeconds: nextElapsed,
     elapsedBaseSeconds: nextElapsed,
-    status: didFinish ? "ended" : state.status,
+    phaseElapsedSeconds: nextPhaseElapsed,
+    phaseElapsedBaseSeconds: nextPhaseElapsed,
+    phaseRegularElapsedSeconds: nextPhaseRegularElapsed,
+    phaseStoppageElapsedSeconds: nextPhaseStoppageElapsed,
     playerAccumulatedSeconds: updatedPlaytime,
-    runStartedAtMs: didFinish ? null : state.runStartedAtMs,
-    endedAt: didFinish ? state.endedAt ?? nowIso() : state.endedAt,
+    runStartedAtMs: state.runStartedAtMs,
     updatedAt: nowIso(),
   };
 }
@@ -101,11 +102,24 @@ export function createLiveMatchFromSetup(setup: MatchSetup): LiveMatchState {
     playtime[playerId] = 0;
   }
 
+  const halves = setup.duration.halves === 2 ? 2 : 1;
+  const durationSeconds = setup.duration.totalMinutes * 60;
+  const regularSecondsPerHalf =
+    halves === 2 ? setup.duration.minutesPerHalf * 60 : durationSeconds;
+
   return {
     id: generateId(),
     setupId: setup.id,
     teamId: setup.teamId,
-    durationSeconds: setup.duration.totalMinutes * 60,
+    durationSeconds,
+    halves,
+    regularSecondsPerHalf,
+    phase: "first_half",
+    currentHalf: 1,
+    phaseElapsedSeconds: 0,
+    phaseElapsedBaseSeconds: 0,
+    phaseRegularElapsedSeconds: 0,
+    phaseStoppageElapsedSeconds: 0,
     elapsedSeconds: 0,
     elapsedBaseSeconds: 0,
     status: "not_started",
@@ -144,8 +158,13 @@ export function startLiveMatch(state: LiveMatchState, nowMs: number): LiveMatchS
     return state;
   }
 
+  const nextPhase = state.phase === "half_time" ? "second_half" : state.phase;
+  const nextHalf = state.phase === "half_time" ? 2 : state.currentHalf;
+
   return {
     ...state,
+    phase: nextPhase,
+    currentHalf: nextHalf,
     status: "running",
     runStartedAtMs: nowMs,
     startedAt: state.startedAt ?? nowIso(),
@@ -168,6 +187,7 @@ export function pauseLiveMatch(state: LiveMatchState, nowMs: number): LiveMatchS
     ...ticked,
     status: "paused",
     elapsedBaseSeconds: ticked.elapsedSeconds,
+    phaseElapsedBaseSeconds: ticked.phaseElapsedSeconds,
     runStartedAtMs: null,
     updatedAt: nowIso(),
   };
@@ -196,9 +216,35 @@ export function endLiveMatch(state: LiveMatchState, nowMs: number): LiveMatchSta
   return {
     ...maybeTicked,
     status: "ended",
+    phase: "full_time",
+    currentHalf: state.halves === 2 ? 2 : 1,
     elapsedBaseSeconds: maybeTicked.elapsedSeconds,
     runStartedAtMs: null,
     endedAt: maybeTicked.endedAt ?? nowIso(),
+    updatedAt: nowIso(),
+  };
+}
+
+export function endCurrentHalf(state: LiveMatchState, nowMs: number): LiveMatchState {
+  if (state.status !== "running" && state.status !== "paused") {
+    return state;
+  }
+
+  const ticked = state.status === "running" ? tickLiveMatch(state, nowMs) : state;
+
+  if (ticked.halves !== 2 || ticked.phase !== "first_half") {
+    return endLiveMatch(ticked, nowMs);
+  }
+
+  return {
+    ...ticked,
+    phase: "half_time",
+    status: "paused",
+    runStartedAtMs: null,
+    phaseElapsedSeconds: 0,
+    phaseElapsedBaseSeconds: 0,
+    phaseRegularElapsedSeconds: 0,
+    phaseStoppageElapsedSeconds: 0,
     updatedAt: nowIso(),
   };
 }
@@ -264,6 +310,22 @@ export function substitutePlayers(
 
 export function getRemainingSeconds(state: LiveMatchState): number {
   return Math.max(0, state.durationSeconds - state.elapsedSeconds);
+}
+
+export function isInStoppageTime(state: LiveMatchState): boolean {
+  return state.phaseStoppageElapsedSeconds > 0;
+}
+
+export function getCurrentHalfNumber(state: LiveMatchState): 1 | 2 | null {
+  if (state.phase === "first_half") {
+    return 1;
+  }
+
+  if (state.phase === "second_half") {
+    return 2;
+  }
+
+  return state.currentHalf;
 }
 
 export function formatClock(totalSeconds: number): string {

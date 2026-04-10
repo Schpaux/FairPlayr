@@ -405,6 +405,22 @@ export function setMatchDuration(setup: MatchConfig, durationMinutes: number): M
   });
 }
 
+export function setMatchHalves(setup: MatchConfig, halves: 1 | 2): MatchConfig {
+  const safeHalves: 1 | 2 = halves === 2 ? 2 : 1;
+  const totalMinutes = Math.max(5, setup.duration.totalMinutes);
+
+  return withUpdatedConfig(setup, {
+    duration: {
+      ...setup.duration,
+      halves: safeHalves,
+      minutesPerHalf:
+        safeHalves === 2
+          ? Math.max(1, Math.round(totalMinutes / 2))
+          : totalMinutes,
+    },
+  });
+}
+
 export function setDurationFromLegacy(
   setup: MatchConfig,
   durationMinutes: number

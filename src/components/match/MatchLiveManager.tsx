@@ -7,13 +7,16 @@ import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Link, useRouter } from "@/i18n/navigation";
 import type { Player } from "@/domain/team";
-import { autoFillLineup, createMatchSetup, setSelectedSquad, type MatchFormat } from "@/domain/match";
+import { useAuth } from "@/components/providers/AuthProvider";
 import {
   createLiveMatchFromSetup,
+  endCurrentHalf,
   endLiveMatch,
   formatClock,
   formatPlaytime,
+  getCurrentHalfNumber,
   getRemainingSeconds,
+  isInStoppageTime,
   pauseLiveMatch,
   resumeLiveMatch,
   startLiveMatch,
@@ -25,8 +28,6 @@ import {
 } from "@/domain/liveMatch";
 import { getSubstitutionSuggestion } from "@/domain/substitutionSuggestion";
 import {
-  activateMatch,
-  saveMatchSetupDraft,
   endMatch,
   getStoredMatchSetup,
   type MatchStatus,
@@ -76,32 +77,12 @@ function statusLabel(
   return t("status.notStarted");
 }
 
-function inferFormatFromSquadSize(playerCount: number): MatchFormat {
-  if (playerCount >= 11) return "11v11";
-  if (playerCount >= 9) return "9v9";
-  if (playerCount >= 7) return "7v7";
-  if (playerCount >= 5) return "5v5";
-  return "3v3";
-}
-
-function createAutoLiveSession(teamId: string, playerIds: string[]) {
-  const format = inferFormatFromSquadSize(playerIds.length);
-  let setup = createMatchSetup(teamId, format);
-  setup = setSelectedSquad(setup, playerIds);
-  setup = autoFillLineup(setup);
-  const live = startLiveMatch(createLiveMatchFromSetup(setup), Date.now());
-
-  return {
-    setup,
-    live,
-  };
-}
-
 export function MatchLiveManager() {
   const t = useTranslations("matchLive");
   const common = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
+  const auth = useAuth();
   const workspace = useTeamWorkspace();
   const { activeMatch, refreshActiveMatch } = useActiveMatch();
   const activeMatchId = searchParams.get("matchId") ?? activeMatch?.id ?? null;
@@ -117,6 +98,7 @@ export function MatchLiveManager() {
   const [setupStatus, setSetupStatus] = useState<MatchStatus | null>(null);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [selectedBenchId, setSelectedBenchId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -126,25 +108,6 @@ export function MatchLiveManager() {
 
     const storedSetup = getStoredMatchSetup();
     const storedLiveMatch = getStoredLiveMatch();
-
-    const requestedTeamId = activeMatch?.teamId ?? workspace.activeTeamId;
-    const requestedTeam = requestedTeamId
-      ? workspace.teams.find((team) => team.id === requestedTeamId) ?? null
-      : null;
-
-    if ((!storedSetup || storedSetup.status !== "active") && activeMatchId && requestedTeam && requestedTeam.players.length > 0) {
-      const playerIds = requestedTeam.players.map((player) => player.id);
-      const session = createAutoLiveSession(requestedTeam.id, playerIds);
-
-      saveMatchSetupDraft(session.setup);
-      activateMatch(session.setup);
-      saveStoredLiveMatch(session.live);
-
-      setTeamPlayers(requestedTeam.players);
-      setLiveMatch(session.live);
-      setSetupStatus("active");
-      return;
-    }
 
     if (!storedSetup) {
       setTeamPlayers([]);
@@ -188,6 +151,55 @@ export function MatchLiveManager() {
 
     saveStoredLiveMatch(liveMatch);
   }, [liveMatch, isHydrated]);
+
+  useEffect(() => {
+    if (!isHydrated || auth.status !== "authenticated" || !activeMatchId || !liveMatch) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      void fetch(`/api/matches/${encodeURIComponent(activeMatchId)}`, {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ runtimeState: liveMatch }),
+      });
+    }, 600);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [activeMatchId, auth.status, isHydrated, liveMatch]);
+
+  useEffect(() => {
+    if (!isHydrated || auth.status !== "authenticated" || !activeMatchId || liveMatch) {
+      return;
+    }
+
+    void (async () => {
+      const response = await fetch(`/api/matches/${encodeURIComponent(activeMatchId)}`, {
+        method: "GET",
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const payload = (await response.json()) as {
+        match?: { runtimeState?: LiveMatchState | null };
+      };
+
+      const runtimeState = payload.match?.runtimeState;
+
+      if (!runtimeState || typeof runtimeState !== "object") {
+        return;
+      }
+
+      setLiveMatch(runtimeState as LiveMatchState);
+      setSetupStatus("active");
+    })();
+  }, [activeMatchId, auth.status, isHydrated, liveMatch]);
 
   useEffect(() => {
     if (!isHydrated) {
@@ -240,6 +252,8 @@ export function MatchLiveManager() {
 
   const remainingClock = liveMatch ? formatClock(getRemainingSeconds(liveMatch)) : "00:00";
   const elapsedClock = liveMatch ? formatClock(liveMatch.elapsedSeconds) : "00:00";
+  const currentHalf = liveMatch ? getCurrentHalfNumber(liveMatch) : null;
+  const inStoppage = liveMatch ? isInStoppageTime(liveMatch) : false;
 
   const selectedPlayersReady = Boolean(selectedFieldId && selectedBenchId);
   const suggestion = liveMatch ? getSubstitutionSuggestion(liveMatch) : null;
@@ -281,10 +295,18 @@ export function MatchLiveManager() {
     );
   };
 
+  const handleEndHalf = () => {
+    setLiveMatch((previous) =>
+      previous ? endCurrentHalf(previous, Date.now()) : previous
+    );
+  };
+
   const handleEnd = () => {
     if (!window.confirm(t("actions.confirmEnd"))) {
       return;
     }
+
+    setError(null);
 
     const storedSetup = getStoredMatchSetup();
 
@@ -297,19 +319,25 @@ export function MatchLiveManager() {
       setSetupStatus("ended");
     }
 
-    if (activeMatchId) {
-      void fetch(`/api/matches/${encodeURIComponent(activeMatchId)}`, {
-        method: "PATCH",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({ status: "completed" }),
-      }).finally(() => {
-        void refreshActiveMatch();
-      });
-    } else {
-      void refreshActiveMatch();
-    }
+    void (async () => {
+      if (activeMatchId) {
+        const response = await fetch(`/api/matches/${encodeURIComponent(activeMatchId)}`, {
+          method: "PATCH",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({ status: "completed" }),
+        });
+
+        if (!response.ok) {
+          const payload = (await response.json()) as { message?: string };
+          setError(payload.message ?? t("errors.endFailed"));
+          return;
+        }
+      }
+
+      await refreshActiveMatch();
+    })();
 
     clearSelection();
   };
@@ -429,6 +457,7 @@ export function MatchLiveManager() {
         variants={variants.staggerContainer}
         className="space-y-4"
       >
+        {error ? <AppCard className="p-3 text-xs text-danger">{error}</AppCard> : null}
         <motion.div variants={variants.fadeInUp}>
           <AppCard className="space-y-3 p-4">
             <p className="text-sm font-semibold text-foreground">{t("score.title")}</p>
@@ -488,20 +517,33 @@ export function MatchLiveManager() {
           <MatchTimerPanel
             status={liveMatch.status}
             statusLabel={statusLabel(liveMatch.status, t)}
-            timerLabel={t("timer.remaining")}
+            timerLabel={t("timer.elapsedPrimary")}
             durationLabel={t("timer.duration", {
               duration: Math.floor(liveMatch.durationSeconds / 60),
             })}
-            remainingClock={remainingClock}
-            elapsedClock={t("timer.elapsed", { elapsed: elapsedClock })}
+            primaryClock={elapsedClock}
+            secondaryLabel={t("timer.remainingSecondary", { remaining: remainingClock })}
+            phaseLabel={
+              liveMatch.phase === "half_time"
+                ? t("phase.halfTime")
+                : currentHalf === 2
+                  ? t("phase.secondHalf")
+                  : t("phase.firstHalf")
+            }
+            stoppageLabel={inStoppage ? t("timer.stoppage", { value: formatClock(liveMatch.phaseStoppageElapsedSeconds) }) : null}
             onStart={handleStart}
             onPause={handlePause}
             onResume={handleResume}
             onEnd={handleEnd}
+            onEndHalf={handleEndHalf}
             startLabel={t("actions.start")}
             pauseLabel={t("actions.pause")}
             resumeLabel={t("actions.resume")}
             endLabel={t("actions.end")}
+            endHalfLabel={t("actions.endHalf")}
+            startSecondHalfLabel={t("actions.startSecondHalf")}
+            canEndHalf={liveMatch.halves === 2 && (liveMatch.phase === "first_half" || liveMatch.phase === "second_half") && liveMatch.status !== "ended"}
+            canStartSecondHalf={liveMatch.phase === "half_time" && liveMatch.status === "paused"}
           />
         </motion.div>
 

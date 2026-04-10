@@ -238,6 +238,7 @@
       },
       "errors": {
         "unauthorized": "You must be signed in.",
+        "teamAccess": "You do not have access to this team.",
         "invalidCredentials": "Invalid Spond email or password.",
         "notConnected": "Spond is not connected yet.",
         "groupNotLinked": "Select and save a Spond group first.",
@@ -381,6 +382,9 @@
     },
     "duration": {
       "presetLabel": "{halves}x{minutes}",
+      "halvesTitle": "Match mode",
+      "halvesOn": "2 halves",
+      "halvesOff": "1 half",
       "customTitle": "Custom total duration",
       "customSuffix": "minutes total",
       "totalLabel": "Total: {minutes} min"
@@ -405,6 +409,12 @@
       "selectMoreStarters": "{needed, plural, one {# more starter needed} other {# more starters needed}}",
       "ready": "Lineup complete"
     },
+    "actions": {
+      "starting": "Starting..."
+    },
+    "errors": {
+      "startFailed": "Could not start the match. Please try again."
+    },
     "startMatch": "Start Match",
     "startMatchHint": "Select players and fill the starting lineup"
   },
@@ -422,7 +432,15 @@
     "timer": {
       "remaining": "Time remaining",
       "elapsed": "Elapsed: {elapsed}",
+      "elapsedPrimary": "Time played",
+      "remainingSecondary": "Time remaining: {remaining}",
+      "stoppage": "Stoppage time: +{value}",
       "duration": "Duration: {duration} min"
+    },
+    "phase": {
+      "firstHalf": "1st half",
+      "halfTime": "Half-time",
+      "secondHalf": "2nd half"
     },
     "score": {
       "title": "Score",
@@ -468,9 +486,14 @@
       "pause": "Pause",
       "resume": "Resume",
       "end": "End Match",
+      "endHalf": "End half",
+      "startSecondHalf": "Start 2nd half",
       "confirmEnd": "End this match now?",
       "toSetup": "Go to Match Setup",
       "setupNext": "Set Up Next Match"
+    },
+    "errors": {
+      "endFailed": "Could not end the match."
     }
   },
   "matchPlanner": {
@@ -482,6 +505,7 @@
     "createCta": "Create match",
     "creating": "Creating...",
     "createdNotice": "Match created.",
+    "createdNowNotice": "Match created. Continue to setup.",
     "listTitle": "Planned matches",
     "empty": "No planned matches yet.",
     "spondTitle": "Spond events",
@@ -532,6 +556,11 @@
       "spond": "From Spond",
       "spondHint": "Connect Spond in settings to pull events directly here.",
       "spondActiveHint": "Fetch events from Spond and import with one tap."
+    },
+    "manualStart": {
+      "now": "Now",
+      "scheduled": "Scheduled",
+      "nowHint": "The match is created for setup now. The clock starts only when you press Start Match on the live screen."
     },
     "rsvpTitle": "Participation from Spond",
     "syncRsvpCta": "Update participation",

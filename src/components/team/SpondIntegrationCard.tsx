@@ -94,6 +94,8 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
     switch (code) {
       case "UNAUTHORIZED":
         return t("errors.unauthorized");
+      case "TEAM_NOT_FOUND":
+        return t("errors.teamAccess");
       case "INVALID_CREDENTIALS":
         return t("errors.invalidCredentials");
       case "CONNECTION_NOT_FOUND":
@@ -114,6 +116,7 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
       case "PLAYER_DEACTIVATE_FAILED":
       case "TEAM_LINK_DELETE_FAILED":
       case "TEAM_LINK_SYNC_MARK_FAILED":
+      case "CONNECTION_SAVE_FAILED":
         return t("errors.cleanupFailed");
       default:
         return fallback;

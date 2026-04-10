@@ -10,6 +10,7 @@ export interface MatchRow {
   status: MatchStatus;
   started_at?: string | null;
   ended_at?: string | null;
+  runtime_state?: Record<string, unknown> | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -38,6 +39,7 @@ export interface MatchListItem {
   status: MatchStatus;
   startedAt: string | null;
   endedAt: string | null;
+  runtimeState: Record<string, unknown> | null;
   source: "manual" | "spond";
   externalEventId: string | null;
   rsvpLastSyncedAt: string | null;
@@ -56,5 +58,6 @@ export interface CreateMatchInput {
 
 export interface UpdateMatchStatusInput {
   matchId: string;
-  status: MatchStatus;
+  status?: MatchStatus;
+  runtimeState?: Record<string, unknown> | null;
 }

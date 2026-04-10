@@ -7,11 +7,6 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useActiveMatch } from "@/components/providers/ActiveMatchProvider";
 import { PageShell } from "@/components/ui/PageShell";
-import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
-import { createLiveMatchFromSetup, startLiveMatch } from "@/domain/liveMatch";
-import { autoFillLineup, createMatchSetup, setSelectedSquad, type MatchFormat } from "@/domain/match";
-import { activateMatch, saveMatchSetupDraft } from "@/lib/storage/matchStorage";
-import { saveStoredLiveMatch } from "@/lib/storage/liveMatchStorage";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { AppCard } from "@/components/ui/AppCard";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -30,14 +25,6 @@ interface MatchDetails {
   rsvpLastSyncedAt: string | null;
   startedAt: string | null;
   endedAt: string | null;
-}
-
-function inferFormatFromSquadSize(playerCount: number): MatchFormat {
-  if (playerCount >= 11) return "11v11";
-  if (playerCount >= 9) return "9v9";
-  if (playerCount >= 7) return "7v7";
-  if (playerCount >= 5) return "5v5";
-  return "3v3";
 }
 
 interface RsvpSnapshot {
@@ -77,7 +64,6 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
   const common = useTranslations("common");
   const locale = useLocale();
   const auth = useAuth();
-  const workspace = useTeamWorkspace();
   const router = useRouter();
   const { refreshActiveMatch } = useActiveMatch();
 
@@ -267,30 +253,10 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
         setMatch(nextMatch);
       }
 
-      if (status === "live") {
-        const team = workspace.teams.find((candidate) => candidate.id === resolvedMatch.teamId) ?? null;
-
-        if (team && team.players.length > 0) {
-          const playerIds = team.players.map((player) => player.id);
-          const format = inferFormatFromSquadSize(playerIds.length);
-
-          let setup = createMatchSetup(team.id, format);
-          setup = setSelectedSquad(setup, playerIds);
-          setup = autoFillLineup(setup);
-
-          saveMatchSetupDraft(setup);
-          activateMatch(setup);
-
-          const live = startLiveMatch(createLiveMatchFromSetup(setup), Date.now());
-          saveStoredLiveMatch(live);
-        }
-      }
-
       await refreshActiveMatch();
 
       if (status === "live") {
-        setNotice(t("startedNotice"));
-        router.push(`/match/live?matchId=${encodeURIComponent(resolvedMatch.id)}`);
+        router.push(`/match/setup?matchId=${encodeURIComponent(resolvedMatch.id)}`);
       } else {
         setNotice(t("completedNotice"));
       }

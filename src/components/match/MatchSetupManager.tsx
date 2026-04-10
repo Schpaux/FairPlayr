@@ -3,12 +3,14 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { ShieldAlert, Users, ArrowRight, CheckCircle2 } from "lucide-react";
 import {
   createMatchSetup,
   setMatchFormat,
   setMatchDuration,
+  setMatchHalves,
   setMatchDurationPreset,
   toggleSquadPlayer,
   setSelectedSquad,
@@ -28,7 +30,8 @@ import {
   saveMatchSetupDraft,
   activateMatch,
 } from "@/lib/storage/matchStorage";
-import { clearStoredLiveMatch } from "@/lib/storage/liveMatchStorage";
+import { createLiveMatchFromSetup } from "@/domain/liveMatch";
+import { clearStoredLiveMatch, saveStoredLiveMatch } from "@/lib/storage/liveMatchStorage";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -70,7 +73,9 @@ function SetupSection({
 export function MatchSetupManager() {
   const t = useTranslations("matchSetup");
   const router = useRouter();
+  const searchParams = useSearchParams();
   const workspace = useTeamWorkspace();
+  const matchId = searchParams.get("matchId");
 
   // ── Hydration guard (avoids SSR/client mismatch on localStorage reads) ──
   const isHydrated = useSyncExternalStore(
@@ -84,7 +89,6 @@ export function MatchSetupManager() {
 
   const team = workspace.activeTeam;
 
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!isHydrated || workspace.isLoading) {
       return;
@@ -104,7 +108,6 @@ export function MatchSetupManager() {
     }
     setSetup(createMatchSetup(team.id));
   }, [isHydrated, team, workspace.isLoading]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   // ── Auto-save draft on every setup change ──────────────────────────────
   useEffect(() => {
@@ -129,6 +132,10 @@ export function MatchSetupManager() {
     typeof DurationPicker
   >["onPresetChange"] = (presetId) => {
     setSetup((prev) => (prev ? setMatchDurationPreset(prev, presetId) : prev));
+  };
+
+  const handleHalvesChange: React.ComponentProps<typeof DurationPicker>["onHalvesChange"] = (halves) => {
+    setSetup((prev) => (prev ? setMatchHalves(prev, halves) : prev));
   };
 
   const handleFormationChange: React.ComponentProps<
@@ -167,11 +174,47 @@ export function MatchSetupManager() {
     setSetup((prev) => (prev ? autoFillLineup(prev) : prev));
   };
 
-  const handleStartMatch = () => {
+  const [isStarting, setIsStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
+
+  const handleStartMatch = async () => {
     if (!setup || !canStartMatch(setup)) return;
+
+    setStartError(null);
+    setIsStarting(true);
+
     clearStoredLiveMatch();
+    const liveState = createLiveMatchFromSetup(setup);
+    saveStoredLiveMatch(liveState);
     activateMatch(setup);
-    router.push("/match/live");
+
+    try {
+      if (matchId) {
+        const response = await fetch(`/api/matches/${encodeURIComponent(matchId)}`, {
+          method: "PATCH",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({ status: "live" }),
+        });
+
+        if (!response.ok) {
+          const payload = (await response.json()) as { message?: string };
+          throw new Error(payload.message ?? t("errors.startFailed"));
+        }
+
+        router.push(`/match/live?matchId=${encodeURIComponent(matchId)}`);
+        return;
+      }
+
+      router.push("/match/live");
+    } catch (cause) {
+      setStartError(cause instanceof Error ? cause.message : t("errors.startFailed"));
+      setIsStarting(false);
+      return;
+    }
+
+    setIsStarting(false);
   };
 
   // ── Validation state ───────────────────────────────────────────────────
@@ -285,6 +328,7 @@ export function MatchSetupManager() {
             value={setup.duration}
             onPresetChange={handleDurationPresetChange}
             onCustomChange={handleDurationChange}
+            onHalvesChange={handleHalvesChange}
           />
         </SetupSection>
 
@@ -324,6 +368,9 @@ export function MatchSetupManager() {
 
         {/* Start Match CTA */}
         <motion.div variants={variants.fadeInUp} className="pt-2 pb-4">
+          {startError ? (
+            <p className="mb-2 text-xs text-danger">{startError}</p>
+          ) : null}
           {/* Validation hint */}
           <div className="mb-3 flex items-center justify-center gap-2 min-h-[20px]">
             {matchReady ? (
@@ -346,14 +393,16 @@ export function MatchSetupManager() {
             variant="primary"
             size="lg"
             fullWidth
-            disabled={!matchReady}
-            onClick={handleStartMatch}
+            disabled={!matchReady || isStarting}
+            onClick={() => {
+              void handleStartMatch();
+            }}
             className={cn(
               "group transition-all",
               matchReady && "glow-primary-sm"
             )}
           >
-            {t("startMatch")}
+            {isStarting ? t("actions.starting") : t("startMatch")}
             <ArrowRight
               size={18}
               className="transition-transform group-hover:translate-x-0.5"

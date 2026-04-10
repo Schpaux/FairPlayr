@@ -9,7 +9,7 @@ import type {
   UpdateMatchStatusInput,
 } from "@/lib/server/matches/types";
 
-const MATCH_SELECT_BASE = "id, team_id, title, opponent_name, starts_at, location, status, created_by, created_at, updated_at";
+const MATCH_SELECT_BASE = "id, team_id, title, opponent_name, starts_at, location, status, runtime_state, created_by, created_at, updated_at";
 const MATCH_SELECT_WITH_TIMESTAMPS = `${MATCH_SELECT_BASE}, started_at, ended_at`;
 
 function isMissingMatchTimestampColumnError(error: { code?: string; message?: string } | null): boolean {
@@ -61,6 +61,10 @@ function mapMatchRows(rows: MatchRow[], links: ExternalEventLinkRow[]): MatchLis
       status: row.status,
       startedAt: row.started_at ?? null,
       endedAt: row.ended_at ?? null,
+      runtimeState:
+        row.runtime_state && typeof row.runtime_state === "object"
+          ? (row.runtime_state as Record<string, unknown>)
+          : null,
       source: link ? "spond" : "manual",
       externalEventId: link?.external_event_id ?? null,
       rsvpLastSyncedAt: link?.rsvp_last_synced_at ?? null,
@@ -248,14 +252,21 @@ export async function updateMatchStatus(
     }
   }
 
-  const timestamps = resolveStatusTimestamps(input.status);
+  const timestamps = input.status ? resolveStatusTimestamps(input.status) : {};
+  const nextStatus = input.status ?? existing.status;
+
+  const updatePayload: Record<string, unknown> = {
+    status: nextStatus,
+    ...timestamps,
+  };
+
+  if (input.runtimeState !== undefined) {
+    updatePayload.runtime_state = input.runtimeState;
+  }
 
   const primary = await supabase
     .from("matches")
-    .update({
-      status: input.status,
-      ...timestamps,
-    })
+    .update(updatePayload)
     .eq("id", input.matchId)
     .select(MATCH_SELECT_WITH_TIMESTAMPS)
     .single<MatchRow>();
@@ -266,7 +277,7 @@ export async function updateMatchStatus(
     const fallback = await supabase
       .from("matches")
       .update({
-        status: input.status,
+        status: nextStatus,
       })
       .eq("id", input.matchId)
       .select(MATCH_SELECT_BASE)
