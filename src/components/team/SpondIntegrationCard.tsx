@@ -14,6 +14,14 @@ interface SpondGroupOption {
   memberCount: number;
 }
 
+interface SpondEventOption {
+  externalId: string;
+  title: string;
+  startsAt: string | null;
+  location: string | null;
+  importedMatchId: string | null;
+}
+
 interface SpondIntegrationCardProps {
   teamId: string;
   mode: TeamStorageMode;
@@ -50,8 +58,10 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
   const [groups, setGroups] = useState<SpondGroupOption[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
   const [linkedGroupId, setLinkedGroupId] = useState<string | null>(null);
+  const [linkedGroupName, setLinkedGroupName] = useState<string | null>(null);
   const [membersLastSyncedAt, setMembersLastSyncedAt] = useState<string | null>(null);
   const [eventsLastSyncedAt, setEventsLastSyncedAt] = useState<string | null>(null);
+  const [events, setEvents] = useState<SpondEventOption[]>([]);
 
   const selectedGroup = useMemo(
     () => groups.find((group) => group.id === selectedGroupId) ?? null,
@@ -98,6 +108,7 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
       accountLabel: string | null;
       teamLink: {
         externalTeamId: string;
+        externalTeamName: string;
         membersLastSyncedAt: string | null;
         eventsLastSyncedAt: string | null;
       } | null;
@@ -106,8 +117,12 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
     setConnected(data.connected);
     setAccountLabel(data.accountLabel);
     setLinkedGroupId(data.teamLink?.externalTeamId ?? null);
+    setLinkedGroupName(data.teamLink?.externalTeamName ?? null);
     setMembersLastSyncedAt(data.teamLink?.membersLastSyncedAt ?? null);
     setEventsLastSyncedAt(data.teamLink?.eventsLastSyncedAt ?? null);
+    if (!data.teamLink) {
+      setEvents([]);
+    }
   }, [mapErrorMessage, teamId]);
 
   const formatSyncedAt = (value: string | null) => {
@@ -119,6 +134,23 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
 
     if (Number.isNaN(date.getTime())) {
       return t("neverSynced");
+    }
+
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(date);
+  };
+
+  const formatEventDate = (value: string | null) => {
+    if (!value) {
+      return t("eventUnknownDate");
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return t("eventUnknownDate");
     }
 
     return new Intl.DateTimeFormat(undefined, {
@@ -253,6 +285,7 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
       }
 
       setLinkedGroupId(selectedGroup.id);
+      setLinkedGroupName(selectedGroup.name);
       setNotice(t("groupLinked"));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t("errors.generic"));
@@ -332,7 +365,13 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
         throw new Error(mapErrorMessage(parsed.code, parsed.message));
       }
 
-      const data = payload as { total: number; syncedAt: string };
+      const data = payload as {
+        total: number;
+        syncedAt: string;
+        events: SpondEventOption[];
+      };
+
+      setEvents(data.events ?? []);
       setEventsLastSyncedAt(data.syncedAt ?? new Date().toISOString());
       setNotice(
         data.total > 0
@@ -388,7 +427,7 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
               />
               <FpButton type="submit" variant="primary" size="md" disabled={isConnecting}>
                 <Link2 size={16} />
-                {isConnecting ? t("connecting") : t("connectCta")}
+                {isConnecting ? t("loading") : t("connectCta")}
               </FpButton>
             </form>
           ) : (
@@ -407,7 +446,7 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
                   disabled={isLoadingGroups}
                 >
                   <RefreshCcw size={14} />
-                  {t("refreshGroups")}
+                  {isLoadingGroups ? t("loading") : t("refreshGroups")}
                 </FpButton>
               </div>
 
@@ -469,6 +508,11 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
 
               {linkedGroupId ? (
                 <div className="space-y-1">
+                  {linkedGroupName ? (
+                    <p className="text-xs text-muted-foreground">
+                      {t("linkedGroupName", { value: linkedGroupName })}
+                    </p>
+                  ) : null}
                   <p className="text-xs text-muted-foreground">{t("linkedGroupReady")}</p>
                   <p className="text-xs text-muted-foreground">
                     {t("lastMembersSync", { value: formatSyncedAt(membersLastSyncedAt) })}
@@ -481,6 +525,36 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
                   </p>
                 </div>
               ) : null}
+
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t("eventsTitle")}
+                </p>
+
+                {events.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">{t("eventsEmpty")}</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {events.map((eventItem) => (
+                      <li
+                        key={eventItem.externalId}
+                        className="rounded-lg border border-fp-border bg-fp-surface-2 px-3 py-2"
+                      >
+                        <p className="text-sm font-medium text-foreground">{eventItem.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatEventDate(eventItem.startsAt)}
+                        </p>
+                        {eventItem.location ? (
+                          <p className="text-xs text-muted-foreground">{eventItem.location}</p>
+                        ) : null}
+                        <p className="text-xs text-muted-foreground">
+                          {eventItem.importedMatchId ? t("eventImported") : t("eventNotImported")}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           )}
         </>

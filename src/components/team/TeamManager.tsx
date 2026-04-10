@@ -317,13 +317,15 @@ export function TeamManager() {
                 </AppCard>
               </motion.div>
 
-              <motion.div variants={variants.fadeInUp}>
-                <SpondIntegrationCard
-                  teamId={team.id}
-                  mode={workspace.mode}
-                  onImported={workspace.refresh}
-                />
-              </motion.div>
+              {workspace.mode === "cloud" ? (
+                <motion.div variants={variants.fadeInUp}>
+                  <SpondIntegrationCard
+                    teamId={team.id}
+                    mode={workspace.mode}
+                    onImported={workspace.refresh}
+                  />
+                </motion.div>
+              ) : null}
 
               <motion.div variants={variants.fadeInUp}>
                 <AppCard className="space-y-4">
