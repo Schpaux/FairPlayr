@@ -1,0 +1,31 @@
+import { NextResponse } from "next/server";
+import { jsonError, requireAuthenticatedSupabaseClient } from "@/lib/server/integrations/spond/http";
+import { getSpondUpcomingEventsForTeam } from "@/lib/server/integrations/spond/service";
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+export async function GET(request: Request) {
+  try {
+    const { supabase, userId } = await requireAuthenticatedSupabaseClient();
+    const requestUrl = new URL(request.url);
+    const teamId = requestUrl.searchParams.get("teamId") ?? "";
+
+    if (!isUuid(teamId)) {
+      return NextResponse.json(
+        {
+          errorCode: "INVALID_TEAM_ID",
+          message: "Ugyldig lag-id.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const result = await getSpondUpcomingEventsForTeam(supabase, userId, teamId);
+
+    return NextResponse.json(result);
+  } catch (error) {
+    return jsonError(error);
+  }
+}

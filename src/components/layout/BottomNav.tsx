@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 const navItems = [
   { href: "/" as const, icon: Home, labelKey: "home" },
   { href: "/team" as const, icon: Users, labelKey: "team" },
-  { href: "/match/setup" as const, icon: Play, labelKey: "match" },
+  { href: "/match" as const, icon: Play, labelKey: "match" },
   { href: "/lineup" as const, icon: LayoutGrid, labelKey: "lineup" },
   { href: "/settings" as const, icon: Settings, labelKey: "settings" },
 ] as const;

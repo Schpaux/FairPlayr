@@ -1,6 +1,8 @@
 import type {
+  NormalizedExternalEvent,
   NormalizedExternalGroup,
   NormalizedExternalMember,
+  SpondEvent,
   SpondGroup,
   SpondGroupMember,
   SpondProfile,
@@ -53,4 +55,19 @@ export function toNormalizedMembers(group: SpondGroup): NormalizedExternalMember
       };
     })
     .filter((member): member is NormalizedExternalMember => member !== null);
+}
+
+export function toNormalizedEvent(event: SpondEvent): NormalizedExternalEvent {
+  const feature = event.location?.feature?.trim() ?? "";
+  const address = event.location?.address?.trim() ?? "";
+  const location = [feature, address].filter((value) => value.length > 0).join(", ") || null;
+
+  return {
+    externalId: event.id,
+    title: event.heading?.trim() || "Spond-arrangement",
+    startsAt: event.startTimestamp ?? null,
+    endsAt: event.endTimestamp ?? null,
+    location,
+    provider: "spond",
+  };
 }

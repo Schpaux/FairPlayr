@@ -1,5 +1,10 @@
 import { IntegrationError } from "@/lib/server/integrations/spond/errors";
-import type { SpondCredentials, SpondGroup, SpondProfile } from "@/lib/server/integrations/spond/types";
+import type {
+  SpondCredentials,
+  SpondEvent,
+  SpondGroup,
+  SpondProfile,
+} from "@/lib/server/integrations/spond/types";
 
 const SPOND_BASE_URL = "https://api.spond.com/core/v1/";
 
@@ -60,6 +65,38 @@ async function getWithToken<T>(path: string, token: string): Promise<T> {
   return readJsonResponse<T>(response);
 }
 
+function formatDateForSpond(date: Date): string {
+  const yyyy = date.getUTCFullYear();
+  const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(date.getUTCDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T00:00:00.000Z`;
+}
+
+async function getEventsWithToken(token: string, groupId: string): Promise<SpondEvent[]> {
+  const today = new Date();
+  const params = new URLSearchParams({
+    max: "100",
+    scheduled: "false",
+    groupId,
+    minStartTimestamp: formatDateForSpond(today),
+  });
+
+  const response = await fetch(`${SPOND_BASE_URL}sponds/?${params.toString()}`, {
+    method: "GET",
+    headers: {
+      "content-type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new IntegrationError("SPOND_REQUEST_FAILED", "Feil ved henting av data fra Spond.", 502);
+  }
+
+  return readJsonResponse<SpondEvent[]>(response);
+}
+
 export const spondProvider = {
   async verifyCredentials(credentials: SpondCredentials): Promise<{ token: string; profile: SpondProfile }> {
     const token = await login(credentials);
@@ -70,5 +107,10 @@ export const spondProvider = {
   async getGroups(credentials: SpondCredentials): Promise<SpondGroup[]> {
     const token = await login(credentials);
     return getWithToken<SpondGroup[]>("groups/", token);
+  },
+
+  async getUpcomingEvents(credentials: SpondCredentials, groupId: string): Promise<SpondEvent[]> {
+    const token = await login(credentials);
+    return getEventsWithToken(token, groupId);
   },
 };

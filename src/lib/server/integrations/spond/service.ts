@@ -1,11 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { decryptJson, encryptJson } from "@/lib/server/integrations/spond/crypto";
 import { IntegrationError } from "@/lib/server/integrations/spond/errors";
-import { toAccountLabel, toNormalizedGroup, toNormalizedMembers } from "@/lib/server/integrations/spond/mapper";
+import { toAccountLabel, toNormalizedEvent, toNormalizedGroup, toNormalizedMembers } from "@/lib/server/integrations/spond/mapper";
 import { spondProvider } from "@/lib/server/integrations/spond/provider";
 import type {
   ExternalTeamLinkRow,
   IntegrationConnectionRow,
+  NormalizedExternalEvent,
   NormalizedExternalGroup,
   SpondCredentials,
 } from "@/lib/server/integrations/spond/types";
@@ -14,6 +15,18 @@ interface PlayerRow {
   id: string;
   external_id: string | null;
   name: string;
+}
+
+interface MatchInsertRow {
+  id: string;
+  team_id: string;
+  title: string;
+  starts_at: string;
+}
+
+interface ExternalEventLinkLookupRow {
+  match_id: string;
+  external_event_id: string;
 }
 
 async function requireTeamMembership(
@@ -281,5 +294,164 @@ export async function importSpondMembersToTeam(
     created,
     updated,
     total: members.length,
+  };
+}
+
+export async function getSpondUpcomingEventsForTeam(
+  supabase: SupabaseClient,
+  userId: string,
+  teamId: string
+): Promise<{
+  teamLink: { externalTeamId: string; externalTeamName: string };
+  events: Array<NormalizedExternalEvent & { importedMatchId: string | null }>;
+}> {
+  await requireTeamMembership(supabase, userId, teamId);
+
+  const connection = await getConnection(supabase, userId);
+
+  if (!connection) {
+    throw new IntegrationError("CONNECTION_NOT_FOUND", "Spond er ikke koblet til ennå.", 404);
+  }
+
+  const teamLink = await getTeamLink(supabase, teamId);
+
+  if (!teamLink) {
+    throw new IntegrationError("TEAM_LINK_NOT_FOUND", "Velg en Spond-gruppe først.", 400);
+  }
+
+  const credentials = decryptJson<SpondCredentials>(connection.credentials_encrypted);
+  const events = await spondProvider.getUpcomingEvents(credentials, teamLink.external_team_id);
+  const normalized = events.map(toNormalizedEvent);
+
+  const externalIds = normalized.map((event) => event.externalId);
+
+  let importedByExternalId = new Map<string, string>();
+
+  if (externalIds.length > 0) {
+    const { data: existingLinks, error } = await supabase
+      .from("external_event_links")
+      .select("match_id, external_event_id")
+      .eq("team_id", teamId)
+      .eq("provider", "spond")
+      .in("external_event_id", externalIds)
+      .returns<ExternalEventLinkLookupRow[]>();
+
+    if (error) {
+      throw new IntegrationError("EVENT_LINK_LOOKUP_FAILED", error.message, 500);
+    }
+
+    importedByExternalId = new Map(
+      (existingLinks ?? []).map((row) => [row.external_event_id, row.match_id])
+    );
+  }
+
+  return {
+    teamLink: {
+      externalTeamId: teamLink.external_team_id,
+      externalTeamName: teamLink.external_team_name,
+    },
+    events: normalized.map((event) => ({
+      ...event,
+      importedMatchId: importedByExternalId.get(event.externalId) ?? null,
+    })),
+  };
+}
+
+export async function importSpondEventToMatch(
+  supabase: SupabaseClient,
+  userId: string,
+  teamId: string,
+  externalEventId: string
+): Promise<{ matchId: string; alreadyImported: boolean }> {
+  await requireTeamMembership(supabase, userId, teamId);
+
+  const connection = await getConnection(supabase, userId);
+
+  if (!connection) {
+    throw new IntegrationError("CONNECTION_NOT_FOUND", "Spond er ikke koblet til ennå.", 404);
+  }
+
+  const teamLink = await getTeamLink(supabase, teamId);
+
+  if (!teamLink) {
+    throw new IntegrationError("TEAM_LINK_NOT_FOUND", "Velg en Spond-gruppe først.", 400);
+  }
+
+  const { data: existingLink, error: existingLinkError } = await supabase
+    .from("external_event_links")
+    .select("match_id")
+    .eq("team_id", teamId)
+    .eq("provider", "spond")
+    .eq("external_event_id", externalEventId)
+    .maybeSingle<{ match_id: string }>();
+
+  if (existingLinkError) {
+    throw new IntegrationError("EVENT_LINK_LOOKUP_FAILED", existingLinkError.message, 500);
+  }
+
+  if (existingLink) {
+    return {
+      matchId: existingLink.match_id,
+      alreadyImported: true,
+    };
+  }
+
+  const credentials = decryptJson<SpondCredentials>(connection.credentials_encrypted);
+  const events = await spondProvider.getUpcomingEvents(credentials, teamLink.external_team_id);
+  const normalized = events.map(toNormalizedEvent);
+  const selected = normalized.find((event) => event.externalId === externalEventId);
+
+  if (!selected) {
+    throw new IntegrationError("EVENT_NOT_FOUND", "Fant ikke valgt Spond-arrangement.", 404);
+  }
+
+  if (!selected.startsAt) {
+    throw new IntegrationError("EVENT_MISSING_START", "Arrangementet mangler tidspunkt og kan ikke importeres.", 400);
+  }
+
+  const { data: createdMatch, error: createMatchError } = await supabase
+    .from("matches")
+    .insert({
+      team_id: teamId,
+      title: selected.title,
+      starts_at: selected.startsAt,
+      location: selected.location,
+      status: "upcoming",
+      created_by: userId,
+    })
+    .select("id, team_id, title, starts_at")
+    .single<MatchInsertRow>();
+
+  if (createMatchError) {
+    throw new IntegrationError("MATCH_CREATE_FAILED", createMatchError.message, 500);
+  }
+
+  const { error: createLinkError } = await supabase
+    .from("external_event_links")
+    .insert({
+      match_id: createdMatch.id,
+      team_id: teamId,
+      provider: "spond",
+      external_event_id: selected.externalId,
+      external_team_id: teamLink.external_team_id,
+      external_event_name: selected.title,
+    });
+
+  if (createLinkError) {
+    throw new IntegrationError("EVENT_LINK_CREATE_FAILED", createLinkError.message, 500);
+  }
+
+  const { error: syncError } = await supabase
+    .from("integration_connections")
+    .update({ last_sync_at: new Date().toISOString(), last_error: null, status: "connected" })
+    .eq("id", connection.id);
+
+  if (syncError) {
+    throw new IntegrationError("SYNC_MARK_FAILED", syncError.message, 500);
+  }
+
+  return {
+    matchId: createdMatch.id,
+    alreadyImported: false,
   };
 }

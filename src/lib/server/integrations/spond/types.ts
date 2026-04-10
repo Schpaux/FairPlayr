@@ -28,6 +28,17 @@ export interface SpondGroup {
   members: SpondGroupMember[];
 }
 
+export interface SpondEvent {
+  id: string;
+  heading?: string;
+  startTimestamp?: string;
+  endTimestamp?: string;
+  location?: {
+    feature?: string;
+    address?: string;
+  };
+}
+
 export interface NormalizedExternalGroup {
   id: string;
   name: string;
@@ -37,6 +48,15 @@ export interface NormalizedExternalGroup {
 export interface NormalizedExternalMember {
   externalId: string;
   name: string;
+}
+
+export interface NormalizedExternalEvent {
+  externalId: string;
+  title: string;
+  startsAt: string | null;
+  endsAt: string | null;
+  location: string | null;
+  provider: "spond";
 }
 
 export interface IntegrationConnectionRow {
