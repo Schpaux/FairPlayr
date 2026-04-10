@@ -1,5 +1,8 @@
 name: Security - Trivy
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   push:
     branches:
@@ -32,6 +35,7 @@ jobs:
           scan-ref: .
           format: sarif
           output: trivy-fs-results.sarif
+          cache: "false"
           ignore-unfixed: true
           exit-code: "0"
 
@@ -39,6 +43,7 @@ jobs:
       - name: Upload filesystem SARIF
         if: always() && hashFiles('trivy-fs-results.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: github/codeql-action/upload-sarif@v4
+        continue-on-error: true
         with:
           sarif_file: trivy-fs-results.sarif
           category: trivy-fs
@@ -51,6 +56,7 @@ jobs:
           scan-ref: .
           format: table
           severity: HIGH,CRITICAL
+          cache: "false"
           ignore-unfixed: true
           exit-code: "1"
 
@@ -78,14 +84,19 @@ jobs:
             docker build -f Dockerfile.trivy --tag "${IMAGE_REF}" .
           fi
 
+      # Export image to tar so Trivy scan does not depend on local daemon lookup behavior.
+      - name: Export Docker image tarball
+        run: docker save "fairplayr:${GITHUB_SHA}" -o fairplayr-image.tar
+
       # Reporting scan: generate SARIF for GitHub code scanning.
       - name: Run Trivy image reporting scan (SARIF)
         uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: image
-          image-ref: fairplayr:${{ github.sha }}
+          input: fairplayr-image.tar
           format: sarif
           output: trivy-image-results.sarif
+          cache: "false"
           ignore-unfixed: true
           exit-code: "0"
 
@@ -93,6 +104,7 @@ jobs:
       - name: Upload image SARIF
         if: always() && hashFiles('trivy-image-results.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: github/codeql-action/upload-sarif@v4
+        continue-on-error: true
         with:
           sarif_file: trivy-image-results.sarif
           category: trivy-image
@@ -102,8 +114,9 @@ jobs:
         uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: image
-          image-ref: fairplayr:${{ github.sha }}
+          input: fairplayr-image.tar
           format: table
           severity: HIGH,CRITICAL
+          cache: "false"
           ignore-unfixed: true
           exit-code: "1"
