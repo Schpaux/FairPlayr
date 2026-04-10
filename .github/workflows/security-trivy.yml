@@ -10,6 +10,7 @@ on:
     - cron: "0 2 * * *"
 
 permissions:
+  actions: read
   contents: read
   security-events: write
 
@@ -21,7 +22,7 @@ jobs:
     steps:
       # Get repository content for scanning.
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # Reporting scan: generate SARIF for GitHub code scanning.
       - name: Run Trivy filesystem reporting scan (SARIF)
@@ -36,8 +37,8 @@ jobs:
 
       # Upload SARIF even if findings exist.
       - name: Upload filesystem SARIF
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        if: always() && hashFiles('trivy-fs-results.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-fs-results.sarif
           category: trivy-fs
@@ -60,7 +61,7 @@ jobs:
     steps:
       # Get repository content for image build and scan.
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # Build a Docker image tagged with the current commit SHA.
       - name: Build Docker image
@@ -81,6 +82,7 @@ jobs:
       - name: Run Trivy image reporting scan (SARIF)
         uses: aquasecurity/trivy-action@v0.35.0
         with:
+          scan-type: image
           image-ref: fairplayr:${{ github.sha }}
           format: sarif
           output: trivy-image-results.sarif
@@ -89,8 +91,8 @@ jobs:
 
       # Upload SARIF even if findings exist.
       - name: Upload image SARIF
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        if: always() && hashFiles('trivy-image-results.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-image-results.sarif
           category: trivy-image
@@ -99,6 +101,7 @@ jobs:
       - name: Run Trivy image gating scan (table)
         uses: aquasecurity/trivy-action@v0.35.0
         with:
+          scan-type: image
           image-ref: fairplayr:${{ github.sha }}
           format: table
           severity: HIGH,CRITICAL
