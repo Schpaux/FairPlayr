@@ -205,14 +205,14 @@ export async function generateText(input: GenerateTextInput): Promise<GenerateTe
         ? ` Oppstrøm-svar var ikke JSON (status=${details.status}, content-type=${contentType}, snippet=${snippet ?? ""}).`
         : "";
 
-    const possibleLocationHint =
-      config.location === "global"
-        ? " Sjekk VERTEX_AI_LOCATION: for Vertex SDK er regional lokasjon (f.eks. us-central1) vanligvis påkrevd."
+    const possibleModelHint =
+      typeof message === "string" && message.includes("Publisher Model")
+        ? " Sjekk VERTEX_AI_MODEL og prosjekt-tilgang i Vertex AI. Modellen finnes ikke i valgt prosjekt/lokasjon eller er ikke tilgjengelig for prosjektet."
         : "";
 
     throw new AiServiceError(
       "VERTEX_CALL_FAILED",
-      `Klarte ikke kalle Vertex AI. Sjekk ADC og IAM. Detalj: ${message}${nonJsonResponseHint}${possibleLocationHint}`,
+      `Klarte ikke kalle Vertex AI. Sjekk ADC og IAM. Detalj: ${message}${nonJsonResponseHint}${possibleModelHint}`,
       502,
       details
     );

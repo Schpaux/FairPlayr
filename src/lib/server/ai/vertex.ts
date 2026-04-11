@@ -125,8 +125,8 @@ export function getVertexRuntimeInfo(): VertexRuntimeInfo {
 
   const config = getVertexAiConfig();
   const { authSource } = resolveAuthSource();
-  const effectiveLocation = config.location === "global" ? "us-central1" : config.location;
-  const apiEndpoint = config.location === "global" ? "us-central1-aiplatform.googleapis.com" : undefined;
+  const effectiveLocation = config.location;
+  const apiEndpoint = undefined;
 
   console.log("[ai] Vertex runtime info resolved", {
     authSource,
@@ -154,8 +154,8 @@ export function getVertexAiClient(): VertexAI {
 
   const config = getVertexAiConfig();
   const { authSource, googleAuthOptions } = resolveAuthSource();
-  const effectiveLocation = config.location === "global" ? "us-central1" : config.location;
-  const apiEndpoint = config.location === "global" ? "us-central1-aiplatform.googleapis.com" : undefined;
+  const effectiveLocation = config.location;
+  const apiEndpoint = undefined;
 
   console.log("[ai] Vertex client init", {
     stage: "vertex_client_init",
