@@ -1,5 +1,6 @@
 import "server-only";
 import { NextResponse } from "next/server";
+import { AiServiceError } from "@/lib/server/ai/errors";
 import { generateText } from "@/lib/server/ai/service";
 import { getVertexAiConfig } from "@/lib/server/ai/config";
 import { getVertexRuntimeInfo } from "@/lib/server/ai/vertex";
@@ -69,12 +70,34 @@ export async function GET(request: Request) {
         : {}),
     });
   } catch (error) {
+    const runtimeInfo = (() => {
+      try {
+        return getVertexRuntimeInfo();
+      } catch {
+        return null;
+      }
+    })();
+
+    const includeDebug = shouldIncludeDebugInfo(request);
+    const details = error instanceof AiServiceError ? error.details : undefined;
     const message = error instanceof Error ? error.message : "Unknown error";
+
+    const safeDebugPayload = includeDebug
+      ? {
+          stage: typeof details?.stage === "string" ? details.stage : "health_route",
+          authSource: runtimeInfo?.authSource,
+          status: typeof details?.status === "number" ? details.status : undefined,
+          contentType:
+            typeof details?.contentType === "string" ? details.contentType : undefined,
+          snippet: typeof details?.snippet === "string" ? details.snippet.slice(0, 120) : undefined,
+        }
+      : undefined;
 
     return NextResponse.json(
       {
         success: false,
         error: message,
+        ...(safeDebugPayload ? { debug: safeDebugPayload } : {}),
       },
       { status: 500 }
     );
