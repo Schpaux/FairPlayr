@@ -65,6 +65,8 @@ export async function GET(request: Request) {
             authSource: runtimeInfo.authSource,
             project: config.project,
             location: config.location,
+            effectiveLocation: runtimeInfo.effectiveLocation,
+            apiEndpoint: runtimeInfo.apiEndpoint,
             model: config.model,
           }
         : {}),
@@ -86,6 +88,9 @@ export async function GET(request: Request) {
       ? {
           stage: typeof details?.stage === "string" ? details.stage : "health_route",
           authSource: runtimeInfo?.authSource,
+          location: runtimeInfo?.location,
+          effectiveLocation: runtimeInfo?.effectiveLocation,
+          apiEndpoint: runtimeInfo?.apiEndpoint,
           status: typeof details?.status === "number" ? details.status : undefined,
           contentType:
             typeof details?.contentType === "string" ? details.contentType : undefined,

@@ -205,9 +205,14 @@ export async function generateText(input: GenerateTextInput): Promise<GenerateTe
         ? ` Oppstrøm-svar var ikke JSON (status=${details.status}, content-type=${contentType}, snippet=${snippet ?? ""}).`
         : "";
 
+    const possibleLocationHint =
+      config.location === "global"
+        ? " Sjekk VERTEX_AI_LOCATION: for Vertex SDK er regional lokasjon (f.eks. us-central1) vanligvis påkrevd."
+        : "";
+
     throw new AiServiceError(
       "VERTEX_CALL_FAILED",
-      `Klarte ikke kalle Vertex AI. Sjekk ADC og IAM. Detalj: ${message}${nonJsonResponseHint}`,
+      `Klarte ikke kalle Vertex AI. Sjekk ADC og IAM. Detalj: ${message}${nonJsonResponseHint}${possibleLocationHint}`,
       502,
       details
     );

@@ -17,6 +17,8 @@ interface VertexRuntimeInfo {
   authSource: AuthSource;
   project: string;
   location: string;
+  effectiveLocation: string;
+  apiEndpoint?: string;
 }
 
 let cachedClient: VertexAI | null = null;
@@ -123,17 +125,23 @@ export function getVertexRuntimeInfo(): VertexRuntimeInfo {
 
   const config = getVertexAiConfig();
   const { authSource } = resolveAuthSource();
+  const effectiveLocation = config.location === "global" ? "us-central1" : config.location;
+  const apiEndpoint = config.location === "global" ? "us-central1-aiplatform.googleapis.com" : undefined;
 
   console.log("[ai] Vertex runtime info resolved", {
     authSource,
     project: config.project,
     location: config.location,
+    effectiveLocation,
+    apiEndpoint,
   });
 
   cachedRuntimeInfo = {
     authSource,
     project: config.project,
     location: config.location,
+    effectiveLocation,
+    apiEndpoint,
   };
 
   return cachedRuntimeInfo;
@@ -146,6 +154,8 @@ export function getVertexAiClient(): VertexAI {
 
   const config = getVertexAiConfig();
   const { authSource, googleAuthOptions } = resolveAuthSource();
+  const effectiveLocation = config.location === "global" ? "us-central1" : config.location;
+  const apiEndpoint = config.location === "global" ? "us-central1-aiplatform.googleapis.com" : undefined;
 
   console.log("[ai] Vertex client init", {
     stage: "vertex_client_init",
@@ -153,11 +163,14 @@ export function getVertexAiClient(): VertexAI {
     authSource,
     project: config.project,
     location: config.location,
+    effectiveLocation,
+    apiEndpoint,
   });
 
   cachedClient = new VertexAI({
     project: config.project,
-    location: config.location,
+    location: effectiveLocation,
+    apiEndpoint,
     googleAuthOptions,
   });
 
@@ -165,6 +178,8 @@ export function getVertexAiClient(): VertexAI {
     authSource,
     project: config.project,
     location: config.location,
+    effectiveLocation,
+    apiEndpoint,
   };
 
   return cachedClient;
