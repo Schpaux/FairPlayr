@@ -14,7 +14,7 @@
   "nav": {
     "home": "Hjem",
     "team": "Lag",
-    "match": "Kamp",
+    "match": "Kamper",
     "lineup": "Oppstilling",
     "settings": "Innstillinger"
   },
@@ -434,6 +434,14 @@
     "errors": {
       "startFailed": "Kunne ikke starte kampen. Prøv igjen."
     },
+    "startGuard": {
+      "title": "Du har allerede en pågående kamp",
+      "description": "{title} er fortsatt aktiv. Velg hva du vil gjøre før du starter en ny kamp.",
+      "unknownMatch": "Pågående kamp",
+      "continue": "Fortsett pågående kamp",
+      "end": "Avslutt pågående kamp",
+      "discard": "Forkast pågående kamp"
+    },
     "startMatch": "Start kamp",
     "startMatchHint": "Velg spillere og fyll startoppstillingen"
   },
@@ -517,6 +525,15 @@
       "toSetup": "Gå til kampoppsett",
       "setupNext": "Sett opp neste kamp"
     },
+    "recovery": {
+      "title": "Vi fant en pågående kamp.",
+      "description": "Kampdata kunne ikke åpnes normalt. Du kan fortsette, avslutte eller forkaste live-tilstanden.",
+      "continue": "Fortsett kamp",
+      "end": "Avslutt kamp",
+      "discard": "Forkast kamp",
+      "endFailed": "Kunne ikke avslutte den pågående kampen.",
+      "discardFailed": "Kunne ikke forkaste den pågående kampen."
+    },
     "errors": {
       "endFailed": "Kunne ikke avslutte kampen."
     }
@@ -531,6 +548,8 @@
     "creating": "Oppretter...",
     "createdNotice": "Kamp opprettet.",
     "createdNowNotice": "Kamp opprettet. Fortsett til kampoppsett.",
+    "ongoingTitle": "Pågår",
+    "ongoingEmpty": "Ingen kamper pågår akkurat nå.",
     "listTitle": "Planlagte kamper",
     "historyTitle": "Kamphistorikk",
     "historyEmpty": "Ingen ferdige kamper ennå.",
@@ -635,6 +654,11 @@
     "startMatchCta": "Start kamp",
     "continueMatchCta": "Gå til pågående kamp",
     "finishMatchCta": "Avslutt kamp",
+    "activeActions": {
+      "continue": "Fortsett",
+      "end": "Avslutt",
+      "discard": "Forkast"
+    },
     "statusUpdating": "Oppdaterer...",
     "startedNotice": "Kampen er startet.",
     "completedNotice": "Kampen er avsluttet.",

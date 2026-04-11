@@ -7,7 +7,7 @@ import { useActiveMatch } from "@/components/providers/ActiveMatchProvider";
 
 export function ActiveMatchBanner() {
   const t = useTranslations("activeMatchBanner");
-  const { activeMatch } = useActiveMatch();
+  const { activeMatch, activeMatchHref } = useActiveMatch();
   const pathname = usePathname();
 
   const isOnLiveMatchPage = pathname.includes("/match/live");
@@ -18,7 +18,7 @@ export function ActiveMatchBanner() {
 
   return (
     <Link
-      href={`/match/live?matchId=${encodeURIComponent(activeMatch.id)}`}
+      href={activeMatchHref}
       className="sticky top-14 z-40 mx-auto mt-2 flex min-h-12 w-[calc(100%-1rem)] max-w-screen-lg items-center justify-between gap-2 rounded-xl border border-red-500/55 bg-red-500/15 px-3 py-2 shadow-[0_0_0_1px_rgba(239,68,68,0.15),0_8px_24px_rgba(239,68,68,0.15)]"
     >
       <div className="min-w-0">

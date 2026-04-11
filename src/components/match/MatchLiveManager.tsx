@@ -109,7 +109,14 @@ export function MatchLiveManager() {
   const searchParams = useSearchParams();
   const auth = useAuth();
   const workspace = useTeamWorkspace();
-  const { activeMatch, refreshActiveMatch } = useActiveMatch();
+  const {
+    activeMatch,
+    activeMatchHref,
+    needsRecovery,
+    forceCloseActiveMatch,
+    discardActiveMatch,
+    refreshActiveMatch,
+  } = useActiveMatch();
   const activeMatchId = searchParams.get("matchId") ?? activeMatch?.id ?? null;
 
   const isHydrated = useSyncExternalStore(
@@ -126,6 +133,7 @@ export function MatchLiveManager() {
   const [error, setError] = useState<string | null>(null);
   const [reportEnabled, setReportEnabled] = useState(false);
   const [promptQueue, setPromptQueue] = useState<GoalPromptState[]>([]);
+  const [isResolvingRecoveryAction, setIsResolvingRecoveryAction] = useState(false);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -653,21 +661,79 @@ export function MatchLiveManager() {
   }
 
   if (!liveMatch || (setupStatus !== "active" && liveMatch.status !== "ended")) {
+    const showRecovery = needsRecovery || Boolean(activeMatch);
+
     return (
       <PageShell>
         <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
-        <EmptyState
-          icon={Play}
-          title={t("empty")}
-          description={t("emptyDescription")}
-          action={
-            <Link href="/match/setup">
-              <FpButton variant="primary" size="md">
-                {t("actions.toSetup")}
+        {showRecovery ? (
+          <AppCard className="space-y-3 p-4">
+            <p className="text-base font-semibold text-foreground">{t("recovery.title")}</p>
+            <p className="text-xs text-muted-foreground">{t("recovery.description")}</p>
+            <div className="grid gap-2">
+              <Link href={activeMatchHref}>
+                <FpButton variant="primary" size="md" fullWidth>
+                  {t("recovery.continue")}
+                </FpButton>
+              </Link>
+              <FpButton
+                variant="secondary"
+                size="md"
+                fullWidth
+                disabled={isResolvingRecoveryAction}
+                onClick={() => {
+                  setIsResolvingRecoveryAction(true);
+                  void forceCloseActiveMatch()
+                    .then(() => {
+                      router.push("/match");
+                    })
+                    .catch(() => {
+                      setError(t("recovery.endFailed"));
+                    })
+                    .finally(() => {
+                      setIsResolvingRecoveryAction(false);
+                    });
+                }}
+              >
+                {t("recovery.end")}
               </FpButton>
-            </Link>
-          }
-        />
+              <FpButton
+                variant="ghost"
+                size="md"
+                fullWidth
+                disabled={isResolvingRecoveryAction}
+                onClick={() => {
+                  setIsResolvingRecoveryAction(true);
+                  void discardActiveMatch()
+                    .then(() => {
+                      router.push("/match");
+                    })
+                    .catch(() => {
+                      setError(t("recovery.discardFailed"));
+                    })
+                    .finally(() => {
+                      setIsResolvingRecoveryAction(false);
+                    });
+                }}
+              >
+                {t("recovery.discard")}
+              </FpButton>
+            </div>
+          </AppCard>
+        ) : (
+          <EmptyState
+            icon={Play}
+            title={t("empty")}
+            description={t("emptyDescription")}
+            action={
+              <Link href="/match/setup">
+                <FpButton variant="primary" size="md">
+                  {t("actions.toSetup")}
+                </FpButton>
+              </Link>
+            }
+          />
+        )}
       </PageShell>
     );
   }

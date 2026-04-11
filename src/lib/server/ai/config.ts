@@ -7,34 +7,31 @@ export interface VertexAiConfig {
   model: string;
 }
 
-const DEFAULT_VERTEX_LOCATION = "global";
-const DEFAULT_VERTEX_MODEL = "gemini-2.5-flash";
-
 let cachedConfig: VertexAiConfig | null = null;
+
+function readRequiredEnv(name: "GOOGLE_CLOUD_PROJECT" | "VERTEX_AI_LOCATION" | "VERTEX_AI_MODEL"): string {
+  const value = process.env[name];
+
+  if (!value || !value.trim()) {
+    throw new AiServiceError(
+      "VERTEX_CONFIG_MISSING_ENV",
+      `Mangler miljoverdi for Vertex AI: ${name}. Legg den til i .env.local eller runtime-konfigurasjon.`,
+      500
+    );
+  }
+
+  return value.trim();
+}
 
 export function getVertexAiConfig(): VertexAiConfig {
   if (cachedConfig) {
     return cachedConfig;
   }
 
-  const project =
-    process.env.GOOGLE_CLOUD_PROJECT ??
-    process.env.GCLOUD_PROJECT ??
-    process.env.GCP_PROJECT ??
-    "";
-
-  if (!project.trim()) {
-    throw new AiServiceError(
-      "VERTEX_CONFIG_MISSING_PROJECT",
-      "Mangler GOOGLE_CLOUD_PROJECT for Vertex AI. Sett prosjekt-id i miljøvariabler.",
-      500
-    );
-  }
-
   cachedConfig = {
-    project: project.trim(),
-    location: (process.env.VERTEX_AI_LOCATION ?? DEFAULT_VERTEX_LOCATION).trim(),
-    model: (process.env.VERTEX_AI_MODEL ?? DEFAULT_VERTEX_MODEL).trim(),
+    project: readRequiredEnv("GOOGLE_CLOUD_PROJECT"),
+    location: readRequiredEnv("VERTEX_AI_LOCATION"),
+    model: readRequiredEnv("VERTEX_AI_MODEL"),
   };
 
   return cachedConfig;

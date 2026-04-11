@@ -269,6 +269,115 @@ export async function getActiveMatchForTeam(
   return mapMatchRows([row], [])[0];
 }
 
+export async function getActiveMatchForUser(
+  supabase: SupabaseClient,
+  userId: string,
+  preferredTeamId?: string | null
+): Promise<{ activeMatch: MatchListItem | null; recoverableMatch: MatchListItem | null }> {
+  let teamIds: string[] = [];
+
+  if (preferredTeamId) {
+    await requireTeamMembership(supabase, userId, preferredTeamId);
+    teamIds = [preferredTeamId];
+  } else {
+    const { data: memberships, error: membershipError } = await supabase
+      .from("team_members")
+      .select("team_id")
+      .eq("user_id", userId)
+      .returns<Array<{ team_id: string }>>();
+
+    if (membershipError) {
+      throw new IntegrationError("TEAM_LOOKUP_FAILED", membershipError.message, 500);
+    }
+
+    teamIds = (memberships ?? []).map((row) => row.team_id);
+  }
+
+  if (teamIds.length === 0) {
+    return {
+      activeMatch: null,
+      recoverableMatch: null,
+    };
+  }
+
+  const primary = await supabase
+    .from("matches")
+    .select(MATCH_SELECT_ENHANCED)
+    .in("team_id", teamIds)
+    .eq("status", "live")
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .returns<MatchRow[]>();
+
+  let { data: activeRows, error: activeError } = primary;
+
+  if (isMissingMatchTimestampColumnError(activeError)) {
+    const fallback = await supabase
+      .from("matches")
+      .select(MATCH_SELECT_LEGACY)
+      .in("team_id", teamIds)
+      .eq("status", "live")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .returns<MatchRow[]>();
+
+    activeRows = fallback.data;
+    activeError = fallback.error;
+  }
+
+  if (activeError) {
+    throw new IntegrationError("MATCH_READ_FAILED", activeError.message, 500);
+  }
+
+  const activeMatch = activeRows && activeRows[0] ? mapMatchRows([activeRows[0]], [])[0] : null;
+
+  if (activeMatch) {
+    return {
+      activeMatch,
+      recoverableMatch: null,
+    };
+  }
+
+  const recoverable = await supabase
+    .from("matches")
+    .select(MATCH_SELECT_ENHANCED)
+    .in("team_id", teamIds)
+    .neq("status", "completed")
+    .not("runtime_state", "is", null)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .returns<MatchRow[]>();
+
+  let { data: recoverableRows, error: recoverableError } = recoverable;
+
+  if (isMissingMatchTimestampColumnError(recoverableError)) {
+    const fallback = await supabase
+      .from("matches")
+      .select(MATCH_SELECT_LEGACY)
+      .in("team_id", teamIds)
+      .neq("status", "completed")
+      .not("runtime_state", "is", null)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .returns<MatchRow[]>();
+
+    recoverableRows = fallback.data;
+    recoverableError = fallback.error;
+  }
+
+  if (recoverableError) {
+    throw new IntegrationError("MATCH_READ_FAILED", recoverableError.message, 500);
+  }
+
+  return {
+    activeMatch: null,
+    recoverableMatch:
+      recoverableRows && recoverableRows[0]
+        ? mapMatchRows([recoverableRows[0]], [])[0]
+        : null,
+  };
+}
+
 function resolveStatusTimestamps(status: MatchStatus) {
   if (status === "live") {
     return {

@@ -44,6 +44,7 @@ import { FormationSelector } from "@/components/match/FormationSelector";
 import { variants } from "@/lib/tokens";
 import { cn } from "@/lib/utils";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
+import { useActiveMatch } from "@/components/providers/ActiveMatchProvider";
 
 // ─── Section wrapper ──────────────────────────────────────────────────────────
 
@@ -73,6 +74,13 @@ export function MatchSetupManager() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const workspace = useTeamWorkspace();
+  const {
+    activeMatch,
+    activeMatchHref,
+    hasActiveConflict,
+    forceCloseActiveMatch,
+    discardActiveMatch,
+  } = useActiveMatch();
   const matchId = searchParams.get("matchId");
 
   // ── Hydration guard (avoids SSR/client mismatch on localStorage reads) ──
@@ -162,9 +170,16 @@ export function MatchSetupManager() {
 
   const [isStarting, setIsStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  const [showStartGuard, setShowStartGuard] = useState(false);
+  const [isResolvingGuardAction, setIsResolvingGuardAction] = useState(false);
 
   const handleStartMatch = async () => {
     if (!setup || !canStartMatch(setup)) return;
+
+    if (hasActiveConflict(matchId)) {
+      setShowStartGuard(true);
+      return;
+    }
 
     setStartError(null);
     setIsStarting(true);
@@ -366,6 +381,67 @@ export function MatchSetupManager() {
           {startError ? (
             <p className="mb-2 text-xs text-danger">{startError}</p>
           ) : null}
+
+          {showStartGuard ? (
+            <div className="mb-3 rounded-xl border border-warning/30 bg-warning/10 p-3 space-y-3">
+              <p className="text-sm font-semibold text-foreground">{t("startGuard.title")}</p>
+              <p className="text-xs text-muted-foreground">
+                {t("startGuard.description", {
+                  title: activeMatch?.title ?? t("startGuard.unknownMatch"),
+                })}
+              </p>
+              <div className="grid gap-2">
+                <Link href={activeMatchHref}>
+                  <FpButton variant="primary" size="md" fullWidth>
+                    {t("startGuard.continue")}
+                  </FpButton>
+                </Link>
+                <FpButton
+                  variant="secondary"
+                  size="md"
+                  fullWidth
+                  disabled={isResolvingGuardAction}
+                  onClick={() => {
+                    setIsResolvingGuardAction(true);
+                    void forceCloseActiveMatch()
+                      .then(() => {
+                        setShowStartGuard(false);
+                      })
+                      .catch(() => {
+                        setStartError(t("errors.startFailed"));
+                      })
+                      .finally(() => {
+                        setIsResolvingGuardAction(false);
+                      });
+                  }}
+                >
+                  {t("startGuard.end")}
+                </FpButton>
+                <FpButton
+                  variant="ghost"
+                  size="md"
+                  fullWidth
+                  disabled={isResolvingGuardAction}
+                  onClick={() => {
+                    setIsResolvingGuardAction(true);
+                    void discardActiveMatch()
+                      .then(() => {
+                        setShowStartGuard(false);
+                      })
+                      .catch(() => {
+                        setStartError(t("errors.startFailed"));
+                      })
+                      .finally(() => {
+                        setIsResolvingGuardAction(false);
+                      });
+                  }}
+                >
+                  {t("startGuard.discard")}
+                </FpButton>
+              </div>
+            </div>
+          ) : null}
+
           {/* Validation hint */}
           <div className="mb-3 flex items-center justify-center gap-2 min-h-[20px]">
             {matchReady ? (

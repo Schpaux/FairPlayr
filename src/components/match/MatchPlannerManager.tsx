@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
+import { useActiveMatch } from "@/components/providers/ActiveMatchProvider";
 import { getStoredMatchSetup } from "@/lib/storage/matchStorage";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -70,6 +71,12 @@ export function MatchPlannerManager() {
   const router = useRouter();
   const auth = useAuth();
   const workspace = useTeamWorkspace();
+  const {
+    activeMatch,
+    activeMatchHref,
+    forceCloseActiveMatch,
+    discardActiveMatch,
+  } = useActiveMatch();
   const isHydrated = useSyncExternalStore(
     () => () => {},
     () => true,
@@ -89,6 +96,7 @@ export function MatchPlannerManager() {
   const [entryMode, setEntryMode] = useState<"manual" | "spond" | null>(null);
   const [hasSpondLink, setHasSpondLink] = useState(false);
   const [manualStartMode, setManualStartMode] = useState<"now" | "scheduled">("now");
+  const [isResolvingActiveAction, setIsResolvingActiveAction] = useState(false);
 
   const [title, setTitle] = useState("");
   const [opponentName, setOpponentName] = useState("");
@@ -111,8 +119,16 @@ export function MatchPlannerManager() {
   const plannedMatches = useMemo(
     () =>
       matches
-        .filter((match) => match.status !== "completed")
+        .filter((match) => match.status !== "completed" && match.status !== "live")
         .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()),
+    [matches]
+  );
+
+  const ongoingMatches = useMemo(
+    () =>
+      matches
+        .filter((match) => match.status === "live")
+        .sort((a, b) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime()),
     [matches]
   );
 
@@ -608,6 +624,70 @@ export function MatchPlannerManager() {
           </>
         ) : (
           <p className="text-xs text-muted-foreground">{t("mode.spondActiveHint")}</p>
+        )}
+      </AppCard>
+
+      <AppCard className="space-y-3 p-4">
+        <h3 className="text-sm font-semibold text-foreground">{t("ongoingTitle")}</h3>
+
+        {activeMatch ? (
+          <div className="rounded-xl border border-primary/30 bg-primary/10 p-3 space-y-2">
+            <p className="text-xs uppercase tracking-wide text-primary font-semibold">{t("status.live")}</p>
+            <p className="text-sm font-semibold text-foreground">{activeMatch.title}</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Link href={activeMatchHref}>
+                <FpButton variant="primary" size="sm" fullWidth>{t("activeActions.continue")}</FpButton>
+              </Link>
+              <FpButton
+                variant="secondary"
+                size="sm"
+                fullWidth
+                disabled={isResolvingActiveAction}
+                onClick={() => {
+                  setIsResolvingActiveAction(true);
+                  void forceCloseActiveMatch()
+                    .then(() => loadMatches())
+                    .finally(() => setIsResolvingActiveAction(false));
+                }}
+              >
+                {t("activeActions.end")}
+              </FpButton>
+            </div>
+            <FpButton
+              variant="ghost"
+              size="sm"
+              fullWidth
+              disabled={isResolvingActiveAction}
+              onClick={() => {
+                setIsResolvingActiveAction(true);
+                void discardActiveMatch()
+                  .then(() => loadMatches())
+                  .finally(() => setIsResolvingActiveAction(false));
+              }}
+            >
+              {t("activeActions.discard")}
+            </FpButton>
+          </div>
+        ) : null}
+
+        {ongoingMatches.length === 0 ? (
+          <p className="text-xs text-muted-foreground">{t("ongoingEmpty")}</p>
+        ) : (
+          <ul className="space-y-2">
+            {ongoingMatches.map((match) => (
+              <li key={match.id} className="rounded-xl border border-fp-border bg-fp-surface-2 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 space-y-1">
+                    <p className="text-sm font-semibold text-foreground truncate">{match.title}</p>
+                    <p className="text-xs text-muted-foreground">{formatDate(match.startsAt)}</p>
+                  </div>
+                  <Link href={`/match/live?matchId=${encodeURIComponent(match.id)}`}>
+                    <span className="text-xs font-medium text-primary">{t("activeActions.continue")}</span>
+                  </Link>
+                </div>
+              </li>
+            ))}
+          </ul>
         )}
       </AppCard>
 

@@ -11,12 +11,14 @@ Dette dokumentet beskriver grunnoppsett for FairPlayr sin AI-plattform med Verte
 
 ## Miljovariabler
 
-Sett disse variablene i runtime-miljo:
+Sett disse variablene i runtime-miljo (alle tre er obligatoriske):
 
 - `GOOGLE_CLOUD_PROJECT`: Google Cloud prosjekt-id.
-- `VERTEX_AI_LOCATION`: Vertex AI lokasjon. Anbefalt default: `global`.
-- `VERTEX_AI_MODEL`: modellnavn. Default i kode: `gemini-2.5-flash`.
+- `VERTEX_AI_LOCATION`: Vertex AI lokasjon (f.eks. `global`).
+- `VERTEX_AI_MODEL`: modellnavn (f.eks. `gemini-2.5-flash`).
 - `AI_HEALTHCHECK_TOKEN` (valgfri, men anbefalt i produksjon): token for intern helsesjekk-endepunkt.
+
+Tips: bruk `.env.example` i repo som mal for lokal `.env.local`.
 
 ## API-er som ma vaere aktivert
 

@@ -14,7 +14,7 @@
   "nav": {
     "home": "Home",
     "team": "Team",
-    "match": "Match",
+    "match": "Matches",
     "lineup": "Lineup",
     "settings": "Settings"
   },
@@ -434,6 +434,14 @@
     "errors": {
       "startFailed": "Could not start the match. Please try again."
     },
+    "startGuard": {
+      "title": "Another live match is already active",
+      "description": "{title} is still active. Choose what to do before starting a new match.",
+      "unknownMatch": "Live match",
+      "continue": "Continue live match",
+      "end": "End live match",
+      "discard": "Discard live match"
+    },
     "startMatch": "Start Match",
     "startMatchHint": "Select players and fill the starting lineup"
   },
@@ -517,6 +525,15 @@
       "toSetup": "Go to Match Setup",
       "setupNext": "Set Up Next Match"
     },
+    "recovery": {
+      "title": "We found an ongoing match.",
+      "description": "The match runtime could not be opened normally. You can continue, end, or discard the live state.",
+      "continue": "Continue match",
+      "end": "End match",
+      "discard": "Discard match",
+      "endFailed": "Could not end the ongoing match.",
+      "discardFailed": "Could not discard the ongoing match."
+    },
     "errors": {
       "endFailed": "Could not end the match."
     }
@@ -531,6 +548,8 @@
     "creating": "Creating...",
     "createdNotice": "Match created.",
     "createdNowNotice": "Match created. Continue to setup.",
+    "ongoingTitle": "Ongoing",
+    "ongoingEmpty": "No matches are currently live.",
     "listTitle": "Planned matches",
     "historyTitle": "Match history",
     "historyEmpty": "No completed matches yet.",
@@ -635,6 +654,11 @@
     "startMatchCta": "Start match",
     "continueMatchCta": "Go to live match",
     "finishMatchCta": "Finish match",
+    "activeActions": {
+      "continue": "Continue",
+      "end": "End",
+      "discard": "Discard"
+    },
     "statusUpdating": "Updating...",
     "startedNotice": "Match started.",
     "completedNotice": "Match completed.",
