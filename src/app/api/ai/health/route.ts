@@ -88,9 +88,16 @@ export async function GET(request: Request) {
       ? {
           stage: typeof details?.stage === "string" ? details.stage : "health_route",
           authSource: runtimeInfo?.authSource,
+          model: getVertexAiConfig().model,
           location: runtimeInfo?.location,
           effectiveLocation: runtimeInfo?.effectiveLocation,
           apiEndpoint: runtimeInfo?.apiEndpoint,
+          fallbackLocation:
+            typeof details?.fallbackLocation === "string" ? details.fallbackLocation : undefined,
+          fallbackApiEndpoint:
+            typeof details?.fallbackApiEndpoint === "string"
+              ? details.fallbackApiEndpoint
+              : undefined,
           status: typeof details?.status === "number" ? details.status : undefined,
           contentType:
             typeof details?.contentType === "string" ? details.contentType : undefined,

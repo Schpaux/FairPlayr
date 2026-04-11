@@ -1,7 +1,7 @@
 import "server-only";
 import { getVertexAiConfig } from "@/lib/server/ai/config";
 import { AiServiceError } from "@/lib/server/ai/errors";
-import { getVertexAiClient } from "@/lib/server/ai/vertex";
+import { createVertexAiClient, getVertexAiClient } from "@/lib/server/ai/vertex";
 
 export interface GenerateTextInput {
   systemInstruction?: string;
@@ -121,6 +121,11 @@ function extractVertexFailureDetails(error: unknown): Record<string, unknown> {
   return details;
 }
 
+function isHtmlJsonParseFailure(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("Unexpected token '<'");
+}
+
 export async function generateText(input: GenerateTextInput): Promise<GenerateTextResult> {
   if (!input.prompt || !input.prompt.trim()) {
     throw new AiServiceError("VERTEX_INVALID_PROMPT", "Prompt kan ikke være tom.", 400);
@@ -182,6 +187,69 @@ export async function generateText(input: GenerateTextInput): Promise<GenerateTe
       project: config.project,
     };
   } catch (error) {
+    if (config.location === "global" && isHtmlJsonParseFailure(error)) {
+      console.warn("[ai] Retrying Vertex call with regional fallback", {
+        stage: "vertex_generate_content_fallback",
+        fallbackLocation: "us-central1",
+        fallbackApiEndpoint: "us-central1-aiplatform.googleapis.com",
+      });
+
+      try {
+        const fallback = createVertexAiClient({
+          location: "us-central1",
+          apiEndpoint: "us-central1-aiplatform.googleapis.com",
+        });
+
+        const fallbackModel = fallback.client.getGenerativeModel({
+          model: config.model,
+          generationConfig: {
+            temperature: normalizeTemperature(input.temperature),
+            maxOutputTokens: normalizeMaxOutputTokens(input.maxOutputTokens),
+          },
+        });
+
+        const fallbackResult = await fallbackModel.generateContent({
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: input.prompt.trim() }],
+            },
+          ],
+          systemInstruction: input.systemInstruction
+            ? {
+                role: "system",
+                parts: [{ text: input.systemInstruction.trim() }],
+              }
+            : undefined,
+        });
+
+        const fallbackResponse = await fallbackResult.response;
+        const fallbackText = responseToText(fallbackResponse);
+
+        if (!fallbackText) {
+          throw new AiServiceError(
+            "VERTEX_EMPTY_RESPONSE",
+            "Vertex AI returnerte tom tekst for foresporselen.",
+            502,
+            {
+              stage: "vertex_generate_content_fallback",
+              fallbackLocation: fallback.runtimeInfo.effectiveLocation,
+              fallbackApiEndpoint: fallback.runtimeInfo.apiEndpoint,
+            }
+          );
+        }
+
+        return {
+          text: fallbackText,
+          model: config.model,
+          location: fallback.runtimeInfo.effectiveLocation,
+          project: config.project,
+        };
+      } catch (fallbackError) {
+        error = fallbackError;
+      }
+    }
+
     if (error instanceof AiServiceError) {
       throw error;
     }

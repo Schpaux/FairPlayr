@@ -21,8 +21,40 @@ interface VertexRuntimeInfo {
   apiEndpoint?: string;
 }
 
+interface VertexClientOverrides {
+  location?: string;
+  apiEndpoint?: string;
+}
+
 let cachedClient: VertexAI | null = null;
 let cachedRuntimeInfo: VertexRuntimeInfo | null = null;
+
+function buildVertexClient(overrides?: VertexClientOverrides): {
+  client: VertexAI;
+  runtimeInfo: VertexRuntimeInfo;
+} {
+  const config = getVertexAiConfig();
+  const { authSource, googleAuthOptions } = resolveAuthSource();
+  const effectiveLocation = overrides?.location ?? config.location;
+  const apiEndpoint = overrides?.apiEndpoint;
+
+  const runtimeInfo: VertexRuntimeInfo = {
+    authSource,
+    project: config.project,
+    location: config.location,
+    effectiveLocation,
+    apiEndpoint,
+  };
+
+  const client = new VertexAI({
+    project: config.project,
+    location: effectiveLocation,
+    apiEndpoint,
+    googleAuthOptions,
+  });
+
+  return { client, runtimeInfo };
+}
 
 function parseEnvCredentialsJson(): ServiceAccountCredentials | null {
   const raw = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
@@ -123,28 +155,38 @@ export function getVertexRuntimeInfo(): VertexRuntimeInfo {
     return cachedRuntimeInfo;
   }
 
-  const config = getVertexAiConfig();
-  const { authSource } = resolveAuthSource();
-  const effectiveLocation = config.location;
-  const apiEndpoint = undefined;
+  const { runtimeInfo } = buildVertexClient();
 
   console.log("[ai] Vertex runtime info resolved", {
-    authSource,
-    project: config.project,
-    location: config.location,
-    effectiveLocation,
-    apiEndpoint,
+    authSource: runtimeInfo.authSource,
+    project: runtimeInfo.project,
+    location: runtimeInfo.location,
+    effectiveLocation: runtimeInfo.effectiveLocation,
+    apiEndpoint: runtimeInfo.apiEndpoint,
   });
 
-  cachedRuntimeInfo = {
-    authSource,
-    project: config.project,
-    location: config.location,
-    effectiveLocation,
-    apiEndpoint,
-  };
+  cachedRuntimeInfo = runtimeInfo;
 
   return cachedRuntimeInfo;
+}
+
+export function createVertexAiClient(overrides?: VertexClientOverrides): {
+  client: VertexAI;
+  runtimeInfo: VertexRuntimeInfo;
+} {
+  const built = buildVertexClient(overrides);
+
+  console.log("[ai] Vertex client init", {
+    stage: "vertex_client_init",
+    hasEnvCredentials: Boolean(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON),
+    authSource: built.runtimeInfo.authSource,
+    project: built.runtimeInfo.project,
+    location: built.runtimeInfo.location,
+    effectiveLocation: built.runtimeInfo.effectiveLocation,
+    apiEndpoint: built.runtimeInfo.apiEndpoint,
+  });
+
+  return built;
 }
 
 export function getVertexAiClient(): VertexAI {
@@ -152,35 +194,9 @@ export function getVertexAiClient(): VertexAI {
     return cachedClient;
   }
 
-  const config = getVertexAiConfig();
-  const { authSource, googleAuthOptions } = resolveAuthSource();
-  const effectiveLocation = config.location;
-  const apiEndpoint = undefined;
-
-  console.log("[ai] Vertex client init", {
-    stage: "vertex_client_init",
-    hasEnvCredentials: Boolean(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON),
-    authSource,
-    project: config.project,
-    location: config.location,
-    effectiveLocation,
-    apiEndpoint,
-  });
-
-  cachedClient = new VertexAI({
-    project: config.project,
-    location: effectiveLocation,
-    apiEndpoint,
-    googleAuthOptions,
-  });
-
-  cachedRuntimeInfo = {
-    authSource,
-    project: config.project,
-    location: config.location,
-    effectiveLocation,
-    apiEndpoint,
-  };
+  const built = createVertexAiClient();
+  cachedClient = built.client;
+  cachedRuntimeInfo = built.runtimeInfo;
 
   return cachedClient;
 }
