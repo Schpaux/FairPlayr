@@ -63,11 +63,6 @@ function parseEnvCredentialsJson(): ServiceAccountCredentials | null {
     return null;
   }
 
-  console.log("[ai] Parsing GOOGLE_APPLICATION_CREDENTIALS_JSON", {
-    length: raw.length,
-    preview: raw.slice(0, 30),
-  });
-
   try {
     const parsed = JSON.parse(raw) as unknown;
 
@@ -156,14 +151,6 @@ export function getVertexRuntimeInfo(): VertexRuntimeInfo {
   }
 
   const { runtimeInfo } = buildVertexClient();
-
-  console.log("[ai] Vertex runtime info resolved", {
-    authSource: runtimeInfo.authSource,
-    project: runtimeInfo.project,
-    location: runtimeInfo.location,
-    effectiveLocation: runtimeInfo.effectiveLocation,
-    apiEndpoint: runtimeInfo.apiEndpoint,
-  });
 
   cachedRuntimeInfo = runtimeInfo;
 

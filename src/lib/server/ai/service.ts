@@ -134,13 +134,6 @@ export async function generateText(input: GenerateTextInput): Promise<GenerateTe
   const config = getVertexAiConfig();
 
   try {
-    console.log("[ai] generateText stage", {
-      stage: "vertex_client",
-      project: config.project,
-      location: config.location,
-      model: config.model,
-    });
-
     const client = getVertexAiClient();
     const model = client.getGenerativeModel({
       model: config.model,
@@ -166,10 +159,6 @@ export async function generateText(input: GenerateTextInput): Promise<GenerateTe
     });
 
     const response = await result.response;
-    console.log("[ai] generateText stage", {
-      stage: "vertex_response_received",
-    });
-
     const text = responseToText(response);
 
     if (!text) {
