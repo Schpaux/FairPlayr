@@ -18,7 +18,7 @@ interface GenerateMatchSummaryDeps {
 
 const SUMMARY_DEFAULTS = {
   temperature: 0.2,
-  maxOutputTokens: 240,
+  maxOutputTokens: 420,
 };
 
 const RETRY_PROMPT_SUFFIX =
@@ -28,6 +28,7 @@ interface GenerationAttemptSpec {
   label: string;
   systemInstruction?: string;
   prompt: string;
+  temperature?: number;
 }
 
 function summarizeInvalidOutput(rawText: string): string {
@@ -36,6 +37,34 @@ function summarizeInvalidOutput(rawText: string): string {
   const hasTerminator = /[.!?](?:["')\]]|\s|$)/.test(compact);
   const snippet = compact.slice(0, 120);
   return `invalid_output(chars=${compact.length}, words=${words}, sentenceTerminator=${String(hasTerminator)}, snippet="${snippet}")`;
+}
+
+function buildHardRecoveryPrompt(input: MatchSummaryInput): string {
+  const goalsFor = input.goalsFor
+    .map((g) => `${g.minute ?? "?"}' ${g.scorerName ?? "ukjent"}`)
+    .slice(0, 6)
+    .join(", ");
+  const goalsAgainst = input.goalsAgainst
+    .map((g) => `${g.minute ?? "?"}'`)
+    .slice(0, 6)
+    .join(", ");
+
+  return [
+    "Skriv en kampoppsummering pa norsk bokmal.",
+    "Krav:",
+    "- 4 hele setninger.",
+    "- Minst 60 tegn totalt.",
+    "- Enkelt sprak for barne-/breddefotball.",
+    "- Ingen overskrift, ingen punktliste.",
+    "- Bruk kun fakta under.",
+    "",
+    `Lag: ${input.teamName}`,
+    `Motstander: ${input.opponentName}`,
+    `Resultat: ${input.scoreFor}-${input.scoreAgainst}`,
+    `Vare mal: ${goalsFor || "ingen detaljer"}`,
+    `Motstanders mal: ${goalsAgainst || "ingen detaljer"}`,
+    `Antall spillere brukt: ${input.playersUsed}`,
+  ].join("\n");
 }
 
 export async function generateMatchSummary(
@@ -72,6 +101,11 @@ export async function generateMatchSummary(
         `${prompt.prompt}${RETRY_PROMPT_SUFFIX}`,
       ].join("\n"),
     },
+    {
+      label: "hard_recovery_plain_prompt",
+      prompt: buildHardRecoveryPrompt(input),
+      temperature: 0.35,
+    },
   ];
 
   for (let attempt = 1; attempt <= attempts.length; attempt += 1) {
@@ -81,7 +115,7 @@ export async function generateMatchSummary(
         systemInstruction: spec.systemInstruction,
         prompt: spec.prompt,
         maxOutputTokens: SUMMARY_DEFAULTS.maxOutputTokens,
-        temperature: SUMMARY_DEFAULTS.temperature,
+        temperature: spec.temperature ?? SUMMARY_DEFAULTS.temperature,
       });
 
       const normalized = normalizeMatchSummaryText(generated.text);
