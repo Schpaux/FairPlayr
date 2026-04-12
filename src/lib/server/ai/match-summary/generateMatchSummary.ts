@@ -30,6 +30,14 @@ interface GenerationAttemptSpec {
   prompt: string;
 }
 
+function summarizeInvalidOutput(rawText: string): string {
+  const compact = rawText.replace(/\s+/g, " ").trim();
+  const words = compact ? compact.split(" ").filter(Boolean).length : 0;
+  const hasTerminator = /[.!?](?:["')\]]|\s|$)/.test(compact);
+  const snippet = compact.slice(0, 120);
+  return `invalid_output(chars=${compact.length}, words=${words}, sentenceTerminator=${String(hasTerminator)}, snippet="${snippet}")`;
+}
+
 export async function generateMatchSummary(
   input: MatchSummaryInput,
   deps: GenerateMatchSummaryDeps = {}
@@ -90,12 +98,13 @@ export async function generateMatchSummary(
         };
       }
 
-      lastErrorMessage = `AI output invalid after normalization (attempt ${attempt}, strategy=${spec.label})`;
+      lastErrorMessage = `${summarizeInvalidOutput(generated.text)} (attempt ${attempt}, strategy=${spec.label})`;
       console.warn("[match-summary] ai output invalid", {
         matchId: input.matchId,
         attempt,
         strategy: spec.label,
         rawLength: generated.text.length,
+        rawPreview: generated.text.slice(0, 120),
       });
     } catch (error) {
       lastErrorMessage = error instanceof Error ? error.message : "Ukjent feil";

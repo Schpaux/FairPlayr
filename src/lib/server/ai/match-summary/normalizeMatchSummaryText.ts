@@ -3,6 +3,8 @@ import "server-only";
 const MAX_LINES = 6;
 const MAX_CHARS = 700;
 const MIN_WORDS = 6;
+const MIN_WORDS_BEST_EFFORT = 8;
+const MIN_CHARS_BEST_EFFORT = 45;
 
 function wordCount(text: string): number {
   return text
@@ -43,11 +45,17 @@ export function normalizeMatchSummaryText(text: string): string | null {
     return null;
   }
 
-  if (wordCount(compact) < MIN_WORDS) {
+  const words = wordCount(compact);
+  if (words < MIN_WORDS) {
     return null;
   }
 
   if (!hasSentenceTerminator(compact)) {
+    // Best-effort rescue: accept reasonably long/complete-looking text by appending period.
+    if (words >= MIN_WORDS_BEST_EFFORT && compact.length >= MIN_CHARS_BEST_EFFORT) {
+      return `${compact}.`;
+    }
+
     return null;
   }
 
