@@ -621,6 +621,8 @@
     },
     "reportBadge": "Summary",
     "lineupTitle": "Lineup",
+    "playingTimeTitle": "Playing time",
+    "defaultOpponent": "Opponent",
     "lineupStarters": "Starting XI",
     "lineupSubbedOn": "Substitutes (came on)",
     "lineupBench": "Bench",

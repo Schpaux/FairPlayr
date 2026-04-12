@@ -253,6 +253,24 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
       });
   }, [match?.runtimeState?.events, sortedServerEvents]);
 
+  // Playing time per player, derived from live match accumulated time tracking
+  const playerTimes = useMemo(() => {
+    const runtimeState = match?.runtimeState as Record<string, unknown> | null | undefined;
+    const accumulated = runtimeState?.playerAccumulatedMs;
+    if (!accumulated || typeof accumulated !== "object" || Array.isArray(accumulated)) {
+      return [];
+    }
+
+    return Object.entries(accumulated as Record<string, unknown>)
+      .map(([playerId, ms]) => {
+        const name = playerById.get(playerId)?.name;
+        const minutes = Math.round((typeof ms === "number" && Number.isFinite(ms) ? ms : 0) / 60000);
+        return name && minutes > 0 ? { name, minutes } : null;
+      })
+      .filter((entry): entry is { name: string; minutes: number } => entry !== null)
+      .sort((a, b) => b.minutes - a.minutes);
+  }, [match?.runtimeState, playerById]);
+
   const formatDate = (value: string | null) => {
     if (!value) {
       return t("neverSynced");
@@ -498,6 +516,10 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
         : { label: t("result.draw"), className: "bg-fp-surface text-muted-foreground" }
     : null;
 
+  const ownTeamName =
+    workspace.teams.find((team) => team.id === match.teamId)?.name ?? match.title;
+  const opponentDisplayName = match.opponentName?.trim() || t("defaultOpponent");
+
   return (
     <PageShell className="space-y-4 pb-8">
       <SectionHeader
@@ -517,7 +539,12 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
       {/* Hero score card */}
       <AppCard className="p-5">
         <div className="flex flex-col items-center gap-2 text-center">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">{match.opponentName ?? "—"}</p>
+          {/* Team names */}
+          <p className="text-sm font-semibold leading-snug text-foreground">
+            {ownTeamName}
+            <span className="mx-1.5 font-normal text-muted-foreground">—</span>
+            {opponentDisplayName}
+          </p>
           <div className="flex items-center gap-4">
             <span className="text-5xl font-black tabular-nums text-foreground">{match.scoreFor}</span>
             <span className="text-2xl font-light text-muted-foreground">–</span>
@@ -607,11 +634,12 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
                       }
                     }}
                   >
-                    <div className="flex items-start gap-2.5">
+                    {/* Opponent goals: reversed layout so minute is right, content is right-aligned */}
+                    <div className={`flex items-start gap-2.5 ${isOpponentGoal ? "flex-row-reverse" : ""}`}>
                       <span className="mt-0.5 w-8 shrink-0 text-[11px] font-semibold tabular-nums text-muted-foreground">
                         {minuteStr}
                       </span>
-                      <div className="flex-1 min-w-0">
+                      <div className={`flex-1 min-w-0 ${isOpponentGoal ? "text-right" : ""}`}>
                         {isOwnGoal && (
                           <>
                             <p className="text-sm font-semibold text-foreground">
@@ -624,7 +652,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
                         )}
                         {isOpponentGoal && (
                           <p className="text-sm font-semibold text-foreground">
-                            ⚽ {t("event.opponentGoal")}
+                            {t("event.opponentGoal")} ⚽
                           </p>
                         )}
                         {isSub && (
@@ -664,101 +692,37 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
         )}
       </AppCard>
 
-      {/* Starting XI / Lineup */}
-      {(() => {
-        const rs = match.runtimeState;
-        const starterIds = rs?.initialOnFieldPlayerIds ?? [];
-        const finalIds = rs?.onFieldPlayerIds ?? [];
-        const benchIds = rs?.benchPlayerIds ?? [];
-        if (starterIds.length === 0 && finalIds.length === 0) return null;
-
-        // Players subbed off: were starters but not in final lineup
-        const subbedOffIds = starterIds.filter((id) => !finalIds.includes(id));
-        // Players subbed on: in final lineup but not starters
-        const subbedOnIds = finalIds.filter((id) => !starterIds.includes(id));
-
-        return (
-          <AppCard className="space-y-3 p-4">
-            <div className="flex items-center gap-2">
-              <Users size={15} className="text-primary" />
-              <p className="text-sm font-semibold text-foreground">{t("lineupTitle")}</p>
-            </div>
-
-            {starterIds.length > 0 && (
-              <div className="space-y-1.5">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t("lineupStarters")}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {starterIds.map((id) => {
-                    const name = playerById.get(id)?.name ?? id;
-                    const subbedOff = subbedOffIds.includes(id);
-                    return (
-                      <span
-                        key={id}
-                        className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
-                          subbedOff
-                            ? "border-muted-foreground/20 bg-fp-surface text-muted-foreground line-through"
-                            : "border-primary/20 bg-primary/8 text-foreground"
-                        }`}
-                      >
-                        {name}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {subbedOnIds.length > 0 && (
-              <div className="space-y-1.5">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t("lineupSubbedOn")}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {subbedOnIds.map((id) => {
-                    const name = playerById.get(id)?.name ?? id;
-                    return (
-                      <span
-                        key={id}
-                        className="rounded-full border border-green-500/25 bg-green-500/8 px-2.5 py-1 text-xs font-medium text-foreground"
-                      >
-                        {name}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {benchIds.length > 0 && (
-              <div className="space-y-1.5">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t("lineupBench")}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {benchIds.map((id) => {
-                    const name = playerById.get(id)?.name ?? id;
-                    const subbedOn = subbedOnIds.includes(id);
-                    return (
-                      <span
-                        key={id}
-                        className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
-                          subbedOn
-                            ? "border-green-500/25 bg-green-500/8 text-foreground"
-                            : "border-fp-border bg-fp-surface-2 text-muted-foreground"
-                        }`}
-                      >
-                        {name}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </AppCard>
-        );
-      })()}
+      {/* Playing time overview */}
+      {playerTimes.length > 0 ? (
+        <AppCard className="space-y-3 p-4">
+          <div className="flex items-center gap-2">
+            <Users size={15} className="text-primary" />
+            <p className="text-sm font-semibold text-foreground">{t("playingTimeTitle")}</p>
+          </div>
+          <ul className="space-y-2">
+            {playerTimes.map(({ name, minutes }) => {
+              const maxMinutes = playerTimes[0]?.minutes ?? 1;
+              const pct = Math.round((minutes / Math.max(maxMinutes, 1)) * 100);
+              return (
+                <li key={name} className="space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium text-foreground">{name}</span>
+                    <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                      {minutes} min
+                    </span>
+                  </div>
+                  <div className="h-1 w-full overflow-hidden rounded-full bg-fp-surface">
+                    <div
+                      className="h-full rounded-full bg-primary/50 transition-all"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </AppCard>
+      ) : null}
 
       {/* AI report */}
       {match.reportEnabled ? (
@@ -815,8 +779,8 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
                 type="number"
                 min={0}
                 value={editMinute}
-                onChange={(event) => setEditMinute(event.target.value)}
-                className="w-full rounded-xl border border-fp-border bg-background px-3 py-2 text-sm"
+                onChange={(event) => { setEditMinute(event.target.value); }}
+                className="w-full rounded-lg border border-fp-border bg-fp-surface-2 px-3 py-2 text-sm text-foreground"
               />
             </label>
 
@@ -824,8 +788,8 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
               <span className="text-xs text-muted-foreground">{t("event.scorer")}</span>
               <select
                 value={editScorerId}
-                onChange={(event) => setEditScorerId(event.target.value)}
-                className="w-full rounded-xl border border-fp-border bg-background px-3 py-2 text-sm"
+                onChange={(event) => { setEditScorerId(event.target.value); }}
+                className="w-full rounded-lg border border-fp-border bg-fp-surface-2 px-3 py-2 text-sm text-foreground"
               >
                 <option value="">{t("event.notRegistered")}</option>
                 {playerOptions.map((player) => (
@@ -838,8 +802,8 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
               <span className="text-xs text-muted-foreground">{t("event.assist")}</span>
               <select
                 value={editAssistId}
-                onChange={(event) => setEditAssistId(event.target.value)}
-                className="w-full rounded-xl border border-fp-border bg-background px-3 py-2 text-sm"
+                onChange={(event) => { setEditAssistId(event.target.value); }}
+                className="w-full rounded-lg border border-fp-border bg-fp-surface-2 px-3 py-2 text-sm text-foreground"
               >
                 <option value="">{t("event.noAssist")}</option>
                 {playerOptions.map((player) => (
@@ -849,14 +813,18 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
             </label>
 
             <div className="grid grid-cols-2 gap-2">
-              <FpButton variant="secondary" size="md" onClick={() => setEditingEvent(null)}>
+              <FpButton
+                variant="secondary"
+                size="md"
+                onClick={() => { setEditingEvent(null); }}
+              >
                 {common("cancel")}
               </FpButton>
               <FpButton
                 variant="primary"
                 size="md"
-                disabled={isSavingEdit}
                 onClick={() => { void handleSaveEdit(); }}
+                disabled={isSavingEdit}
               >
                 {isSavingEdit ? t("event.saving") : t("event.save")}
               </FpButton>

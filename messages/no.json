@@ -621,6 +621,8 @@
     },
     "reportBadge": "Kampoppsummering",
     "lineupTitle": "Oppstilling",
+    "playingTimeTitle": "Spilletid",
+    "defaultOpponent": "Motstander",
     "lineupStarters": "Startoppstilling",
     "lineupSubbedOn": "Innbyttere (kom inn)",
     "lineupBench": "Benk",
