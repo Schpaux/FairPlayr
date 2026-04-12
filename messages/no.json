@@ -13,7 +13,7 @@
   },
   "nav": {
     "home": "Hjem",
-    "team": "Lag",
+    "team": "Spillere",
     "match": "Kamper",
     "historikk": "Historikk",
     "settings": "Innstillinger"
@@ -123,8 +123,10 @@
     }
   },
   "team": {
-    "title": "Lag",
-    "subtitle": "Administrer laget og spillerne dine til kampdag.",
+    "title": "Spillere",
+    "subtitle": "Troppen din, klar til kampdag.",
+    "activeTeamLabel": "Aktivt lag",
+    "teamSettings": "Laginnstillinger",
     "noTeam": {
       "title": "Opprett laget ditt",
       "description": "Start med å opprette et lag. Data lagres lokalt på denne enheten foreløpig."
@@ -158,7 +160,10 @@
       "title": "Spillere",
       "count": "{count, plural, =0 {Ingen spillere} one {# spiller} other {# spillere}}",
       "emptyTitle": "Ingen spillere ennå",
-      "emptyDescription": "Legg til den første spilleren for å begynne å bygge troppen."
+      "emptyDescription": "Legg til den første spilleren for å begynne å bygge troppen.",
+      "spondSynced": "Synkronisert fra Spond",
+      "spondConnect": "Koble til Spond",
+      "spondSyncedInfo": "Spillere importert fra Spond kan ikke redigeres eller slettes manuelt her. Administrer dem i Spond — FairPlayr synkroniserer automatisk."
     },
     "playerSource": {
       "spondBadge": "Spond",

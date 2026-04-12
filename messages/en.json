@@ -13,7 +13,7 @@
   },
   "nav": {
     "home": "Home",
-    "team": "Team",
+    "team": "Players",
     "match": "Matches",
     "historikk": "History",
     "settings": "Settings"
@@ -123,8 +123,10 @@
     }
   },
   "team": {
-    "title": "Team",
-    "subtitle": "Manage your team and players for matchday.",
+    "title": "Players",
+    "subtitle": "Your squad, ready for matchday.",
+    "activeTeamLabel": "Active team",
+    "teamSettings": "Team settings",
     "noTeam": {
       "title": "Create your team",
       "description": "Start by creating a team. Your data stays on this device for now."
@@ -158,7 +160,10 @@
       "title": "Players",
       "count": "{count, plural, =0 {No players} one {# player} other {# players}}",
       "emptyTitle": "No players yet",
-      "emptyDescription": "Add your first player to begin building your squad."
+      "emptyDescription": "Add your first player to begin building your squad.",
+      "spondSynced": "Synced via Spond",
+      "spondConnect": "Connect Spond",
+      "spondSyncedInfo": "Players imported from Spond cannot be edited or deleted manually here. Manage them in Spond — FairPlayr will sync automatically."
     },
     "playerSource": {
       "spondBadge": "Spond",

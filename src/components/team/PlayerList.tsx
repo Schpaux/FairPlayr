@@ -15,7 +15,6 @@ interface PlayerListCopy {
   moveUp: string;
   moveDown: string;
   sourceSpondBadge: string;
-  managedDeleteHint: string;
   save: string;
   cancel: string;
   playerNameLabel: string;
@@ -133,71 +132,66 @@ export function PlayerList({
                 </form>
               ) : (
                 <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-foreground truncate">
-                        {index + 1}. {player.name}
-                      </p>
-                      {player.source === "spond" ? (
-                        <span className="rounded-full border border-fp-accent/40 bg-fp-accent/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-accent">
-                          {copy.sourceSpondBadge}
-                        </span>
+                  <div className="min-w-0 flex items-center gap-2">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {index + 1}. {player.name}
+                    </p>
+                    {player.source === "spond" ? (
+                      <span className="shrink-0 rounded-full border border-fp-accent/40 bg-fp-accent/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-accent">
+                        {copy.sourceSpondBadge}
+                      </span>
+                    ) : null}
+                  </div>
+                  {!isManagedPlayer ? (
+                    <div className="flex shrink-0 items-center gap-1">
+                      {allowReorder ? (
+                        <>
+                          <FpButton
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="tap-target px-2"
+                            aria-label={copy.moveUp}
+                            onClick={() => onMovePlayer(player.id, "up")}
+                            disabled={index === 0}
+                          >
+                            <ArrowUp size={16} />
+                          </FpButton>
+                          <FpButton
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="tap-target px-2"
+                            aria-label={copy.moveDown}
+                            onClick={() => onMovePlayer(player.id, "down")}
+                            disabled={index === players.length - 1}
+                          >
+                            <ArrowDown size={16} />
+                          </FpButton>
+                        </>
                       ) : null}
+                      <FpButton
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="tap-target px-2"
+                        aria-label={copy.rename}
+                        onClick={() => startEditing(player)}
+                      >
+                        <Pencil size={16} />
+                      </FpButton>
+                      <FpButton
+                        type="button"
+                        variant="danger"
+                        size="sm"
+                        className="tap-target px-2"
+                        aria-label={copy.delete}
+                        onClick={() => onDeletePlayer(player.id)}
+                      >
+                        <Trash2 size={16} />
+                      </FpButton>
                     </div>
-                    {isManagedPlayer ? (
-                      <p className="mt-1 text-[11px] text-muted-foreground">{copy.managedDeleteHint}</p>
-                    ) : null}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {allowReorder ? (
-                      <>
-                        <FpButton
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="tap-target px-2"
-                          aria-label={copy.moveUp}
-                          onClick={() => onMovePlayer(player.id, "up")}
-                          disabled={index === 0}
-                        >
-                          <ArrowUp size={16} />
-                        </FpButton>
-                        <FpButton
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="tap-target px-2"
-                          aria-label={copy.moveDown}
-                          onClick={() => onMovePlayer(player.id, "down")}
-                          disabled={index === players.length - 1}
-                        >
-                          <ArrowDown size={16} />
-                        </FpButton>
-                      </>
-                    ) : null}
-                    <FpButton
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="tap-target px-2"
-                      aria-label={copy.rename}
-                      onClick={() => startEditing(player)}
-                    >
-                      <Pencil size={16} />
-                    </FpButton>
-                    <FpButton
-                      type="button"
-                      variant="danger"
-                      size="sm"
-                      className="tap-target px-2"
-                      aria-label={copy.delete}
-                      onClick={() => onDeletePlayer(player.id)}
-                      disabled={isManagedPlayer}
-                      title={isManagedPlayer ? copy.managedDeleteHint : undefined}
-                    >
-                      <Trash2 size={16} />
-                    </FpButton>
-                  </div>
+                  ) : null}
                 </div>
               )}
             </AppCard>
