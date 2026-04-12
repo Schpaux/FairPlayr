@@ -630,6 +630,7 @@
     "timelineEmpty": "Ingen hendelser registrert.",
     "reportTitle": "Kampoppsummering",
     "reportPending": "Kampoppsummering genereres...",
+    "reportGeneratedAt": "Sist generert: {value}",
     "reportFailed": "Kampoppsummering kunne ikke genereres",
     "reportRetryCta": "Prøv igjen",
     "reportRetrying": "Prøver å generere...",

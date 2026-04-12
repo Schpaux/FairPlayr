@@ -630,6 +630,7 @@
     "timelineEmpty": "No events recorded.",
     "reportTitle": "Match summary",
     "reportPending": "Match summary is being generated...",
+    "reportGeneratedAt": "Last generated: {value}",
     "reportFailed": "Match summary could not be generated",
     "reportRetryCta": "Try again",
     "reportRetrying": "Retrying generation...",

@@ -832,9 +832,14 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
             <p className="text-sm text-danger">{t("reportFailed")}</p>
           )}
           {match.reportStatus === "ready" && match.reportText ? (
-            <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/80">
-              {match.reportText}
-            </p>
+            <div className="space-y-2">
+              <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/80">
+                {match.reportText}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {t("reportGeneratedAt", { value: formatDate(match.reportGeneratedAt ?? null) })}
+              </p>
+            </div>
           ) : null}
           {match.reportStatus === "not_requested" && (
             <p className="text-xs text-muted-foreground">{t("reportPending")}</p>
