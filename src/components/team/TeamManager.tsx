@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { ShieldAlert, Users } from "lucide-react";
+import { CheckCircle2, ShieldAlert, Users } from "lucide-react";
 import { hasPlayerNameConflict } from "@/domain/team";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/ui/PageShell";
@@ -24,8 +24,32 @@ export function TeamManager() {
 
   const [isEditingTeamName, setIsEditingTeamName] = useState(false);
   const [teamError, setTeamError] = useState<string | null>(null);
+  const [spondConnected, setSpondConnected] = useState<boolean | null>(null);
 
   const team = workspace.activeTeam;
+
+  useEffect(() => {
+    if (workspace.mode !== "cloud" || !team) {
+      setSpondConnected(null);
+      return;
+    }
+
+    void (async () => {
+      try {
+        const response = await fetch(
+          `/api/integrations/spond/status?teamId=${encodeURIComponent(team.id)}`,
+          { method: "GET" }
+        );
+        if (!response.ok) {
+          return;
+        }
+        const data = (await response.json()) as { connected?: boolean };
+        setSpondConnected(data.connected === true);
+      } catch {
+        // silently ignore — the info box is non-critical
+      }
+    })();
+  }, [team, workspace.mode]);
 
   const allowReorder = workspace.mode === "guest-local";
 
@@ -310,23 +334,38 @@ export function TeamManager() {
                 </AppCard>
               </motion.div>
 
-              {workspace.mode === "cloud" ? (
+              {workspace.mode === "cloud" && spondConnected !== null ? (
                 <motion.div variants={variants.fadeInUp}>
-                  <AppCard className="space-y-3 p-4">
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-fp-spond">{t("spondInfo.badge")}</p>
-                      <h3 className="text-base font-semibold text-foreground">{t("spondInfo.title")}</h3>
-                      <p className="text-xs text-muted-foreground">{t("spondInfo.description")}</p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Link href="/settings" className="tap-target inline-flex h-10 items-center rounded-xl border border-fp-spond-border bg-fp-spond-soft px-4 text-sm font-semibold text-fp-spond-foreground">
-                        {t("spondInfo.manageCta")}
+                  {spondConnected ? (
+                    <AppCard className="space-y-3 border-fp-spond-border/50 p-4">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 size={16} className="shrink-0 text-fp-spond" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-foreground">{t("spondInfo.connectedTitle")}</p>
+                          <p className="text-xs text-muted-foreground">{t("spondInfo.connectedDescription")}</p>
+                        </div>
+                      </div>
+                      <Link href="/settings" className="tap-target inline-flex h-9 items-center rounded-xl border border-fp-spond-border bg-fp-spond-soft px-3 text-sm font-semibold text-fp-spond-foreground">
+                        {t("spondInfo.connectedManageCta")}
                       </Link>
-                      <Link href="/match" className="tap-target inline-flex h-10 items-center rounded-xl border border-fp-border bg-fp-surface-2 px-4 text-sm font-semibold text-foreground">
-                        {t("spondInfo.importCta")}
-                      </Link>
-                    </div>
-                  </AppCard>
+                    </AppCard>
+                  ) : (
+                    <AppCard className="space-y-3 p-4">
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-fp-spond">{t("spondInfo.badge")}</p>
+                        <h3 className="text-base font-semibold text-foreground">{t("spondInfo.title")}</h3>
+                        <p className="text-xs text-muted-foreground">{t("spondInfo.description")}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Link href="/settings" className="tap-target inline-flex h-10 items-center rounded-xl border border-fp-spond-border bg-fp-spond-soft px-4 text-sm font-semibold text-fp-spond-foreground">
+                          {t("spondInfo.manageCta")}
+                        </Link>
+                        <Link href="/match" className="tap-target inline-flex h-10 items-center rounded-xl border border-fp-border bg-fp-surface-2 px-4 text-sm font-semibold text-foreground">
+                          {t("spondInfo.importCta")}
+                        </Link>
+                      </div>
+                    </AppCard>
+                  )}
                 </motion.div>
               ) : null}
 

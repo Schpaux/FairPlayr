@@ -46,11 +46,20 @@ function isMissingMatchTimestampColumnError(error: { code?: string; message?: st
     return false;
   }
 
+  // Postgres undefined_column error
   if (error.code === "42703") {
     return true;
   }
 
-  return /column\s+matches\.(started_at|ended_at|format|report_enabled|report_status|report_text|report_generated_at|score_for|score_against)\s+does\s+not\s+exist/i.test(error.message ?? "");
+  const msg = error.message ?? "";
+
+  // PostgREST schema cache error: "Could not find the 'X' column of 'matches' in the schema cache"
+  if (/could not find the '[^']+' column of 'matches' in the schema cache/i.test(msg)) {
+    return true;
+  }
+
+  // Legacy pattern: "column matches.X does not exist"
+  return /column\s+matches\.(started_at|ended_at|format|report_enabled|report_status|report_text|report_generated_at|score_for|score_against)\s+does\s+not\s+exist/i.test(msg);
 }
 
 async function requireTeamMembership(

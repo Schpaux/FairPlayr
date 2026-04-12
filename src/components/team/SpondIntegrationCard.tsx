@@ -547,317 +547,329 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
     }
   };
 
-  return (
-    <AppCard className="space-y-4 p-4">
-      <div className="space-y-1">
+  if (mode !== "cloud") {
+    return (
+      <AppCard className="space-y-2 p-4">
         <h3 className="text-base font-semibold text-foreground">{t("title")}</h3>
-        <p className="text-xs text-muted-foreground">{t("subtitle")}</p>
+        <p className="text-xs text-muted-foreground">{t("guestModeHint")}</p>
+      </AppCard>
+    );
+  }
+
+  return (
+    <AppCard className="divide-y divide-fp-border overflow-hidden p-0">
+
+      {/* ── Section 1: Status & auth ─────────────────────────────── */}
+      <div className="space-y-3 p-4">
+        <div className="space-y-0.5">
+          <h3 className="text-sm font-semibold text-foreground">{t("title")}</h3>
+          <p className="text-xs text-muted-foreground">{t("subtitle")}</p>
+        </div>
+
+        {/* Connection status pill */}
+        <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 ${
+          connected
+            ? "border-fp-spond-border bg-fp-spond-soft"
+            : "border-fp-border bg-fp-surface-2"
+        }`}>
+          <span className={`h-2 w-2 rounded-full ${connected ? "bg-fp-spond" : "bg-muted-foreground/40"}`} />
+          <p className="text-xs font-medium text-foreground">
+            {connected ? t("statusConnected") : t("statusDisconnected")}
+          </p>
+          {connected && accountLabel ? (
+            <p className="ml-auto text-[11px] text-muted-foreground truncate">{accountLabel}</p>
+          ) : null}
+        </div>
+
+        {/* Login form — only when disconnected */}
+        {!connected && (
+          <form onSubmit={handleConnect} className="space-y-2">
+            <label className="sr-only" htmlFor="spond-email">{t("emailLabel")}</label>
+            <input
+              id="spond-email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder={t("emailPlaceholder")}
+              className={teamTextInputClassName}
+              autoComplete="username"
+            />
+            <label className="sr-only" htmlFor="spond-password">{t("passwordLabel")}</label>
+            <input
+              id="spond-password"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder={t("passwordPlaceholder")}
+              className={teamTextInputClassName}
+              autoComplete="current-password"
+            />
+            <FpButton type="submit" variant="primary" size="md" disabled={isConnecting}>
+              <Link2 size={16} />
+              {isConnecting ? t("loading") : t("connectCta")}
+            </FpButton>
+          </form>
+        )}
       </div>
 
-      {mode !== "cloud" ? (
-        <p className="text-xs text-muted-foreground">{t("guestModeHint")}</p>
-      ) : null}
-
-      {mode === "cloud" ? (
-        <>
-          <div className="rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-xs text-muted-foreground">
-            {connected ? t("statusConnected") : t("statusDisconnected")}
-            {connected && accountLabel ? ` - ${accountLabel}` : ""}
+      {/* ── Section 2: Group link ─────────────────────────────────── */}
+      {connected && (
+        <div className="space-y-3 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("groupLabel")}
+            </p>
+            <FpButton
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                void loadGroups().catch((cause) => {
+                  setError(cause instanceof Error ? cause.message : t("errors.generic"));
+                });
+              }}
+              disabled={isLoadingGroups}
+            >
+              <RefreshCcw size={13} />
+              {isLoadingGroups ? t("loading") : t("refreshGroups")}
+            </FpButton>
           </div>
 
-          {!connected ? (
-            <form onSubmit={handleConnect} className="space-y-2">
-              <label className="sr-only" htmlFor="spond-email">{t("emailLabel")}</label>
-              <input
-                id="spond-email"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder={t("emailPlaceholder")}
-                className={teamTextInputClassName}
-                autoComplete="username"
-              />
-              <label className="sr-only" htmlFor="spond-password">{t("passwordLabel")}</label>
-              <input
-                id="spond-password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder={t("passwordPlaceholder")}
-                className={teamTextInputClassName}
-                autoComplete="current-password"
-              />
-              <FpButton type="submit" variant="primary" size="md" disabled={isConnecting}>
-                <Link2 size={16} />
-                {isConnecting ? t("loading") : t("connectCta")}
-              </FpButton>
-            </form>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <FpButton
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="tap-target"
-                  onClick={() => {
-                    void loadGroups().catch((cause) => {
-                      setError(cause instanceof Error ? cause.message : t("errors.generic"));
-                    });
-                  }}
-                  disabled={isLoadingGroups}
-                >
-                  <RefreshCcw size={14} />
-                  {isLoadingGroups ? t("loading") : t("refreshGroups")}
-                </FpButton>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground" htmlFor="spond-group">
-                  {t("groupLabel")}
-                </label>
-                <select
-                  id="spond-group"
-                  className={teamTextInputClassName}
-                  value={selectedGroupId}
-                  onChange={(event) => setSelectedGroupId(event.target.value)}
-                  disabled={groups.length === 0}
-                >
-                  {groups.length === 0 ? <option value="">{t("noGroups")}</option> : null}
-                  {groups.map((group) => (
-                    <option key={group.id} value={group.id}>
-                      {group.name} ({group.memberCount})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <FpButton
-                  type="button"
-                  variant="secondary"
-                  size="md"
-                  onClick={() => {
-                    void handleSaveLink();
-                  }}
-                  disabled={!selectedGroupId || isSavingLink}
-                >
-                  {isSavingLink ? t("savingLink") : t("saveLinkCta")}
-                </FpButton>
-                <FpButton
-                  type="button"
-                  variant="primary"
-                  size="md"
-                  onClick={() => {
-                    void handleImport();
-                  }}
-                  disabled={!linkedGroupId || isLoadingImportPreview || isImporting}
-                >
-                  {isLoadingImportPreview ? t("preview.loading") : t("syncMembersCta")}
-                </FpButton>
-                <FpButton
-                  type="button"
-                  variant="ghost"
-                  size="md"
-                  onClick={() => {
-                    void handleSyncEvents();
-                  }}
-                  disabled={!linkedGroupId || isSyncingEvents}
-                >
-                  {isSyncingEvents ? t("syncEventsLoading") : t("syncEventsCta")}
-                </FpButton>
-              </div>
-
-              {linkedGroupId ? (
-                <div className="space-y-1">
-                  {linkedGroupName ? (
-                    <p className="text-xs text-muted-foreground">
-                      {t("linkedGroupName", { value: linkedGroupName })}
-                    </p>
-                  ) : null}
-                  <p className="text-xs text-muted-foreground">{t("linkedGroupReady")}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {t("lastMembersSync", { value: formatSyncedAt(membersLastSyncedAt) })}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {t("lastEventsSync", { value: formatSyncedAt(eventsLastSyncedAt) })}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {t("syncMembersInactiveNotice")}
-                  </p>
-                </div>
-              ) : null}
-
-              {linkedGroupId ? (
-                <div className="space-y-3 rounded-xl border border-fp-border bg-fp-surface-2 p-3">
-                  <p className="text-sm font-semibold text-foreground">{t("preview.title")}</p>
-                  <p className="text-xs text-muted-foreground">{t("preview.subtitle")}</p>
-                  <p className="text-xs text-muted-foreground">{t("preview.helperText")}</p>
-
-                  {importPreviewCandidates.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">{t("preview.empty")}</p>
-                  ) : (
-                    <>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <FpButton
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleSelectAllCandidates}
-                          disabled={isImporting}
-                        >
-                          {t("preview.selectAll")}
-                        </FpButton>
-                        <FpButton
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleClearAllCandidates}
-                          disabled={isImporting}
-                        >
-                          {t("preview.clearAll")}
-                        </FpButton>
-                        <p className="text-xs font-medium text-muted-foreground">
-                          {t("preview.selectedCount", { count: selectedCount })}
-                        </p>
-                      </div>
-
-                      <ul className="max-h-56 space-y-2 overflow-y-auto">
-                        {importPreviewCandidates.map((candidate) => (
-                          <li
-                            key={candidate.externalId}
-                            className="rounded-lg border border-fp-border bg-background px-3 py-2"
-                          >
-                            <label className="flex items-start gap-3">
-                              <input
-                                type="checkbox"
-                                checked={selectedCandidateExternalIds.includes(candidate.externalId)}
-                                onChange={() => handleToggleCandidate(candidate.externalId)}
-                                disabled={!candidate.selectable || isImporting}
-                                className="mt-0.5 h-4 w-4 rounded border-fp-border"
-                              />
-                              <span className="min-w-0 space-y-1">
-                                <span className="block truncate text-sm font-medium text-foreground">
-                                  {candidate.name}
-                                </span>
-                                <span className="flex flex-wrap items-center gap-1 text-xs">
-                                  <span
-                                    className={
-                                      candidate.importClassification === "likely_player"
-                                        ? "rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-emerald-700 dark:text-emerald-300"
-                                        : candidate.importClassification === "likely_staff"
-                                          ? "rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-amber-700 dark:text-amber-300"
-                                          : "rounded-full border border-fp-border bg-fp-surface-2 px-2 py-0.5 text-muted-foreground"
-                                    }
-                                  >
-                                    {candidate.importClassification === "likely_player"
-                                      ? t("preview.classificationPlayer")
-                                      : candidate.importClassification === "likely_staff"
-                                        ? t("preview.classificationStaff")
-                                        : t("preview.classificationUnknown")}
-                                  </span>
-                                  <span className="text-muted-foreground">
-                                    {candidate.status === "already-imported"
-                                      ? t("preview.statusAlreadyImported")
-                                      : candidate.status === "existing-player"
-                                        ? t("preview.statusExisting")
-                                        : t("preview.statusNew")}
-                                  </span>
-                                </span>
-                              </span>
-                            </label>
-                          </li>
-                        ))}
-                      </ul>
-
-                      <FpButton
-                        type="button"
-                        variant="primary"
-                        size="md"
-                        onClick={() => {
-                          void handleConfirmSelectedImport();
-                        }}
-                        disabled={selectedCount === 0 || isImporting}
-                      >
-                        {isImporting ? t("preview.importing") : t("preview.importSelected")}
-                      </FpButton>
-                    </>
-                  )}
-                </div>
-              ) : null}
-
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t("eventsTitle")}
-                </p>
-
-                {events.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">{t("eventsEmpty")}</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {events.map((eventItem) => (
-                      <li
-                        key={eventItem.externalId}
-                        className="rounded-lg border border-fp-border bg-fp-surface-2 px-3 py-2"
-                      >
-                        <p className="text-sm font-medium text-foreground">{eventItem.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatEventDate(eventItem.startsAt)}
-                        </p>
-                        {eventItem.location ? (
-                          <p className="text-xs text-muted-foreground">{eventItem.location}</p>
-                        ) : null}
-                        <p className="text-xs text-muted-foreground">
-                          {eventItem.importedMatchId ? t("eventImported") : t("eventNotImported")}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              <div className="space-y-2 rounded-xl border border-fp-border bg-fp-surface-2 p-3">
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-foreground">{t("cleanup.deleteImportedTitle")}</p>
-                  <p className="text-xs text-muted-foreground">{t("cleanup.deleteImportedHelp")}</p>
-                </div>
-                <FpButton
-                  type="button"
-                  variant="secondary"
-                  size="md"
-                  onClick={() => {
-                    void handleResetAction("delete-imported-data");
-                  }}
-                  disabled={pendingResetAction !== null}
-                >
-                  {pendingResetAction === "delete-imported-data" ? t("cleanup.running") : t("cleanup.deleteImportedCta")}
-                </FpButton>
-
-                <div className="h-px bg-fp-border" />
-
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-foreground">{t("cleanup.disconnectTitle")}</p>
-                  <p className="text-xs text-muted-foreground">{t("cleanup.disconnectHelp")}</p>
-                </div>
-                <FpButton
-                  type="button"
-                  variant="danger"
-                  size="md"
-                  onClick={() => {
-                    void handleResetAction("disconnect-and-delete");
-                  }}
-                  disabled={pendingResetAction !== null}
-                >
-                  {pendingResetAction === "disconnect-and-delete" ? t("cleanup.running") : t("cleanup.disconnectCta")}
-                </FpButton>
-              </div>
+          {linkedGroupId && linkedGroupName ? (
+            <div className="rounded-xl border border-fp-spond-border bg-fp-spond-soft px-3 py-2">
+              <p className="text-xs font-medium text-fp-spond-foreground">
+                {t("linkedGroupName", { value: linkedGroupName })}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {t("lastMembersSync", { value: formatSyncedAt(membersLastSyncedAt) })}
+                {" · "}
+                {t("lastEventsSync", { value: formatSyncedAt(eventsLastSyncedAt) })}
+              </p>
             </div>
-          )}
-        </>
-      ) : null}
+          ) : null}
 
-      {notice ? <p className="text-xs text-fp-spond-foreground">{notice}</p> : null}
-      {error ? <p className="text-xs text-danger">{error}</p> : null}
+          <div className="space-y-2">
+            <select
+              id="spond-group"
+              className={teamTextInputClassName}
+              value={selectedGroupId}
+              onChange={(event) => setSelectedGroupId(event.target.value)}
+              disabled={groups.length === 0}
+            >
+              {groups.length === 0 ? <option value="">{t("noGroups")}</option> : null}
+              {groups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name} ({group.memberCount})
+                </option>
+              ))}
+            </select>
+            <FpButton
+              type="button"
+              variant="secondary"
+              size="md"
+              fullWidth
+              onClick={() => { void handleSaveLink(); }}
+              disabled={!selectedGroupId || isSavingLink}
+            >
+              {isSavingLink ? t("savingLink") : t("saveLinkCta")}
+            </FpButton>
+          </div>
+        </div>
+      )}
+
+      {/* ── Section 3: Import members ─────────────────────────────── */}
+      {connected && linkedGroupId && (
+        <div className="space-y-3 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="space-y-0.5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {t("preview.title")}
+              </p>
+              <p className="text-[11px] text-muted-foreground">{t("preview.subtitle")}</p>
+            </div>
+            <FpButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => { void handleImport(); }}
+              disabled={isLoadingImportPreview || isImporting}
+            >
+              {isLoadingImportPreview ? t("preview.loading") : t("syncMembersCta")}
+            </FpButton>
+          </div>
+
+          {importPreviewCandidates.length > 0 && (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <FpButton type="button" variant="ghost" size="sm" onClick={handleSelectAllCandidates} disabled={isImporting}>
+                  {t("preview.selectAll")}
+                </FpButton>
+                <FpButton type="button" variant="ghost" size="sm" onClick={handleClearAllCandidates} disabled={isImporting}>
+                  {t("preview.clearAll")}
+                </FpButton>
+                <p className="text-xs text-muted-foreground">
+                  {t("preview.selectedCount", { count: selectedCount })}
+                </p>
+              </div>
+
+              <ul className="max-h-52 space-y-1.5 overflow-y-auto">
+                {importPreviewCandidates.map((candidate) => (
+                  <li key={candidate.externalId} className="rounded-lg border border-fp-border bg-background px-3 py-2">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedCandidateExternalIds.includes(candidate.externalId)}
+                        onChange={() => handleToggleCandidate(candidate.externalId)}
+                        disabled={!candidate.selectable || isImporting}
+                        className="mt-0.5 h-4 w-4 rounded border-fp-border"
+                      />
+                      <span className="min-w-0 space-y-0.5">
+                        <span className="block truncate text-sm font-medium text-foreground">{candidate.name}</span>
+                        <span className="flex flex-wrap items-center gap-1 text-xs">
+                          <span className={
+                            candidate.importClassification === "likely_player"
+                              ? "rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-emerald-700 dark:text-emerald-300"
+                              : candidate.importClassification === "likely_staff"
+                                ? "rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-amber-700 dark:text-amber-300"
+                                : "rounded-full border border-fp-border bg-fp-surface-2 px-2 py-0.5 text-muted-foreground"
+                          }>
+                            {candidate.importClassification === "likely_player"
+                              ? t("preview.classificationPlayer")
+                              : candidate.importClassification === "likely_staff"
+                                ? t("preview.classificationStaff")
+                                : t("preview.classificationUnknown")}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {candidate.status === "already-imported"
+                              ? t("preview.statusAlreadyImported")
+                              : candidate.status === "existing-player"
+                                ? t("preview.statusExisting")
+                                : t("preview.statusNew")}
+                          </span>
+                        </span>
+                      </span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+
+              <FpButton
+                type="button"
+                variant="primary"
+                size="md"
+                fullWidth
+                onClick={() => { void handleConfirmSelectedImport(); }}
+                disabled={selectedCount === 0 || isImporting}
+              >
+                {isImporting ? t("preview.importing") : t("preview.importSelected")}
+              </FpButton>
+            </>
+          )}
+          {importPreviewCandidates.length === 0 && !isLoadingImportPreview && (
+            <p className="text-xs text-muted-foreground">{t("preview.helperText")}</p>
+          )}
+          <p className="text-[11px] text-muted-foreground">{t("syncMembersInactiveNotice")}</p>
+        </div>
+      )}
+
+      {/* ── Section 4: Events ────────────────────────────────────── */}
+      {connected && linkedGroupId && (
+        <div className="space-y-3 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("eventsTitle")}
+            </p>
+            <FpButton
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => { void handleSyncEvents(); }}
+              disabled={isSyncingEvents}
+            >
+              <RefreshCcw size={13} />
+              {isSyncingEvents ? t("syncEventsLoading") : t("syncEventsCta")}
+            </FpButton>
+          </div>
+
+          {events.length === 0 ? (
+            <p className="text-xs text-muted-foreground">{t("eventsEmpty")}</p>
+          ) : (
+            <ul className="space-y-1.5">
+              {events.map((eventItem) => (
+                <li key={eventItem.externalId} className="rounded-lg border border-fp-border bg-fp-surface-2 px-3 py-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">{eventItem.title}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {formatEventDate(eventItem.startsAt)}
+                        {eventItem.location ? ` · ${eventItem.location}` : ""}
+                      </p>
+                    </div>
+                    <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                      eventItem.importedMatchId
+                        ? "border-fp-spond-border bg-fp-spond-soft text-fp-spond-foreground"
+                        : "border-fp-border bg-background text-muted-foreground"
+                    }`}>
+                      {eventItem.importedMatchId ? t("eventImported") : t("eventNotImported")}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* ── Section 5: Danger zone ───────────────────────────────── */}
+      {connected && (
+        <div className="space-y-3 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-danger/70">
+            {t("cleanup.sectionTitle")}
+          </p>
+
+          <div className="space-y-2">
+            <div className="space-y-0.5">
+              <p className="text-xs font-semibold text-foreground">{t("cleanup.deleteImportedTitle")}</p>
+              <p className="text-[11px] text-muted-foreground">{t("cleanup.deleteImportedHelp")}</p>
+            </div>
+            <FpButton
+              type="button"
+              variant="danger"
+              size="sm"
+              onClick={() => { void handleResetAction("delete-imported-data"); }}
+              disabled={pendingResetAction !== null}
+            >
+              {pendingResetAction === "delete-imported-data" ? t("cleanup.running") : t("cleanup.deleteImportedCta")}
+            </FpButton>
+          </div>
+
+          <div className="h-px bg-fp-border" />
+
+          <div className="space-y-2">
+            <div className="space-y-0.5">
+              <p className="text-xs font-semibold text-foreground">{t("cleanup.disconnectTitle")}</p>
+              <p className="text-[11px] text-muted-foreground">{t("cleanup.disconnectHelp")}</p>
+            </div>
+            <FpButton
+              type="button"
+              variant="danger"
+              size="sm"
+              onClick={() => { void handleResetAction("disconnect-and-delete"); }}
+              disabled={pendingResetAction !== null}
+            >
+              {pendingResetAction === "disconnect-and-delete" ? t("cleanup.running") : t("cleanup.disconnectCta")}
+            </FpButton>
+          </div>
+        </div>
+      )}
+
+      {/* ── Feedback messages ────────────────────────────────────── */}
+      {(notice || error) && (
+        <div className="space-y-1 p-4">
+          {notice ? <p className="text-xs text-fp-spond-foreground">{notice}</p> : null}
+          {error ? <p className="text-xs text-danger">{error}</p> : null}
+        </div>
+      )}
     </AppCard>
   );
 }

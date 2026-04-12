@@ -346,33 +346,35 @@ export function MatchSetupManager() {
           />
         </SetupSection>
 
-        <SetupSection label={t("sections.summary")}> 
+        <SetupSection label={t("sections.summary")}>
           <div className="rounded-xl border border-fp-border bg-fp-surface-2 p-3">
-            <label className="flex items-start justify-between gap-3">
-              <div>
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-foreground">{t("reportToggle.label")}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{t("reportToggle.help")}</p>
               </div>
+              {/* Standalone toggle — not wrapped in a label to avoid double-fire */}
               <button
                 type="button"
                 role="switch"
                 aria-checked={setup.reportEnabled}
+                aria-label={t("reportToggle.label")}
                 onClick={() => handleReportToggle(!setup.reportEnabled)}
                 className={cn(
-                  "relative mt-0.5 h-7 w-12 rounded-full border transition-colors",
+                  "relative flex-shrink-0 h-7 w-12 rounded-full border transition-colors tap-target",
                   setup.reportEnabled
                     ? "border-primary/40 bg-primary"
-                    : "border-fp-border bg-background"
+                    : "border-fp-border bg-fp-surface"
                 )}
               >
                 <span
                   className={cn(
-                    "absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform",
-                    setup.reportEnabled ? "translate-x-6" : "translate-x-0.5"
+                    "absolute top-[3px] left-[3px] h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200",
+                    setup.reportEnabled ? "translate-x-5" : "translate-x-0"
                   )}
                 />
               </button>
-            </label>
+            </div>
           </div>
         </SetupSection>
 
@@ -418,7 +420,7 @@ export function MatchSetupManager() {
                   {t("startGuard.end")}
                 </FpButton>
                 <FpButton
-                  variant="ghost"
+                  variant="danger"
                   size="md"
                   fullWidth
                   disabled={isResolvingGuardAction}

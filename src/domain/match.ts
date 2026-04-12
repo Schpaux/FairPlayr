@@ -362,7 +362,7 @@ export function createMatchSetup(
     id: generateId(),
     teamId,
     format,
-    reportEnabled: false,
+    reportEnabled: true,
     formationId: formation.id,
     duration: createDurationFromPreset(getDefaultDurationPreset(format)),
     selectedPlayerIds: [],
@@ -444,8 +444,20 @@ export function setMatchDurationPreset(
   setup: MatchConfig,
   presetId: MatchDurationPresetId
 ): MatchConfig {
+  const preset = MATCH_DURATION_PRESETS[presetId];
+  // Respect the user's current halves choice instead of forcing preset.halves (always 2)
+  const halves = setup.duration.halves as 1 | 2;
+  const minutesPerHalf =
+    halves === 1 ? preset.totalMinutes : preset.minutesPerHalf;
+
   return withUpdatedConfig(setup, {
-    duration: createDurationFromPreset(presetId),
+    duration: {
+      mode: "preset",
+      presetId,
+      halves,
+      minutesPerHalf,
+      totalMinutes: preset.totalMinutes,
+    },
   });
 }
 
