@@ -376,6 +376,37 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
     }
   };
 
+  const fetchMatchById = useCallback(async (targetMatchId: string): Promise<MatchDetails> => {
+    const response = await fetch(`/api/matches/${encodeURIComponent(targetMatchId)}`, {
+      method: "GET",
+    });
+
+    const payload = (await response.json()) as { message?: string; match?: MatchDetails };
+    if (!response.ok || !payload.match) {
+      throw new Error(payload.message ?? t("errors.generic"));
+    }
+
+    return payload.match;
+  }, [t]);
+
+  const pollReportStatus = useCallback(async (targetMatchId: string) => {
+    const maxAttempts = 10;
+    const delayMs = 1500;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const latest = await fetchMatchById(targetMatchId);
+      setMatch(latest);
+
+      if (latest.reportStatus !== "pending") {
+        return;
+      }
+
+      await new Promise((resolve) => {
+        setTimeout(resolve, delayMs);
+      });
+    }
+  }, [fetchMatchById]);
+
   const triggerReportGeneration = useCallback(async (targetMatch: MatchDetails, silent = false) => {
     setIsRegeneratingReport(true);
     if (!silent) {
@@ -401,8 +432,9 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
       }
 
       setMatch(payload.match);
-      if (!silent) {
-        setNotice(t("reportPending"));
+
+      if (payload.match.reportStatus === "pending") {
+        await pollReportStatus(payload.match.id);
       }
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : t("errors.generic");
@@ -412,7 +444,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
     } finally {
       setIsRegeneratingReport(false);
     }
-  }, [t]);
+  }, [pollReportStatus, t]);
 
   useEffect(() => {
     if (!match) {
