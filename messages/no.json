@@ -631,6 +631,8 @@
     "reportTitle": "Kampoppsummering",
     "reportPending": "Kampoppsummering genereres...",
     "reportFailed": "Kampoppsummering kunne ikke genereres",
+    "reportRetryCta": "Prøv igjen",
+    "reportRetrying": "Prøver å generere...",
     "actionsTitle": "Handlinger",
     "delete": {
       "cta": "Slett kamp",

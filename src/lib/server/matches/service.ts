@@ -459,9 +459,15 @@ export async function updateMatchStatus(
     updatePayload.report_generated_at = input.reportGeneratedAt;
   }
 
+  const nextReportEnabled = input.reportEnabled ?? existing.reportEnabled;
   const shouldGenerateReport =
-    input.status === "completed" &&
-    (input.reportEnabled ?? existing.reportEnabled) === true;
+    nextStatus === "completed" &&
+    nextReportEnabled === true &&
+    (
+      input.status === "completed" ||
+      (input.reportEnabled === true && existing.reportStatus !== "ready") ||
+      input.reportStatus === "pending"
+    );
 
   if (shouldGenerateReport) {
     updatePayload.report_status = "pending";
@@ -537,7 +543,8 @@ export async function updateMatchStatus(
         matchId: mapped.id,
         source: summary.result.source,
       });
-    } catch {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown report generation error";
       const { data: failedRow } = await supabase
         .from("matches")
         .update({
@@ -554,6 +561,7 @@ export async function updateMatchStatus(
 
       console.error("[match-report] generation failed", {
         matchId: mapped.id,
+        message,
       });
     }
   }

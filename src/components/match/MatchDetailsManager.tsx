@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ArrowLeftRight, Loader2, ShieldAlert, Sparkles, Users } from "lucide-react";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -124,6 +124,8 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
   const [editAssistId, setEditAssistId] = useState<string>("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isRegeneratingReport, setIsRegeneratingReport] = useState(false);
+  const [autoReportTriggeredFor, setAutoReportTriggeredFor] = useState<string | null>(null);
 
   const playerOptions = useMemo(() => {
     if (!match) {
@@ -373,6 +375,63 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
       setIsUpdatingStatus(false);
     }
   };
+
+  const triggerReportGeneration = useCallback(async (targetMatch: MatchDetails, silent = false) => {
+    setIsRegeneratingReport(true);
+    if (!silent) {
+      setError(null);
+      setNotice(null);
+    }
+
+    try {
+      const response = await fetch(`/api/matches/${encodeURIComponent(targetMatch.id)}`, {
+        method: "PATCH",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          status: "completed",
+          reportEnabled: true,
+        }),
+      });
+
+      const payload = (await response.json()) as { message?: string; match?: MatchDetails };
+      if (!response.ok || !payload.match) {
+        throw new Error(payload.message ?? t("errors.generic"));
+      }
+
+      setMatch(payload.match);
+      if (!silent) {
+        setNotice(t("reportPending"));
+      }
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : t("errors.generic");
+      if (!silent) {
+        setError(message);
+      }
+    } finally {
+      setIsRegeneratingReport(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    if (!match) {
+      return;
+    }
+
+    const shouldAutoTrigger =
+      match.status === "completed" &&
+      match.reportEnabled &&
+      (match.reportStatus === "not_requested" || match.reportStatus === "failed") &&
+      autoReportTriggeredFor !== match.id;
+
+    if (!shouldAutoTrigger) {
+      return;
+    }
+
+    setAutoReportTriggeredFor(match.id);
+    void triggerReportGeneration(match, true);
+  }, [autoReportTriggeredFor, match, triggerReportGeneration]);
 
   const openEditModal = (event: MatchEventItem) => {
     setEditingEvent(event);
@@ -738,7 +797,22 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
             </div>
           )}
           {match.reportStatus === "failed" && (
-            <p className="text-sm text-danger">{t("reportFailed")}</p>
+            <div className="space-y-2">
+              <p className="text-sm text-danger">{t("reportFailed")}</p>
+              <FpButton
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (match) {
+                    void triggerReportGeneration(match);
+                  }
+                }}
+                disabled={isRegeneratingReport}
+              >
+                {isRegeneratingReport ? t("reportRetrying") : t("reportRetryCta")}
+              </FpButton>
+            </div>
           )}
           {match.reportStatus === "ready" && match.reportText ? (
             <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/80">
@@ -746,7 +820,22 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
             </p>
           ) : null}
           {match.reportStatus === "not_requested" && (
-            <p className="text-xs text-muted-foreground">{t("reportPending")}</p>
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">{t("reportPending")}</p>
+              <FpButton
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (match) {
+                    void triggerReportGeneration(match);
+                  }
+                }}
+                disabled={isRegeneratingReport}
+              >
+                {isRegeneratingReport ? t("reportRetrying") : t("reportRetryCta")}
+              </FpButton>
+            </div>
           )}
         </AppCard>
       ) : null}

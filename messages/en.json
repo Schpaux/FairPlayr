@@ -631,6 +631,8 @@
     "reportTitle": "Match summary",
     "reportPending": "Match summary is being generated...",
     "reportFailed": "Match summary could not be generated",
+    "reportRetryCta": "Try again",
+    "reportRetrying": "Retrying generation...",
     "actionsTitle": "Actions",
     "delete": {
       "cta": "Delete match",
