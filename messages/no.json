@@ -15,7 +15,7 @@
     "home": "Hjem",
     "team": "Lag",
     "match": "Kamper",
-    "lineup": "Oppstilling",
+    "historikk": "Historikk",
     "settings": "Innstillinger"
   },
   "home": {
@@ -142,7 +142,10 @@
       "title": "Har du lag i Spond?",
       "description": "Koble til Spond i innstillinger for å importere spillere og arrangementer raskere.",
       "manageCta": "Åpne integrasjoner",
-      "importCta": "Gå til kampplanlegging"
+      "importCta": "Gå til kampplanlegging",
+      "connectedTitle": "Spond tilkoblet",
+      "connectedDescription": "Spillere og arrangementer synkroniseres via Spond.",
+      "connectedManageCta": "Administrer integrasjon"
     },
     "teamList": {
       "title": "Lagene dine",
@@ -222,6 +225,7 @@
       "syncMembersResult": "Spillere importert: {created} nye, {updated} navneendringer, {reactivated} reaktivert, {inactivated} markert inaktive, {unchanged} uendret, {total} totalt.",
       "syncMembersInactiveNotice": "Spillere som ikke lenger finnes i Spond er beholdt i FairPlayr som inaktive.",
       "cleanup": {
+        "sectionTitle": "Faresone",
         "deleteImportedTitle": "Slett alle importerte Spond-data",
         "deleteImportedHelp": "Sletter spillere, arrangementer og deltakelsesdata som er importert fra Spond for dette laget. Du kan alltids importere dataen igjen.",
         "deleteImportedCta": "Slett alle importerte Spond-data",
@@ -472,7 +476,11 @@
     "score": {
       "title": "Resultat",
       "team": "Oss",
-      "opponent": "Dem"
+      "opponent": "Dem",
+      "increaseTeam": "Mål for oss",
+      "decreaseTeam": "Fjern lagmål",
+      "increaseOpponent": "Motstandermål",
+      "decreaseOpponent": "Fjern motstandermål"
     },
     "prompt": {
       "scorerTitle": "Hvem scoret?",
@@ -513,6 +521,18 @@
     "ended": {
       "title": "Kampen er avsluttet",
       "description": "Live-sporing er stoppet. Du kan sette opp en ny kamp."
+    },
+    "endingSequence": {
+      "title": "Avslutter kamp...",
+      "subtitle": "Lagrer data og klargjør rapport.",
+      "done": "Ferdig!",
+      "goToReport": "Åpne kamprapport"
+    },
+    "scoreEvents": {
+      "goalFor": "Mål",
+      "goalAgainst": "Motstandermål",
+      "substitution": "Bytte",
+      "noGoals": "Ingen mål ennå"
     },
     "actions": {
       "start": "Start kamp",
@@ -594,7 +614,16 @@
     "statusLabel": "Status: {value}",
     "formatLabel": "Format: {value}",
     "resultLabel": "Resultat: {scoreFor}-{scoreAgainst}",
+    "result": {
+      "win": "Seier",
+      "draw": "Uavgjort",
+      "loss": "Tap"
+    },
     "reportBadge": "Kampoppsummering",
+    "lineupTitle": "Oppstilling",
+    "lineupStarters": "Startoppstilling",
+    "lineupSubbedOn": "Innbyttere (kom inn)",
+    "lineupBench": "Benk",
     "timelineTitle": "Kampforløp",
     "timelineEmpty": "Ingen hendelser registrert.",
     "reportTitle": "Kampoppsummering",
@@ -609,6 +638,10 @@
     "event": {
       "assistLabel": "Assist: {value}",
       "opponentGoal": "Motstander",
+      "matchStarted": "Kampen startet",
+      "matchEnded": "Kampen avsluttet",
+      "substitutionIn": "Inn",
+      "substitutionOut": "Ut",
       "notRegistered": "Ikke registrert",
       "noAssist": "Ingen assist",
       "editTitle": "Rediger mål",
@@ -630,8 +663,14 @@
       "manual": "Manuell kamp",
       "spond": "Fra Spond",
       "spondHint": "Koble Spond i innstillinger for å hente arrangementer direkte her.",
-      "spondActiveHint": "Hent arrangementer fra Spond og importer med ett trykk."
+      "spondActiveHint": "Hent arrangementer fra Spond og importer med ett trykk.",
+      "spondNotLinkedTitle": "Spond ikke koblet til",
+      "spondNotLinkedHint": "Koble FairPlayr til Spond og velg en gruppe i innstillinger for å importere kamper herfra.",
+      "spondGoToSettings": "Åpne innstillinger",
+      "spondNoEventsTitle": "Ingen kommende arrangementer",
+      "spondNoEventsHint": "Ingen kommende Spond-arrangementer funnet. Prøv å oppdatere, eller opprett kampen manuelt."
     },
+    "goToHistory": "Se kamphistorikk →",
     "manualStart": {
       "now": "Nå",
       "scheduled": "Planlagt",
@@ -673,6 +712,37 @@
       "matchNotSpond": "Denne kampen er ikke koblet til Spond.",
       "activeMatchExists": "En annen kamp pågår allerede for dette laget.",
       "generic": "Noe gikk galt under kampplanlegging."
+    }
+  },
+  "matchHistory": {
+    "title": "Historikk",
+    "subtitle": "Alle ferdige kamper og kamprapporter.",
+    "activeTeam": "Aktivt lag: {name}",
+    "listTitle": "Ferdige kamper",
+    "emptyTitle": "Ingen ferdige kamper ennå",
+    "emptyDescription": "Fullfør din første kamp, så dukker den opp her.",
+    "goToMatches": "Gå til kampplanlegging",
+    "guestTitle": "Logg inn for å se historikk",
+    "guestDescription": "Kamphistorikk lagres i skyen og krever innlogging.",
+    "guestCta": "Logg inn",
+    "noTeamTitle": "Ingen aktivt lag",
+    "noTeamDescription": "Velg eller opprett et lag for å se kamphistorikk.",
+    "goToTeam": "Gå til lag",
+    "reportBadge": "Rapport",
+    "openMatch": "Se rapport",
+    "opponentLabel": "Motstander: {value}",
+    "locationLabel": "Sted: {value}",
+    "formatLabel": "Format: {value}",
+    "resultWon": "Seier",
+    "resultDraw": "Uavgjort",
+    "resultLost": "Tap",
+    "delete": {
+      "cta": "Slett",
+      "confirm": "Slette denne kampen? Dette sletter også kampforløp og rapport.",
+      "success": "Kampen ble slettet."
+    },
+    "errors": {
+      "generic": "Noe gikk galt. Prøv igjen."
     }
   },
   "lineup": {

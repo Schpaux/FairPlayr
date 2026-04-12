@@ -15,7 +15,7 @@
     "home": "Home",
     "team": "Team",
     "match": "Matches",
-    "lineup": "Lineup",
+    "historikk": "History",
     "settings": "Settings"
   },
   "home": {
@@ -142,7 +142,10 @@
       "title": "Using Spond for your teams?",
       "description": "Connect Spond in settings to import players and events faster.",
       "manageCta": "Open integrations",
-      "importCta": "Go to match planning"
+      "importCta": "Go to match planning",
+      "connectedTitle": "Spond connected",
+      "connectedDescription": "Players and events are synced via Spond.",
+      "connectedManageCta": "Manage integration"
     },
     "teamList": {
       "title": "Your teams",
@@ -222,6 +225,7 @@
       "syncMembersResult": "Players imported: {created} new, {updated} renamed, {reactivated} reactivated, {inactivated} marked inactive, {unchanged} unchanged, {total} total.",
       "syncMembersInactiveNotice": "Players no longer found in Spond are kept in FairPlayr as inactive.",
       "cleanup": {
+        "sectionTitle": "Danger zone",
         "deleteImportedTitle": "Delete all imported Spond data",
         "deleteImportedHelp": "Deletes players, events, and participation data imported from Spond for this team. You can always import the data again.",
         "deleteImportedCta": "Delete all imported Spond data",
@@ -472,7 +476,11 @@
     "score": {
       "title": "Score",
       "team": "Us",
-      "opponent": "Them"
+      "opponent": "Them",
+      "increaseTeam": "Goal for us",
+      "decreaseTeam": "Remove team goal",
+      "increaseOpponent": "Opponent goal",
+      "decreaseOpponent": "Remove opponent goal"
     },
     "prompt": {
       "scorerTitle": "Who scored?",
@@ -513,6 +521,18 @@
     "ended": {
       "title": "Match ended",
       "description": "Live tracking has stopped. You can set up a new match."
+    },
+    "endingSequence": {
+      "title": "Ending match...",
+      "subtitle": "Saving data and preparing report.",
+      "done": "Done!",
+      "goToReport": "Open match report"
+    },
+    "scoreEvents": {
+      "goalFor": "Goal",
+      "goalAgainst": "Opponent goal",
+      "substitution": "Substitution",
+      "noGoals": "No goals yet"
     },
     "actions": {
       "start": "Start Match",
@@ -594,7 +614,16 @@
     "statusLabel": "Status: {value}",
     "formatLabel": "Format: {value}",
     "resultLabel": "Result: {scoreFor}-{scoreAgainst}",
+    "result": {
+      "win": "Win",
+      "draw": "Draw",
+      "loss": "Loss"
+    },
     "reportBadge": "Summary",
+    "lineupTitle": "Lineup",
+    "lineupStarters": "Starting XI",
+    "lineupSubbedOn": "Substitutes (came on)",
+    "lineupBench": "Bench",
     "timelineTitle": "Match timeline",
     "timelineEmpty": "No events recorded.",
     "reportTitle": "Match summary",
@@ -609,6 +638,10 @@
     "event": {
       "assistLabel": "Assist: {value}",
       "opponentGoal": "Opponent",
+      "matchStarted": "Match started",
+      "matchEnded": "Match ended",
+      "substitutionIn": "In",
+      "substitutionOut": "Out",
       "notRegistered": "Not registered",
       "noAssist": "No assist",
       "editTitle": "Edit goal",
@@ -630,7 +663,12 @@
       "manual": "Manual match",
       "spond": "From Spond",
       "spondHint": "Connect Spond in settings to pull events directly here.",
-      "spondActiveHint": "Fetch events from Spond and import with one tap."
+      "spondActiveHint": "Fetch events from Spond and import with one tap.",
+      "spondNotLinkedTitle": "Spond not connected",
+      "spondNotLinkedHint": "Connect FairPlayr to Spond and select a group in settings to import matches from here.",
+      "spondGoToSettings": "Open settings",
+      "spondNoEventsTitle": "No upcoming events",
+      "spondNoEventsHint": "No upcoming Spond events found. Try refreshing, or create the match manually."
     },
     "manualStart": {
       "now": "Now",
@@ -663,6 +701,7 @@
     "startedNotice": "Match started.",
     "completedNotice": "Match completed.",
     "noLocation": "Not set",
+    "goToHistory": "See match history →",
     "errors": {
       "unauthorized": "You must be signed in.",
       "teamAccess": "You do not have access to this team.",
@@ -673,6 +712,37 @@
       "matchNotSpond": "This match is not linked to Spond.",
       "activeMatchExists": "Another match is already live for this team.",
       "generic": "Something went wrong while planning matches."
+    }
+  },
+  "matchHistory": {
+    "title": "History",
+    "subtitle": "All completed matches and match reports.",
+    "activeTeam": "Active team: {name}",
+    "listTitle": "Completed matches",
+    "emptyTitle": "No completed matches yet",
+    "emptyDescription": "Complete your first match and it will appear here.",
+    "goToMatches": "Go to match planner",
+    "guestTitle": "Sign in to view history",
+    "guestDescription": "Match history is stored in the cloud and requires sign in.",
+    "guestCta": "Sign in",
+    "noTeamTitle": "No active team",
+    "noTeamDescription": "Select or create a team to view match history.",
+    "goToTeam": "Go to team",
+    "reportBadge": "Report",
+    "openMatch": "View report",
+    "opponentLabel": "Opponent: {value}",
+    "locationLabel": "Location: {value}",
+    "formatLabel": "Format: {value}",
+    "resultWon": "Win",
+    "resultDraw": "Draw",
+    "resultLost": "Loss",
+    "delete": {
+      "cta": "Delete",
+      "confirm": "Delete this match? This also deletes the event log and report.",
+      "success": "Match deleted."
+    },
+    "errors": {
+      "generic": "Something went wrong. Try again."
     }
   },
   "lineup": {

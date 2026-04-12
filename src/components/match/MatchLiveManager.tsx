@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { motion } from "framer-motion";
-import { ArrowLeftRight, Play } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeftRight, Play, Minus, Plus, ArrowRightLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -29,6 +29,11 @@ import {
   type LiveMatchState,
 } from "@/domain/liveMatch";
 import { getSubstitutionSuggestion } from "@/domain/substitutionSuggestion";
+import {
+  createGoalEvent,
+  createSubstitutionEvent,
+  updateGoalEventContributors,
+} from "@/domain/matchEvent";
 import {
   endMatch,
   getStoredMatchSetup,
@@ -58,7 +63,8 @@ interface PromptPlayerOption {
 }
 
 interface GoalPromptState {
-  eventId: string;
+  eventId: string | null;
+  localEventId: string;
   minute: number | null;
   options: PromptPlayerOption[];
   step: "scorer" | "assist";
@@ -134,6 +140,9 @@ export function MatchLiveManager() {
   const [reportEnabled, setReportEnabled] = useState(false);
   const [promptQueue, setPromptQueue] = useState<GoalPromptState[]>([]);
   const [isResolvingRecoveryAction, setIsResolvingRecoveryAction] = useState(false);
+  const [isEndingMatch, setIsEndingMatch] = useState(false);
+  const [endMatchDone, setEndMatchDone] = useState(false);
+  const endedMatchIdRef = useRef<string | null>(null);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -257,7 +266,7 @@ export function MatchLiveManager() {
       }
 
       setPromptQueue((previous) => previous.slice(1));
-    }, 5000);
+    }, 10000);
 
     return () => {
       window.clearTimeout(timeout);
@@ -382,6 +391,8 @@ export function MatchLiveManager() {
     setSelectedBenchId(null);
   };
 
+  const liveEvents = liveMatch?.events ?? [];
+
   const handleStart = () => {
     matchClock.start();
   };
@@ -406,8 +417,12 @@ export function MatchLiveManager() {
     }
 
     setError(null);
+    setIsEndingMatch(true);
 
     const storedSetup = getStoredMatchSetup();
+    const finalTeamScore = liveMatch?.teamScore ?? 0;
+    const finalOpponentScore = liveMatch?.opponentScore ?? 0;
+    const matchIdToEnd = activeMatchId;
 
     setLiveMatch((previous) =>
       previous ? endLiveMatch(previous, Date.now()) : previous
@@ -419,16 +434,16 @@ export function MatchLiveManager() {
     }
 
     void (async () => {
-      if (activeMatchId) {
-        const response = await fetch(`/api/matches/${encodeURIComponent(activeMatchId)}`, {
+      if (matchIdToEnd) {
+        const response = await fetch(`/api/matches/${encodeURIComponent(matchIdToEnd)}`, {
           method: "PATCH",
           headers: {
             "content-type": "application/json",
           },
           body: JSON.stringify({
             status: "completed",
-            scoreFor: liveMatch?.teamScore ?? 0,
-            scoreAgainst: liveMatch?.opponentScore ?? 0,
+            scoreFor: finalTeamScore,
+            scoreAgainst: finalOpponentScore,
             reportEnabled,
           }),
         });
@@ -436,11 +451,23 @@ export function MatchLiveManager() {
         if (!response.ok) {
           const payload = (await response.json()) as { message?: string };
           setError(payload.message ?? t("errors.endFailed"));
+          setIsEndingMatch(false);
           return;
         }
       }
 
       await refreshActiveMatch();
+      setEndMatchDone(true);
+      endedMatchIdRef.current = matchIdToEnd;
+
+      // Brief pause so user sees the "Done!" state, then navigate to report
+      window.setTimeout(() => {
+        if (matchIdToEnd) {
+          router.push(`/match/${encodeURIComponent(matchIdToEnd)}`);
+        } else {
+          router.push("/historikk");
+        }
+      }, 1200);
     })();
 
     clearSelection();
@@ -451,9 +478,27 @@ export function MatchLiveManager() {
       return;
     }
 
+    const outPlayer = playersById.get(selectedFieldId);
+    const inPlayer = playersById.get(selectedBenchId);
+    const minute = liveMatch ? Math.floor(elapsedSeconds / 60) : null;
+    const timestampMs = liveMatch ? elapsedSeconds * 1000 : null;
+
     setLiveMatch((previous) =>
       previous
-        ? substitutePlayers(previous, selectedFieldId, selectedBenchId, Date.now())
+        ? {
+            ...substitutePlayers(previous, selectedFieldId, selectedBenchId, Date.now()),
+            events: [
+              ...previous.events,
+              createSubstitutionEvent({
+                minute,
+                timestampMs,
+                inPlayerId: selectedBenchId,
+                inPlayerName: inPlayer?.name ?? null,
+                outPlayerId: selectedFieldId,
+                outPlayerName: outPlayer?.name ?? null,
+              }),
+            ],
+          }
         : previous
     );
 
@@ -465,14 +510,30 @@ export function MatchLiveManager() {
       return;
     }
 
+    const minute = liveMatch ? Math.floor(elapsedSeconds / 60) : null;
+    const timestampMs = liveMatch ? elapsedSeconds * 1000 : null;
+
     setLiveMatch((previous) =>
       previous
-        ? substitutePlayers(
-            previous,
-            suggestion.outgoingPlayerId,
-            suggestion.incomingPlayerId,
-            Date.now()
-          )
+        ? {
+            ...substitutePlayers(
+              previous,
+              suggestion.outgoingPlayerId,
+              suggestion.incomingPlayerId,
+              Date.now()
+            ),
+            events: [
+              ...previous.events,
+              createSubstitutionEvent({
+                minute,
+                timestampMs,
+                inPlayerId: suggestion.incomingPlayerId,
+                inPlayerName: suggestedIncomingPlayer?.name ?? null,
+                outPlayerId: suggestion.outgoingPlayerId,
+                outPlayerName: suggestedOutgoingPlayer?.name ?? null,
+              }),
+            ],
+          }
         : previous
     );
 
@@ -484,7 +545,7 @@ export function MatchLiveManager() {
     router.push("/match/setup");
   };
 
-  const createGoalEvent = async (
+  const createGoalEventOnServer = async (
     type: "goal_for" | "goal_against",
     minute: number | null
   ) => {
@@ -531,7 +592,7 @@ export function MatchLiveManager() {
     });
   };
 
-  const queueGoalPrompt = (eventId: string, minute: number | null) => {
+  const queueGoalPrompt = (eventId: string | null, localEventId: string, minute: number | null) => {
     if (!liveMatch) {
       return;
     }
@@ -545,6 +606,7 @@ export function MatchLiveManager() {
       ...previous,
       {
         eventId,
+        localEventId,
         minute,
         options,
         step: "scorer",
@@ -562,11 +624,27 @@ export function MatchLiveManager() {
 
     const player = playerId ? current.options.find((option) => option.id === playerId) : null;
 
-    void patchGoalEvent(current.eventId, {
-      primaryPlayerId: playerId,
-      payload: {
-        primaryPlayerName: player?.name ?? null,
-      },
+    if (current.eventId) {
+      void patchGoalEvent(current.eventId, {
+        primaryPlayerId: playerId,
+        payload: {
+          primaryPlayerName: player?.name ?? null,
+        },
+      });
+    }
+
+    setLiveMatch((previous) => {
+      if (!previous) {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        events: updateGoalEventContributors(previous.events, current.localEventId, {
+          scorerPlayerId: playerId,
+          scorerName: player?.name ?? null,
+        }),
+      };
     });
 
     setPromptQueue((previous) => {
@@ -595,44 +673,142 @@ export function MatchLiveManager() {
 
     const player = playerId ? current.options.find((option) => option.id === playerId) : null;
 
-    void patchGoalEvent(current.eventId, {
-      secondaryPlayerId: playerId,
-      payload: {
-        primaryPlayerName: current.scorerName,
-        secondaryPlayerName: player?.name ?? null,
-      },
+    if (current.eventId) {
+      void patchGoalEvent(current.eventId, {
+        secondaryPlayerId: playerId,
+        payload: {
+          primaryPlayerName: current.scorerName,
+          secondaryPlayerName: player?.name ?? null,
+        },
+      });
+    }
+
+    setLiveMatch((previous) => {
+      if (!previous) {
+        return previous;
+      }
+
+      return {
+        ...previous,
+        events: updateGoalEventContributors(previous.events, current.localEventId, {
+          assistPlayerId: playerId,
+          assistName: player?.name ?? null,
+        }),
+      };
     });
 
     setPromptQueue((previous) => previous.slice(1));
   };
 
   const handleTeamScore = (delta: number) => {
-    setLiveMatch((previous) =>
-      previous ? updateScore(previous, "team", delta) : previous
-    );
+    const minute = liveMatch ? Math.floor(elapsedSeconds / 60) : null;
+    const timestampMs = liveMatch ? elapsedSeconds * 1000 : null;
+
+    const localGoalEvent =
+      delta > 0
+        ? createGoalEvent({
+            minute,
+            timestampMs,
+            teamSide: "own",
+          })
+        : null;
+
+    setLiveMatch((previous) => {
+      if (!previous) {
+        return previous;
+      }
+
+      const next = updateScore(previous, "team", delta);
+
+      if (delta > 0 && localGoalEvent) {
+        return {
+          ...next,
+          events: [...previous.events, localGoalEvent],
+        };
+      }
+
+      if (delta < 0) {
+        const removableIndex = [...previous.events]
+          .map((event, index) => ({ event, index }))
+          .reverse()
+          .find(({ event }) => event.type === "goal" && event.teamSide === "own")?.index;
+
+        if (removableIndex === undefined) {
+          return next;
+        }
+
+        return {
+          ...next,
+          events: previous.events.filter((_, index) => index !== removableIndex),
+        };
+      }
+
+      return next;
+    });
 
     if (delta > 0) {
-      const minute = liveMatch ? Math.floor(elapsedSeconds / 60) : null;
       void (async () => {
-        const eventId = await createGoalEvent("goal_for", minute);
+        const eventId = await createGoalEventOnServer("goal_for", minute);
 
-        if (!eventId || !reportEnabled) {
+        if (!reportEnabled) {
           return;
         }
 
-        queueGoalPrompt(eventId, minute);
+        if (!localGoalEvent) {
+          return;
+        }
+
+        queueGoalPrompt(eventId, localGoalEvent.id, minute);
       })();
     }
   };
 
   const handleOpponentScore = (delta: number) => {
-    setLiveMatch((previous) =>
-      previous ? updateScore(previous, "opponent", delta) : previous
-    );
+    const minute = liveMatch ? Math.floor(elapsedSeconds / 60) : null;
+    const timestampMs = liveMatch ? elapsedSeconds * 1000 : null;
+
+    setLiveMatch((previous) => {
+      if (!previous) {
+        return previous;
+      }
+
+      const next = updateScore(previous, "opponent", delta);
+
+      if (delta > 0) {
+        return {
+          ...next,
+          events: [
+            ...previous.events,
+            createGoalEvent({
+              minute,
+              timestampMs,
+              teamSide: "opponent",
+            }),
+          ],
+        };
+      }
+
+      if (delta < 0) {
+        const removableIndex = [...previous.events]
+          .map((event, index) => ({ event, index }))
+          .reverse()
+          .find(({ event }) => event.type === "goal" && event.teamSide === "opponent")?.index;
+
+        if (removableIndex === undefined) {
+          return next;
+        }
+
+        return {
+          ...next,
+          events: previous.events.filter((_, index) => index !== removableIndex),
+        };
+      }
+
+      return next;
+    });
 
     if (delta > 0) {
-      const minute = liveMatch ? Math.floor(elapsedSeconds / 60) : null;
-      void createGoalEvent("goal_against", minute);
+      void createGoalEventOnServer("goal_against", minute);
     }
   };
 
@@ -677,7 +853,7 @@ export function MatchLiveManager() {
                 </FpButton>
               </Link>
               <FpButton
-                variant="secondary"
+                variant="danger"
                 size="md"
                 fullWidth
                 disabled={isResolvingRecoveryAction}
@@ -698,7 +874,7 @@ export function MatchLiveManager() {
                 {t("recovery.end")}
               </FpButton>
               <FpButton
-                variant="ghost"
+                variant="danger"
                 size="md"
                 fullWidth
                 disabled={isResolvingRecoveryAction}
@@ -764,54 +940,110 @@ export function MatchLiveManager() {
           <AppCard className="space-y-3 p-4">
             <p className="text-sm font-semibold text-foreground">{t("score.title")}</p>
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl border border-fp-border bg-fp-surface-2 p-3 text-center">
+              {/* Team score */}
+              <div className="flex flex-col items-center gap-2 rounded-xl border border-fp-border bg-fp-surface-2 p-3">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">
                   {t("score.team")}
                 </p>
-                <p className="mt-1 text-2xl font-bold text-foreground">{liveMatch.teamScore}</p>
-                <div className="mt-2 flex items-center justify-center gap-2">
+                <p className="text-4xl font-bold tabular-nums text-foreground">{liveMatch.teamScore}</p>
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    className="tap-target rounded-lg border border-fp-border bg-background px-2 py-1 text-sm"
+                    aria-label={t("score.decreaseTeam")}
+                    className="flex h-12 w-12 items-center justify-center rounded-xl border border-fp-border bg-background transition-colors active:bg-fp-surface-2 disabled:opacity-40"
                     onClick={() => handleTeamScore(-1)}
+                    disabled={liveMatch.teamScore === 0 || liveMatch.status === "ended"}
                   >
-                    -
+                    <Minus size={20} />
                   </button>
                   <button
                     type="button"
-                    className="tap-target rounded-lg border border-fp-border bg-background px-2 py-1 text-sm"
+                    aria-label={t("score.increaseTeam")}
+                    className="flex h-12 w-12 items-center justify-center rounded-xl border border-primary/40 bg-primary/10 text-primary transition-colors active:bg-primary/20 disabled:opacity-40"
                     onClick={() => handleTeamScore(1)}
+                    disabled={liveMatch.status === "ended"}
                   >
-                    +
+                    <Plus size={20} />
                   </button>
                 </div>
+                {/* Recent team events */}
+                {liveEvents.filter((e) => e.type === "goal" && e.teamSide === "own").length > 0 && (
+                  <div className="w-full space-y-0.5 border-t border-fp-border pt-2">
+                    {liveEvents
+                      .filter((e) => e.type === "goal" && e.teamSide === "own")
+                      .slice(-4)
+                      .map((ev) => (
+                        <p key={ev.id} className="text-center text-[10px] text-muted-foreground">
+                          {ev.minute !== null ? `${ev.minute}'` : "–"}
+                          {ev.type === "goal" && ev.scorerName ? ` ${ev.scorerName}` : ""}
+                        </p>
+                      ))}
+                  </div>
+                )}
               </div>
 
-              <div className="rounded-xl border border-fp-border bg-fp-surface-2 p-3 text-center">
+              {/* Opponent score */}
+              <div className="flex flex-col items-center gap-2 rounded-xl border border-fp-border bg-fp-surface-2 p-3">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">
                   {t("score.opponent")}
                 </p>
-                <p className="mt-1 text-2xl font-bold text-foreground">
+                <p className="text-4xl font-bold tabular-nums text-foreground">
                   {liveMatch.opponentScore}
                 </p>
-                <div className="mt-2 flex items-center justify-center gap-2">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    className="tap-target rounded-lg border border-fp-border bg-background px-2 py-1 text-sm"
+                    aria-label={t("score.decreaseOpponent")}
+                    className="flex h-12 w-12 items-center justify-center rounded-xl border border-fp-border bg-background transition-colors active:bg-fp-surface-2 disabled:opacity-40"
                     onClick={() => handleOpponentScore(-1)}
+                    disabled={liveMatch.opponentScore === 0 || liveMatch.status === "ended"}
                   >
-                    -
+                    <Minus size={20} />
                   </button>
                   <button
                     type="button"
-                    className="tap-target rounded-lg border border-fp-border bg-background px-2 py-1 text-sm"
+                    aria-label={t("score.increaseOpponent")}
+                    className="flex h-12 w-12 items-center justify-center rounded-xl border border-fp-border bg-background transition-colors active:bg-fp-surface-2 disabled:opacity-40"
                     onClick={() => handleOpponentScore(1)}
+                    disabled={liveMatch.status === "ended"}
                   >
-                    +
+                    <Plus size={20} />
                   </button>
                 </div>
+                {/* Recent opponent events */}
+                {liveEvents.filter((e) => e.type === "goal" && e.teamSide === "opponent").length > 0 && (
+                  <div className="w-full space-y-0.5 border-t border-fp-border pt-2">
+                    {liveEvents
+                      .filter((e) => e.type === "goal" && e.teamSide === "opponent")
+                      .slice(-4)
+                      .map((ev) => (
+                        <p key={ev.id} className="text-center text-[10px] text-muted-foreground">
+                          {ev.minute !== null ? `${ev.minute}'` : "–"}
+                        </p>
+                      ))}
+                  </div>
+                )}
               </div>
             </div>
+
+            {/* Substitution events */}
+            {liveEvents.filter((e) => e.type === "substitution").length > 0 && (
+              <div className="space-y-1 border-t border-fp-border pt-2">
+                {liveEvents
+                  .filter((e) => e.type === "substitution")
+                  .slice(-4)
+                  .map((ev) => (
+                    <div key={ev.id} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                      <ArrowRightLeft size={10} className="shrink-0" />
+                      <span>
+                        {ev.minute !== null ? `${ev.minute}' ` : ""}
+                        {ev.type === "substitution" ? ev.inPlayerName ?? "" : ""}
+                        {ev.type === "substitution" && ev.outPlayerName ? ` ← ${ev.outPlayerName}` : ""}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            )}
           </AppCard>
         </motion.div>
 
@@ -1011,6 +1243,46 @@ export function MatchLiveManager() {
           </AppCard>
         </div>
       ) : null}
+
+      <AnimatePresence>
+        {isEndingMatch && (
+          <motion.div
+            key="ending-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-background/95 backdrop-blur-sm"
+          >
+            {endMatchDone ? (
+              <motion.div
+                key="done"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="flex flex-col items-center gap-3 text-center"
+              >
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Play size={32} fill="currentColor" />
+                </div>
+                <p className="text-xl font-bold text-foreground">{t("endingSequence.done")}</p>
+                <p className="text-sm text-muted-foreground">{t("endingSequence.subtitle")}</p>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="loading"
+                className="flex flex-col items-center gap-3 text-center"
+              >
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
+                  className="h-10 w-10 rounded-full border-2 border-fp-border border-t-primary"
+                />
+                <p className="text-lg font-semibold text-foreground">{t("endingSequence.title")}</p>
+                <p className="text-sm text-muted-foreground">{t("endingSequence.subtitle")}</p>
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </PageShell>
   );
 }

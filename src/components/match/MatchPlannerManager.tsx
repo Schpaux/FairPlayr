@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { CalendarClock, MapPin, ShieldAlert, PlusCircle, ExternalLink } from "lucide-react";
+import { CalendarClock, MapPin, ShieldAlert, PlusCircle, ExternalLink, Link2Off, RefreshCcw } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -128,14 +128,6 @@ export function MatchPlannerManager() {
     () =>
       matches
         .filter((match) => match.status === "live")
-        .sort((a, b) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime()),
-    [matches]
-  );
-
-  const historyMatches = useMemo(
-    () =>
-      matches
-        .filter((match) => match.status === "completed")
         .sort((a, b) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime()),
     [matches]
   );
@@ -401,31 +393,6 @@ export function MatchPlannerManager() {
     }
   };
 
-  const handleDeleteMatch = async (matchId: string) => {
-    if (!window.confirm(t("delete.confirm"))) {
-      return;
-    }
-
-    setError(null);
-    setNotice(null);
-
-    try {
-      const response = await fetch(`/api/matches/${encodeURIComponent(matchId)}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok && response.status !== 204) {
-        const payload = (await response.json()) as unknown;
-        const parsed = parseApiError(payload);
-        throw new Error(parsed.message);
-      }
-
-      setMatches((previous) => previous.filter((match) => match.id !== matchId));
-      setNotice(t("delete.success"));
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t("errors.generic"));
-    }
-  };
 
   if (!isHydrated || auth.status === "loading" || workspace.isLoading) {
     return (
@@ -519,36 +486,31 @@ export function MatchPlannerManager() {
             {common("loading")}
           </div>
         ) : (
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            className={
-              entryMode === "manual"
-                ? "tap-target rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary"
-                : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-xs font-semibold text-muted-foreground"
-            }
-            onClick={() => setEntryMode("manual")}
-          >
-            {t("mode.manual")}
-          </button>
-          <button
-            type="button"
-            className={
-              entryMode === "spond"
-                ? "tap-target rounded-xl border border-fp-spond-border bg-fp-spond-soft px-3 py-2 text-xs font-semibold text-fp-spond-foreground"
-                : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-xs font-semibold text-muted-foreground"
-            }
-            onClick={() => setEntryMode("spond")}
-            disabled={!hasSpondLink}
-          >
-            {t("mode.spond")}
-          </button>
-        </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className={
+                entryMode === "manual"
+                  ? "tap-target rounded-xl border border-primary/30 bg-primary/10 px-3 py-2.5 text-xs font-semibold text-primary"
+                  : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2.5 text-xs font-semibold text-muted-foreground"
+              }
+              onClick={() => setEntryMode("manual")}
+            >
+              {t("mode.manual")}
+            </button>
+            <button
+              type="button"
+              className={
+                entryMode === "spond"
+                  ? "tap-target rounded-xl border border-fp-spond-border bg-fp-spond-soft px-3 py-2.5 text-xs font-semibold text-fp-spond-foreground"
+                  : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2.5 text-xs font-semibold text-muted-foreground"
+              }
+              onClick={() => setEntryMode("spond")}
+            >
+              {t("mode.spond")}
+            </button>
+          </div>
         )}
-
-        {!hasSpondLink ? (
-          <p className="text-xs text-muted-foreground">{t("mode.spondHint")}</p>
-        ) : null}
 
         {isResolvingEntryMode ? (
           <p className="text-xs text-muted-foreground">{common("loading")}</p>
@@ -622,8 +584,105 @@ export function MatchPlannerManager() {
               </FpButton>
             </form>
           </>
+        ) : hasSpondLink ? (
+          /* Spond mode — show events or empty state */
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                {t("spondTitle")}
+              </p>
+              <FpButton
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  void loadEvents().catch((cause) => {
+                    setError(cause instanceof Error ? cause.message : t("errors.generic"));
+                  });
+                }}
+                disabled={isLoadingEvents}
+              >
+                <RefreshCcw size={13} />
+                {isLoadingEvents ? t("syncEventsLoading") : t("syncEventsCta")}
+              </FpButton>
+            </div>
+
+            <p className="text-[11px] text-muted-foreground">
+              {t("lastEventsSync", { value: formatSyncedAt(eventsLastSyncedAt) })}
+            </p>
+
+            {isLoadingEvents ? (
+              <p className="text-xs text-muted-foreground">{common("loading")}</p>
+            ) : events.length === 0 ? (
+              <div className="rounded-xl border border-fp-border bg-fp-surface-2 p-4 text-center space-y-2">
+                <p className="text-sm font-semibold text-foreground">{t("mode.spondNoEventsTitle")}</p>
+                <p className="text-xs text-muted-foreground">{t("mode.spondNoEventsHint")}</p>
+                <FpButton
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    void loadEvents().catch((cause) => {
+                      setError(cause instanceof Error ? cause.message : t("errors.generic"));
+                    });
+                  }}
+                  disabled={isLoadingEvents}
+                >
+                  {t("syncEventsCta")}
+                </FpButton>
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {events.map((event) => (
+                  <li key={event.externalId} className="rounded-xl border border-fp-border bg-fp-surface-2 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 space-y-1">
+                        <p className="text-sm font-semibold text-foreground truncate">{event.title}</p>
+                        <p className="text-xs text-muted-foreground">{formatDate(event.startsAt)}</p>
+                        {event.location ? (
+                          <p className="text-xs text-muted-foreground">{event.location}</p>
+                        ) : null}
+                      </div>
+                      {event.importedMatchId ? (
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="rounded-full border border-fp-spond-border bg-fp-spond-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-spond-foreground">
+                            {t("alreadyImported")}
+                          </span>
+                          <Link href={`/match/${event.importedMatchId}`}>
+                            <span className="text-xs font-medium text-primary">{t("openMatch")}</span>
+                          </Link>
+                        </div>
+                      ) : (
+                        <FpButton
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          disabled={loadingEventId === event.externalId}
+                          onClick={() => {
+                            void handleImportEvent(event.externalId);
+                          }}
+                        >
+                          {loadingEventId === event.externalId ? t("importing") : t("importCta")}
+                        </FpButton>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         ) : (
-          <p className="text-xs text-muted-foreground">{t("mode.spondActiveHint")}</p>
+          /* Spond mode selected, but no link configured */
+          <div className="rounded-xl border border-fp-border bg-fp-surface-2 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Link2Off size={16} className="text-muted-foreground shrink-0" />
+              <p className="text-sm font-semibold text-foreground">{t("mode.spondNotLinkedTitle")}</p>
+            </div>
+            <p className="text-xs text-muted-foreground">{t("mode.spondNotLinkedHint")}</p>
+            <Link href="/settings">
+              <FpButton variant="secondary" size="sm">{t("mode.spondGoToSettings")}</FpButton>
+            </Link>
+          </div>
         )}
       </AppCard>
 
@@ -654,7 +713,7 @@ export function MatchPlannerManager() {
               </FpButton>
             </div>
             <FpButton
-              variant="ghost"
+              variant="danger"
               size="sm"
               fullWidth
               disabled={isResolvingActiveAction}
@@ -742,126 +801,13 @@ export function MatchPlannerManager() {
         )}
       </AppCard>
 
-      <AppCard className="space-y-3 p-4">
-        <h3 className="text-sm font-semibold text-foreground">{t("historyTitle")}</h3>
-
-        {isLoadingMatches ? (
-          <p className="text-xs text-muted-foreground">{common("loading")}</p>
-        ) : historyMatches.length === 0 ? (
-          <p className="text-xs text-muted-foreground">{t("historyEmpty")}</p>
-        ) : (
-          <ul className="space-y-2">
-            {historyMatches.map((match) => (
-              <li key={match.id} className="rounded-xl border border-fp-border bg-fp-surface-2 p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 space-y-1">
-                    <p className="text-sm font-semibold text-foreground truncate">{match.opponentName ? `${match.title} - ${match.opponentName}` : match.title}</p>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <CalendarClock size={12} />
-                      {formatDate(match.startsAt)}
-                    </p>
-                    <p className="text-sm font-semibold text-foreground">
-                      {t("resultLabel", {
-                        scoreFor: match.scoreFor ?? 0,
-                        scoreAgainst: match.scoreAgainst ?? 0,
-                      })}
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    {match.reportStatus === "ready" ? (
-                      <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
-                        {t("reportBadge")}
-                      </span>
-                    ) : null}
-                    <Link href={`/match/${match.id}`}>
-                      <span className="text-xs font-medium text-primary">{t("openMatch")}</span>
-                    </Link>
-                    <button
-                      type="button"
-                      className="text-xs font-medium text-danger"
-                      onClick={() => {
-                        void handleDeleteMatch(match.id);
-                      }}
-                    >
-                      {t("delete.cta")}
-                    </button>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </AppCard>
-
-      {hasSpondLink ? (
-      <AppCard className="space-y-3 p-4">
-        <div className="flex items-center justify-between gap-2">
-          <div className="space-y-1">
-            <h3 className="text-sm font-semibold text-foreground">{t("spondTitle")}</h3>
-            <p className="text-xs text-muted-foreground">
-              {t("lastEventsSync", { value: formatSyncedAt(eventsLastSyncedAt) })}
-            </p>
-          </div>
-          <FpButton
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              void loadEvents().catch((cause) => {
-                setError(cause instanceof Error ? cause.message : t("errors.generic"));
-              });
-            }}
-            disabled={isLoadingEvents}
-          >
-            {isLoadingEvents ? t("syncEventsLoading") : t("syncEventsCta")}
+      <AppCard className="p-3">
+        <Link href="/historikk">
+          <FpButton variant="secondary" size="md" fullWidth>
+            {t("goToHistory")}
           </FpButton>
-        </div>
-
-        {isLoadingEvents ? (
-          <p className="text-xs text-muted-foreground">{common("loading")}</p>
-        ) : events.length === 0 ? (
-          <p className="text-xs text-muted-foreground">{t("noEvents")}</p>
-        ) : (
-          <ul className="space-y-2">
-            {events.map((event) => (
-              <li key={event.externalId} className="rounded-xl border border-fp-border bg-fp-surface-2 p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 space-y-1">
-                    <p className="text-sm font-semibold text-foreground truncate">{event.title}</p>
-                    <p className="text-xs text-muted-foreground">{formatDate(event.startsAt)}</p>
-                    {event.location ? (
-                      <p className="text-xs text-muted-foreground">{event.location}</p>
-                    ) : null}
-                  </div>
-                  {event.importedMatchId ? (
-                    <div className="flex flex-col items-end gap-1">
-                      <span className="rounded-full border border-fp-spond-border bg-fp-spond-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-spond-foreground">
-                        {t("alreadyImported")}
-                      </span>
-                      <Link href={`/match/${event.importedMatchId}`}>
-                        <span className="text-xs font-medium text-primary">{t("openMatch")}</span>
-                      </Link>
-                    </div>
-                  ) : (
-                    <FpButton
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      disabled={loadingEventId === event.externalId}
-                      onClick={() => {
-                        void handleImportEvent(event.externalId);
-                      }}
-                    >
-                      {loadingEventId === event.externalId ? t("importing") : t("importCta")}
-                    </FpButton>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+        </Link>
       </AppCard>
-      ) : null}
     </PageShell>
   );
 }

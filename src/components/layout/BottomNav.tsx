@@ -2,14 +2,14 @@
 
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
-import { Home, Users, Play, LayoutGrid, Settings } from "lucide-react";
+import { Home, Users, Play, History, Settings } from "lucide-react";
 import { motion } from "framer-motion";
 
 const navItems = [
   { href: "/" as const, icon: Home, labelKey: "home" },
   { href: "/team" as const, icon: Users, labelKey: "team" },
   { href: "/match" as const, icon: Play, labelKey: "match" },
-  { href: "/lineup" as const, icon: LayoutGrid, labelKey: "lineup" },
+  { href: "/historikk" as const, icon: History, labelKey: "historikk" },
   { href: "/settings" as const, icon: Settings, labelKey: "settings" },
 ] as const;
 

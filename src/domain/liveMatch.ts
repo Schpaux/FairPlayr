@@ -1,4 +1,9 @@
 import type { MatchSetup } from "@/domain/match";
+import {
+  createMatchEndedEvent,
+  createMatchStartedEvent,
+  type MatchEvent,
+} from "@/domain/matchEvent";
 
 export type LiveMatchStatus = "not_started" | "running" | "paused" | "ended";
 export type LiveMatchPhase = "first_half" | "half_time" | "second_half" | "full_time";
@@ -24,6 +29,8 @@ export interface LiveMatchState {
   status: LiveMatchStatus;
   teamScore: number;
   opponentScore: number;
+  /** Starting XI — captured at match creation, never mutated. Used by match report. */
+  initialOnFieldPlayerIds: string[];
   onFieldPlayerIds: string[];
   benchPlayerIds: string[];
   playerAccumulatedMs: Record<string, number>;
@@ -32,6 +39,7 @@ export interface LiveMatchState {
   endedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  events: MatchEvent[];
 }
 
 function nowIso() {
@@ -180,6 +188,8 @@ export function createLiveMatchFromSetup(setup: MatchSetup): LiveMatchState {
   const regularSecondsPerHalf =
     halves === 2 ? setup.duration.minutesPerHalf * 60 : durationSeconds;
 
+  const startingPlayerIds = [...setup.startingPlayerIds];
+
   return {
     id: generateId(),
     setupId: setup.id,
@@ -199,7 +209,8 @@ export function createLiveMatchFromSetup(setup: MatchSetup): LiveMatchState {
     status: "not_started",
     teamScore: 0,
     opponentScore: 0,
-    onFieldPlayerIds: [...setup.startingPlayerIds],
+    initialOnFieldPlayerIds: startingPlayerIds,
+    onFieldPlayerIds: startingPlayerIds,
     benchPlayerIds: setup.selectedPlayerIds.filter(
       (playerId) => !setup.startingPlayerIds.includes(playerId)
     ),
@@ -209,6 +220,7 @@ export function createLiveMatchFromSetup(setup: MatchSetup): LiveMatchState {
     endedAt: null,
     createdAt: timestamp,
     updatedAt: timestamp,
+    events: [],
   };
 }
 
@@ -241,6 +253,16 @@ export function startLiveMatch(state: LiveMatchState, nowMs: number): LiveMatchS
   const nextPhase = state.phase === "half_time" ? "second_half" : state.phase;
   const nextHalf = state.phase === "half_time" ? 2 : state.currentHalf;
   const normalized = normalizePlayerState(state, elapsedMs);
+  const shouldRecordStart = normalized.startedAt === null;
+  const nextEvents = shouldRecordStart
+    ? [
+        ...normalized.events,
+        createMatchStartedEvent({
+          minute: Math.floor(elapsedMs / 60000),
+          timestampMs: elapsedMs,
+        }),
+      ]
+    : normalized.events;
 
   const nextState: LiveMatchState = {
     ...normalized,
@@ -251,6 +273,7 @@ export function startLiveMatch(state: LiveMatchState, nowMs: number): LiveMatchS
     clock: startClock(normalized.clock, nowMs),
     startedAt: normalized.startedAt ?? nowIso(),
     updatedAt: nowIso(),
+    events: nextEvents,
   };
 
   return withUpdatedStatus(nextState);
@@ -295,6 +318,16 @@ export function endLiveMatch(state: LiveMatchState, nowMs: number): LiveMatchSta
   const elapsedMs = getElapsedMs(state, nowMs);
   const normalized = normalizePlayerState(state, elapsedMs);
   const pausedClock = pauseClock(normalized.clock, nowMs);
+  const hasEndedEvent = normalized.events.some((event) => event.type === "match_ended");
+  const nextEvents = hasEndedEvent
+    ? normalized.events
+    : [
+        ...normalized.events,
+        createMatchEndedEvent({
+          minute: Math.floor(elapsedMs / 60000),
+          timestampMs: elapsedMs,
+        }),
+      ];
 
   return {
     ...normalized,
@@ -307,6 +340,7 @@ export function endLiveMatch(state: LiveMatchState, nowMs: number): LiveMatchSta
     },
     endedAt: normalized.endedAt ?? nowIso(),
     updatedAt: nowIso(),
+    events: nextEvents,
   };
 }
 
@@ -480,6 +514,10 @@ export function reconcileLiveMatchWithSquad(
 
   return {
     ...state,
+    // Preserve original starting XI — never overwrite with reconciled data
+    initialOnFieldPlayerIds: state.initialOnFieldPlayerIds.length > 0
+      ? state.initialOnFieldPlayerIds
+      : onFieldPlayerIds,
     onFieldPlayerIds,
     benchPlayerIds: nextBench,
     playerAccumulatedMs: nextPlaytimeMs,

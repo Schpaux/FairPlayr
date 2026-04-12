@@ -1,7 +1,11 @@
 import type { LiveMatchState, MatchClockBasis } from "@/domain/liveMatch";
+import {
+  migrateLegacyLiveEvents,
+  normalizeMatchEvents,
+} from "@/domain/matchEvent";
 
 const LIVE_MATCH_STORAGE_KEY = "fairplayr.liveMatch.v1";
-const STORAGE_VERSION = 3;
+const STORAGE_VERSION = 4;
 
 interface LiveMatchStorageEnvelope {
   version: number;
@@ -234,6 +238,15 @@ function toValidLiveMatch(value: unknown): LiveMatchState | null {
     }
   }
 
+  // initialOnFieldPlayerIds: added later — fall back to current onFieldPlayerIds for old records
+  const initialOnFieldPlayerIds = readStringArray(value.initialOnFieldPlayerIds).length > 0
+    ? readStringArray(value.initialOnFieldPlayerIds)
+    : onFieldPlayerIds;
+
+  const storedEvents = normalizeMatchEvents(value.events);
+  const legacyLiveEvents = migrateLegacyLiveEvents(value.liveEvents);
+  const events = storedEvents.length > 0 ? storedEvents : legacyLiveEvents;
+
   return {
     id,
     setupId,
@@ -250,6 +263,7 @@ function toValidLiveMatch(value: unknown): LiveMatchState | null {
     status,
     teamScore,
     opponentScore,
+    initialOnFieldPlayerIds,
     onFieldPlayerIds,
     benchPlayerIds,
     playerAccumulatedMs,
@@ -258,6 +272,7 @@ function toValidLiveMatch(value: unknown): LiveMatchState | null {
     endedAt: readString(value.endedAt),
     createdAt,
     updatedAt,
+    events,
   };
 }
 
@@ -382,6 +397,8 @@ function migrateLegacyLiveMatch(legacy: LegacyLiveMatch): LiveMatchState {
     status: legacy.status,
     teamScore: legacy.teamScore,
     opponentScore: legacy.opponentScore,
+    // Legacy records have no initialOnFieldPlayerIds — best effort: use current onField
+    initialOnFieldPlayerIds: [...legacy.onFieldPlayerIds],
     onFieldPlayerIds: legacy.onFieldPlayerIds,
     benchPlayerIds: legacy.benchPlayerIds,
     playerAccumulatedMs,
@@ -390,6 +407,7 @@ function migrateLegacyLiveMatch(legacy: LegacyLiveMatch): LiveMatchState {
     endedAt: legacy.endedAt,
     createdAt: legacy.createdAt,
     updatedAt: legacy.updatedAt,
+    events: [],
   };
 }
 
@@ -427,7 +445,15 @@ export function getStoredLiveMatch(): LiveMatchState | null {
       return null;
     }
 
-    const normalized = normalizeLiveMatchState(parsed.liveMatch);
+    const liveMatchRecord = parsed.liveMatch as unknown;
+    const envelopeRecord = parsed as unknown as Record<string, unknown>;
+
+    const liveMatchInput =
+      isRecord(liveMatchRecord) && "liveEvents" in envelopeRecord && !("events" in liveMatchRecord)
+        ? { ...liveMatchRecord, liveEvents: envelopeRecord.liveEvents }
+        : parsed.liveMatch;
+
+    const normalized = normalizeLiveMatchState(liveMatchInput);
 
     if (!normalized) {
       return null;

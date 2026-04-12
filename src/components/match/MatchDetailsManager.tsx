@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { ShieldAlert } from "lucide-react";
+import { ArrowLeftRight, Loader2, ShieldAlert, Sparkles, Users } from "lucide-react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useActiveMatch } from "@/components/providers/ActiveMatchProvider";
@@ -13,6 +13,26 @@ import { AppCard } from "@/components/ui/AppCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FpButton } from "@/components/ui/FpButton";
 import type { Player } from "@/domain/team";
+import {
+  createGoalEvent,
+  createMatchEndedEvent,
+  createMatchStartedEvent,
+  createSubstitutionEvent,
+  normalizeMatchEvents,
+  type MatchEvent,
+} from "@/domain/matchEvent";
+
+interface MatchRuntimeState {
+  initialOnFieldPlayerIds?: string[];
+  onFieldPlayerIds?: string[];
+  benchPlayerIds?: string[];
+  events?: unknown;
+}
+
+type TimelineEvent = MatchEvent & {
+  source: "runtime" | "server";
+  serverEventId: string | null;
+};
 
 interface MatchDetails {
   id: string;
@@ -34,6 +54,7 @@ interface MatchDetails {
   reportStatus: "not_requested" | "pending" | "ready" | "failed";
   reportText: string | null;
   reportGeneratedAt?: string | null;
+  runtimeState?: MatchRuntimeState | null;
 }
 
 interface MatchEventItem {
@@ -116,7 +137,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
     return new Map(playerOptions.map((player) => [player.id, player]));
   }, [playerOptions]);
 
-  const sortedEvents = useMemo(() => {
+  const sortedServerEvents = useMemo(() => {
     return [...events].sort((a, b) => {
       const aTime = a.timestampMs ?? Number.MAX_SAFE_INTEGER;
       const bTime = b.timestampMs ?? Number.MAX_SAFE_INTEGER;
@@ -127,6 +148,109 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
       return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
     });
   }, [events]);
+
+  const timelineEvents = useMemo<TimelineEvent[]>(() => {
+    const runtimeEvents = normalizeMatchEvents(match?.runtimeState?.events);
+
+    if (runtimeEvents.length > 0) {
+      const runtimeTimeline: TimelineEvent[] = runtimeEvents
+        .map((event) => ({ ...event, source: "runtime" as const, serverEventId: null }))
+        .sort((a, b) => {
+          const aTime = a.timestampMs ?? Number.MAX_SAFE_INTEGER;
+          const bTime = b.timestampMs ?? Number.MAX_SAFE_INTEGER;
+          if (aTime !== bTime) {
+            return aTime - bTime;
+          }
+
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        });
+
+      return runtimeTimeline;
+    }
+
+    return sortedServerEvents.flatMap<TimelineEvent>((event) => {
+        if (event.type === "goal_for") {
+          return [{
+            ...createGoalEvent({
+              id: event.id,
+              minute: event.minute,
+              timestampMs: event.timestampMs,
+              createdAt: event.createdAt,
+              teamSide: "own",
+              scorerPlayerId: event.primaryPlayerId,
+              scorerName: payloadName(event.payload, "primaryPlayerName"),
+              assistPlayerId: event.secondaryPlayerId,
+              assistName: payloadName(event.payload, "secondaryPlayerName"),
+            }),
+            source: "server" as const,
+            serverEventId: event.id,
+          }];
+        }
+
+        if (event.type === "goal_against") {
+          return [{
+            ...createGoalEvent({
+              id: event.id,
+              minute: event.minute,
+              timestampMs: event.timestampMs,
+              createdAt: event.createdAt,
+              teamSide: "opponent",
+              scorerPlayerId: event.primaryPlayerId,
+              scorerName: payloadName(event.payload, "primaryPlayerName"),
+              assistPlayerId: event.secondaryPlayerId,
+              assistName: payloadName(event.payload, "secondaryPlayerName"),
+            }),
+            source: "server" as const,
+            serverEventId: event.id,
+          }];
+        }
+
+        if (event.type === "substitution") {
+          return [{
+            ...createSubstitutionEvent({
+              id: event.id,
+              minute: event.minute,
+              timestampMs: event.timestampMs,
+              createdAt: event.createdAt,
+              inPlayerId: event.primaryPlayerId,
+              inPlayerName: payloadName(event.payload, "inPlayerName"),
+              outPlayerId: event.secondaryPlayerId,
+              outPlayerName: payloadName(event.payload, "outPlayerName"),
+            }),
+            source: "server" as const,
+            serverEventId: event.id,
+          }];
+        }
+
+        if (event.type === "period_start") {
+          return [{
+            ...createMatchStartedEvent({
+              id: event.id,
+              minute: event.minute,
+              timestampMs: event.timestampMs,
+              createdAt: event.createdAt,
+            }),
+            source: "server" as const,
+            serverEventId: event.id,
+          }];
+        }
+
+        if (event.type === "period_end") {
+          return [{
+            ...createMatchEndedEvent({
+              id: event.id,
+              minute: event.minute,
+              timestampMs: event.timestampMs,
+              createdAt: event.createdAt,
+            }),
+            source: "server" as const,
+            serverEventId: event.id,
+          }];
+        }
+
+        return [];
+      });
+  }, [match?.runtimeState?.events, sortedServerEvents]);
 
   const formatDate = (value: string | null) => {
     if (!value) {
@@ -144,48 +268,6 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
       timeStyle: "short",
     }).format(date);
   };
-
-  const formatStatus = (status: MatchDetails["status"]) => {
-    if (status === "upcoming") {
-      return t("status.planned");
-    }
-
-    if (status === "live") {
-      return t("status.live");
-    }
-
-    if (status === "completed") {
-      return t("status.completed");
-    }
-
-    return t("status.planned");
-  };
-
-  const scorerLabel = useCallback((event: MatchEventItem) => {
-    const fromPayload = payloadName(event.payload, "primaryPlayerName");
-    if (fromPayload) {
-      return fromPayload;
-    }
-
-    if (event.primaryPlayerId) {
-      return playerById.get(event.primaryPlayerId)?.name ?? t("event.notRegistered");
-    }
-
-    return t("event.notRegistered");
-  }, [playerById, t]);
-
-  const assistLabel = useCallback((event: MatchEventItem) => {
-    const fromPayload = payloadName(event.payload, "secondaryPlayerName");
-    if (fromPayload) {
-      return fromPayload;
-    }
-
-    if (event.secondaryPlayerId) {
-      return playerById.get(event.secondaryPlayerId)?.name ?? t("event.noAssist");
-    }
-
-    return t("event.noAssist");
-  }, [playerById, t]);
 
   useEffect(() => {
     if (auth.status !== "authenticated") {
@@ -407,118 +489,321 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
     );
   }
 
+  const isCompleted = match.status === "completed";
+  const resultBadge = isCompleted
+    ? match.scoreFor > match.scoreAgainst
+      ? { label: t("result.win"), className: "bg-green-500/15 text-green-600 dark:text-green-400" }
+      : match.scoreFor < match.scoreAgainst
+        ? { label: t("result.loss"), className: "bg-danger/10 text-danger" }
+        : { label: t("result.draw"), className: "bg-fp-surface text-muted-foreground" }
+    : null;
+
   return (
     <PageShell className="space-y-4 pb-8">
-      <SectionHeader title={t("detailsTitle")} subtitle={match.title} accent />
+      <SectionHeader
+        title={t("detailsTitle")}
+        subtitle={match.title}
+        accent
+        action={
+          <Link href="/match">
+            <FpButton variant="ghost" size="sm">{t("backToList")}</FpButton>
+          </Link>
+        }
+      />
 
       {notice ? <AppCard className="p-3 text-xs text-fp-accent">{notice}</AppCard> : null}
       {error ? <AppCard className="p-3 text-xs text-danger">{error}</AppCard> : null}
 
-      <AppCard className="space-y-2 p-4">
-        <p className="text-sm font-semibold text-foreground">
-          {match.title} {match.opponentName ? `vs ${match.opponentName}` : ""}
-        </p>
-        <p className="text-xs text-muted-foreground">{t("timeLabel", { value: formatDate(match.startsAt) })}</p>
-        <p className="text-xs text-muted-foreground">{t("locationLabel", { value: match.location ?? t("noLocation") })}</p>
-        <p className="text-xs text-muted-foreground">{t("formatLabel", { value: match.format })}</p>
-        <p className="text-xs text-muted-foreground">{t("statusLabel", { value: formatStatus(match.status) })}</p>
-        <p className="text-lg font-bold text-foreground">{t("resultLabel", { scoreFor: match.scoreFor, scoreAgainst: match.scoreAgainst })}</p>
+      {/* Hero score card */}
+      <AppCard className="p-5">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">{match.opponentName ?? "—"}</p>
+          <div className="flex items-center gap-4">
+            <span className="text-5xl font-black tabular-nums text-foreground">{match.scoreFor}</span>
+            <span className="text-2xl font-light text-muted-foreground">–</span>
+            <span className="text-5xl font-black tabular-nums text-foreground">{match.scoreAgainst}</span>
+          </div>
+          {resultBadge && (
+            <span className={`rounded-full px-3 py-0.5 text-xs font-semibold ${resultBadge.className}`}>
+              {resultBadge.label}
+            </span>
+          )}
+          <div className="mt-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+            <span className="text-[11px] text-muted-foreground">{formatDate(match.startsAt)}</span>
+            {match.location && (
+              <span className="text-[11px] text-muted-foreground">· {match.location}</span>
+            )}
+            <span className="text-[11px] text-muted-foreground">· {match.format}</span>
+          </div>
+        </div>
 
-        <div className="flex flex-wrap gap-2 pt-1">
-          {(match.status === "upcoming" || match.status === "draft") ? (
-            <FpButton
-              type="button"
-              variant="primary"
-              size="sm"
-              disabled={isUpdatingStatus}
-              onClick={() => {
-                void handleStatusChange("live");
-              }}
-            >
-              {isUpdatingStatus ? t("statusUpdating") : t("startMatchCta")}
-            </FpButton>
-          ) : null}
-
-          {match.status === "live" ? (
-            <>
-              <Link href={`/match/live?matchId=${encodeURIComponent(match.id)}`}>
-                <FpButton variant="secondary" size="sm">{t("continueMatchCta")}</FpButton>
-              </Link>
+        {(match.status === "upcoming" || match.status === "draft" || match.status === "live") && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {(match.status === "upcoming" || match.status === "draft") && (
               <FpButton
                 type="button"
-                variant="danger"
-                size="sm"
+                variant="primary"
+                size="md"
+                fullWidth
                 disabled={isUpdatingStatus}
-                onClick={() => {
-                  void handleStatusChange("completed");
-                }}
+                onClick={() => { void handleStatusChange("live"); }}
               >
-                {isUpdatingStatus ? t("statusUpdating") : t("finishMatchCta")}
+                {isUpdatingStatus ? t("statusUpdating") : t("startMatchCta")}
               </FpButton>
-            </>
-          ) : null}
-        </div>
+            )}
+            {match.status === "live" && (
+              <>
+                <Link href={`/match/live?matchId=${encodeURIComponent(match.id)}`} className="flex-1">
+                  <FpButton variant="primary" size="md" fullWidth>{t("continueMatchCta")}</FpButton>
+                </Link>
+                <FpButton
+                  type="button"
+                  variant="danger"
+                  size="md"
+                  disabled={isUpdatingStatus}
+                  onClick={() => { void handleStatusChange("completed"); }}
+                >
+                  {isUpdatingStatus ? t("statusUpdating") : t("finishMatchCta")}
+                </FpButton>
+              </>
+            )}
+          </div>
+        )}
       </AppCard>
 
+      {/* Timeline */}
       <AppCard className="space-y-3 p-4">
         <p className="text-sm font-semibold text-foreground">{t("timelineTitle")}</p>
-        {sortedEvents.length === 0 ? (
+        {timelineEvents.length === 0 ? (
           <p className="text-xs text-muted-foreground">{t("timelineEmpty")}</p>
         ) : (
-          <ul className="space-y-2">
-            {sortedEvents.map((event) => (
-              <li key={event.id} className="rounded-xl border border-fp-border bg-fp-surface-2 p-3">
-                <button
-                  type="button"
-                  className="w-full text-left"
-                  onClick={() => {
-                    if (event.type === "goal_for") {
-                      openEditModal(event);
-                    }
-                  }}
-                >
-                  <p className="text-xs font-semibold text-muted-foreground">
-                    {event.minute !== null ? `${String(event.minute).padStart(2, "0")}'` : "--"}
-                  </p>
-                  {event.type === "goal_for" ? (
-                    <>
-                      <p className="text-sm font-semibold text-foreground">⚽ {scorerLabel(event)}</p>
-                      <p className="text-xs text-muted-foreground">{t("event.assistLabel", { value: assistLabel(event) })}</p>
-                    </>
-                  ) : event.type === "goal_against" ? (
-                    <p className="text-sm font-semibold text-foreground">⚽ {t("event.opponentGoal")}</p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">{event.type}</p>
-                  )}
-                </button>
-              </li>
-            ))}
+          <ul className="space-y-1.5">
+            {timelineEvents.map((event) => {
+              const isOwnGoal = event.type === "goal" && event.teamSide === "own";
+              const isOpponentGoal = event.type === "goal" && event.teamSide === "opponent";
+              const isSub = event.type === "substitution";
+              const isStart = event.type === "match_started";
+              const isEnd = event.type === "match_ended";
+              const minuteStr = event.minute !== null ? `${event.minute}'` : "—";
+              const editableServerEvent =
+                isOwnGoal && event.source === "server" && event.serverEventId
+                  ? events.find((serverEvent) => serverEvent.id === event.serverEventId) ?? null
+                  : null;
+
+              return (
+                <li key={event.id}>
+                  <button
+                    type="button"
+                    className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                      isOwnGoal
+                        ? "border-green-500/20 bg-green-500/5 active:bg-green-500/10"
+                        : isOpponentGoal
+                          ? "border-danger/20 bg-danger/5 active:bg-danger/10"
+                          : "border-fp-border bg-fp-surface-2 active:bg-fp-surface"
+                    }`}
+                    onClick={() => {
+                      if (editableServerEvent) {
+                        openEditModal(editableServerEvent);
+                      }
+                    }}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <span className="mt-0.5 w-8 shrink-0 text-[11px] font-semibold tabular-nums text-muted-foreground">
+                        {minuteStr}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        {isOwnGoal && (
+                          <>
+                            <p className="text-sm font-semibold text-foreground">
+                              ⚽ {event.scorerName ?? t("event.notRegistered")}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {t("event.assistLabel", { value: event.assistName ?? t("event.noAssist") })}
+                            </p>
+                          </>
+                        )}
+                        {isOpponentGoal && (
+                          <p className="text-sm font-semibold text-foreground">
+                            ⚽ {t("event.opponentGoal")}
+                          </p>
+                        )}
+                        {isSub && (
+                          <div className="flex items-center gap-1.5">
+                            <ArrowLeftRight size={13} className="shrink-0 text-muted-foreground" />
+                            <div>
+                              <p className="text-xs text-foreground">
+                                <span className="text-green-600 dark:text-green-400">
+                                  {t("event.substitutionIn")}: {event.inPlayerName ?? t("event.notRegistered")}
+                                </span>
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {t("event.substitutionOut")}: {event.outPlayerName ?? t("event.notRegistered")}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                        {isStart && (
+                          <p className="text-xs text-muted-foreground">{t("event.matchStarted")}</p>
+                        )}
+                        {isEnd && (
+                          <p className="text-xs text-muted-foreground">{t("event.matchEnded")}</p>
+                        )}
+                        {!isOwnGoal && !isOpponentGoal && !isSub && !isStart && !isEnd && (
+                          <p className="text-xs text-muted-foreground">{event.type}</p>
+                        )}
+                      </div>
+                      {editableServerEvent && (
+                        <span className="shrink-0 text-[10px] text-muted-foreground/60">{t("event.editTitle")} →</span>
+                      )}
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </AppCard>
 
+      {/* Starting XI / Lineup */}
+      {(() => {
+        const rs = match.runtimeState;
+        const starterIds = rs?.initialOnFieldPlayerIds ?? [];
+        const finalIds = rs?.onFieldPlayerIds ?? [];
+        const benchIds = rs?.benchPlayerIds ?? [];
+        if (starterIds.length === 0 && finalIds.length === 0) return null;
+
+        // Players subbed off: were starters but not in final lineup
+        const subbedOffIds = starterIds.filter((id) => !finalIds.includes(id));
+        // Players subbed on: in final lineup but not starters
+        const subbedOnIds = finalIds.filter((id) => !starterIds.includes(id));
+
+        return (
+          <AppCard className="space-y-3 p-4">
+            <div className="flex items-center gap-2">
+              <Users size={15} className="text-primary" />
+              <p className="text-sm font-semibold text-foreground">{t("lineupTitle")}</p>
+            </div>
+
+            {starterIds.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t("lineupStarters")}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {starterIds.map((id) => {
+                    const name = playerById.get(id)?.name ?? id;
+                    const subbedOff = subbedOffIds.includes(id);
+                    return (
+                      <span
+                        key={id}
+                        className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
+                          subbedOff
+                            ? "border-muted-foreground/20 bg-fp-surface text-muted-foreground line-through"
+                            : "border-primary/20 bg-primary/8 text-foreground"
+                        }`}
+                      >
+                        {name}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {subbedOnIds.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t("lineupSubbedOn")}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {subbedOnIds.map((id) => {
+                    const name = playerById.get(id)?.name ?? id;
+                    return (
+                      <span
+                        key={id}
+                        className="rounded-full border border-green-500/25 bg-green-500/8 px-2.5 py-1 text-xs font-medium text-foreground"
+                      >
+                        {name}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {benchIds.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t("lineupBench")}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {benchIds.map((id) => {
+                    const name = playerById.get(id)?.name ?? id;
+                    const subbedOn = subbedOnIds.includes(id);
+                    return (
+                      <span
+                        key={id}
+                        className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
+                          subbedOn
+                            ? "border-green-500/25 bg-green-500/8 text-foreground"
+                            : "border-fp-border bg-fp-surface-2 text-muted-foreground"
+                        }`}
+                      >
+                        {name}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </AppCard>
+        );
+      })()}
+
+      {/* AI report */}
       {match.reportEnabled ? (
-        <AppCard className="space-y-2 p-4">
-          <p className="text-sm font-semibold text-foreground">{t("reportTitle")}</p>
-          {match.reportStatus === "pending" ? (
-            <p className="text-sm text-muted-foreground">{t("reportPending")}</p>
-          ) : null}
-          {match.reportStatus === "failed" ? (
-            <p className="text-sm text-muted-foreground">{t("reportFailed")}</p>
-          ) : null}
+        <AppCard className="space-y-3 p-4">
+          <div className="flex items-center gap-2">
+            <Sparkles size={15} className="text-fp-accent" />
+            <p className="text-sm font-semibold text-foreground">{t("reportTitle")}</p>
+          </div>
+          {match.reportStatus === "pending" && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 size={14} className="animate-spin" />
+              {t("reportPending")}
+            </div>
+          )}
+          {match.reportStatus === "failed" && (
+            <p className="text-sm text-danger">{t("reportFailed")}</p>
+          )}
           {match.reportStatus === "ready" && match.reportText ? (
-            <p className="whitespace-pre-line text-sm text-muted-foreground">{match.reportText}</p>
+            <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/80">
+              {match.reportText}
+            </p>
           ) : null}
+          {match.reportStatus === "not_requested" && (
+            <p className="text-xs text-muted-foreground">{t("reportPending")}</p>
+          )}
         </AppCard>
       ) : null}
 
-      <AppCard className="space-y-3 p-4">
-        <p className="text-sm font-semibold text-foreground">{t("actionsTitle")}</p>
-        <FpButton type="button" variant="danger" size="md" onClick={() => { void handleDeleteMatch(); }}>
+      {/* Danger zone */}
+      <AppCard className="space-y-3 border-danger/20 p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-danger/70">
+          {t("actionsTitle")}
+        </p>
+        <FpButton
+          type="button"
+          variant="danger"
+          size="md"
+          fullWidth
+          onClick={() => { void handleDeleteMatch(); }}
+        >
           {t("delete.cta")}
         </FpButton>
       </AppCard>
 
+      {/* Goal edit modal */}
       {editingEvent ? (
         <div className="fixed inset-0 z-40 flex items-end bg-black/45 p-3">
           <AppCard className="w-full space-y-3 p-4">
@@ -564,20 +849,14 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
             </label>
 
             <div className="grid grid-cols-2 gap-2">
-              <FpButton
-                variant="secondary"
-                size="md"
-                onClick={() => setEditingEvent(null)}
-              >
+              <FpButton variant="secondary" size="md" onClick={() => setEditingEvent(null)}>
                 {common("cancel")}
               </FpButton>
               <FpButton
                 variant="primary"
                 size="md"
                 disabled={isSavingEdit}
-                onClick={() => {
-                  void handleSaveEdit();
-                }}
+                onClick={() => { void handleSaveEdit(); }}
               >
                 {isSavingEdit ? t("event.saving") : t("event.save")}
               </FpButton>
@@ -586,19 +865,14 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
             <FpButton
               variant="danger"
               size="md"
-              onClick={() => {
-                void handleDeleteEvent();
-              }}
+              fullWidth
+              onClick={() => { void handleDeleteEvent(); }}
             >
               {t("event.delete")}
             </FpButton>
           </AppCard>
         </div>
       ) : null}
-
-      <Link href="/match">
-        <FpButton variant="secondary" size="md">{t("backToList")}</FpButton>
-      </Link>
     </PageShell>
   );
 }
