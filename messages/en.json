@@ -632,6 +632,8 @@
     "actionsTitle": "Actions",
     "delete": {
       "cta": "Delete match",
+      "title": "Delete match?",
+      "description": "This action cannot be undone. The match and report will be removed.",
       "confirm": "Are you sure you want to delete this match? This also deletes the timeline and summary.",
       "success": "Match deleted."
     },
@@ -718,6 +720,8 @@
     "title": "History",
     "subtitle": "All completed matches and match reports.",
     "activeTeam": "Active team: {name}",
+    "filterLabel": "Team",
+    "filterAllTeams": "All teams",
     "listTitle": "Completed matches",
     "emptyTitle": "No completed matches yet",
     "emptyDescription": "Complete your first match and it will appear here.",

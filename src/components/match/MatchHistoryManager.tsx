@@ -14,6 +14,7 @@ import { FpButton } from "@/components/ui/FpButton";
 
 interface MatchItem {
   id: string;
+  teamId: string;
   title: string;
   opponentName: string | null;
   startsAt: string;
@@ -28,16 +29,6 @@ interface MatchItem {
   source: "manual" | "spond";
   startedAt?: string | null;
   endedAt?: string | null;
-}
-
-function parseApiError(payload: unknown): { message: string } {
-  if (typeof payload !== "object" || payload === null) {
-    return { message: "Ukjent feil." };
-  }
-  const value = payload as Record<string, unknown>;
-  return {
-    message: typeof value.message === "string" ? value.message : "Ukjent feil.",
-  };
 }
 
 export function MatchHistoryManager() {
@@ -56,18 +47,24 @@ export function MatchHistoryManager() {
   const [matches, setMatches] = useState<MatchItem[]>([]);
   const [isLoadingMatches, setIsLoadingMatches] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
-  const team = workspace.activeTeam;
+  // undefined = not yet chosen by user → falls back to workspace.activeTeamId
+  // null = user explicitly chose "Alle lag"
+  // string = specific team ID chosen by user
+  const [localFilterId, setLocalFilterId] = useState<string | null | undefined>(undefined);
+
+  const effectiveTeamId =
+    localFilterId !== undefined ? localFilterId : (workspace.activeTeamId ?? null);
+
   const isGuestMode = workspace.mode === "guest-local" || auth.status !== "authenticated";
 
-  const historyMatches = useMemo(
-    () =>
-      matches
-        .filter((match) => match.status === "completed")
-        .sort((a, b) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime()),
-    [matches]
-  );
+  const historyMatches = useMemo(() => {
+    const completed = matches.filter((match) => match.status === "completed");
+    const filtered = effectiveTeamId
+      ? completed.filter((match) => match.teamId === effectiveTeamId)
+      : completed;
+    return filtered.sort((a, b) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime());
+  }, [matches, effectiveTeamId]);
 
   const formatDate = (value: string | null) => {
     if (!value) return "—";
@@ -80,50 +77,32 @@ export function MatchHistoryManager() {
   };
 
   const loadMatches = useCallback(async () => {
-    if (!team) return;
+    if (workspace.teams.length === 0) return;
 
     setIsLoadingMatches(true);
+    setError(null);
     try {
-      const response = await fetch(`/api/matches?teamId=${encodeURIComponent(team.id)}`);
-      const payload = (await response.json()) as unknown;
-      if (!response.ok) throw new Error(parseApiError(payload).message);
-      const data = payload as { matches: MatchItem[] };
-      setMatches(data.matches ?? []);
+      const results = await Promise.all(
+        workspace.teams.map(async (team) => {
+          const response = await fetch(`/api/matches?teamId=${encodeURIComponent(team.id)}`);
+          const payload = (await response.json()) as unknown;
+          if (!response.ok) return [] as MatchItem[];
+          const data = payload as { matches: MatchItem[] };
+          return data.matches ?? ([] as MatchItem[]);
+        })
+      );
+      setMatches(results.flat());
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t("errors.generic"));
     } finally {
       setIsLoadingMatches(false);
     }
-  }, [team, t]);
+  }, [workspace.teams, t]);
 
   useEffect(() => {
-    if (auth.status !== "authenticated" || !team) return;
-    setError(null);
+    if (auth.status !== "authenticated" || workspace.isLoading) return;
     void loadMatches();
-  }, [auth.status, loadMatches, team]);
-
-  const handleDeleteMatch = async (matchId: string) => {
-    if (!window.confirm(t("delete.confirm"))) return;
-
-    setError(null);
-    setNotice(null);
-
-    try {
-      const response = await fetch(`/api/matches/${encodeURIComponent(matchId)}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok && response.status !== 204) {
-        const payload = (await response.json()) as unknown;
-        throw new Error(parseApiError(payload).message);
-      }
-
-      setMatches((previous) => previous.filter((match) => match.id !== matchId));
-      setNotice(t("delete.success"));
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t("errors.generic"));
-    }
-  };
+  }, [auth.status, loadMatches, workspace.isLoading]);
 
   if (!isHydrated || auth.status === "loading" || workspace.isLoading) {
     return (
@@ -151,7 +130,7 @@ export function MatchHistoryManager() {
     );
   }
 
-  if (!team) {
+  if (workspace.teams.length === 0) {
     return (
       <PageShell className="space-y-4">
         <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
@@ -173,18 +152,36 @@ export function MatchHistoryManager() {
     <PageShell className="space-y-5">
       <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
 
-      <AppCard className="p-3 text-xs text-muted-foreground">
-        {t("activeTeam", { name: team.name })}
+      {/* Team filter */}
+      <AppCard className="p-3">
+        <label className="flex items-center gap-2.5">
+          <span className="shrink-0 text-xs font-medium text-muted-foreground">
+            {t("filterLabel")}
+          </span>
+          <select
+            value={effectiveTeamId ?? ""}
+            onChange={(e) => { setLocalFilterId(e.target.value || null); }}
+            className="min-w-0 flex-1 rounded-lg border border-fp-border bg-background px-3 py-1.5 text-sm font-medium text-foreground outline-none focus:border-transparent focus:ring-2 focus:ring-ring"
+          >
+            <option value="">{t("filterAllTeams")}</option>
+            {workspace.teams.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}
+              </option>
+            ))}
+          </select>
+        </label>
       </AppCard>
 
-      {notice ? <AppCard className="p-3 text-xs text-fp-accent">{notice}</AppCard> : null}
       {error ? <AppCard className="p-3 text-xs text-danger">{error}</AppCard> : null}
 
-      <AppCard className="space-y-3 p-4">
-        <h3 className="text-sm font-semibold text-foreground">{t("listTitle")}</h3>
+      <div className="space-y-3">
+        <h3 className="px-1 text-sm font-semibold text-foreground">{t("listTitle")}</h3>
 
         {isLoadingMatches ? (
-          <p className="text-xs text-muted-foreground">{common("loading")}</p>
+          <AppCard className="p-6">
+            <p className="text-center text-xs text-muted-foreground">{common("loading")}</p>
+          </AppCard>
         ) : historyMatches.length === 0 ? (
           <EmptyState
             icon={Trophy}
@@ -205,101 +202,71 @@ export function MatchHistoryManager() {
               const draw = scoreFor === scoreAgainst;
 
               return (
-                <li
-                  key={match.id}
-                  className="rounded-xl border border-fp-border bg-fp-surface-2 p-3"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 space-y-1.5">
-                      <p className="text-sm font-semibold text-foreground truncate">
+                <li key={match.id}>
+                  <AppCard className="space-y-3 p-4">
+                    {/* Title + Spond badge */}
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm font-semibold leading-snug text-foreground">
                         {match.opponentName
                           ? `${match.title} — ${match.opponentName}`
                           : match.title}
                       </p>
-
-                      <p className="text-xs text-muted-foreground">
-                        {t("opponentLabel", { value: match.opponentName ?? "—" })}
-                      </p>
-
-                      {/* Result badge */}
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`text-lg font-bold leading-none ${
-                            won
-                              ? "text-fp-accent"
-                              : draw
-                                ? "text-muted-foreground"
-                                : "text-danger"
-                          }`}
-                        >
-                          {scoreFor} – {scoreAgainst}
-                        </span>
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                            won
-                              ? "border border-fp-accent/30 bg-fp-accent/10 text-fp-accent"
-                              : draw
-                                ? "border border-fp-border bg-fp-surface text-muted-foreground"
-                                : "border border-danger/30 bg-danger/10 text-danger"
-                          }`}
-                        >
-                          {won ? t("resultWon") : draw ? t("resultDraw") : t("resultLost")}
-                        </span>
-                      </div>
-
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <CalendarClock size={11} />
-                        {formatDate(match.startsAt)}
-                      </p>
-
-                      {match.location ? (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <MapPin size={11} />
-                          {t("locationLabel", { value: match.location })}
-                        </p>
-                      ) : null}
-
-                      {match.format ? (
-                        <p className="text-xs text-muted-foreground">
-                          {t("formatLabel", { value: match.format })}
-                        </p>
-                      ) : null}
-                    </div>
-
-                    <div className="flex flex-col items-end gap-2 shrink-0">
                       {match.source === "spond" ? (
-                        <span className="rounded-full border border-fp-spond-border bg-fp-spond-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-spond-foreground">
+                        <span className="shrink-0 rounded-full border border-fp-spond-border bg-fp-spond-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-spond-foreground">
                           Spond
                         </span>
                       ) : null}
-
-                      {match.reportStatus === "ready" ? (
-                        <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
-                          {t("reportBadge")}
-                        </span>
-                      ) : null}
-
-                      <Link href={`/match/${match.id}`}>
-                        <span className="text-xs font-medium text-primary">{t("openMatch")}</span>
-                      </Link>
-
-                      <button
-                        type="button"
-                        className="inline-flex items-center justify-center h-8 px-3 text-xs font-semibold rounded-lg border border-danger/30 bg-danger/10 text-danger tap-target transition-colors hover:bg-danger/20"
-                        onClick={() => {
-                          void handleDeleteMatch(match.id);
-                        }}
-                      >
-                        {t("delete.cta")}
-                      </button>
                     </div>
-                  </div>
+
+                    {/* Score + result badge */}
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`text-2xl font-black leading-none tabular-nums ${
+                          won ? "text-fp-accent" : draw ? "text-foreground" : "text-danger"
+                        }`}
+                      >
+                        {scoreFor} – {scoreAgainst}
+                      </span>
+                      <span
+                        className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
+                          won
+                            ? "border-fp-accent/25 bg-fp-accent/10 text-fp-accent"
+                            : draw
+                              ? "border-fp-border bg-fp-surface text-muted-foreground"
+                              : "border-danger/25 bg-danger/10 text-danger"
+                        }`}
+                      >
+                        {won ? t("resultWon") : draw ? t("resultDraw") : t("resultLost")}
+                      </span>
+                    </div>
+
+                    {/* Metadata */}
+                    <div className="space-y-0.5">
+                      <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <CalendarClock size={11} />
+                        {formatDate(match.startsAt)}
+                      </p>
+                      {match.location ? (
+                        <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <MapPin size={11} />
+                          {match.location}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    {/* Primary action */}
+                    <Link href={`/match/${match.id}`} className="block">
+                      <FpButton variant="primary" size="md" fullWidth>
+                        {t("openMatch")}
+                      </FpButton>
+                    </Link>
+                  </AppCard>
                 </li>
               );
             })}
           </ul>
         )}
-      </AppCard>
+      </div>
     </PageShell>
   );
 }

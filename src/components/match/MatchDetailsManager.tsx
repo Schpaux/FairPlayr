@@ -123,6 +123,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
   const [editScorerId, setEditScorerId] = useState<string>("");
   const [editAssistId, setEditAssistId] = useState<string>("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const playerOptions = useMemo(() => {
     if (!match) {
@@ -432,11 +433,10 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
   };
 
   const handleDeleteMatch = async () => {
-    if (!match || !window.confirm(t("delete.confirm"))) {
-      return;
-    }
+    if (!match) return;
 
     setError(null);
+    setShowDeleteConfirm(false);
 
     try {
       const response = await fetch(`/api/matches/${encodeURIComponent(match.id)}`, {
@@ -448,7 +448,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
         throw new Error(parseApiError(payload).message);
       }
 
-      router.push("/match");
+      router.push("/historikk");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t("errors.generic"));
     }
@@ -797,7 +797,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
           variant="danger"
           size="md"
           fullWidth
-          onClick={() => { void handleDeleteMatch(); }}
+          onClick={() => { setShowDeleteConfirm(true); }}
         >
           {t("delete.cta")}
         </FpButton>
@@ -870,6 +870,34 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
             >
               {t("event.delete")}
             </FpButton>
+          </AppCard>
+        </div>
+      ) : null}
+
+      {/* Delete confirmation modal */}
+      {showDeleteConfirm ? (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/50 p-3">
+          <AppCard className="w-full space-y-4 p-5">
+            <div className="space-y-1.5">
+              <p className="text-base font-semibold text-foreground">{t("delete.title")}</p>
+              <p className="text-sm text-muted-foreground">{t("delete.description")}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <FpButton
+                variant="secondary"
+                size="md"
+                onClick={() => { setShowDeleteConfirm(false); }}
+              >
+                {common("cancel")}
+              </FpButton>
+              <FpButton
+                variant="danger"
+                size="md"
+                onClick={() => { void handleDeleteMatch(); }}
+              >
+                {t("delete.cta")}
+              </FpButton>
+            </div>
           </AppCard>
         </div>
       ) : null}

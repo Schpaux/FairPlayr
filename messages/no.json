@@ -632,6 +632,8 @@
     "actionsTitle": "Handlinger",
     "delete": {
       "cta": "Slett kamp",
+      "title": "Slette kamp?",
+      "description": "Denne handlingen kan ikke angres. Kampen og rapporten blir fjernet.",
       "confirm": "Er du sikker på at du vil slette kampen? Dette sletter også kampforløp og kampoppsummering.",
       "success": "Kampen ble slettet."
     },
@@ -718,6 +720,8 @@
     "title": "Historikk",
     "subtitle": "Alle ferdige kamper og kamprapporter.",
     "activeTeam": "Aktivt lag: {name}",
+    "filterLabel": "Lag",
+    "filterAllTeams": "Alle lag",
     "listTitle": "Ferdige kamper",
     "emptyTitle": "Ingen ferdige kamper ennå",
     "emptyDescription": "Fullfør din første kamp, så dukker den opp her.",
