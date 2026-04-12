@@ -7,15 +7,15 @@ import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { ShieldAlert, Users, ArrowRight, CheckCircle2 } from "lucide-react";
 import {
-  createMatchSetup,
+  createMatchSetupWithPrefs,
   setMatchFormat,
   setMatchDuration,
   setMatchHalves,
   setMatchDurationPreset,
   setReportEnabled,
   setSelectedSquad,
-  assignStarterToSlot,
-  clearStarterSlot,
+  toggleSquadPlayer,
+  selectAllSquad,
   autoFillLineup,
   getFormationPresets,
   setMatchFormation,
@@ -31,6 +31,7 @@ import {
 } from "@/lib/storage/matchStorage";
 import { createLiveMatchFromSetup } from "@/domain/liveMatch";
 import { clearStoredLiveMatch, saveStoredLiveMatch } from "@/lib/storage/liveMatchStorage";
+import { getTeamMatchPrefs, saveTeamMatchPrefs } from "@/lib/storage/teamPrefsStorage";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -39,8 +40,9 @@ import { FpButton } from "@/components/ui/FpButton";
 import { Link } from "@/i18n/navigation";
 import { FormatSelector } from "@/components/match/FormatSelector";
 import { DurationPicker } from "@/components/match/DurationPicker";
-import { LineupAssigner } from "@/components/match/LineupAssigner";
 import { FormationSelector } from "@/components/match/FormationSelector";
+import { SquadSelector } from "@/components/match/SquadSelector";
+import { PitchLineupEditor } from "@/components/match/PitchLineupEditor";
 import { variants } from "@/lib/tokens";
 import { cn } from "@/lib/utils";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
@@ -83,47 +85,59 @@ export function MatchSetupManager() {
   } = useActiveMatch();
   const matchId = searchParams.get("matchId");
 
-  // ── Hydration guard (avoids SSR/client mismatch on localStorage reads) ──
+  // ── Hydration guard ────────────────────────────────────────────────────────
   const isHydrated = useSyncExternalStore(
     () => () => {},
     () => true,
     () => false
   );
 
-  // ── State ──────────────────────────────────────────────────────────────
+  // ── State ──────────────────────────────────────────────────────────────────
   const [setup, setSetup] = useState<MatchConfig | null>(null);
 
   const team = workspace.activeTeam;
 
   useEffect(() => {
-    if (!isHydrated || workspace.isLoading) {
-      return;
-    }
-
+    if (!isHydrated || workspace.isLoading) return;
     if (!team) {
       setSetup(null);
       return;
     }
 
+    const teamPlayerIds = team.players.map((p) => p.id);
     const stored = getStoredMatchSetup();
-    const teamPlayerIds = team.players.map((player) => player.id);
 
     if (stored && stored.config.teamId === team.id) {
+      // Existing draft — reconcile with current team roster, keep selected squad
       const reconciled = reconcileWithTeam(stored.config, teamPlayerIds);
-      setSetup(setSelectedSquad(reconciled, teamPlayerIds));
+      setSetup(reconciled);
       return;
     }
 
-    setSetup(setSelectedSquad(createMatchSetup(team.id), teamPlayerIds));
+    // New setup — pre-fill with team preferences (DEL 3), squad starts empty (DEL 5+6)
+    const prefs = getTeamMatchPrefs(team.id);
+    setSetup(createMatchSetupWithPrefs(team.id, prefs));
   }, [isHydrated, team, workspace.isLoading]);
 
-  // ── Auto-save draft on every setup change ──────────────────────────────
+  // ── Persist draft on every change ─────────────────────────────────────────
   useEffect(() => {
     if (!isHydrated || !setup) return;
     saveMatchSetupDraft(setup);
   }, [setup, isHydrated]);
 
-  // ── Handlers ───────────────────────────────────────────────────────────
+  // ── Persist team preferences when coach changes format/formation/duration ──
+  useEffect(() => {
+    if (!setup || !team) return;
+    saveTeamMatchPrefs(team.id, {
+      format: setup.format,
+      formationId: setup.formationId,
+      durationPresetId: setup.duration.mode === "preset" && setup.duration.presetId
+        ? setup.duration.presetId
+        : undefined,
+    });
+  }, [setup?.format, setup?.formationId, setup?.duration.presetId, team?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
   const handleFormatChange: React.ComponentProps<
     typeof FormatSelector
   >["onChange"] = (format) => {
@@ -142,7 +156,9 @@ export function MatchSetupManager() {
     setSetup((prev) => (prev ? setMatchDurationPreset(prev, presetId) : prev));
   };
 
-  const handleHalvesChange: React.ComponentProps<typeof DurationPicker>["onHalvesChange"] = (halves) => {
+  const handleHalvesChange: React.ComponentProps<
+    typeof DurationPicker
+  >["onHalvesChange"] = (halves) => {
     setSetup((prev) => (prev ? setMatchHalves(prev, halves) : prev));
   };
 
@@ -156,18 +172,22 @@ export function MatchSetupManager() {
     setSetup((prev) => (prev ? setReportEnabled(prev, enabled) : prev));
   };
 
-  const handleAssignToSlot = (slotId: string, playerId: string) => {
-    setSetup((prev) => (prev ? assignStarterToSlot(prev, slotId, playerId) : prev));
+  const handleToggleSquadPlayer = (playerId: string) => {
+    setSetup((prev) => (prev ? toggleSquadPlayer(prev, playerId) : prev));
   };
 
-  const handleClearSlot = (slotId: string) => {
-    setSetup((prev) => (prev ? clearStarterSlot(prev, slotId) : prev));
+  const handleSelectAllSquad = () => {
+    if (!team) return;
+    setSetup((prev) =>
+      prev ? selectAllSquad(prev, team.players.map((p) => p.id)) : prev
+    );
   };
 
-  const handleAutoFill = () => {
-    setSetup((prev) => (prev ? autoFillLineup(prev) : prev));
+  const handleClearSquad = () => {
+    setSetup((prev) => (prev ? setSelectedSquad(prev, []) : prev));
   };
 
+  // ── Start match ────────────────────────────────────────────────────────────
   const [isStarting, setIsStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
   const [showStartGuard, setShowStartGuard] = useState(false);
@@ -193,9 +213,7 @@ export function MatchSetupManager() {
       if (matchId) {
         const response = await fetch(`/api/matches/${encodeURIComponent(matchId)}`, {
           method: "PATCH",
-          headers: {
-            "content-type": "application/json",
-          },
+          headers: { "content-type": "application/json" },
           body: JSON.stringify({
             status: "live",
             reportEnabled: setup.reportEnabled,
@@ -213,7 +231,9 @@ export function MatchSetupManager() {
 
       router.push("/match/live");
     } catch (cause) {
-      setStartError(cause instanceof Error ? cause.message : t("errors.startFailed"));
+      setStartError(
+        cause instanceof Error ? cause.message : t("errors.startFailed")
+      );
       setIsStarting(false);
       return;
     }
@@ -221,17 +241,15 @@ export function MatchSetupManager() {
     setIsStarting(false);
   };
 
-  // ── Validation state ───────────────────────────────────────────────────
+  // ── Validation ─────────────────────────────────────────────────────────────
   const deficit = setup ? getStarterDeficit(setup) : 0;
   const matchReady = setup ? canStartMatch(setup) : false;
 
-  // ── Loading ────────────────────────────────────────────────────────────
+  // ── Loading ─────────────────────────────────────────────────────────────────
   if (!isHydrated) {
     return (
       <PageShell>
-        <AppCard className="p-6 text-sm text-muted-foreground animate-pulse">
-          &nbsp;
-        </AppCard>
+        <AppCard className="p-6 text-sm text-muted-foreground animate-pulse">&nbsp;</AppCard>
       </PageShell>
     );
   }
@@ -252,7 +270,6 @@ export function MatchSetupManager() {
     );
   }
 
-  // ── No team ────────────────────────────────────────────────────────────
   if (!team) {
     return (
       <PageShell>
@@ -263,9 +280,7 @@ export function MatchSetupManager() {
           description={t("noTeam.description")}
           action={
             <Link href="/team">
-              <FpButton variant="primary" size="md">
-                {t("noTeam.action")}
-              </FpButton>
+              <FpButton variant="primary" size="md">{t("noTeam.action")}</FpButton>
             </Link>
           }
         />
@@ -273,7 +288,6 @@ export function MatchSetupManager() {
     );
   }
 
-  // ── No players ─────────────────────────────────────────────────────────
   if (team.players.length === 0) {
     return (
       <PageShell>
@@ -284,9 +298,7 @@ export function MatchSetupManager() {
           description={t("noPlayers.description")}
           action={
             <Link href="/team">
-              <FpButton variant="primary" size="md">
-                {t("noPlayers.action")}
-              </FpButton>
+              <FpButton variant="primary" size="md">{t("noPlayers.action")}</FpButton>
             </Link>
           }
         />
@@ -296,7 +308,6 @@ export function MatchSetupManager() {
 
   if (!setup) return null;
 
-  // ── Main setup form ────────────────────────────────────────────────────
   return (
     <PageShell className="space-y-4">
       <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
@@ -318,6 +329,7 @@ export function MatchSetupManager() {
           <FormatSelector value={setup.format} onChange={handleFormatChange} />
         </SetupSection>
 
+        {/* Formation */}
         <SetupSection label={t("sections.formation")}>
           <FormationSelector
             formations={getFormationPresets(setup.format)}
@@ -336,24 +348,46 @@ export function MatchSetupManager() {
           />
         </SetupSection>
 
-        <SetupSection label={t("sections.lineup")}>
-          <LineupAssigner
-            setup={setup}
+        {/* Squad — who is playing today? (DEL 5) */}
+        <SetupSection label={t("sections.squad")}>
+          <p className="text-xs text-muted-foreground">{t("squad.hint")}</p>
+          <SquadSelector
             players={team.players}
-            onAssignToSlot={handleAssignToSlot}
-            onClearSlot={handleClearSlot}
-            onAutoFill={handleAutoFill}
+            selectedIds={setup.selectedPlayerIds}
+            onToggle={handleToggleSquadPlayer}
+            onSelectAll={handleSelectAllSquad}
+            onClearSelection={handleClearSquad}
+            selectAllLabel={t("squad.selectAll")}
+            clearLabel={t("squad.clear")}
           />
         </SetupSection>
 
+        {/* Visual pitch + bench — shown only when squad has players (DEL 7+8) */}
+        {setup.selectedPlayerIds.length > 0 && (
+          <SetupSection label={t("sections.lineup")}>
+            <PitchLineupEditor
+              setup={setup}
+              players={team.players.filter((p) =>
+                setup.selectedPlayerIds.includes(p.id)
+              )}
+              onSetupChange={setSetup}
+              onAutoFill={() => setSetup((prev) => (prev ? autoFillLineup(prev) : prev))}
+            />
+          </SetupSection>
+        )}
+
+        {/* Report toggle */}
         <SetupSection label={t("sections.summary")}>
           <div className="rounded-xl border border-fp-border bg-fp-surface-2 p-3">
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-foreground">{t("reportToggle.label")}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{t("reportToggle.help")}</p>
+                <p className="text-sm font-semibold text-foreground">
+                  {t("reportToggle.label")}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t("reportToggle.help")}
+                </p>
               </div>
-              {/* Standalone toggle — not wrapped in a label to avoid double-fire */}
               <button
                 type="button"
                 role="switch"
@@ -378,7 +412,7 @@ export function MatchSetupManager() {
           </div>
         </SetupSection>
 
-        {/* Start Match CTA */}
+        {/* Start match CTA */}
         <motion.div variants={variants.fadeInUp} className="pt-2 pb-4">
           {startError ? (
             <p className="mb-2 text-xs text-danger">{startError}</p>
@@ -386,7 +420,9 @@ export function MatchSetupManager() {
 
           {showStartGuard ? (
             <div className="mb-3 rounded-xl border border-warning/30 bg-warning/10 p-3 space-y-3">
-              <p className="text-sm font-semibold text-foreground">{t("startGuard.title")}</p>
+              <p className="text-sm font-semibold text-foreground">
+                {t("startGuard.title")}
+              </p>
               <p className="text-xs text-muted-foreground">
                 {t("startGuard.description", {
                   title: activeMatch?.title ?? t("startGuard.unknownMatch"),
@@ -406,15 +442,9 @@ export function MatchSetupManager() {
                   onClick={() => {
                     setIsResolvingGuardAction(true);
                     void forceCloseActiveMatch()
-                      .then(() => {
-                        setShowStartGuard(false);
-                      })
-                      .catch(() => {
-                        setStartError(t("errors.startFailed"));
-                      })
-                      .finally(() => {
-                        setIsResolvingGuardAction(false);
-                      });
+                      .then(() => setShowStartGuard(false))
+                      .catch(() => setStartError(t("errors.startFailed")))
+                      .finally(() => setIsResolvingGuardAction(false));
                   }}
                 >
                   {t("startGuard.end")}
@@ -427,15 +457,9 @@ export function MatchSetupManager() {
                   onClick={() => {
                     setIsResolvingGuardAction(true);
                     void discardActiveMatch()
-                      .then(() => {
-                        setShowStartGuard(false);
-                      })
-                      .catch(() => {
-                        setStartError(t("errors.startFailed"));
-                      })
-                      .finally(() => {
-                        setIsResolvingGuardAction(false);
-                      });
+                      .then(() => setShowStartGuard(false))
+                      .catch(() => setStartError(t("errors.startFailed")))
+                      .finally(() => setIsResolvingGuardAction(false));
                   }}
                 >
                   {t("startGuard.discard")}
@@ -451,13 +475,13 @@ export function MatchSetupManager() {
                 <CheckCircle2 size={15} />
                 {t("validation.ready")}
               </span>
+            ) : setup.selectedPlayerIds.length === 0 ? (
+              <span className="text-sm text-muted-foreground">
+                {t("squad.selectHint")}
+              </span>
             ) : deficit > 0 ? (
               <span className="text-sm text-muted-foreground">
                 {t("validation.selectMoreStarters", { needed: deficit })}
-              </span>
-            ) : setup.selectedPlayerIds.length === 0 ? (
-              <span className="text-sm text-muted-foreground">
-                {t("startMatchHint")}
               </span>
             ) : null}
           </div>
@@ -470,10 +494,7 @@ export function MatchSetupManager() {
             onClick={() => {
               void handleStartMatch();
             }}
-            className={cn(
-              "group transition-all",
-              matchReady && "glow-primary-sm"
-            )}
+            className={cn("group transition-all", matchReady && "glow-primary-sm")}
           >
             {isStarting ? t("actions.starting") : t("startMatch")}
             <ArrowRight

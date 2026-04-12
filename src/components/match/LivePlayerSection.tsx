@@ -4,6 +4,7 @@ import { Users } from "lucide-react";
 import { motion } from "framer-motion";
 import { AppCard } from "@/components/ui/AppCard";
 import type { Player } from "@/domain/team";
+import { shortName } from "@/lib/utils/playerName";
 
 interface LivePlayerSectionProps {
   title: string;
@@ -66,7 +67,7 @@ export function LivePlayerSection({
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-foreground">
-                        {player.name}
+                        {shortName(player.name)}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {playtimeLabel}: {getPlaytime(player.id)}

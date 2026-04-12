@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { CalendarClock, MapPin, ShieldAlert, PlusCircle, ExternalLink, Link2Off, RefreshCcw } from "lucide-react";
+import { generateMatchName, isAutoMatchName } from "@/lib/utils/matchName";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
@@ -98,12 +99,21 @@ export function MatchPlannerManager() {
   const [manualStartMode, setManualStartMode] = useState<"now" | "scheduled">("now");
   const [isResolvingActiveAction, setIsResolvingActiveAction] = useState(false);
 
-  const [title, setTitle] = useState("");
+  // Custom title only set when user has deliberately typed one
+  const [customTitle, setCustomTitle] = useState("");
   const [opponentName, setOpponentName] = useState("");
   const [startsAt, setStartsAt] = useState(() => {
     return toLocalDateTimeInputValue(new Date());
   });
   const [location, setLocation] = useState("");
+
+  // Derived: the effective title shown/sent — auto-generated unless overridden
+  const startsAtDate = useMemo(() => {
+    const d = new Date(startsAt);
+    return Number.isNaN(d.getTime()) ? new Date() : d;
+  }, [startsAt]);
+  const autoTitle = generateMatchName(opponentName || null, startsAtDate);
+  const effectiveTitle = customTitle || autoTitle;
 
   const team = workspace.activeTeam;
   const isGuestMode = workspace.mode === "guest-local" || auth.status !== "authenticated";
@@ -281,7 +291,8 @@ export function MatchPlannerManager() {
         if (statusResponse.ok) {
           const linked = Boolean(statusPayload.connected && statusPayload.teamLink?.externalTeamId);
           setHasSpondLink(linked);
-          setEntryMode(linked ? "spond" : "manual");
+          // DEL 1: always default to manual — Spond is accessible but not pre-selected
+          setEntryMode("manual");
         } else {
           setHasSpondLink(false);
           setEntryMode("manual");
@@ -320,7 +331,7 @@ export function MatchPlannerManager() {
         },
         body: JSON.stringify({
           teamId: team.id,
-          title,
+          title: effectiveTitle,
           opponentName,
           startsAt: startsAtIso,
           location,
@@ -337,7 +348,7 @@ export function MatchPlannerManager() {
 
       const data = payload as { match: MatchItem };
 
-      setTitle("");
+      setCustomTitle("");
       setOpponentName("");
       setLocation("");
       setNotice(
@@ -548,18 +559,26 @@ export function MatchPlannerManager() {
               </div>
 
               <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder={t("fields.title")}
-                className={teamTextInputClassName}
-                required
-              />
-              <input
                 value={opponentName}
                 onChange={(e) => setOpponentName(e.target.value)}
                 placeholder={t("fields.opponent")}
                 className={teamTextInputClassName}
               />
+              <div className="space-y-1">
+                <input
+                  value={customTitle}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    // Stop auto-generating if user types; resume if they clear
+                    setCustomTitle(isAutoMatchName(val) || val === "" ? "" : val);
+                  }}
+                  placeholder={autoTitle}
+                  className={teamTextInputClassName}
+                />
+                <p className="px-1 text-[11px] text-muted-foreground">
+                  {customTitle ? t("fields.titleCustom") : t("fields.titleAuto")}
+                </p>
+              </div>
               {manualStartMode === "scheduled" ? (
                 <input
                   type="datetime-local"

@@ -381,6 +381,7 @@
       "formation": "Formasjon",
       "duration": "Varighet",
       "summary": "Kampoppsummering",
+      "squad": "Hvem er med i dag?",
       "lineup": "Startoppstilling"
     },
     "reportToggle": {
@@ -405,7 +406,9 @@
     "squad": {
       "selectedCount": "{selected} av {total} spillere valgt",
       "selectAll": "Velg alle",
-      "clear": "Tøm"
+      "clear": "Tøm",
+      "hint": "Velg hvem som faktisk er med i dag. Kun valgte spillere tas med i startoppstilling og live-kamp.",
+      "selectHint": "Velg spillere som er med i kampen"
     },
     "lineup": {
       "starterSlots": "{current} / {required}",
@@ -596,9 +599,11 @@
     "unknownTime": "Tidspunkt mangler",
     "vs": "Mot {opponent}",
     "fields": {
-      "title": "Kampnavn",
+      "title": "Kampnavn (valgfritt)",
       "opponent": "Motstander (valgfritt)",
-      "location": "Sted (valgfritt)"
+      "location": "Sted (valgfritt)",
+      "titleAuto": "Navn genereres automatisk fra motstander og tidspunkt",
+      "titleCustom": "Egendefinert kampnavn"
     },
     "loginRequiredTitle": "Logg inn for kampplanlegging",
     "loginRequiredDescription": "Du må være logget inn for å planlegge kamper og importere fra Spond.",

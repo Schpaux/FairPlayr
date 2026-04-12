@@ -373,6 +373,45 @@ export function createMatchSetup(
   };
 }
 
+export interface MatchSetupPrefs {
+  format?: MatchFormat;
+  formationId?: string;
+  durationPresetId?: MatchDurationPresetId;
+}
+
+/**
+ * Create a new MatchConfig pre-filled with team preferences.
+ * Falls back to sensible defaults for any missing preference.
+ * Squad starts empty — the coach explicitly picks who is playing today.
+ */
+export function createMatchSetupWithPrefs(
+  teamId: string,
+  prefs: MatchSetupPrefs
+): MatchConfig {
+  const format: MatchFormat = prefs.format ?? "5v5";
+  const now = nowIso();
+  const formations = getFormationPresets(format);
+  const formation =
+    (prefs.formationId ? formations.find((f) => f.id === prefs.formationId) : null) ??
+    formations[0];
+  const presetId: MatchDurationPresetId =
+    prefs.durationPresetId ?? getDefaultDurationPreset(format);
+
+  return {
+    id: generateId(),
+    teamId,
+    format,
+    reportEnabled: true,
+    formationId: formation.id,
+    duration: createDurationFromPreset(presetId),
+    selectedPlayerIds: [],
+    startingPlayerIds: [],
+    slotAssignments: createEmptySlotAssignments(format, formation.id),
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 export function setReportEnabled(setup: MatchConfig, enabled: boolean): MatchConfig {
   if (setup.reportEnabled === enabled) {
     return setup;
@@ -608,6 +647,37 @@ export function clearStarterSlot(setup: MatchConfig, slotId: string): MatchConfi
   const nextAssignments = {
     ...setup.slotAssignments,
     [slotId]: null,
+  };
+
+  return withUpdatedConfig(setup, {
+    slotAssignments: nextAssignments,
+    startingPlayerIds: deriveStartingPlayerIds(nextAssignments, slots),
+  });
+}
+
+/**
+ * Swap the players assigned to two field slots.
+ * If one slot is empty, the non-empty player simply moves there.
+ */
+export function swapFieldSlots(
+  setup: MatchConfig,
+  slotAId: string,
+  slotBId: string
+): MatchConfig {
+  if (slotAId === slotBId) return setup;
+
+  const slots = getFormationSlots(setup.format, setup.formationId);
+  const hasA = slots.some((s) => s.id === slotAId);
+  const hasB = slots.some((s) => s.id === slotBId);
+  if (!hasA || !hasB) return setup;
+
+  const playerA = setup.slotAssignments[slotAId] ?? null;
+  const playerB = setup.slotAssignments[slotBId] ?? null;
+
+  const nextAssignments = {
+    ...setup.slotAssignments,
+    [slotAId]: playerB,
+    [slotBId]: playerA,
   };
 
   return withUpdatedConfig(setup, {

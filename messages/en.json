@@ -381,6 +381,7 @@
       "formation": "Formation",
       "duration": "Duration",
       "summary": "Match Summary",
+      "squad": "Who's playing today?",
       "lineup": "Starting Lineup"
     },
     "reportToggle": {
@@ -405,7 +406,9 @@
     "squad": {
       "selectedCount": "{selected} of {total} players selected",
       "selectAll": "Select all",
-      "clear": "Clear"
+      "clear": "Clear",
+      "hint": "Choose who is actually playing today. Only selected players appear in the lineup and live match.",
+      "selectHint": "Select players who are in the match"
     },
     "lineup": {
       "starterSlots": "{current} / {required}",
@@ -596,9 +599,11 @@
     "unknownTime": "Time unavailable",
     "vs": "vs {opponent}",
     "fields": {
-      "title": "Match title",
+      "title": "Match title (optional)",
       "opponent": "Opponent (optional)",
-      "location": "Location (optional)"
+      "location": "Location (optional)",
+      "titleAuto": "Name is auto-generated from opponent and time",
+      "titleCustom": "Custom match name"
     },
     "loginRequiredTitle": "Sign in to plan matches",
     "loginRequiredDescription": "You must sign in to plan matches and import from Spond.",
