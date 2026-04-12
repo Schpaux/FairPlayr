@@ -797,22 +797,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
             </div>
           )}
           {match.reportStatus === "failed" && (
-            <div className="space-y-2">
-              <p className="text-sm text-danger">{t("reportFailed")}</p>
-              <FpButton
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  if (match) {
-                    void triggerReportGeneration(match);
-                  }
-                }}
-                disabled={isRegeneratingReport}
-              >
-                {isRegeneratingReport ? t("reportRetrying") : t("reportRetryCta")}
-              </FpButton>
-            </div>
+            <p className="text-sm text-danger">{t("reportFailed")}</p>
           )}
           {match.reportStatus === "ready" && match.reportText ? (
             <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/80">
@@ -820,23 +805,21 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
             </p>
           ) : null}
           {match.reportStatus === "not_requested" && (
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">{t("reportPending")}</p>
-              <FpButton
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  if (match) {
-                    void triggerReportGeneration(match);
-                  }
-                }}
-                disabled={isRegeneratingReport}
-              >
-                {isRegeneratingReport ? t("reportRetrying") : t("reportRetryCta")}
-              </FpButton>
-            </div>
+            <p className="text-xs text-muted-foreground">{t("reportPending")}</p>
           )}
+          <FpButton
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              void triggerReportGeneration(match);
+            }}
+            disabled={isRegeneratingReport || match.reportStatus === "pending"}
+          >
+            {isRegeneratingReport || match.reportStatus === "pending"
+              ? t("reportRetrying")
+              : t("reportRegenerateCta")}
+          </FpButton>
         </AppCard>
       ) : null}
 

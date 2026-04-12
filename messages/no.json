@@ -633,6 +633,7 @@
     "reportFailed": "Kampoppsummering kunne ikke genereres",
     "reportRetryCta": "Prøv igjen",
     "reportRetrying": "Prøver å generere...",
+    "reportRegenerateCta": "Regenerer oppsummering",
     "actionsTitle": "Handlinger",
     "delete": {
       "cta": "Slett kamp",

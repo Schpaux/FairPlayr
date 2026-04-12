@@ -633,6 +633,7 @@
     "reportFailed": "Match summary could not be generated",
     "reportRetryCta": "Try again",
     "reportRetrying": "Retrying generation...",
+    "reportRegenerateCta": "Regenerate summary",
     "actionsTitle": "Actions",
     "delete": {
       "cta": "Delete match",
