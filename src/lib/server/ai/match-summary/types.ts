@@ -44,4 +44,5 @@ export interface MatchSummaryInput {
 export interface MatchSummaryResult {
   text: string;
   source: "ai" | "fallback";
+  failureReason?: string;
 }

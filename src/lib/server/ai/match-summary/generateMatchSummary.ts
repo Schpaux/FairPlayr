@@ -24,6 +24,12 @@ const SUMMARY_DEFAULTS = {
 const RETRY_PROMPT_SUFFIX =
   "\n\nViktig: Skriv 3 til 6 hele setninger pa norsk bokmal. Ikke svar med bare en kort frase.";
 
+interface GenerationAttemptSpec {
+  label: string;
+  systemInstruction?: string;
+  prompt: string;
+}
+
 export async function generateMatchSummary(
   input: MatchSummaryInput,
   deps: GenerateMatchSummaryDeps = {}
@@ -37,12 +43,35 @@ export async function generateMatchSummary(
   const fallback = buildFallbackMatchSummary(input);
   const prompt = buildMatchSummaryPrompt(input);
   let lastErrorMessage: string | null = null;
+  const attempts: GenerationAttemptSpec[] = [
+    {
+      label: "default",
+      systemInstruction: prompt.systemInstruction,
+      prompt: prompt.prompt,
+    },
+    {
+      label: "default_with_retry_suffix",
+      systemInstruction: prompt.systemInstruction,
+      prompt: `${prompt.prompt}${RETRY_PROMPT_SUFFIX}`,
+    },
+    {
+      label: "no_system_instruction",
+      prompt: [
+        "Instruksjoner:",
+        prompt.systemInstruction,
+        "",
+        "Oppgave:",
+        `${prompt.prompt}${RETRY_PROMPT_SUFFIX}`,
+      ].join("\n"),
+    },
+  ];
 
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
+  for (let attempt = 1; attempt <= attempts.length; attempt += 1) {
+    const spec = attempts[attempt - 1];
     try {
       const generated = await generateTextFn({
-        systemInstruction: prompt.systemInstruction,
-        prompt: attempt === 1 ? prompt.prompt : `${prompt.prompt}${RETRY_PROMPT_SUFFIX}`,
+        systemInstruction: spec.systemInstruction,
+        prompt: spec.prompt,
         maxOutputTokens: SUMMARY_DEFAULTS.maxOutputTokens,
         temperature: SUMMARY_DEFAULTS.temperature,
       });
@@ -52,6 +81,7 @@ export async function generateMatchSummary(
         console.info("[match-summary] generation finished with ai", {
           matchId: input.matchId,
           attempt,
+          strategy: spec.label,
         });
 
         return {
@@ -60,10 +90,11 @@ export async function generateMatchSummary(
         };
       }
 
-      lastErrorMessage = `AI output invalid after normalization (attempt ${attempt})`;
+      lastErrorMessage = `AI output invalid after normalization (attempt ${attempt}, strategy=${spec.label})`;
       console.warn("[match-summary] ai output invalid", {
         matchId: input.matchId,
         attempt,
+        strategy: spec.label,
         rawLength: generated.text.length,
       });
     } catch (error) {
@@ -71,6 +102,7 @@ export async function generateMatchSummary(
       console.error("[match-summary] ai call failed", {
         matchId: input.matchId,
         attempt,
+        strategy: spec.label,
         message: lastErrorMessage,
       });
     }
@@ -84,6 +116,7 @@ export async function generateMatchSummary(
   return {
     text: fallback,
     source: "fallback",
+    failureReason: lastErrorMessage ?? "Ukjent AI-feil",
   };
 }
 

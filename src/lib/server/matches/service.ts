@@ -526,7 +526,7 @@ export async function updateMatchStatus(
           report_status: "ready",
           report_text:
             summary.result.source === "fallback"
-              ? `${summary.result.text}\n\n(Standardoppsummering brukt fordi AI-svar ikke var tilgjengelig.)`
+              ? `${summary.result.text}\n\n(Standardoppsummering brukt fordi AI-svar ikke var tilgjengelig.${summary.result.failureReason ? ` Grunn: ${summary.result.failureReason}` : ""})`
               : summary.result.text,
           report_generated_at: generatedAt,
         })
