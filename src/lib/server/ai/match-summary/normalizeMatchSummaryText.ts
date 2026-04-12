@@ -2,6 +2,18 @@ import "server-only";
 
 const MAX_LINES = 6;
 const MAX_CHARS = 700;
+const MIN_WORDS = 6;
+
+function wordCount(text: string): number {
+  return text
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter(Boolean).length;
+}
+
+function hasSentenceTerminator(text: string): boolean {
+  return /[.!?](?:["')\]]|\s|$)/.test(text);
+}
 
 export function normalizeMatchSummaryText(text: string): string | null {
   const normalized = text
@@ -28,6 +40,14 @@ export function normalizeMatchSummaryText(text: string): string | null {
   const compact = lines.join("\n");
 
   if (compact.length < 20) {
+    return null;
+  }
+
+  if (wordCount(compact) < MIN_WORDS) {
+    return null;
+  }
+
+  if (!hasSentenceTerminator(compact)) {
     return null;
   }
 
