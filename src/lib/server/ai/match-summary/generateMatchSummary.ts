@@ -21,6 +21,9 @@ const SUMMARY_DEFAULTS = {
   maxOutputTokens: 240,
 };
 
+const RETRY_PROMPT_SUFFIX =
+  "\n\nViktig: Skriv 3 til 6 hele setninger pa norsk bokmal. Ikke svar med bare en kort frase.";
+
 export async function generateMatchSummary(
   input: MatchSummaryInput,
   deps: GenerateMatchSummaryDeps = {}
@@ -32,50 +35,56 @@ export async function generateMatchSummary(
   });
 
   const fallback = buildFallbackMatchSummary(input);
+  const prompt = buildMatchSummaryPrompt(input);
+  let lastErrorMessage: string | null = null;
 
-  try {
-    const prompt = buildMatchSummaryPrompt(input);
-    const generated = await generateTextFn({
-      systemInstruction: prompt.systemInstruction,
-      prompt: prompt.prompt,
-      maxOutputTokens: SUMMARY_DEFAULTS.maxOutputTokens,
-      temperature: SUMMARY_DEFAULTS.temperature,
-    });
-
-    const normalized = normalizeMatchSummaryText(generated.text);
-
-    if (!normalized) {
-      console.warn("[match-summary] ai output invalid, using fallback", {
-        matchId: input.matchId,
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      const generated = await generateTextFn({
+        systemInstruction: prompt.systemInstruction,
+        prompt: attempt === 1 ? prompt.prompt : `${prompt.prompt}${RETRY_PROMPT_SUFFIX}`,
+        maxOutputTokens: SUMMARY_DEFAULTS.maxOutputTokens,
+        temperature: SUMMARY_DEFAULTS.temperature,
       });
 
-      return {
-        text: fallback,
-        source: "fallback",
-      };
+      const normalized = normalizeMatchSummaryText(generated.text);
+      if (normalized) {
+        console.info("[match-summary] generation finished with ai", {
+          matchId: input.matchId,
+          attempt,
+        });
+
+        return {
+          text: normalized,
+          source: "ai",
+        };
+      }
+
+      lastErrorMessage = `AI output invalid after normalization (attempt ${attempt})`;
+      console.warn("[match-summary] ai output invalid", {
+        matchId: input.matchId,
+        attempt,
+        rawLength: generated.text.length,
+      });
+    } catch (error) {
+      lastErrorMessage = error instanceof Error ? error.message : "Ukjent feil";
+      console.error("[match-summary] ai call failed", {
+        matchId: input.matchId,
+        attempt,
+        message: lastErrorMessage,
+      });
     }
-
-    console.info("[match-summary] generation finished with ai", {
-      matchId: input.matchId,
-    });
-
-    return {
-      text: normalized,
-      source: "ai",
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Ukjent feil";
-
-    console.error("[match-summary] ai call failed, using fallback", {
-      matchId: input.matchId,
-      message,
-    });
-
-    return {
-      text: fallback,
-      source: "fallback",
-    };
   }
+
+  console.warn("[match-summary] using fallback summary", {
+    matchId: input.matchId,
+    reason: lastErrorMessage,
+  });
+
+  return {
+    text: fallback,
+    source: "fallback",
+  };
 }
 
 export async function generateMatchSummaryByMatchId(
