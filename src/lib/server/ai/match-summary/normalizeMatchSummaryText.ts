@@ -1,7 +1,11 @@
 import "server-only";
 
-const MAX_LINES = 6;
-const MAX_CHARS = 700;
+/**
+ * Maximum number of non-empty content lines (title + up to 3 paragraphs).
+ * Blank separator lines between sections are preserved but do not count toward this limit.
+ */
+const MAX_CONTENT_LINES = 4;
+const MAX_CHARS = 1100;
 const MIN_WORDS = 6;
 const MIN_WORDS_BEST_EFFORT = 8;
 const MIN_CHARS_BEST_EFFORT = 45;
@@ -17,6 +21,15 @@ function hasSentenceTerminator(text: string): boolean {
   return /[.!?](?:["')\]]|\s|$)/.test(text);
 }
 
+/**
+ * Normalise AI-generated match summary text.
+ *
+ * Preserves single blank lines between sections (title / paragraph breaks) so that
+ * the UI can render them correctly with `whitespace-pre-line`. Collapses runs of 2+
+ * blank lines into a single blank line. Limits to MAX_CONTENT_LINES non-empty lines.
+ *
+ * Returns null if the text is too short, too sparse, or lacks sentence structure.
+ */
 export function normalizeMatchSummaryText(text: string): string | null {
   const normalized = text
     .replace(/\r\n/g, "\n")
@@ -29,17 +42,37 @@ export function normalizeMatchSummaryText(text: string): string | null {
     return null;
   }
 
-  const lines = normalized
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .slice(0, MAX_LINES);
+  // Process lines: keep content lines up to MAX_CONTENT_LINES, preserve single blank-line separators
+  const rawLines = normalized.split("\n").map((line) => line.trim());
+  const resultLines: string[] = [];
+  let contentLineCount = 0;
+  let prevWasBlank = false;
 
-  if (lines.length === 0) {
+  for (const line of rawLines) {
+    if (line) {
+      contentLineCount++;
+      if (contentLineCount > MAX_CONTENT_LINES) break;
+      resultLines.push(line);
+      prevWasBlank = false;
+    } else {
+      // Add a single blank separator only when adjacent to content (no consecutive blanks)
+      if (resultLines.length > 0 && !prevWasBlank) {
+        resultLines.push("");
+        prevWasBlank = true;
+      }
+    }
+  }
+
+  // Strip trailing blank line if the last content line ended up followed by one
+  while (resultLines.length > 0 && resultLines[resultLines.length - 1] === "") {
+    resultLines.pop();
+  }
+
+  if (resultLines.length === 0) {
     return null;
   }
 
-  const compact = lines.join("\n");
+  const compact = resultLines.join("\n");
 
   if (compact.length < 20) {
     return null;

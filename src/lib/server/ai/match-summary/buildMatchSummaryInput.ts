@@ -3,13 +3,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { IntegrationError } from "@/lib/server/integrations/spond/errors";
 import type { MatchEventItem, MatchEventRow, MatchRow } from "@/lib/server/matches/types";
 import type {
+  MatchSummaryEvent,
   MatchSummaryInput,
   MatchSummaryPlayerTime,
+  MatchSummaryPlayerUsed,
+  MatchSummaryStartingPlayer,
   MatchSummarySubstitution,
 } from "@/lib/server/ai/match-summary/types";
 
 const MATCH_SELECT =
-  "id, team_id, title, opponent_name, starts_at, format, score_for, score_against, runtime_state";
+  "id, team_id, title, opponent_name, starts_at, location, format, score_for, score_against, runtime_state";
 const MATCH_EVENT_SELECT =
   "id, match_id, type, minute, timestamp_ms, team_side, primary_player_id, secondary_player_id, payload, created_at, updated_at";
 
@@ -132,8 +135,7 @@ function extractSubstitutionsFromServerEvents(
 
 /**
  * Compute per-player playing times from runtime_state.playerAccumulatedMs.
- * Keys are player IDs; values are accumulated milliseconds of on-field time.
- * Falls back gracefully if the field is missing or malformed.
+ * Returns only players with ms > 0 and a known name.
  */
 function extractPlayerTimesFromRuntimeState(
   runtimeState: Record<string, unknown> | null,
@@ -162,6 +164,200 @@ function extractMatchDurationMinutes(runtimeState: Record<string, unknown> | nul
   if (!runtimeState) return null;
   const seconds = safeNumber(runtimeState.durationSeconds);
   return seconds !== null ? Math.round(seconds / 60) : null;
+}
+
+interface UsedPlayersResult {
+  startingPlayers: MatchSummaryStartingPlayer[];
+  playersUsedList: MatchSummaryPlayerUsed[];
+  playersUsed: number;
+}
+
+/**
+ * Compute the set of players who appeared in the match using a union of three sources:
+ *   1. initialOnFieldPlayerIds — players who started (stable snapshot taken at match creation)
+ *   2. Substitution events — player IDs who came on (inPlayerId)
+ *   3. playerAccumulatedMs — player IDs with tracked time > 0
+ *
+ * This ensures playersUsed is never incorrectly low due to missing time tracking
+ * or incomplete runtime state. Player names are resolved from the DB map first,
+ * then supplemented by names embedded in runtime substitution events.
+ */
+function extractStartingAndUsedPlayers(
+  runtimeState: Record<string, unknown> | null,
+  playerNameMap: Map<string, string>
+): UsedPlayersResult {
+  // 1. Starting lineup snapshot (captured at match creation, never mutated)
+  const rawInitialIds = runtimeState?.initialOnFieldPlayerIds;
+  const initialIds: string[] = Array.isArray(rawInitialIds)
+    ? rawInitialIds.filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+    : [];
+
+  // 2. Players from runtime substitution events
+  const runtimeEvents = Array.isArray(runtimeState?.events)
+    ? (runtimeState!.events as unknown[])
+    : [];
+
+  const subsInIds: string[] = [];
+  const subsOutIds: string[] = [];
+  for (const e of runtimeEvents) {
+    if (!isRecord(e) || e.type !== "substitution") continue;
+    const inId = safeString(e.inPlayerId);
+    const outId = safeString(e.outPlayerId);
+    if (inId) subsInIds.push(inId);
+    if (outId) subsOutIds.push(outId);
+  }
+
+  // 3. Player IDs with accumulated time > 0
+  const accumulated = runtimeState?.playerAccumulatedMs;
+  const idsWithTime: string[] = isRecord(accumulated)
+    ? Object.entries(accumulated)
+        .filter(([, ms]) => typeof ms === "number" && (ms as number) > 0)
+        .map(([id]) => id)
+    : [];
+
+  // Union of all sources
+  const allPlayerIds = new Set([...initialIds, ...subsInIds, ...idsWithTime]);
+
+  // Augment DB name map with names embedded directly in runtime events
+  // (covers players who may have been deactivated in the DB since the match)
+  const nameMap = new Map(playerNameMap);
+  for (const e of runtimeEvents) {
+    if (!isRecord(e) || e.type !== "substitution") continue;
+    const inId = safeString(e.inPlayerId);
+    const inName = safeString(e.inPlayerName);
+    if (inId && inName && !nameMap.has(inId)) nameMap.set(inId, inName);
+    const outId = safeString(e.outPlayerId);
+    const outName = safeString(e.outPlayerName);
+    if (outId && outName && !nameMap.has(outId)) nameMap.set(outId, outName);
+  }
+
+  const startingSet = new Set(initialIds);
+  const subsInSet = new Set(subsInIds);
+
+  const playersUsedList: MatchSummaryPlayerUsed[] = [];
+  for (const id of allPlayerIds) {
+    const name = nameMap.get(id);
+    if (!name) continue; // no name available — skip rather than emit unnamed entry
+
+    const ms = isRecord(accumulated) ? safeNumber((accumulated as Record<string, unknown>)[id]) : null;
+    const minutesPlayed = ms !== null && ms > 0 ? Math.round(ms / 60000) : null;
+
+    playersUsedList.push({
+      name,
+      minutesPlayed,
+      started: startingSet.has(id),
+      cameOn: !startingSet.has(id) && subsInSet.has(id),
+    });
+  }
+
+  // Sort: starters first (by minutes desc), then subs (by minutes desc), then others
+  playersUsedList.sort((a, b) => {
+    if (a.started !== b.started) return a.started ? -1 : 1;
+    if (a.cameOn !== b.cameOn) return a.cameOn ? -1 : 1;
+    return (b.minutesPlayed ?? 0) - (a.minutesPlayed ?? 0);
+  });
+
+  // Starting player list in original squad order (preserving initialOnFieldPlayerIds order)
+  const startingPlayers = initialIds
+    .map((id) => nameMap.get(id))
+    .filter((name): name is string => !!name)
+    .map((name) => ({ name }));
+
+  return {
+    startingPlayers,
+    playersUsedList,
+    playersUsed: playersUsedList.length,
+  };
+}
+
+/**
+ * Build a chronological list of match events for AI narrative context.
+ * Goal events carry a running score so the AI can describe how the game progressed.
+ */
+function buildChronologicalMatchEvents(
+  teamName: string,
+  opponentName: string,
+  scoreFor: number,
+  scoreAgainst: number,
+  goalsFor: Array<{ minute: number | null; scorerName: string | null; assistName: string | null }>,
+  goalsAgainst: Array<{ minute: number | null }>,
+  substitutions: MatchSummarySubstitution[],
+  matchDurationMinutes: number | null
+): MatchSummaryEvent[] {
+  const events: MatchSummaryEvent[] = [];
+
+  events.push({
+    type: "match_start",
+    minute: 0,
+    detail: `Kampstart: ${teamName} vs ${opponentName}`,
+  });
+
+  // Merge all mid-game events to sort chronologically
+  type RawMidEvent =
+    | { kind: "goal_for"; minute: number | null; scorerName: string | null; assistName: string | null }
+    | { kind: "goal_against"; minute: number | null }
+    | { kind: "substitution"; minute: number | null; playerInName: string | null; playerOutName: string | null };
+
+  const midEvents: RawMidEvent[] = [
+    ...goalsFor.map((g) => ({
+      kind: "goal_for" as const,
+      minute: g.minute,
+      scorerName: g.scorerName,
+      assistName: g.assistName,
+    })),
+    ...goalsAgainst.map((g) => ({ kind: "goal_against" as const, minute: g.minute })),
+    ...substitutions.map((s) => ({
+      kind: "substitution" as const,
+      minute: s.minute,
+      playerInName: s.playerInName,
+      playerOutName: s.playerOutName,
+    })),
+  ];
+
+  // Sort by minute (null-minute events go to end)
+  midEvents.sort((a, b) => {
+    if (a.minute === null && b.minute === null) return 0;
+    if (a.minute === null) return 1;
+    if (b.minute === null) return -1;
+    return a.minute - b.minute;
+  });
+
+  // Walk events, tracking running score for context
+  let ownGoals = 0;
+  let oppGoals = 0;
+
+  for (const ev of midEvents) {
+    if (ev.kind === "goal_for") {
+      ownGoals += 1;
+      let detail = `Mål for ${teamName} (${ownGoals}-${oppGoals})`;
+      if (ev.scorerName) detail += ` — scorer: ${ev.scorerName}`;
+      if (ev.assistName) detail += `, assist: ${ev.assistName}`;
+      events.push({ type: "goal_for", minute: ev.minute, detail });
+    } else if (ev.kind === "goal_against") {
+      oppGoals += 1;
+      events.push({
+        type: "goal_against",
+        minute: ev.minute,
+        detail: `Mål for ${opponentName} (${ownGoals}-${oppGoals})`,
+      });
+    } else {
+      const inn = ev.playerInName;
+      const ut = ev.playerOutName;
+      let detail = "Bytte";
+      if (inn && ut) detail = `Bytte: ${inn} inn, ${ut} ut`;
+      else if (inn) detail = `Bytte inn: ${inn}`;
+      else if (ut) detail = `Bytte ut: ${ut}`;
+      events.push({ type: "substitution", minute: ev.minute, detail });
+    }
+  }
+
+  events.push({
+    type: "match_end",
+    minute: matchDurationMinutes,
+    detail: `Slutt: ${teamName} ${scoreFor}-${scoreAgainst} ${opponentName}`,
+  });
+
+  return events;
 }
 
 export async function buildMatchSummaryInput(
@@ -220,14 +416,14 @@ export async function buildMatchSummaryInput(
   const events = mapMatchEvents(eventsResult.data ?? []);
   const team = teamResult.data;
 
-  // Build player name lookup from DB players (authoritative names)
+  // Build player name lookup from DB players (authoritative names for active players)
   const playerNameMap = new Map<string, string>(
     (playersResult.data ?? []).map((p) => [p.id, p.name])
   );
 
   const runtimeState = isRecord(matchRow.runtime_state) ? matchRow.runtime_state : null;
 
-  // Goals
+  // Goals from server events (ordered by timestamp)
   const goalsFor = events
     .filter((event) => event.type === "goal_for")
     .map((event) => ({
@@ -243,33 +439,59 @@ export async function buildMatchSummaryInput(
     }));
 
   // Substitutions — prefer runtime_state.events (domain model, richer) over server events
-  const runtimeEvents = Array.isArray(runtimeState?.events) ? runtimeState.events as unknown[] : [];
+  const runtimeEvents = Array.isArray(runtimeState?.events)
+    ? (runtimeState!.events as unknown[])
+    : [];
   const runtimeSubs = extractSubstitutionsFromRuntimeEvents(runtimeEvents);
   const substitutions =
-    runtimeSubs.length > 0
-      ? runtimeSubs
-      : extractSubstitutionsFromServerEvents(events);
+    runtimeSubs.length > 0 ? runtimeSubs : extractSubstitutionsFromServerEvents(events);
 
   // Player times — derived from live match accumulated time tracking
   const playerTimes = extractPlayerTimesFromRuntimeState(runtimeState, playerNameMap);
-  const playersUsed = playerTimes.length;
+
+  // Players used — union-based calculation (starting lineup + subs + time-tracked)
+  const { startingPlayers, playersUsedList, playersUsed } = extractStartingAndUsedPlayers(
+    runtimeState,
+    playerNameMap
+  );
 
   // Match duration from live match setup
   const matchDurationMinutes = extractMatchDurationMinutes(runtimeState);
 
+  const teamName = team?.name?.trim() || matchRow.title || "Laget";
+  const opponentName = matchRow.opponent_name?.trim() || "Motstanderen";
+  const scoreForFinal = Math.max(0, Math.floor(matchRow.score_for ?? 0));
+  const scoreAgainstFinal = Math.max(0, Math.floor(matchRow.score_against ?? 0));
+
+  // Chronological event timeline for AI narrative context
+  const matchEvents = buildChronologicalMatchEvents(
+    teamName,
+    opponentName,
+    scoreForFinal,
+    scoreAgainstFinal,
+    goalsFor,
+    goalsAgainst,
+    substitutions,
+    matchDurationMinutes
+  );
+
   return {
     matchId,
-    teamName: team?.name?.trim() || matchRow.title || "Laget",
-    opponentName: matchRow.opponent_name?.trim() || "Motstanderen",
+    teamName,
+    opponentName,
     dateTime: matchRow.starts_at ?? null,
+    venue: matchRow.location?.trim() ?? null,
     format: matchRow.format ?? null,
     matchDurationMinutes,
-    scoreFor: Math.max(0, Math.floor(matchRow.score_for ?? 0)),
-    scoreAgainst: Math.max(0, Math.floor(matchRow.score_against ?? 0)),
+    scoreFor: scoreForFinal,
+    scoreAgainst: scoreAgainstFinal,
+    startingPlayers,
     goalsFor,
     goalsAgainst,
     substitutions,
     playersUsed,
+    playersUsedList,
     playerTimes,
+    matchEvents,
   };
 }

@@ -18,7 +18,7 @@ interface GenerateMatchSummaryDeps {
 
 const SUMMARY_DEFAULTS = {
   temperature: 0.2,
-  maxOutputTokens: 420,
+  maxOutputTokens: 600,
 };
 
 const RETRY_PROMPT_SUFFIX =
@@ -87,31 +87,71 @@ function buildRepairedSummaryFromPartial(input: MatchSummaryInput, rawText: stri
 }
 
 function buildHardRecoveryPrompt(input: MatchSummaryInput): string {
-  const goalsFor = input.goalsFor
-    .map((g) => `${g.minute ?? "?"}' ${g.scorerName ?? "ukjent"}`)
+  const outcome =
+    input.scoreFor > input.scoreAgainst
+      ? "seier"
+      : input.scoreFor === input.scoreAgainst
+        ? "uavgjort"
+        : "tap";
+
+  const goalsForLines = input.goalsFor
     .slice(0, 6)
-    .join(", ");
-  const goalsAgainst = input.goalsAgainst
-    .map((g) => `${g.minute ?? "?"}'`)
+    .map((g) => {
+      const min = g.minute !== null ? `${g.minute}'` : "?'";
+      const scorer = g.scorerName ?? "ukjent";
+      const assist = g.assistName ? ` (assist: ${g.assistName})` : "";
+      return `  ${min} ${scorer}${assist}`;
+    })
+    .join("\n");
+
+  const goalsAgainstLines = input.goalsAgainst
     .slice(0, 6)
-    .join(", ");
+    .map((g) => `  ${g.minute !== null ? `${g.minute}'` : "?'"}`)
+    .join("\n");
+
+  // Include a condensed event timeline if available
+  const timelinePart =
+    input.matchEvents.length > 2
+      ? [
+          "",
+          "Hendelsesforløp:",
+          ...input.matchEvents
+            .filter((e) => e.type !== "match_start" && e.type !== "match_end")
+            .slice(0, 8)
+            .map((e) => `  ${e.minute !== null ? `${e.minute}'` : "?"} — ${e.detail}`),
+        ].join("\n")
+      : "";
+
+  const playersLine =
+    input.playersUsed > 0
+      ? `Spillere brukt: ${input.playersUsed}${input.startingPlayers.length > 0 ? ` (herav ${input.startingPlayers.length} i startoppstilling)` : ""}`
+      : "";
 
   return [
     "Skriv en kampoppsummering pa norsk bokmal.",
+    "",
     "Krav:",
-    "- 4 hele setninger.",
-    "- Minst 60 tegn totalt.",
-    "- Enkelt sprak for barne-/breddefotball.",
-    "- Ingen overskrift, ingen punktliste.",
-    "- Bruk kun fakta under.",
+    "- Skriv en kort overskrift pa forste linje",
+    "- Deretter 2 korte avsnitt (totalt 4-6 setninger)",
+    "- Totalt ca. 80-150 ord",
+    "- Ingen punktliste",
+    "- Bruk kun fakta fra dataene under",
+    outcome === "tap"
+      ? "- Vaer aErlig om at laget tapte — ikke pynt pa resultatet, men vaer rolig og konstruktiv"
+      : outcome === "uavgjort"
+        ? "- Beskriv kampen balansert og saklig"
+        : "- Tonen kan vaere positiv og konkret",
     "",
     `Lag: ${input.teamName}`,
     `Motstander: ${input.opponentName}`,
-    `Resultat: ${input.scoreFor}-${input.scoreAgainst}`,
-    `Vare mal: ${goalsFor || "ingen detaljer"}`,
-    `Motstanders mal: ${goalsAgainst || "ingen detaljer"}`,
-    `Antall spillere brukt: ${input.playersUsed}`,
-  ].join("\n");
+    `Resultat: ${input.scoreFor}-${input.scoreAgainst} (${outcome})`,
+    goalsForLines ? `Vare mal:\n${goalsForLines}` : "Vare mal: ingen",
+    goalsAgainstLines ? `Motstanders mal:\n${goalsAgainstLines}` : "Motstanders mal: ingen",
+    playersLine,
+    timelinePart,
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 export async function generateMatchSummary(

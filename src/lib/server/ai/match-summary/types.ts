@@ -21,24 +21,53 @@ export interface MatchSummaryPlayerTime {
   minutesPlayed: number;
 }
 
+export interface MatchSummaryStartingPlayer {
+  name: string;
+}
+
+export interface MatchSummaryPlayerUsed {
+  name: string;
+  /** Accumulated playing time in minutes, or null if not reliably tracked. */
+  minutesPlayed: number | null;
+  /** True if this player was in the starting lineup. */
+  started: boolean;
+  /** True if this player came on as a substitute. */
+  cameOn: boolean;
+}
+
+export interface MatchSummaryEvent {
+  type: "match_start" | "goal_for" | "goal_against" | "substitution" | "match_end";
+  minute: number | null;
+  /** Human-readable detail string in Norwegian, for AI narrative context. */
+  detail: string;
+}
+
 export interface MatchSummaryInput {
   matchId: string;
   teamName: string;
   opponentName: string;
   dateTime: string | null;
+  /** Match venue / location, if available. */
+  venue: string | null;
   format: "3v3" | "5v5" | "7v7" | "9v9" | "11v11" | null;
   /** Total scheduled match duration in minutes (from runtime state or setup). */
   matchDurationMinutes: number | null;
   scoreFor: number;
   scoreAgainst: number;
+  /** Players in the starting lineup, in squad order. Empty if snapshot unavailable. */
+  startingPlayers: MatchSummaryStartingPlayer[];
   goalsFor: MatchSummaryGoalFor[];
   goalsAgainst: MatchSummaryGoalAgainst[];
   /** Recorded substitutions for own team, in chronological order. */
   substitutions: MatchSummarySubstitution[];
-  /** Number of distinct players who appeared on the pitch. */
+  /** Number of distinct players who appeared on the pitch (union of starters + subs + tracked time). */
   playersUsed: number;
-  /** Per-player playing time, sorted by most minutes first. */
+  /** All players who appeared, with role metadata. Starters first, then subs, sorted by minutes desc. */
+  playersUsedList: MatchSummaryPlayerUsed[];
+  /** Per-player playing time, sorted by most minutes first. Subset of playersUsedList (only tracked players). */
   playerTimes: MatchSummaryPlayerTime[];
+  /** Chronological match events for AI narrative context. */
+  matchEvents: MatchSummaryEvent[];
 }
 
 export interface MatchSummaryResult {
