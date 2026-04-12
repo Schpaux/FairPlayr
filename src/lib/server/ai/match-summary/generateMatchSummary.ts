@@ -39,6 +39,53 @@ function summarizeInvalidOutput(rawText: string): string {
   return `invalid_output(chars=${compact.length}, words=${words}, sentenceTerminator=${String(hasTerminator)}, snippet="${snippet}")`;
 }
 
+function buildRepairedSummaryFromPartial(input: MatchSummaryInput, rawText: string): string | null {
+  const compact = rawText.replace(/\s+/g, " ").trim();
+  if (!compact) {
+    return null;
+  }
+
+  const words = compact.split(" ").filter(Boolean);
+  if (words.length < 5) {
+    return null;
+  }
+
+  const team = input.teamName.trim() || "Laget";
+  const opponent = input.opponentName.trim() || "motstanderen";
+  const score = `${input.scoreFor}-${input.scoreAgainst}`;
+
+  const cleanedBase = compact.replace(/[.!?\s]+$/g, "");
+  const needsOpponentCompletion = /\bmot$/i.test(cleanedBase);
+  const firstSentenceBase = needsOpponentCompletion
+    ? `${cleanedBase} ${opponent}`
+    : cleanedBase;
+  const firstSentence = `${firstSentenceBase}.`;
+
+  const resultSentence = `Resultatet ble ${score}.`;
+
+  let detailSentence = "";
+  if (input.goalsFor.length > 0) {
+    const scorers = input.goalsFor
+      .map((goal) => goal.scorerName)
+      .filter((name): name is string => typeof name === "string" && name.trim().length > 0)
+      .slice(0, 3);
+    if (scorers.length > 0) {
+      detailSentence = `Målscorere for ${team} var ${scorers.join(", ")}.`;
+    }
+  }
+
+  const usageSentence =
+    input.playersUsed > 0
+      ? `${team} brukte ${input.playersUsed} spillere i kampen.`
+      : "";
+
+  const repaired = [firstSentence, resultSentence, detailSentence, usageSentence]
+    .filter(Boolean)
+    .join(" ");
+
+  return normalizeMatchSummaryText(repaired);
+}
+
 function buildHardRecoveryPrompt(input: MatchSummaryInput): string {
   const goalsFor = input.goalsFor
     .map((g) => `${g.minute ?? "?"}' ${g.scorerName ?? "ukjent"}`)
@@ -128,6 +175,20 @@ export async function generateMatchSummary(
 
         return {
           text: normalized,
+          source: "ai",
+        };
+      }
+
+      const repaired = buildRepairedSummaryFromPartial(input, generated.text);
+      if (repaired) {
+        console.info("[match-summary] generation finished with repaired ai text", {
+          matchId: input.matchId,
+          attempt,
+          strategy: spec.label,
+        });
+
+        return {
+          text: repaired,
           source: "ai",
         };
       }
