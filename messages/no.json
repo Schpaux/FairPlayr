@@ -858,5 +858,12 @@
   "activeMatchBanner": {
     "label": "Kamp pågår",
     "open": "Åpne"
+  },
+  "native": {
+    "offline": {
+      "title": "Ingen internettforbindelse",
+      "description": "FairPlayr trenger nett for å laste kampdata.",
+      "retry": "Prøv igjen"
+    }
   }
 }

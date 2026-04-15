@@ -193,11 +193,16 @@
 
   html {
     @apply font-sans scroll-smooth;
+    /* Prevent the outermost elastic bounce scroll in Capacitor WKWebView.
+       Individual scrollable regions (overflow-y: auto) still scroll normally. */
+    overscroll-behavior: none;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "ss01", "ss02";
+    /* Mirror overscroll prevention on body for cross-browser reliability. */
+    overscroll-behavior: none;
   }
 
   /* Remove focus outline on mouse click, keep it for keyboard nav */
@@ -253,11 +258,18 @@
     min-width: 44px;
   }
 
-  /* Safe area padding for PWA */
+  /* Safe area padding — used by Header (pt-safe), BottomNav (pb-safe), and
+     any landscape-aware container that needs side gutters (pl-safe, pr-safe). */
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
   }
   .pt-safe {
     padding-top: env(safe-area-inset-top);
+  }
+  .pl-safe {
+    padding-left: env(safe-area-inset-left);
+  }
+  .pr-safe {
+    padding-right: env(safe-area-inset-right);
   }
 }

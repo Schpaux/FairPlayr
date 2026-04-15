@@ -46,6 +46,7 @@ FairPlayr exists to make fair rotation and match organization easier in real tim
 - Theming: next-themes
 - Backend/BaaS: Supabase (Auth + Postgres + RLS)
 - Data access: @supabase/ssr and @supabase/supabase-js
+- iOS packaging: Capacitor 8 (server URL mode wrapping the Vercel deployment)
 - Linting: ESLint 9 + eslint-config-next
 
 ## Architecture Overview
@@ -319,6 +320,169 @@ Near-term directions visible from current structure and code:
 - Smarter fairness guidance in live substitution decisions
 - Better sharing/export patterns for practical coaching workflows
 - Packaging path from web-first experience toward app-like distribution
+
+## iOS / Capacitor
+
+FairPlayr is packaged as a native iOS app using Capacitor in **server URL mode**: the WKWebView loads the live Vercel deployment rather than a bundled static build. This keeps all API routes, SSR, Supabase auth, and next-intl server features working identically on web and iOS. Internet connectivity is required (Supabase auth already requires it).
+
+### Key files
+
+| File | Purpose |
+| --- | --- |
+| `capacitor.config.ts` | Capacitor config — app ID, server URL, iOS/plugin settings |
+| `src/lib/native.ts` | Runtime helper: `isNative()` + `initNative()` for plugin setup |
+| `src/components/layout/NativeAppShell.tsx` | Shell wrapper: native init, offline detection |
+| `src/components/layout/OfflineScreen.tsx` | Localised offline fallback screen |
+| `ios/` | Generated Xcode project (managed by Capacitor, do not edit manually) |
+
+### Development workflow
+
+```bash
+# 1. Start the Next.js dev server
+npm run dev
+
+# 2. Sync Capacitor config pointing at localhost + open Xcode
+npm run cap:sync:dev
+npm run cap:ios
+# Then press Run in Xcode (simulator or device)
+```
+
+### Configuring the server URL
+
+`CAPACITOR_SERVER_URL` controls which URL the WKWebView loads. It is read at `cap sync` time (not at app runtime), so re-sync after changing it.
+
+```bash
+# Local development — loads from the Next.js dev server
+npm run cap:sync:dev
+
+# Production — pass your Vercel URL explicitly
+CAPACITOR_SERVER_URL=https://your-app.vercel.app npm run cap:sync:prod
+
+# No URL set — Capacitor falls back to loading from webDir (static files)
+npm run cap:sync
+```
+
+There is no hardcoded URL in `capacitor.config.ts`. If `CAPACITOR_SERVER_URL` is not set, `server` is `undefined` and Capacitor uses `webDir` instead.
+
+### iOS layout and safe areas
+
+Safe areas are handled via CSS utility classes:
+
+- `pt-safe` — top safe area (used by Header)
+- `pb-safe` — bottom safe area (used by BottomNav)
+- `pl-safe` / `pr-safe` — side safe areas (available if needed)
+
+`viewport-fit=cover` is set in the `Viewport` export in `src/app/[locale]/layout.tsx`, which activates `env(safe-area-inset-*)` in the WKWebView.
+
+The status bar is configured as transparent/overlay via `@capacitor/status-bar` in `NativeAppShell`, matching the `appleWebApp.statusBarStyle: "black-translucent"` metadata in the layout.
+
+### Limitations of this setup
+
+- The iOS app requires an internet connection (server URL mode loads content from Vercel).
+- Any web-only deployment (e.g. Vercel preview branch) requires a `cap:sync` + Xcode rebuild to reach the iOS app.
+- Android is not set up. Capacitor supports it, but it is explicitly out of scope for now.
+
+---
+
+## TestFlight Release
+
+### App metadata (set in repo / Xcode project)
+
+| Setting | Value |
+| --- | --- |
+| Bundle ID | `app.fairplayr.mobile` |
+| Display name | FairPlayr |
+| Version | 1.0 |
+| Build | 1 |
+| iOS deployment target | 15.0 |
+| Orientation | Portrait only |
+| Launch screen | Solid dark `#0b0f1a` (matches splash background) |
+
+### App icon requirements
+
+The current app icon is the **Capacitor default placeholder** and must be replaced before TestFlight.
+
+**Spec:**
+- Format: PNG, 1024 × 1024 px
+- No alpha channel (App Store rejects transparent icons)
+- No rounded corners (iOS applies the mask automatically)
+
+**Where to place it:**
+
+Replace the file at:
+```
+ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png
+```
+
+The `Contents.json` in that folder already references this filename. Xcode generates all required size variants automatically.
+
+### Splash screen
+
+The native launch screen (`LaunchScreen.storyboard`) currently shows a solid dark background (`#0b0f1a`), which matches the Capacitor `SplashScreen` plugin color and prevents any white flash on startup.
+
+To add branded splash artwork later:
+
+1. Add a 2732 × 2732 px PNG to `ios/App/App/Assets.xcassets/Splash.imageset/`
+2. Update `LaunchScreen.storyboard` to reference it as an `imageView` with `contentMode="scaleAspectFill"`
+
+### First TestFlight release — step by step
+
+**Before you open Xcode:**
+
+```bash
+# 1. Confirm the Vercel deployment is live and up to date
+# 2. Sync Capacitor with the production URL
+CAPACITOR_SERVER_URL=https://your-app.vercel.app npm run cap:sync:prod
+
+# 3. Open Xcode
+npm run cap:ios
+```
+
+**In Apple Developer (developer.apple.com):**
+
+- [ ] Register bundle ID `app.fairplayr.mobile` under Certificates, Identifiers & Profiles
+- [ ] Create or confirm you have a valid Distribution certificate
+
+**In App Store Connect (appstoreconnect.apple.com):**
+
+- [ ] Create a new app record
+- [ ] Set bundle ID: `app.fairplayr.mobile`
+- [ ] Set primary language, category (Sports), and a privacy policy URL
+
+**In Xcode:**
+
+- [ ] Open `ios/App/App.xcodeproj` (or use `npm run cap:ios`)
+- [ ] Target → Signing & Capabilities → set your Team
+- [ ] Verify bundle ID shows `app.fairplayr.mobile`
+- [ ] Set version `1.0` and build number `1` (or increment as needed)
+- [ ] Select target device: **Any iOS Device (arm64)**
+- [ ] Replace the placeholder app icon before archiving
+- [ ] Product → Archive
+- [ ] In the Organizer → Distribute App → App Store Connect → Upload
+
+**Back in App Store Connect:**
+
+- [ ] Open TestFlight tab → your new build should appear within ~30 min
+- [ ] Add internal testers (Apple ID invite) or submit for external beta review
+
+### Subsequent releases
+
+For each new TestFlight build after the first:
+
+```bash
+# 1. Deploy updated web app to Vercel
+# 2. Sync Capacitor
+CAPACITOR_SERVER_URL=https://your-app.vercel.app npm run cap:sync:prod
+# 3. Open Xcode, bump build number, archive, upload
+npm run cap:ios
+```
+
+In server URL mode, you may only need a new Xcode build if:
+- Capacitor native config changed (plugins, app ID, server URL)
+- iOS deployment target or entitlements changed
+- You want to bump the build number visible in TestFlight
+
+Pure web/UI changes deployed to Vercel are live in the app immediately without a new build.
 
 ## Contributing
 

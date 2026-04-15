@@ -858,5 +858,12 @@
   "activeMatchBanner": {
     "label": "Match in progress",
     "open": "Open"
+  },
+  "native": {
+    "offline": {
+      "title": "No internet connection",
+      "description": "FairPlayr needs internet to load match data.",
+      "retry": "Try again"
+    }
   }
 }

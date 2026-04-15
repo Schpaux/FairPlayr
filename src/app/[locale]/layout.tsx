@@ -11,6 +11,8 @@ import { ActiveMatchProvider } from "@/components/providers/ActiveMatchProvider"
 import { Header } from "@/components/layout/Header";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { ActiveMatchBanner } from "@/components/layout/ActiveMatchBanner";
+import { NativeAppShell } from "@/components/layout/NativeAppShell";
+import { AppShellErrorBoundary } from "@/components/layout/AppShellErrorBoundary";
 import "../globals.css";
 
 const geistSans = Geist({
@@ -46,6 +48,9 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  // viewport-fit=cover is required so env(safe-area-inset-*) works correctly
+  // inside a Capacitor WKWebView and as a PWA on iOS.
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)", color: "#0b0f1a" },
@@ -83,12 +88,16 @@ export default async function LocaleLayout({ children, params }: Props) {
             <AuthProvider>
               <TeamWorkspaceProvider>
                 <ActiveMatchProvider>
-                  <div className="relative flex min-h-screen flex-col">
-                    <Header />
-                    <ActiveMatchBanner />
-                    <main className="flex-1 pb-20">{children}</main>
-                    <BottomNav />
-                  </div>
+                  <AppShellErrorBoundary>
+                    <NativeAppShell>
+                      <div className="relative flex min-h-screen flex-col">
+                        <Header />
+                        <ActiveMatchBanner />
+                        <main className="flex-1 pb-20">{children}</main>
+                        <BottomNav />
+                      </div>
+                    </NativeAppShell>
+                  </AppShellErrorBoundary>
                 </ActiveMatchProvider>
               </TeamWorkspaceProvider>
             </AuthProvider>
