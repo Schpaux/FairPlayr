@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
@@ -11,6 +12,7 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
 import { UserAvatar } from "@/components/layout/UserAvatar";
 import { SyncStatusRow } from "@/components/layout/SyncStatusRow";
+import { useSpondStatus } from "@/components/team/useSpondStatus";
 
 function readProfileMetadata(user: ReturnType<typeof useAuth>["user"]) {
   const metadata = user?.user_metadata as Record<string, unknown> | undefined;
@@ -43,6 +45,17 @@ export function ProfileMenu() {
   const profile = useMemo(() => readProfileMetadata(user), [user]);
   const isGuest = status !== "authenticated";
 
+  const spondConnected = useSpondStatus(workspace.activeTeamId, workspace.mode);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [open]);
+
   return (
     <>
       <button
@@ -72,7 +85,17 @@ export function ProfileMenu() {
           <div className="absolute inset-x-0 bottom-0 top-[max(env(safe-area-inset-top),0.5rem)] flex items-end px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)]">
             <div className="mx-auto flex h-full w-full max-w-screen-sm flex-col overflow-hidden rounded-2xl border border-fp-border bg-background shadow-xl">
               <div className="flex-1 overflow-y-auto px-4 pb-4 pt-3">
-                <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-fp-border" />
+                <div className="relative mb-4 flex items-center justify-center">
+                  <div className="h-1.5 w-12 rounded-full bg-fp-border" />
+                  <button
+                    type="button"
+                    className="absolute right-0 flex h-7 w-7 items-center justify-center rounded-full border border-fp-border bg-fp-surface-2 text-muted-foreground"
+                    aria-label={t("close")}
+                    onClick={() => setOpen(false)}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
 
                 <div className="flex items-center gap-3 rounded-xl border border-fp-border bg-fp-surface-2 p-3">
                   <UserAvatar
@@ -93,6 +116,28 @@ export function ProfileMenu() {
 
                 <div className="mt-3 space-y-2">
                   <SyncStatusRow mode={workspace.mode} hasError={Boolean(workspace.error)} />
+
+                  {workspace.mode === "cloud" ? (
+                    <div className="flex items-center justify-between rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2">
+                      <span className="text-xs font-medium text-foreground">Spond</span>
+                      <span
+                        className={
+                          spondConnected
+                            ? "inline-flex items-center gap-1 text-xs font-medium text-fp-accent"
+                            : "inline-flex items-center gap-1 text-xs font-medium text-muted-foreground"
+                        }
+                      >
+                        <span
+                          className={
+                            spondConnected
+                              ? "h-1.5 w-1.5 rounded-full bg-fp-accent"
+                              : "h-1.5 w-1.5 rounded-full bg-muted-foreground/40"
+                          }
+                        />
+                        {spondConnected ? "Tilkoblet Spond" : "Ikke koblet til"}
+                      </span>
+                    </div>
+                  ) : null}
 
                   <Link
                     href="/settings"
