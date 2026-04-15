@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
@@ -59,7 +60,7 @@ export function ProfileMenu() {
         />
       </button>
 
-      {open ? (
+      {open ? createPortal(
         <div className="fixed inset-0 z-[70]">
           <button
             type="button"
@@ -188,7 +189,7 @@ export function ProfileMenu() {
             </div>
           </div>
         </div>
-      ) : null}
+      , document.body) : null}
     </>
   );
 }
