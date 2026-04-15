@@ -1,4 +1,4 @@
-import type { MatchSetup } from "@/domain/match";
+import type { MatchFormat, MatchSetup } from "@/domain/match";
 import {
   createMatchEndedEvent,
   createMatchStartedEvent,
@@ -29,6 +29,10 @@ export interface LiveMatchState {
   status: LiveMatchStatus;
   teamScore: number;
   opponentScore: number;
+  format: MatchFormat;
+  formationId: string;
+  /** Current slot → player assignments, updated during live play. */
+  liveSlotAssignments: Record<string, string | null>;
   /** Starting XI — captured at match creation, never mutated. Used by match report. */
   initialOnFieldPlayerIds: string[];
   onFieldPlayerIds: string[];
@@ -209,6 +213,9 @@ export function createLiveMatchFromSetup(setup: MatchSetup): LiveMatchState {
     status: "not_started",
     teamScore: 0,
     opponentScore: 0,
+    format: setup.format,
+    formationId: setup.formationId,
+    liveSlotAssignments: { ...setup.slotAssignments },
     initialOnFieldPlayerIds: startingPlayerIds,
     onFieldPlayerIds: startingPlayerIds,
     benchPlayerIds: setup.selectedPlayerIds.filter(
@@ -431,12 +438,134 @@ export function substitutePlayers(
     [incomingPlayerId]: elapsedMs,
   };
 
+  // Keep liveSlotAssignments in sync: find outgoing player's slot and give it to incoming
+  const nextSlotAssignments = { ...sourceState.liveSlotAssignments };
+  for (const slotId of Object.keys(nextSlotAssignments)) {
+    if (nextSlotAssignments[slotId] === outgoingPlayerId) {
+      nextSlotAssignments[slotId] = incomingPlayerId;
+      break;
+    }
+  }
+
   return {
     ...sourceState,
     onFieldPlayerIds,
     benchPlayerIds,
     playerAccumulatedMs,
     onFieldStartedAtElapsedMs,
+    liveSlotAssignments: nextSlotAssignments,
+    updatedAt: nowIso(),
+  };
+}
+
+/**
+ * Swap two field players between their slots. No substitution event — both players
+ * remain on the field, they just switch positions.
+ */
+export function repositionLivePlayers(
+  state: LiveMatchState,
+  slotAId: string,
+  slotBId: string
+): LiveMatchState {
+  if (slotAId === slotBId) return state;
+
+  const playerA = state.liveSlotAssignments[slotAId] ?? null;
+  const playerB = state.liveSlotAssignments[slotBId] ?? null;
+
+  return {
+    ...state,
+    liveSlotAssignments: {
+      ...state.liveSlotAssignments,
+      [slotAId]: playerB,
+      [slotBId]: playerA,
+    },
+    updatedAt: nowIso(),
+  };
+}
+
+/**
+ * Move a bench player to a field slot.
+ * - If the slot is occupied: performs a substitution (outgoing → bench, incoming → field).
+ * - If the slot is empty: just moves the player to the field with no outgoing player.
+ *
+ * Caller is responsible for creating the SubstitutionMatchEvent.
+ * Returns the displaced player ID so the caller knows whether a real sub happened.
+ */
+export function moveBenchPlayerToSlot(
+  state: LiveMatchState,
+  slotId: string,
+  incomingPlayerId: string,
+  nowMs: number
+): LiveMatchState {
+  if (!state.benchPlayerIds.includes(incomingPlayerId)) {
+    return state;
+  }
+
+  const displacedPlayerId = state.liveSlotAssignments[slotId] ?? null;
+
+  if (displacedPlayerId && state.onFieldPlayerIds.includes(displacedPlayerId)) {
+    // Occupied slot → substitution (uses substitutePlayers which also updates slots)
+    return substitutePlayers(state, displacedPlayerId, incomingPlayerId, nowMs);
+  }
+
+  // Empty slot → move player to field without an outgoing player
+  const elapsedMs = getElapsedMs(state, nowMs);
+  const sourceState = normalizePlayerState(state, elapsedMs);
+
+  const onFieldPlayerIds = [...sourceState.onFieldPlayerIds, incomingPlayerId];
+  const benchPlayerIds = sourceState.benchPlayerIds.filter((id) => id !== incomingPlayerId);
+  const onFieldStartedAtElapsedMs = {
+    ...sourceState.onFieldStartedAtElapsedMs,
+    [incomingPlayerId]: elapsedMs,
+  };
+
+  return {
+    ...sourceState,
+    onFieldPlayerIds,
+    benchPlayerIds,
+    onFieldStartedAtElapsedMs,
+    liveSlotAssignments: {
+      ...sourceState.liveSlotAssignments,
+      [slotId]: incomingPlayerId,
+    },
+    updatedAt: nowIso(),
+  };
+}
+
+/**
+ * Remove a field player from their slot and move them to the bench.
+ * No incoming player — caller decides whether to create a substitution event.
+ */
+export function removePlayerFromField(
+  state: LiveMatchState,
+  slotId: string,
+  nowMs: number
+): LiveMatchState {
+  const playerId = state.liveSlotAssignments[slotId] ?? null;
+  if (!playerId || !state.onFieldPlayerIds.includes(playerId)) return state;
+
+  const elapsedMs = getElapsedMs(state, nowMs);
+  const sourceState = normalizePlayerState(state, elapsedMs);
+
+  const playerAccumulatedMs = {
+    ...sourceState.playerAccumulatedMs,
+    [playerId]: getPlayerElapsedMsAt(sourceState, playerId, elapsedMs),
+  };
+  const onFieldStartedAtElapsedMs = {
+    ...sourceState.onFieldStartedAtElapsedMs,
+    [playerId]: null,
+  };
+
+  return {
+    ...sourceState,
+    onFieldPlayerIds: sourceState.onFieldPlayerIds.filter((id) => id !== playerId),
+    benchPlayerIds: [...sourceState.benchPlayerIds, playerId],
+    playerAccumulatedMs,
+    onFieldStartedAtElapsedMs,
+    liveSlotAssignments: {
+      ...sourceState.liveSlotAssignments,
+      [slotId]: null,
+    },
     updatedAt: nowIso(),
   };
 }
@@ -512,6 +641,12 @@ export function reconcileLiveMatchWithSquad(
       state.onFieldStartedAtElapsedMs[playerId] ?? (onFieldPlayerIds.includes(playerId) ? 0 : null);
   }
 
+  // Clean up slot assignments: remove players no longer in squad
+  const nextSlotAssignments: Record<string, string | null> = {};
+  for (const [slotId, pid] of Object.entries(state.liveSlotAssignments)) {
+    nextSlotAssignments[slotId] = pid && allowed.has(pid) ? pid : null;
+  }
+
   return {
     ...state,
     // Preserve original starting XI — never overwrite with reconciled data
@@ -522,6 +657,7 @@ export function reconcileLiveMatchWithSquad(
     benchPlayerIds: nextBench,
     playerAccumulatedMs: nextPlaytimeMs,
     onFieldStartedAtElapsedMs: nextOnFieldStart,
+    liveSlotAssignments: nextSlotAssignments,
     updatedAt: nowIso(),
   };
 }

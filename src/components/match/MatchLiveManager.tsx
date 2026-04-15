@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeftRight, Play, Minus, Plus, ArrowRightLeft } from "lucide-react";
+import { Play, Minus, Plus, ArrowRightLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -20,11 +20,14 @@ import {
   getPlayerAccumulatedSeconds,
   getRemainingSeconds,
   isInStoppageTime,
+  moveBenchPlayerToSlot,
   pauseLiveMatch,
+  reconcileLiveMatchWithSquad,
+  removePlayerFromField,
+  repositionLivePlayers,
   resumeLiveMatch,
   startLiveMatch,
   substitutePlayers,
-  reconcileLiveMatchWithSquad,
   updateScore,
   type LiveMatchState,
 } from "@/domain/liveMatch";
@@ -53,7 +56,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { AppCard } from "@/components/ui/AppCard";
 import { FpButton } from "@/components/ui/FpButton";
 import { MatchTimerPanel } from "@/components/match/MatchTimerPanel";
-import { LivePlayerSection } from "@/components/match/LivePlayerSection";
+import { LivePitchLineupEditor } from "@/components/match/LivePitchLineupEditor";
 import { useMatchClock } from "@/components/match/useMatchClock";
 import { variants } from "@/lib/tokens";
 
@@ -134,8 +137,6 @@ export function MatchLiveManager() {
   const [teamPlayers, setTeamPlayers] = useState<Player[]>([]);
   const [liveMatch, setLiveMatch] = useState<LiveMatchState | null>(null);
   const [setupStatus, setSetupStatus] = useState<MatchStatus | null>(null);
-  const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
-  const [selectedBenchId, setSelectedBenchId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reportEnabled, setReportEnabled] = useState(false);
   const [promptQueue, setPromptQueue] = useState<GoalPromptState[]>([]);
@@ -346,16 +347,6 @@ export function MatchLiveManager() {
 
   const playersById = useMemo(() => mapPlayersById(teamPlayers), [teamPlayers]);
 
-  const onFieldPlayers = useMemo(
-    () => (liveMatch ? resolvePlayers(liveMatch.onFieldPlayerIds, playersById) : []),
-    [liveMatch, playersById]
-  );
-
-  const benchPlayers = useMemo(
-    () => (liveMatch ? resolvePlayers(liveMatch.benchPlayerIds, playersById) : []),
-    [liveMatch, playersById]
-  );
-
   const elapsedSeconds = liveMatch
     ? getElapsedSeconds(liveMatch, matchClock.nowMs)
     : 0;
@@ -369,7 +360,6 @@ export function MatchLiveManager() {
   const currentHalf = liveMatch ? getCurrentHalfNumber(liveMatch) : null;
   const inStoppage = liveMatch ? isInStoppageTime(liveMatch, matchClock.nowMs) : false;
 
-  const selectedPlayersReady = Boolean(selectedFieldId && selectedBenchId);
   const suggestion = liveMatch ? getSubstitutionSuggestion(liveMatch, matchClock.nowMs) : null;
   const suggestedOutgoingPlayer = suggestion
     ? playersById.get(suggestion.outgoingPlayerId) ?? null
@@ -384,11 +374,6 @@ export function MatchLiveManager() {
     }
 
     return formatPlaytime(getPlayerAccumulatedSeconds(liveMatch, playerId, matchClock.nowMs));
-  };
-
-  const clearSelection = () => {
-    setSelectedFieldId(null);
-    setSelectedBenchId(null);
   };
 
   const liveEvents = liveMatch?.events ?? [];
@@ -470,39 +455,6 @@ export function MatchLiveManager() {
       }, 1200);
     })();
 
-    clearSelection();
-  };
-
-  const handleSubstitute = () => {
-    if (!selectedFieldId || !selectedBenchId) {
-      return;
-    }
-
-    const outPlayer = playersById.get(selectedFieldId);
-    const inPlayer = playersById.get(selectedBenchId);
-    const minute = liveMatch ? Math.floor(elapsedSeconds / 60) : null;
-    const timestampMs = liveMatch ? elapsedSeconds * 1000 : null;
-
-    setLiveMatch((previous) =>
-      previous
-        ? {
-            ...substitutePlayers(previous, selectedFieldId, selectedBenchId, Date.now()),
-            events: [
-              ...previous.events,
-              createSubstitutionEvent({
-                minute,
-                timestampMs,
-                inPlayerId: selectedBenchId,
-                inPlayerName: inPlayer?.name ?? null,
-                outPlayerId: selectedFieldId,
-                outPlayerName: outPlayer?.name ?? null,
-              }),
-            ],
-          }
-        : previous
-    );
-
-    clearSelection();
   };
 
   const handleApplySuggestion = () => {
@@ -536,8 +488,56 @@ export function MatchLiveManager() {
           }
         : previous
     );
+  };
 
-    clearSelection();
+  // ─── Pitch lineup handlers ─────────────────────────────────────────────────
+
+  const handlePitchBenchToSlot = (
+    benchPlayerId: string,
+    slotId: string,
+    displacedPlayerId: string | null
+  ) => {
+    if (!liveMatch || liveMatch.status === "ended") return;
+
+    const inPlayer = playersById.get(benchPlayerId);
+    const outPlayer = displacedPlayerId ? playersById.get(displacedPlayerId) : null;
+    const minute = Math.floor(elapsedSeconds / 60);
+    const timestampMs = elapsedSeconds * 1000;
+    const nowMs = Date.now();
+
+    setLiveMatch((prev) => {
+      if (!prev) return prev;
+      const next = moveBenchPlayerToSlot(prev, slotId, benchPlayerId, nowMs);
+      // Only create a substitution event when a player was actually displaced
+      if (!displacedPlayerId) return next;
+      return {
+        ...next,
+        events: [
+          ...next.events,
+          createSubstitutionEvent({
+            minute,
+            timestampMs,
+            inPlayerId: benchPlayerId,
+            inPlayerName: inPlayer?.name ?? null,
+            outPlayerId: displacedPlayerId,
+            outPlayerName: outPlayer?.name ?? null,
+          }),
+        ],
+      };
+    });
+  };
+
+  const handlePitchSlotToSlot = (slotAId: string, slotBId: string) => {
+    if (!liveMatch || liveMatch.status === "ended") return;
+    // Pure reposition — no substitution event
+    setLiveMatch((prev) => (prev ? repositionLivePlayers(prev, slotAId, slotBId) : prev));
+  };
+
+  const handlePitchSlotToBench = (playerId: string, slotId: string) => {
+    if (!liveMatch || liveMatch.status === "ended") return;
+    setLiveMatch((prev) =>
+      prev ? removePlayerFromField(prev, slotId, Date.now()) : prev
+    );
   };
 
   const handleResetView = () => {
@@ -1081,42 +1081,25 @@ export function MatchLiveManager() {
           />
         </motion.div>
 
-        <motion.div variants={variants.fadeInUp} className="space-y-4">
-          <LivePlayerSection
-            title={t("field.title")}
-            description={t("field.description")}
-            players={onFieldPlayers}
-            selectedPlayerId={selectedFieldId}
-            suggestedPlayerId={suggestion?.outgoingPlayerId}
-            selectedLabel={t("selection.selected")}
-            suggestedLabel={t("selection.suggestedOut")}
-            emptyText={t("field.empty")}
-            playtimeLabel={t("player.playtime")}
-            getPlaytime={getPlayerPlaytime}
-            onSelectPlayer={(playerId) =>
-              setSelectedFieldId((previous) =>
-                previous === playerId ? null : playerId
-              )
-            }
-          />
-
-          <LivePlayerSection
-            title={t("bench.title")}
-            description={t("bench.description")}
-            players={benchPlayers}
-            selectedPlayerId={selectedBenchId}
-            suggestedPlayerId={suggestion?.incomingPlayerId}
-            selectedLabel={t("selection.selected")}
-            suggestedLabel={t("selection.suggestedIn")}
-            emptyText={t("bench.empty")}
-            playtimeLabel={t("player.playtime")}
-            getPlaytime={getPlayerPlaytime}
-            onSelectPlayer={(playerId) =>
-              setSelectedBenchId((previous) =>
-                previous === playerId ? null : playerId
-              )
-            }
-          />
+        <motion.div variants={variants.fadeInUp}>
+          <AppCard className="p-3">
+            <p className="mb-3 text-sm font-semibold text-foreground">
+              {t("field.title")}
+            </p>
+            <LivePitchLineupEditor
+              format={liveMatch.format}
+              formationId={liveMatch.formationId}
+              liveSlotAssignments={liveMatch.liveSlotAssignments}
+              onFieldPlayerIds={liveMatch.onFieldPlayerIds}
+              benchPlayerIds={liveMatch.benchPlayerIds}
+              players={teamPlayers}
+              disabled={liveMatch.status === "ended"}
+              getPlayerSubtitle={getPlayerPlaytime}
+              onBenchToSlot={handlePitchBenchToSlot}
+              onSlotToSlot={handlePitchSlotToSlot}
+              onSlotToBench={handlePitchSlotToBench}
+            />
+          </AppCard>
         </motion.div>
 
         <motion.div variants={variants.fadeInUp}>
@@ -1145,40 +1128,6 @@ export function MatchLiveManager() {
               </>
             ) : (
               <p className="text-xs text-muted-foreground">{t("suggestion.unavailable")}</p>
-            )}
-          </AppCard>
-        </motion.div>
-
-        <motion.div variants={variants.fadeInUp}>
-          <AppCard className="space-y-3 p-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <ArrowLeftRight size={16} className="text-primary" />
-              {t("substitution.manualTitle")}
-            </div>
-
-            <p className="text-xs text-muted-foreground">{t("substitution.hint")}</p>
-
-            <FpButton
-              variant="primary"
-              size="lg"
-              fullWidth
-              className="tap-target"
-              onClick={handleSubstitute}
-              disabled={!selectedPlayersReady || liveMatch.status === "ended"}
-            >
-              {t("substitution.action")}
-            </FpButton>
-
-            {(selectedFieldId || selectedBenchId) && (
-              <FpButton
-                variant="ghost"
-                size="md"
-                fullWidth
-                className="tap-target"
-                onClick={clearSelection}
-              >
-                {t("selection.clear")}
-              </FpButton>
             )}
           </AppCard>
         </motion.div>

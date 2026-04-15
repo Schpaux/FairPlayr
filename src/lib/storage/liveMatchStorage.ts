@@ -1,4 +1,5 @@
 import type { LiveMatchState, MatchClockBasis } from "@/domain/liveMatch";
+import type { MatchFormat } from "@/domain/match";
 import {
   migrateLegacyLiveEvents,
   normalizeMatchEvents,
@@ -131,6 +132,28 @@ function readPlayerAccumulatedMs(value: unknown): Record<string, number> {
   return output;
 }
 
+const VALID_FORMATS: MatchFormat[] = ["3v3", "5v5", "7v7", "9v9", "11v11"];
+
+function readMatchFormat(value: unknown): MatchFormat {
+  if (typeof value === "string" && (VALID_FORMATS as string[]).includes(value)) {
+    return value as MatchFormat;
+  }
+  return "5v5";
+}
+
+function readSlotAssignments(value: unknown): Record<string, string | null> {
+  const output: Record<string, string | null> = {};
+  if (!isRecord(value)) return output;
+  for (const [slotId, pid] of Object.entries(value)) {
+    if (pid === null) {
+      output[slotId] = null;
+    } else if (typeof pid === "string" && pid.length > 0) {
+      output[slotId] = pid;
+    }
+  }
+  return output;
+}
+
 function readOnFieldStartedAtElapsedMs(value: unknown): Record<string, number | null> {
   const output: Record<string, number | null> = {};
 
@@ -247,6 +270,17 @@ function toValidLiveMatch(value: unknown): LiveMatchState | null {
   const legacyLiveEvents = migrateLegacyLiveEvents(value.liveEvents);
   const events = storedEvents.length > 0 ? storedEvents : legacyLiveEvents;
 
+  const format = readMatchFormat(value.format);
+  const formationId = readString(value.formationId) ?? `${format}-2-2`;
+
+  // liveSlotAssignments: best-effort fallback — assign onField players to slots in order
+  let liveSlotAssignments = readSlotAssignments(value.liveSlotAssignments);
+  if (Object.keys(liveSlotAssignments).length === 0 && onFieldPlayerIds.length > 0) {
+    onFieldPlayerIds.forEach((playerId, index) => {
+      liveSlotAssignments[`${format}-${index + 1}`] = playerId;
+    });
+  }
+
   return {
     id,
     setupId,
@@ -263,6 +297,9 @@ function toValidLiveMatch(value: unknown): LiveMatchState | null {
     status,
     teamScore,
     opponentScore,
+    format,
+    formationId,
+    liveSlotAssignments,
     initialOnFieldPlayerIds,
     onFieldPlayerIds,
     benchPlayerIds,
@@ -383,6 +420,14 @@ function migrateLegacyLiveMatch(legacy: LegacyLiveMatch): LiveMatchState {
     };
   }
 
+  // Legacy records have no formation info — use safe defaults
+  const format: MatchFormat = "5v5";
+  const formationId = "5v5-2-2";
+  const liveSlotAssignments: Record<string, string | null> = {};
+  legacy.onFieldPlayerIds.forEach((playerId, index) => {
+    liveSlotAssignments[`${format}-${index + 1}`] = playerId;
+  });
+
   return {
     id: legacy.id,
     setupId: legacy.setupId,
@@ -397,6 +442,9 @@ function migrateLegacyLiveMatch(legacy: LegacyLiveMatch): LiveMatchState {
     status: legacy.status,
     teamScore: legacy.teamScore,
     opponentScore: legacy.opponentScore,
+    format,
+    formationId,
+    liveSlotAssignments,
     // Legacy records have no initialOnFieldPlayerIds — best effort: use current onField
     initialOnFieldPlayerIds: [...legacy.onFieldPlayerIds],
     onFieldPlayerIds: legacy.onFieldPlayerIds,
