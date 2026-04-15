@@ -156,6 +156,13 @@
     "teamCard": {
       "label": "Lagnavn"
     },
+    "matchDefaults": {
+      "title": "Kampstandard",
+      "hint": "Forhåndsutfylles når du oppretter en ny kamp for dette laget.",
+      "format": "Format",
+      "formation": "Formasjon",
+      "duration": "Kampvarighet"
+    },
     "players": {
       "title": "Spillere",
       "count": "{count, plural, =0 {Ingen spillere} one {# spiller} other {# spillere}}",
@@ -366,6 +373,10 @@
     "title": "Kampoppsett",
     "subtitle": "Konfigurer kampen din før avspark.",
     "activeTeam": "Aktivt lag: {name}",
+    "compact": {
+      "title": "Kampinnstillinger",
+      "edit": "Endre innstillinger"
+    },
     "noTeam": {
       "title": "Ingen lag funnet",
       "description": "Du trenger et lag før du kan sette opp en kamp.",

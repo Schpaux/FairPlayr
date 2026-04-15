@@ -156,6 +156,13 @@
     "teamCard": {
       "label": "Team name"
     },
+    "matchDefaults": {
+      "title": "Match defaults",
+      "hint": "Pre-filled when creating a new match for this team.",
+      "format": "Format",
+      "formation": "Formation",
+      "duration": "Duration"
+    },
     "players": {
       "title": "Players",
       "count": "{count, plural, =0 {No players} one {# player} other {# players}}",
@@ -366,6 +373,10 @@
     "title": "Match Setup",
     "subtitle": "Configure your match before kick-off.",
     "activeTeam": "Active team: {name}",
+    "compact": {
+      "title": "Match settings",
+      "edit": "Change settings"
+    },
     "noTeam": {
       "title": "No team found",
       "description": "You need a team before setting up a match.",

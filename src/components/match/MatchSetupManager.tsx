@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
-import { ShieldAlert, Users, ArrowRight, CheckCircle2 } from "lucide-react";
+import { ShieldAlert, Users, ArrowRight, CheckCircle2, Pencil } from "lucide-react";
 import {
   createMatchSetupWithPrefs,
   setMatchFormat,
@@ -22,6 +22,7 @@ import {
   getStarterDeficit,
   canStartMatch,
   reconcileWithTeam,
+  MATCH_DURATION_PRESETS,
 } from "@/domain/match";
 import type { MatchConfig } from "@/domain/match";
 import {
@@ -94,6 +95,7 @@ export function MatchSetupManager() {
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [setup, setSetup] = useState<MatchConfig | null>(null);
+  const [isCompact, setIsCompact] = useState(false);
 
   const team = workspace.activeTeam;
 
@@ -107,16 +109,20 @@ export function MatchSetupManager() {
     const teamPlayerIds = team.players.map((p) => p.id);
     const stored = getStoredMatchSetup();
 
+    const prefs = getTeamMatchPrefs(team.id);
+    const hasDefaults = Boolean(prefs.format ?? prefs.formationId ?? prefs.durationPresetId);
+
     if (stored && stored.config.teamId === team.id) {
       // Existing draft — reconcile with current team roster, keep selected squad
       const reconciled = reconcileWithTeam(stored.config, teamPlayerIds);
       setSetup(reconciled);
+      setIsCompact(hasDefaults);
       return;
     }
 
-    // New setup — pre-fill with team preferences (DEL 3), squad starts empty (DEL 5+6)
-    const prefs = getTeamMatchPrefs(team.id);
+    // New setup — pre-fill with team preferences, squad starts empty
     setSetup(createMatchSetupWithPrefs(team.id, prefs));
+    setIsCompact(hasDefaults);
   }, [isHydrated, team, workspace.isLoading]);
 
   // ── Persist draft on every change ─────────────────────────────────────────
@@ -324,29 +330,63 @@ export function MatchSetupManager() {
           </AppCard>
         </motion.div>
 
-        {/* Format */}
-        <SetupSection label={t("sections.format")}>
-          <FormatSelector value={setup.format} onChange={handleFormatChange} />
-        </SetupSection>
+        {/* Compact defaults summary */}
+        {isCompact ? (
+          <motion.div variants={variants.fadeInUp}>
+            <AppCard className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {t("compact.title")}
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-lg border border-fp-border bg-fp-surface-2 px-2.5 py-1 text-sm font-semibold text-foreground">
+                  {setup.format}
+                </span>
+                <span className="rounded-lg border border-fp-border bg-fp-surface-2 px-2.5 py-1 text-sm font-medium text-foreground">
+                  {getFormationPresets(setup.format).find((f) => f.id === setup.formationId)?.shape ?? setup.formationId}
+                </span>
+                <span className="rounded-lg border border-fp-border bg-fp-surface-2 px-2.5 py-1 text-sm font-medium text-foreground">
+                  {setup.duration.mode === "preset" && setup.duration.presetId
+                    ? `${setup.duration.presetId} · ${MATCH_DURATION_PRESETS[setup.duration.presetId].totalMinutes} min`
+                    : `${setup.duration.totalMinutes} min`}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCompact(false)}
+                className="tap-target flex items-center gap-1.5 text-sm font-medium text-primary"
+              >
+                <Pencil size={13} />
+                {t("compact.edit")}
+              </button>
+            </AppCard>
+          </motion.div>
+        ) : (
+          <>
+            {/* Format */}
+            <SetupSection label={t("sections.format")}>
+              <FormatSelector value={setup.format} onChange={handleFormatChange} />
+            </SetupSection>
 
-        {/* Formation */}
-        <SetupSection label={t("sections.formation")}>
-          <FormationSelector
-            formations={getFormationPresets(setup.format)}
-            value={setup.formationId}
-            onChange={handleFormationChange}
-          />
-        </SetupSection>
+            {/* Formation */}
+            <SetupSection label={t("sections.formation")}>
+              <FormationSelector
+                formations={getFormationPresets(setup.format)}
+                value={setup.formationId}
+                onChange={handleFormationChange}
+              />
+            </SetupSection>
 
-        {/* Duration */}
-        <SetupSection label={t("sections.duration")}>
-          <DurationPicker
-            value={setup.duration}
-            onPresetChange={handleDurationPresetChange}
-            onCustomChange={handleDurationChange}
-            onHalvesChange={handleHalvesChange}
-          />
-        </SetupSection>
+            {/* Duration */}
+            <SetupSection label={t("sections.duration")}>
+              <DurationPicker
+                value={setup.duration}
+                onPresetChange={handleDurationPresetChange}
+                onCustomChange={handleDurationChange}
+                onHalvesChange={handleHalvesChange}
+              />
+            </SetupSection>
+          </>
+        )}
 
         {/* Squad — who is playing today? (DEL 5) */}
         <SetupSection label={t("sections.squad")}>

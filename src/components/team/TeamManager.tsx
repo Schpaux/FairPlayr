@@ -16,6 +16,7 @@ import { variants } from "@/lib/tokens";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
 import { Link } from "@/i18n/navigation";
 import { useSpondStatus } from "@/components/team/useSpondStatus";
+import { MatchDefaultsEditor } from "@/components/team/MatchDefaultsEditor";
 
 export function TeamManager() {
   const t = useTranslations("team");
@@ -300,6 +301,11 @@ export function TeamManager() {
                       validationMessage={t("validation.teamNameRequired")}
                       onSubmit={handleCreateTeam}
                     />
+                  </div>
+
+                  {/* Match defaults */}
+                  <div className="p-4">
+                    <MatchDefaultsEditor teamId={team.id} />
                   </div>
 
                   {/* Delete team – danger zone */}
