@@ -395,7 +395,7 @@ export function MatchSetupManager() {
                 aria-label={t("reportToggle.label")}
                 onClick={() => handleReportToggle(!setup.reportEnabled)}
                 className={cn(
-                  "relative flex-shrink-0 h-7 w-12 rounded-full border transition-colors tap-target",
+                  "relative flex-shrink-0 h-7 w-12 rounded-full border transition-colors",
                   setup.reportEnabled
                     ? "border-primary/40 bg-primary"
                     : "border-fp-border bg-fp-surface"
