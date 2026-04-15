@@ -1148,11 +1148,24 @@ export function MatchLiveManager() {
       {promptQueue[0] ? (
         <div className="fixed inset-0 z-40 flex items-end bg-black/45 p-3">
           <AppCard className="w-full space-y-3 p-4">
+            <div className="h-0.5 w-full overflow-hidden rounded-full bg-fp-border">
+              <motion.div
+                key={`${promptQueue[0].localEventId}-${promptQueue[0].step}`}
+                className="h-full bg-primary/40"
+                initial={{ scaleX: 1 }}
+                animate={{ scaleX: 0 }}
+                transition={{ duration: 10, ease: "linear" }}
+                style={{ transformOrigin: "left" }}
+              />
+            </div>
             <p className="text-base font-semibold text-foreground">
               {promptQueue[0].step === "scorer" ? t("prompt.scorerTitle") : t("prompt.assistTitle")}
             </p>
             <div className="grid grid-cols-1 gap-2">
-              {promptQueue[0].options.map((option) => (
+              {(promptQueue[0].step === "assist"
+                ? promptQueue[0].options.filter((o) => o.id !== promptQueue[0]!.scorerId)
+                : promptQueue[0].options
+              ).map((option) => (
                 <FpButton
                   key={option.id}
                   variant="secondary"
