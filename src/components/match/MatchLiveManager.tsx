@@ -937,111 +937,84 @@ export function MatchLiveManager() {
       >
         {error ? <AppCard className="p-3 text-xs text-danger">{error}</AppCard> : null}
         <motion.div variants={variants.fadeInUp}>
-          <AppCard className="space-y-3 p-4">
-            <p className="text-sm font-semibold text-foreground">{t("score.title")}</p>
-            <div className="grid grid-cols-2 gap-3">
-              {/* Team score */}
-              <div className="flex flex-col items-center gap-2 rounded-xl border border-fp-border bg-fp-surface-2 p-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+          <AppCard className="p-3">
+            {/* Compact 3-column score row */}
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+              {/* Team side */}
+              <div className="flex flex-col items-center gap-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                   {t("score.team")}
                 </p>
-                <p className="text-4xl font-bold tabular-nums text-foreground">{liveMatch.teamScore}</p>
-                <div className="flex items-center gap-2">
+                <p className="text-4xl font-black tabular-nums text-foreground leading-none">
+                  {liveMatch.teamScore}
+                </p>
+                <div className="flex items-center gap-1.5">
                   <button
                     type="button"
                     aria-label={t("score.decreaseTeam")}
-                    className="flex h-12 w-12 items-center justify-center rounded-xl border border-fp-border bg-background transition-colors active:bg-fp-surface-2 disabled:opacity-40"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-fp-border bg-fp-surface-2 transition-colors active:bg-fp-surface disabled:opacity-40"
                     onClick={() => handleTeamScore(-1)}
                     disabled={liveMatch.teamScore === 0 || liveMatch.status === "ended"}
                   >
-                    <Minus size={20} />
+                    <Minus size={16} />
                   </button>
                   <button
                     type="button"
                     aria-label={t("score.increaseTeam")}
-                    className="flex h-12 w-12 items-center justify-center rounded-xl border border-primary/40 bg-primary/10 text-primary transition-colors active:bg-primary/20 disabled:opacity-40"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-fp-cta/40 bg-fp-cta/15 text-fp-cta transition-colors active:bg-fp-cta/25 disabled:opacity-40"
                     onClick={() => handleTeamScore(1)}
                     disabled={liveMatch.status === "ended"}
                   >
-                    <Plus size={20} />
+                    <Plus size={16} />
                   </button>
                 </div>
-                {/* Recent team events */}
-                {liveEvents.filter((e) => e.type === "goal" && e.teamSide === "own").length > 0 && (
-                  <div className="w-full space-y-0.5 border-t border-fp-border pt-2">
-                    {liveEvents
-                      .filter((e) => e.type === "goal" && e.teamSide === "own")
-                      .slice(-4)
-                      .map((ev) => (
-                        <p key={ev.id} className="text-center text-[10px] text-muted-foreground">
-                          {ev.minute !== null ? `${ev.minute}'` : "–"}
-                          {ev.type === "goal" && ev.scorerName ? ` ${ev.scorerName}` : ""}
-                        </p>
-                      ))}
-                  </div>
-                )}
               </div>
 
-              {/* Opponent score */}
-              <div className="flex flex-col items-center gap-2 rounded-xl border border-fp-border bg-fp-surface-2 p-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              {/* Center divider */}
+              <p className="text-2xl font-black leading-none text-muted-foreground/30">:</p>
+
+              {/* Opponent side */}
+              <div className="flex flex-col items-center gap-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                   {t("score.opponent")}
                 </p>
-                <p className="text-4xl font-bold tabular-nums text-foreground">
+                <p className="text-4xl font-black tabular-nums text-foreground leading-none">
                   {liveMatch.opponentScore}
                 </p>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <button
                     type="button"
                     aria-label={t("score.decreaseOpponent")}
-                    className="flex h-12 w-12 items-center justify-center rounded-xl border border-fp-border bg-background transition-colors active:bg-fp-surface-2 disabled:opacity-40"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-fp-border bg-fp-surface-2 transition-colors active:bg-fp-surface disabled:opacity-40"
                     onClick={() => handleOpponentScore(-1)}
                     disabled={liveMatch.opponentScore === 0 || liveMatch.status === "ended"}
                   >
-                    <Minus size={20} />
+                    <Minus size={16} />
                   </button>
                   <button
                     type="button"
                     aria-label={t("score.increaseOpponent")}
-                    className="flex h-12 w-12 items-center justify-center rounded-xl border border-fp-border bg-background transition-colors active:bg-fp-surface-2 disabled:opacity-40"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-fp-border bg-fp-surface-2 transition-colors active:bg-fp-surface disabled:opacity-40"
                     onClick={() => handleOpponentScore(1)}
                     disabled={liveMatch.status === "ended"}
                   >
-                    <Plus size={20} />
+                    <Plus size={16} />
                   </button>
                 </div>
-                {/* Recent opponent events */}
-                {liveEvents.filter((e) => e.type === "goal" && e.teamSide === "opponent").length > 0 && (
-                  <div className="w-full space-y-0.5 border-t border-fp-border pt-2">
-                    {liveEvents
-                      .filter((e) => e.type === "goal" && e.teamSide === "opponent")
-                      .slice(-4)
-                      .map((ev) => (
-                        <p key={ev.id} className="text-center text-[10px] text-muted-foreground">
-                          {ev.minute !== null ? `${ev.minute}'` : "–"}
-                        </p>
-                      ))}
-                  </div>
-                )}
               </div>
             </div>
 
-            {/* Substitution events */}
-            {liveEvents.filter((e) => e.type === "substitution").length > 0 && (
-              <div className="space-y-1 border-t border-fp-border pt-2">
-                {liveEvents
-                  .filter((e) => e.type === "substitution")
-                  .slice(-4)
-                  .map((ev) => (
-                    <div key={ev.id} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                      <ArrowRightLeft size={10} className="shrink-0" />
-                      <span>
-                        {ev.minute !== null ? `${ev.minute}' ` : ""}
-                        {ev.type === "substitution" ? ev.inPlayerName ?? "" : ""}
-                        {ev.type === "substitution" && ev.outPlayerName ? ` ← ${ev.outPlayerName}` : ""}
-                      </span>
-                    </div>
-                  ))}
+            {/* Compact event strip */}
+            {liveEvents.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 border-t border-fp-border pt-2">
+                {liveEvents.slice(-8).map((ev) => (
+                  <span key={ev.id} className="text-[10px] tabular-nums text-muted-foreground">
+                    {ev.minute !== null ? `${ev.minute}'` : ""}
+                    {ev.type === "goal" ? " ⚽" : " ↕"}
+                    {ev.type === "goal" && ev.scorerName ? ` ${ev.scorerName}` : ""}
+                    {ev.type === "substitution" && ev.inPlayerName ? ` ${ev.inPlayerName}` : ""}
+                  </span>
+                ))}
               </div>
             )}
           </AppCard>

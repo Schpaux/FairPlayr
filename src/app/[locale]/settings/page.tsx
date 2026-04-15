@@ -89,7 +89,7 @@ export default function SettingsPage() {
                   className={cn(
                     "flex flex-col items-center gap-2 rounded-xl p-3 text-xs font-medium transition-all tap-target",
                     theme === value
-                      ? "bg-primary/10 text-primary border border-primary/20"
+                      ? "bg-fp-cta/15 text-fp-cta border border-fp-cta/30"
                       : "bg-fp-surface-2 text-muted-foreground hover:text-foreground"
                   )}
                 >
@@ -123,12 +123,12 @@ export default function SettingsPage() {
                   className={cn(
                     "flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-all tap-target",
                     l === locale
-                      ? "bg-primary/10 text-primary"
+                      ? "bg-fp-cta/15 text-fp-cta font-semibold"
                       : "text-muted-foreground hover:bg-fp-surface-2 hover:text-foreground"
                   )}
                 >
                   <span>{meta?.full ?? l}</span>
-                  {l === locale && <span className="text-xs text-primary">✓</span>}
+                  {l === locale && <span className="text-xs text-fp-cta">✓</span>}
                 </button>
               );
             })}

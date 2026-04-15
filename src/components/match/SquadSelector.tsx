@@ -60,16 +60,18 @@ export function SquadSelector({
               onClick={() => onToggle(player.id)}
               aria-pressed={isSelected}
               className={cn(
-                "flex items-center justify-between gap-3 px-1 py-3 text-left transition-colors duration-100 tap-target",
-                index === 0 && "pt-1",
-                "hover:bg-fp-surface-2 rounded-lg -mx-1 px-2"
+                "flex items-center justify-between gap-3 rounded-xl px-2 py-2.5 text-left transition-all duration-100 tap-target -mx-1",
+                index === 0 && "pt-2",
+                isSelected
+                  ? "bg-fp-cta/8"
+                  : "hover:bg-fp-surface-2"
               )}
             >
               {/* Player name */}
               <span
                 className={cn(
                   "text-sm font-medium transition-colors",
-                  isSelected ? "text-foreground" : "text-muted-foreground"
+                  isSelected ? "text-fp-cta font-semibold" : "text-muted-foreground"
                 )}
               >
                 {player.name}
@@ -78,9 +80,9 @@ export function SquadSelector({
               {/* Toggle indicator */}
               <span
                 className={cn(
-                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-md border text-xs font-medium transition-all duration-150",
+                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border text-xs font-medium transition-all duration-150",
                   isSelected
-                    ? "border-fp-accent/40 bg-fp-accent/15 text-fp-accent"
+                    ? "border-fp-cta/50 bg-fp-cta/15 text-fp-cta scale-110"
                     : "border-fp-border bg-fp-surface-2 text-transparent"
                 )}
               >

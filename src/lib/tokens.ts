@@ -14,14 +14,22 @@ export const colors = {
   accent: "#22c55e",
   accentLight: "#4ade80",
   warning: "#f59e0b",
-  danger: "#ef4444",
+  danger: "#d03238",
+
+  // Wise-inspired CTA — lime green for primary actions
+  cta: {
+    light: "#9fe870",
+    dark: "#a3e635",
+    foreground: "#163300",
+    foregroundDark: "#1a3300",
+  },
 
   // Dark theme surfaces
   dark: {
     background: "#0b0f1a",
     surface: "#111827",
-    surface2: "#1f2937",
-    textPrimary: "#f9fafb",
+    surface2: "#1a2332",
+    textPrimary: "#f4f8f0",
     textSecondary: "#9ca3af",
     border: "rgba(255, 255, 255, 0.08)",
   },
@@ -29,11 +37,11 @@ export const colors = {
   // Light theme surfaces
   light: {
     background: "#ffffff",
-    surface: "#f9fafb",
-    surface2: "#f3f4f6",
-    textPrimary: "#111827",
-    textSecondary: "#6b7280",
-    border: "rgba(0, 0, 0, 0.08)",
+    surface: "#f8faf5",
+    surface2: "#f0f4eb",
+    textPrimary: "#0e0f0c",
+    textSecondary: "#686b66",
+    border: "rgba(14, 15, 12, 0.10)",
   },
 } as const;
 
@@ -46,29 +54,33 @@ export const spacing = {
   "2xl": 32,
 } as const;
 
+// Wise-inspired radius scale — more generous, rounded
 export const radius = {
-  sm: "8px",
-  md: "12px",
-  lg: "16px",
-  xl: "24px",
+  sm: "10px",
+  md: "14px",
+  lg: "20px",
+  xl: "28px",
+  pill: "9999px",
 } as const;
 
 export const shadows = {
-  card: "0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08)",
+  card: "0 1px 3px rgba(0,0,0,0.10), 0 1px 2px rgba(0,0,0,0.06)",
   cardDark: "0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3)",
-  glowPrimary: "0 0 30px rgba(99, 102, 241, 0.3)",
-  glowPrimarySm: "0 0 15px rgba(99, 102, 241, 0.2)",
-  glowAccent: "0 0 30px rgba(34, 197, 94, 0.3)",
-  glowAccentSm: "0 0 15px rgba(34, 197, 94, 0.2)",
+  ring: "rgba(14,15,12,0.12) 0px 0px 0px 1px",
+  glowPrimary: "0 0 30px rgba(99, 102, 241, 0.28)",
+  glowPrimarySm: "0 0 15px rgba(99, 102, 241, 0.18)",
+  glowAccent: "0 0 30px rgba(34, 197, 94, 0.28)",
+  glowAccentSm: "0 0 15px rgba(34, 197, 94, 0.18)",
+  glowCta: "0 0 30px rgba(163, 230, 53, 0.35)",
+  glowCtaSm: "0 0 15px rgba(163, 230, 53, 0.22)",
 } as const;
 
 // Framer Motion transition presets
-// Easing tuples typed as [number, number, number, number] for Framer Motion's Easing type
 export const transitions = {
-  fast: { duration: 0.15, ease: [0.4, 0, 0.2, 1] as [number, number, number, number] },
-  base: { duration: 0.25, ease: [0.4, 0, 0.2, 1] as [number, number, number, number] },
-  slow: { duration: 0.4, ease: [0.4, 0, 0.2, 1] as [number, number, number, number] },
-  spring: { type: "spring" as const, stiffness: 400, damping: 30 },
+  fast: { duration: 0.12, ease: [0.4, 0, 0.2, 1] as [number, number, number, number] },
+  base: { duration: 0.22, ease: [0.4, 0, 0.2, 1] as [number, number, number, number] },
+  slow: { duration: 0.35, ease: [0.4, 0, 0.2, 1] as [number, number, number, number] },
+  spring: { type: "spring" as const, stiffness: 420, damping: 32 },
   springGentle: { type: "spring" as const, stiffness: 200, damping: 25 },
 };
 
@@ -79,21 +91,21 @@ export const variants = {
     visible: { opacity: 1, transition: transitions.base },
   },
   fadeInUp: {
-    hidden: { opacity: 0, y: 16 },
+    hidden: { opacity: 0, y: 12 },
     visible: { opacity: 1, y: 0, transition: transitions.base },
   },
   fadeInDown: {
-    hidden: { opacity: 0, y: -16 },
+    hidden: { opacity: 0, y: -12 },
     visible: { opacity: 1, y: 0, transition: transitions.base },
   },
   scaleIn: {
-    hidden: { opacity: 0, scale: 0.95 },
+    hidden: { opacity: 0, scale: 0.96 },
     visible: { opacity: 1, scale: 1, transition: transitions.spring },
   },
   staggerContainer: {
     hidden: {},
     visible: {
-      transition: { staggerChildren: 0.08, delayChildren: 0.1 },
+      transition: { staggerChildren: 0.07, delayChildren: 0.08 },
     },
   },
 } as const;

@@ -502,7 +502,7 @@ export function MatchPlannerManager() {
               type="button"
               className={
                 entryMode === "manual"
-                  ? "tap-target rounded-xl border border-primary/30 bg-primary/10 px-3 py-2.5 text-xs font-semibold text-primary"
+                  ? "tap-target rounded-xl border border-fp-cta/30 bg-fp-cta/10 px-3 py-2.5 text-xs font-semibold text-fp-cta"
                   : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2.5 text-xs font-semibold text-muted-foreground"
               }
               onClick={() => setEntryMode("manual")}
@@ -538,7 +538,7 @@ export function MatchPlannerManager() {
                   type="button"
                   className={
                     manualStartMode === "now"
-                      ? "tap-target rounded-xl border border-primary/35 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary"
+                      ? "tap-target rounded-xl border border-fp-cta/35 bg-fp-cta/10 px-3 py-2 text-xs font-semibold text-fp-cta"
                       : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-xs font-semibold text-muted-foreground"
                   }
                   onClick={() => setManualStartMode("now")}
@@ -549,7 +549,7 @@ export function MatchPlannerManager() {
                   type="button"
                   className={
                     manualStartMode === "scheduled"
-                      ? "tap-target rounded-xl border border-primary/35 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary"
+                      ? "tap-target rounded-xl border border-fp-cta/35 bg-fp-cta/10 px-3 py-2 text-xs font-semibold text-fp-cta"
                       : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-xs font-semibold text-muted-foreground"
                   }
                   onClick={() => setManualStartMode("scheduled")}
@@ -588,7 +588,7 @@ export function MatchPlannerManager() {
                   required
                 />
               ) : (
-                <p className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-primary">
+                <p className="rounded-xl border border-fp-cta/20 bg-fp-cta/5 px-3 py-2 text-xs text-fp-cta">
                   {t("manualStart.nowHint")}
                 </p>
               )}
@@ -709,8 +709,8 @@ export function MatchPlannerManager() {
         <h3 className="text-sm font-semibold text-foreground">{t("ongoingTitle")}</h3>
 
         {activeMatch ? (
-          <div className="rounded-xl border border-primary/30 bg-primary/10 p-3 space-y-2">
-            <p className="text-xs uppercase tracking-wide text-primary font-semibold">{t("status.live")}</p>
+          <div className="rounded-xl border border-fp-cta/30 bg-fp-cta/8 p-3 space-y-2">
+            <p className="text-xs uppercase tracking-wide text-fp-cta font-semibold">{t("status.live")}</p>
             <p className="text-sm font-semibold text-foreground">{activeMatch.title}</p>
             <div className="grid grid-cols-2 gap-2">
               <Link href={activeMatchHref}>
@@ -753,14 +753,19 @@ export function MatchPlannerManager() {
         ) : (
           <ul className="space-y-2">
             {ongoingMatches.map((match) => (
-              <li key={match.id} className="rounded-xl border border-fp-border bg-fp-surface-2 p-3">
+              <li key={match.id} className="rounded-xl border border-fp-cta/25 bg-fp-cta/8 p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full border border-fp-cta/40 bg-fp-cta/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-cta">
+                        {t("status.live")}
+                      </span>
+                    </div>
                     <p className="text-sm font-semibold text-foreground truncate">{match.title}</p>
                     <p className="text-xs text-muted-foreground">{formatDate(match.startsAt)}</p>
                   </div>
                   <Link href={`/match/live?matchId=${encodeURIComponent(match.id)}`}>
-                    <span className="text-xs font-medium text-primary">{t("activeActions.continue")}</span>
+                    <span className="text-xs font-semibold text-fp-cta">{t("activeActions.continue")}</span>
                   </Link>
                 </div>
               </li>
@@ -803,11 +808,15 @@ export function MatchPlannerManager() {
                         {t("spondBadge")}
                       </span>
                     ) : null}
-                    <span className="rounded-full border border-fp-border bg-background px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    <span className={
+                      match.status === "live"
+                        ? "rounded-full border border-fp-cta/40 bg-fp-cta/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-cta"
+                        : "rounded-full border border-fp-border bg-fp-surface-2 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
+                    }>
                       {formatStatus(match.status)}
                     </span>
                     <Link href={`/match/${match.id}`}>
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-fp-cta">
                         {t("openMatch")}
                         <ExternalLink size={12} />
                       </span>

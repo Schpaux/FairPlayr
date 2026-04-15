@@ -227,9 +227,9 @@ export function TeamManager() {
                       key={candidate.id}
                       type="button"
                       onClick={() => void workspace.setActiveTeam(candidate.id)}
-                      className={`tap-target rounded-full border px-3 py-1 text-xs font-medium transition-all ${
+                      className={`tap-target rounded-full border px-3 py-1 text-xs font-semibold transition-all ${
                         isActive
-                          ? "border-primary/40 bg-primary/10 text-primary"
+                          ? "border-fp-cta/40 bg-fp-cta/15 text-fp-cta"
                           : "border-fp-border bg-fp-surface-2 text-muted-foreground"
                       }`}
                     >

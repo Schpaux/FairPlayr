@@ -27,31 +27,26 @@ export function FormatSelector({
           <motion.button
             key={format}
             onClick={() => onChange(format)}
-            whileTap={{ scale: 0.96 }}
+            whileTap={{ scale: 0.95 }}
             transition={{ duration: 0.1 }}
             aria-pressed={isSelected}
             className={cn(
               "relative flex flex-col items-center justify-center gap-1.5 rounded-2xl border py-4 px-2 text-center transition-all duration-150 tap-target",
               isSelected
-                ? "border-primary/30 bg-primary/10 text-primary glow-primary-sm"
-                : "border-fp-border bg-fp-surface-2 text-muted-foreground hover:border-primary/20 hover:text-foreground"
+                ? "border-fp-cta/40 bg-fp-cta/15 text-foreground glow-cta-sm"
+                : "border-fp-border bg-fp-surface-2 text-muted-foreground hover:border-fp-border hover:text-foreground"
             )}
           >
-            {/* Format label */}
-            <span className="text-base font-bold leading-none tracking-tight">
+            <span className={cn("text-base font-bold leading-none tracking-tight", isSelected && "text-fp-cta dark:text-fp-cta")}>
               {format}
             </span>
-
-            {/* Field count sub-label */}
-            <span className="text-[10px] font-medium leading-none opacity-80">
+            <span className="text-[10px] font-medium leading-none opacity-70">
               {t("fieldCount", { count: fieldCount })}
             </span>
-
-            {/* Selected indicator dot */}
             {isSelected && (
               <motion.span
                 layoutId="format-dot"
-                className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-primary"
+                className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-fp-cta"
                 transition={{ type: "spring", stiffness: 500, damping: 35 }}
               />
             )}

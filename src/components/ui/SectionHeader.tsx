@@ -26,14 +26,14 @@ export function SectionHeader({
       <div>
         <h1
           className={cn(
-            "text-xl font-semibold tracking-tight",
+            "text-2xl font-bold tracking-tight",
             accent ? "gradient-text-primary" : "text-foreground"
           )}
         >
           {title}
         </h1>
         {subtitle && (
-          <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>
+          <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">{subtitle}</p>
         )}
       </div>
       {action && <div className="shrink-0">{action}</div>}

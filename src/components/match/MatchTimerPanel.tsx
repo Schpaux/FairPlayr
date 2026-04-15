@@ -65,7 +65,7 @@ export function MatchTimerPanel({
   canStartSecondHalf,
 }: MatchTimerPanelProps) {
   return (
-    <AppCard glow={status === "running" ? "primary" : "none"} className="space-y-4 p-5">
+    <AppCard glow={status === "running" ? "accent" : "none"} className="space-y-4 p-5">
       <div className="flex items-center justify-between">
         <span
           className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${statusClassName(status)}`}
@@ -84,7 +84,7 @@ export function MatchTimerPanel({
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {timerLabel}
         </p>
-        <p className="mt-1 text-5xl font-bold tracking-tight text-foreground tabular-nums">
+        <p className="mt-1 text-6xl font-black tracking-tight text-foreground tabular-nums">
           {primaryClock}
         </p>
         <p className="mt-1 text-sm text-muted-foreground tabular-nums">

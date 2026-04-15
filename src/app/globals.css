@@ -5,9 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   FairPlayr Design Token System
+   FairPlayr Design Token System — Wise-inspired edition
    Single source of truth for all visual values.
-   These map to Tailwind via @theme inline below.
 ───────────────────────────────────────────────────────────────────────────── */
 
 @theme inline {
@@ -57,19 +56,20 @@
   --color-fp-text-secondary: var(--fp-text-secondary);
   --color-fp-border: var(--fp-border);
 
+  /* Wise-inspired CTA token — lime green, used for primary buttons */
+  --color-fp-cta: var(--fp-cta);
+  --color-fp-cta-foreground: var(--fp-cta-foreground);
+
   /* Typography */
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
-  /* Spacing scale: 4, 8, 12, 16, 24, 32 */
-  /* (Tailwind's default scale covers these; no override needed) */
-
-  /* Radius scale */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
-  --radius: 0.75rem; /* base radius for shadcn components (12px) */
+  /* Radius scale — Wise-inspired: larger, more generous */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius: 0.875rem; /* 14px base radius for shadcn components */
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -80,52 +80,58 @@
 
   /* Shadcn semantic tokens */
   --background: #ffffff;
-  --foreground: #111827;
-  --card: #f9fafb;
-  --card-foreground: #111827;
+  --foreground: #0e0f0c;
+  --card: #f8faf5;
+  --card-foreground: #0e0f0c;
   --popover: #ffffff;
-  --popover-foreground: #111827;
+  --popover-foreground: #0e0f0c;
   --primary: #6366f1;
   --primary-foreground: #ffffff;
-  --secondary: #f3f4f6;
-  --secondary-foreground: #111827;
-  --muted: #f3f4f6;
-  --muted-foreground: #6b7280;
+  --secondary: #f0f4eb;
+  --secondary-foreground: #0e0f0c;
+  --muted: #f0f4eb;
+  --muted-foreground: #686b66;
   --accent: #22c55e;
   --accent-foreground: #ffffff;
-  --destructive: #ef4444;
+  --destructive: #d03238;
   --destructive-foreground: #ffffff;
-  --border: rgba(0, 0, 0, 0.08);
-  --input: rgba(0, 0, 0, 0.08);
+  --border: rgba(14, 15, 12, 0.10);
+  --input: rgba(14, 15, 12, 0.08);
   --ring: #6366f1;
-  --radius: 0.75rem;
+  --radius: 0.875rem;
 
   /* FairPlayr semantic surface tokens */
-  --fp-surface: #f9fafb;
-  --fp-surface-2: #f3f4f6;
-  --fp-text-primary: #111827;
-  --fp-text-secondary: #6b7280;
-  --fp-border: rgba(0, 0, 0, 0.08);
+  --fp-surface: #f8faf5;
+  --fp-surface-2: #f0f4eb;
+  --fp-text-primary: #0e0f0c;
+  --fp-text-secondary: #686b66;
+  --fp-border: rgba(14, 15, 12, 0.10);
   --fp-spond: #e15a37;
-  --fp-spond-soft: rgba(225, 90, 55, 0.12);
+  --fp-spond-soft: rgba(225, 90, 55, 0.10);
   --fp-spond-foreground: #7a2d1b;
-  --fp-spond-border: rgba(225, 90, 55, 0.35);
+  --fp-spond-border: rgba(225, 90, 55, 0.30);
+
+  /* Wise-inspired CTA — lime green on light */
+  --fp-cta: #9fe870;
+  --fp-cta-foreground: #163300;
 
   /* Sidebar */
-  --sidebar: #f9fafb;
-  --sidebar-foreground: #111827;
+  --sidebar: #f8faf5;
+  --sidebar-foreground: #0e0f0c;
   --sidebar-primary: #6366f1;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f3f4f6;
-  --sidebar-accent-foreground: #111827;
-  --sidebar-border: rgba(0, 0, 0, 0.08);
+  --sidebar-accent: #f0f4eb;
+  --sidebar-accent-foreground: #0e0f0c;
+  --sidebar-border: rgba(14, 15, 12, 0.10);
   --sidebar-ring: #6366f1;
 
   /* Glow — subtle in light mode */
   --glow-primary: 0 0 20px rgba(99, 102, 241, 0.15);
-  --glow-primary-sm: 0 0 10px rgba(99, 102, 241, 0.12);
+  --glow-primary-sm: 0 0 10px rgba(99, 102, 241, 0.10);
   --glow-accent: 0 0 20px rgba(34, 197, 94, 0.15);
-  --glow-accent-sm: 0 0 10px rgba(34, 197, 94, 0.12);
+  --glow-accent-sm: 0 0 10px rgba(34, 197, 94, 0.10);
+  --glow-cta: 0 0 20px rgba(159, 232, 112, 0.25);
+  --glow-cta-sm: 0 0 10px rgba(159, 232, 112, 0.18);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -136,51 +142,57 @@
 
   /* Shadcn semantic tokens */
   --background: #0b0f1a;
-  --foreground: #f9fafb;
+  --foreground: #f4f8f0;
   --card: #111827;
-  --card-foreground: #f9fafb;
+  --card-foreground: #f4f8f0;
   --popover: #111827;
-  --popover-foreground: #f9fafb;
+  --popover-foreground: #f4f8f0;
   --primary: #6366f1;
   --primary-foreground: #ffffff;
-  --secondary: #1f2937;
-  --secondary-foreground: #f9fafb;
-  --muted: #1f2937;
+  --secondary: #1a2332;
+  --secondary-foreground: #f4f8f0;
+  --muted: #1a2332;
   --muted-foreground: #9ca3af;
   --accent: #22c55e;
   --accent-foreground: #ffffff;
-  --destructive: #ef4444;
+  --destructive: #d03238;
   --destructive-foreground: #ffffff;
   --border: rgba(255, 255, 255, 0.08);
-  --input: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.07);
   --ring: #6366f1;
 
   /* FairPlayr semantic surface tokens */
   --fp-surface: #111827;
-  --fp-surface-2: #1f2937;
-  --fp-text-primary: #f9fafb;
+  --fp-surface-2: #1a2332;
+  --fp-text-primary: #f4f8f0;
   --fp-text-secondary: #9ca3af;
   --fp-border: rgba(255, 255, 255, 0.08);
   --fp-spond: #ff815f;
-  --fp-spond-soft: rgba(255, 129, 95, 0.18);
+  --fp-spond-soft: rgba(255, 129, 95, 0.15);
   --fp-spond-foreground: #ffd9cf;
-  --fp-spond-border: rgba(255, 129, 95, 0.45);
+  --fp-spond-border: rgba(255, 129, 95, 0.40);
+
+  /* Wise-inspired CTA — brighter lime on dark */
+  --fp-cta: #a3e635;
+  --fp-cta-foreground: #1a3300;
 
   /* Sidebar */
   --sidebar: #111827;
-  --sidebar-foreground: #f9fafb;
+  --sidebar-foreground: #f4f8f0;
   --sidebar-primary: #6366f1;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1f2937;
-  --sidebar-accent-foreground: #f9fafb;
+  --sidebar-accent: #1a2332;
+  --sidebar-accent-foreground: #f4f8f0;
   --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-ring: #6366f1;
 
   /* Glow — richer in dark mode */
-  --glow-primary: 0 0 30px rgba(99, 102, 241, 0.3);
-  --glow-primary-sm: 0 0 15px rgba(99, 102, 241, 0.2);
-  --glow-accent: 0 0 30px rgba(34, 197, 94, 0.3);
-  --glow-accent-sm: 0 0 15px rgba(34, 197, 94, 0.2);
+  --glow-primary: 0 0 30px rgba(99, 102, 241, 0.28);
+  --glow-primary-sm: 0 0 15px rgba(99, 102, 241, 0.18);
+  --glow-accent: 0 0 30px rgba(34, 197, 94, 0.28);
+  --glow-accent-sm: 0 0 15px rgba(34, 197, 94, 0.18);
+  --glow-cta: 0 0 30px rgba(163, 230, 53, 0.35);
+  --glow-cta-sm: 0 0 15px rgba(163, 230, 53, 0.22);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -193,15 +205,14 @@
 
   html {
     @apply font-sans scroll-smooth;
-    /* Prevent the outermost elastic bounce scroll in Capacitor WKWebView.
-       Individual scrollable regions (overflow-y: auto) still scroll normally. */
+    /* Prevent the outermost elastic bounce scroll in Capacitor WKWebView. */
     overscroll-behavior: none;
+    font-feature-settings: "calt", "ss01", "ss02";
   }
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "ss01", "ss02";
-    /* Mirror overscroll prevention on body for cross-browser reliability. */
+    font-feature-settings: "calt", "ss01", "ss02";
     overscroll-behavior: none;
   }
 
@@ -215,13 +226,15 @@
    Utility Classes
 ───────────────────────────────────────────────────────────────────────────── */
 @layer utilities {
-  /* Glow effects — use sparingly */
+  /* Glow effects — primary (indigo) */
   .glow-primary {
     box-shadow: var(--glow-primary);
   }
   .glow-primary-sm {
     box-shadow: var(--glow-primary-sm);
   }
+
+  /* Glow effects — accent (green) */
   .glow-accent {
     box-shadow: var(--glow-accent);
   }
@@ -229,9 +242,25 @@
     box-shadow: var(--glow-accent-sm);
   }
 
-  /* FairPlayr gradient text */
+  /* Glow effects — CTA (lime) */
+  .glow-cta {
+    box-shadow: var(--glow-cta);
+  }
+  .glow-cta-sm {
+    box-shadow: var(--glow-cta-sm);
+  }
+
+  /* FairPlayr gradient text — indigo/violet for premium display headings */
   .gradient-text-primary {
     background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Lime gradient text — for Wise-inspired sporty accents */
+  .gradient-text-cta {
+    background: linear-gradient(135deg, #9fe870 0%, #d9f99d 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -258,8 +287,7 @@
     min-width: 44px;
   }
 
-  /* Safe area padding — used by Header (pt-safe), BottomNav (pb-safe), and
-     any landscape-aware container that needs side gutters (pl-safe, pr-safe). */
+  /* Safe area padding */
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
   }

@@ -102,8 +102,8 @@ export function MatchDefaultsEditor({ teamId }: Props) {
                 className={cn(
                   "h-10 rounded-xl border px-3 text-sm font-medium transition-all duration-150 tap-target",
                   isSelected
-                    ? "border-primary/30 bg-primary/10 text-primary glow-primary-sm"
-                    : "border-fp-border bg-fp-surface-2 text-muted-foreground hover:border-primary/20 hover:text-foreground"
+                    ? "border-fp-cta/40 bg-fp-cta/15 text-fp-cta glow-cta-sm"
+                    : "border-fp-border bg-fp-surface-2 text-muted-foreground hover:text-foreground"
                 )}
               >
                 {presetId}{" "}

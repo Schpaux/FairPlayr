@@ -24,7 +24,7 @@ export function AuthStatusCard() {
         <p className="text-sm font-semibold text-foreground">{t("status.guestTitle")}</p>
         <p className="text-xs text-muted-foreground">{t("status.guestDescription")}</p>
         <Link href="/auth/sign-in">
-          <FpButton variant="secondary" size="md" className="tap-target">
+          <FpButton variant="primary" size="md" className="tap-target">
             {t("actions.signIn")}
           </FpButton>
         </Link>
@@ -38,18 +38,19 @@ export function AuthStatusCard() {
       <p className="text-xs text-muted-foreground">
         {t("status.signedInAs", { email: user?.email ?? "-" })}
       </p>
-      <button
-        type="button"
+      <FpButton
+        variant="secondary"
+        size="md"
         onClick={() => {
           startTransition(async () => {
             await signOut();
           });
         }}
         disabled={isPending}
-        className="tap-target inline-flex h-10 items-center rounded-xl border border-fp-border bg-fp-surface-2 px-4 text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-60"
+        className="tap-target"
       >
         {isPending ? t("actions.signingOut") : t("actions.signOut")}
-      </button>
+      </FpButton>
     </AppCard>
   );
 }

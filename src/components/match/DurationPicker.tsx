@@ -24,9 +24,9 @@ export function DurationPicker({
   const currentHalves = value.halves as 1 | 2;
 
   return (
-    <div className="space-y-3">
-      {/* Halves selector comes first so users pick mode before duration */}
-      <div className="space-y-1">
+    <div className="space-y-4">
+      {/* Halves selector */}
+      <div className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {t("halvesTitle")}
         </p>
@@ -34,10 +34,10 @@ export function DurationPicker({
           <button
             type="button"
             className={cn(
-              "h-9 rounded-xl border px-3 text-xs font-semibold tap-target",
+              "h-10 rounded-xl border px-3 text-sm font-semibold tap-target transition-all duration-150",
               currentHalves === 2
-                ? "border-primary/30 bg-primary/10 text-primary"
-                : "border-fp-border bg-background text-muted-foreground"
+                ? "border-fp-cta/40 bg-fp-cta/15 text-fp-cta"
+                : "border-fp-border bg-fp-surface-2 text-muted-foreground hover:text-foreground"
             )}
             onClick={() => onHalvesChange(2)}
           >
@@ -46,10 +46,10 @@ export function DurationPicker({
           <button
             type="button"
             className={cn(
-              "h-9 rounded-xl border px-3 text-xs font-semibold tap-target",
+              "h-10 rounded-xl border px-3 text-sm font-semibold tap-target transition-all duration-150",
               currentHalves === 1
-                ? "border-primary/30 bg-primary/10 text-primary"
-                : "border-fp-border bg-background text-muted-foreground"
+                ? "border-fp-cta/40 bg-fp-cta/15 text-fp-cta"
+                : "border-fp-border bg-fp-surface-2 text-muted-foreground hover:text-foreground"
             )}
             onClick={() => onHalvesChange(1)}
           >
@@ -58,12 +58,11 @@ export function DurationPicker({
         </div>
       </div>
 
-      {/* Preset buttons — labels update dynamically based on halves selection */}
+      {/* Preset buttons */}
       <div className="flex flex-wrap gap-2">
         {ALL_DURATION_PRESETS.map((presetId) => {
           const preset = MATCH_DURATION_PRESETS[presetId];
           const isSelected = value.mode === "preset" && value.presetId === presetId;
-          // Show "1x20" when 1 half, "2x10" when 2 halves
           const minutesLabel =
             currentHalves === 1 ? preset.totalMinutes : preset.minutesPerHalf;
 
@@ -73,10 +72,10 @@ export function DurationPicker({
               onClick={() => onPresetChange(presetId)}
               aria-pressed={isSelected}
               className={cn(
-                "h-10 min-w-[68px] rounded-xl border px-3 text-sm font-medium transition-all duration-150 tap-target",
+                "h-10 min-w-[72px] rounded-xl border px-3 text-sm font-semibold transition-all duration-150 tap-target",
                 isSelected
-                  ? "border-primary/30 bg-primary/10 text-primary glow-primary-sm"
-                  : "border-fp-border bg-fp-surface-2 text-muted-foreground hover:border-primary/20 hover:text-foreground"
+                  ? "border-fp-cta/40 bg-fp-cta/15 text-fp-cta glow-cta-sm"
+                  : "border-fp-border bg-fp-surface-2 text-muted-foreground hover:text-foreground"
               )}
             >
               {t("presetLabel", {
@@ -88,12 +87,12 @@ export function DurationPicker({
         })}
       </div>
 
-      <div className="space-y-2 rounded-xl border border-fp-border bg-fp-surface-2 p-3">
+      {/* Custom duration */}
+      <div className="space-y-2 rounded-2xl border border-fp-border bg-fp-surface-2 p-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {t("customTitle")}
         </p>
-
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <input
             type="number"
             min={5}
@@ -102,19 +101,13 @@ export function DurationPicker({
             value={value.totalMinutes}
             onChange={(event) => {
               const next = Number(event.target.value);
-
-              if (Number.isNaN(next)) {
-                return;
-              }
-
+              if (Number.isNaN(next)) return;
               onCustomChange(next);
             }}
-            className="h-10 w-24 rounded-lg border border-fp-border bg-background px-3 text-sm text-foreground"
+            className="h-11 w-24 rounded-xl border border-fp-border bg-background px-3 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
-
           <span className="text-sm text-muted-foreground">{t("customSuffix")}</span>
         </div>
-
         <p className="text-xs text-muted-foreground">
           {t("totalLabel", { minutes: value.totalMinutes })}
         </p>

@@ -338,13 +338,13 @@ export function MatchSetupManager() {
                 {t("compact.title")}
               </p>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-lg border border-fp-border bg-fp-surface-2 px-2.5 py-1 text-sm font-semibold text-foreground">
+                <span className="rounded-xl border border-fp-cta/30 bg-fp-cta/10 px-3 py-1 text-sm font-bold text-fp-cta">
                   {setup.format}
                 </span>
-                <span className="rounded-lg border border-fp-border bg-fp-surface-2 px-2.5 py-1 text-sm font-medium text-foreground">
+                <span className="rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-1 text-sm font-semibold text-foreground">
                   {getFormationPresets(setup.format).find((f) => f.id === setup.formationId)?.shape ?? setup.formationId}
                 </span>
-                <span className="rounded-lg border border-fp-border bg-fp-surface-2 px-2.5 py-1 text-sm font-medium text-foreground">
+                <span className="rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-1 text-sm font-semibold text-foreground">
                   {setup.duration.mode === "preset" && setup.duration.presetId
                     ? `${setup.duration.presetId} · ${MATCH_DURATION_PRESETS[setup.duration.presetId].totalMinutes} min`
                     : `${setup.duration.totalMinutes} min`}
@@ -353,7 +353,7 @@ export function MatchSetupManager() {
               <button
                 type="button"
                 onClick={() => setIsCompact(false)}
-                className="tap-target flex items-center gap-1.5 text-sm font-medium text-primary"
+                className="tap-target flex items-center gap-1.5 text-sm font-semibold text-fp-cta"
               >
                 <Pencil size={13} />
                 {t("compact.edit")}
@@ -437,8 +437,8 @@ export function MatchSetupManager() {
                 className={cn(
                   "relative flex-shrink-0 h-7 w-12 rounded-full border transition-colors",
                   setup.reportEnabled
-                    ? "border-primary/40 bg-primary"
-                    : "border-fp-border bg-fp-surface"
+                    ? "border-fp-cta/40 bg-fp-cta"
+                    : "border-fp-border bg-fp-surface-2"
                 )}
               >
                 <span
@@ -534,7 +534,7 @@ export function MatchSetupManager() {
             onClick={() => {
               void handleStartMatch();
             }}
-            className={cn("group transition-all", matchReady && "glow-primary-sm")}
+            className={cn("group transition-all", matchReady && "glow-cta-sm")}
           >
             {isStarting ? t("actions.starting") : t("startMatch")}
             <ArrowRight

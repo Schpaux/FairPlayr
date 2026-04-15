@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 export interface AppCardProps {
   children: ReactNode;
   className?: string;
-  /** Adds a primary glow — use for active or high-focus cards */
+  /** Adds a glow — use for active or high-focus cards */
   glow?: "primary" | "accent" | "none";
   /** Make the card feel slightly interactive with a hover lift */
   interactive?: boolean;
@@ -14,7 +14,7 @@ export interface AppCardProps {
 
 /**
  * FairPlayr's main card primitive.
- * Renders a surface with rounded corners, border, and optional glow.
+ * Wise-inspired: generous radius (rounded-3xl), clean ring border, optional glow.
  */
 export function AppCard({
   children,
@@ -28,11 +28,11 @@ export function AppCard({
     <Tag
       onClick={onClick}
       className={cn(
-        "rounded-2xl border border-fp-border bg-fp-surface p-4",
+        "rounded-3xl border border-fp-border bg-fp-surface p-4",
         glow === "primary" && "glow-primary-sm border-primary/20",
         glow === "accent" && "glow-accent-sm border-accent/20",
         interactive &&
-          "cursor-pointer transition-transform duration-150 hover:-translate-y-0.5 active:translate-y-0",
+          "cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.99]",
         className
       )}
     >

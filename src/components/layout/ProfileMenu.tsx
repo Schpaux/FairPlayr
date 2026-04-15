@@ -164,7 +164,7 @@ export function ProfileMenu() {
                             type="button"
                             className={
                               active
-                                ? "tap-target rounded-xl border border-primary/35 bg-primary/10 px-3 py-2 text-sm font-medium text-primary"
+                                ? "tap-target rounded-xl border border-fp-cta/35 bg-fp-cta/10 px-3 py-2 text-sm font-medium text-fp-cta"
                                 : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-sm font-medium text-muted-foreground"
                             }
                             onClick={() => {
@@ -196,7 +196,7 @@ export function ProfileMenu() {
                             type="button"
                             className={
                               active
-                                ? "tap-target rounded-xl border border-primary/35 bg-primary/10 px-2 py-2 text-xs font-semibold text-primary"
+                                ? "tap-target rounded-xl border border-fp-cta/35 bg-fp-cta/10 px-2 py-2 text-xs font-semibold text-fp-cta"
                                 : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-2 py-2 text-xs font-semibold text-muted-foreground"
                             }
                             onClick={() => setTheme(option.value)}
@@ -215,7 +215,7 @@ export function ProfileMenu() {
                   <Link
                     href="/auth/sign-in"
                     onClick={() => setOpen(false)}
-                    className="tap-target inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-primary/35 bg-primary/10 px-4 text-sm font-semibold text-primary"
+                    className="tap-target inline-flex min-h-12 w-full items-center justify-center rounded-full border border-fp-cta/40 bg-fp-cta/15 px-4 text-sm font-semibold text-fp-cta"
                   >
                     {authT("signIn")}
                   </Link>

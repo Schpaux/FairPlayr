@@ -26,7 +26,7 @@ interface State {
 export class AppShellErrorBoundary extends Component<Props, State> {
   override state: State = { hasError: false };
 
-  static override getDerivedStateFromError(): State {
+  static getDerivedStateFromError(): State {
     return { hasError: true };
   }
 
@@ -56,7 +56,7 @@ export class AppShellErrorBoundary extends Component<Props, State> {
                 this.setState({ hasError: false });
                 window.location.reload();
               }}
-              className="tap-target inline-flex items-center justify-center rounded-xl bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition-opacity active:opacity-80"
+              className="tap-target inline-flex items-center justify-center rounded-full bg-fp-cta px-6 py-3 text-sm font-semibold text-fp-cta-foreground transition-all active:scale-95"
             >
               Try again
             </button>

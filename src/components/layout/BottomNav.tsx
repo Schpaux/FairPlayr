@@ -23,35 +23,36 @@ export function BottomNav() {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-fp-border bg-background/90 backdrop-blur-md pb-safe">
-      <div className="mx-auto flex max-w-screen-lg items-center justify-around px-2 h-16">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-fp-border bg-background/92 backdrop-blur-xl pb-safe">
+      <div className="mx-auto flex max-w-screen-lg items-stretch justify-around px-1 h-[60px]">
         {navItems.map(({ href, icon: Icon, labelKey }) => {
           const active = isActive(href);
           return (
             <Link
               key={href}
               href={href}
-              className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl tap-target transition-colors"
+              className="flex flex-1 flex-col items-center justify-center gap-1 py-2 transition-opacity active:opacity-60"
               aria-current={active ? "page" : undefined}
             >
-              <div className="relative">
+              <div className="relative flex items-center justify-center">
                 {active && (
                   <motion.div
-                    layoutId="nav-indicator"
-                    className="absolute inset-0 -m-1.5 rounded-lg bg-primary/10"
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    layoutId="nav-pill"
+                    className="absolute inset-0 -mx-3 -my-1 rounded-full bg-fp-cta/20"
+                    transition={{ type: "spring", stiffness: 420, damping: 32 }}
                   />
                 )}
                 <Icon
-                  size={20}
+                  size={21}
                   className={`relative transition-colors ${
-                    active ? "text-primary" : "text-muted-foreground"
+                    active ? "text-fp-cta dark:text-fp-cta" : "text-muted-foreground"
                   }`}
+                  strokeWidth={active ? 2.2 : 1.8}
                 />
               </div>
               <span
-                className={`text-[10px] font-medium leading-none transition-colors ${
-                  active ? "text-primary" : "text-muted-foreground"
+                className={`text-[10px] font-semibold leading-none transition-colors ${
+                  active ? "text-fp-cta dark:text-fp-cta" : "text-muted-foreground"
                 }`}
               >
                 {t(labelKey)}

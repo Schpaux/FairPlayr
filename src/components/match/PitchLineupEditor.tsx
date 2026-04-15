@@ -324,13 +324,13 @@ export function PitchLineupEditor({
                 "min-w-[52px]",
                 isBeingDragged && "opacity-30",
                 isSelected
-                  ? "border-primary bg-primary text-primary-foreground shadow-[var(--glow-primary-sm)] scale-105"
+                  ? "border-fp-cta bg-fp-cta/20 text-fp-cta shadow-[var(--glow-cta-sm)] scale-105"
                   : isDropTarget || isTapTarget
                     ? isOccupied
                       ? "border-warning/60 bg-warning/20 text-white"
-                      : "border-fp-accent/60 bg-fp-accent/20 text-white"
+                      : "border-fp-cta/60 bg-fp-cta/20 text-white"
                     : isOccupied
-                      ? "border-white/40 bg-black/45 text-white"
+                      ? "border-white/40 bg-black/50 text-white"
                       : "border-dashed border-white/30 bg-white/8 text-white/60"
               )}
               style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
@@ -390,7 +390,7 @@ export function PitchLineupEditor({
                     "tap-target rounded-full border px-3 py-1.5 text-xs font-semibold transition-all",
                     beingDragged && "opacity-30",
                     selected
-                      ? "border-primary/40 bg-primary/15 text-primary shadow-[var(--glow-primary-sm)] scale-105"
+                      ? "border-fp-cta/40 bg-fp-cta/15 text-fp-cta shadow-[var(--glow-cta-sm)] scale-105"
                       : "border-fp-border bg-background text-foreground"
                   )}
                   style={{ touchAction: "none" }}
@@ -418,7 +418,7 @@ export function PitchLineupEditor({
       {/* ── Drag ghost ────────────────────────────────────────────────────── */}
       {drag?.active && (
         <div
-          className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-primary/60 bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-lg"
+          className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-fp-cta/60 bg-fp-cta px-3 py-1.5 text-xs font-semibold text-fp-cta-foreground shadow-lg"
           style={{ left: drag.currentX, top: drag.currentY }}
         >
           {getShort(drag.source.playerId)}
