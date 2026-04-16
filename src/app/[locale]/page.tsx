@@ -48,7 +48,7 @@ const spondBenefits: SpondBenefitKey[] = ["autoImport", "attendance", "lessDoubl
 const spondSteps = [1, 2, 3] as const;
 
 const featureIconClass: Record<NonNullable<AppCardProps["glow"]>, string> = {
-  primary: "bg-primary/10 text-primary",
+  primary: "bg-fp-accent/10 text-fp-accent",
   accent: "bg-fp-accent/10 text-fp-accent",
   none: "bg-fp-surface-2 text-muted-foreground",
 };
@@ -60,10 +60,10 @@ export default function HomePage() {
     <div className="relative overflow-hidden">
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="relative min-h-[calc(100svh-4rem)] flex flex-col justify-center px-4 pt-8 pb-16">
-        {/* Atmospheric background glows */}
+        {/* Atmospheric background glows — lime only */}
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/4 h-[500px] w-[500px] rounded-full bg-primary/20 blur-[120px]" />
-          <div className="absolute right-0 bottom-0 translate-x-1/4 translate-y-1/4 h-[300px] w-[300px] rounded-full bg-fp-accent/10 blur-[100px]" />
+          <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/4 h-[500px] w-[500px] rounded-full bg-fp-accent/15 blur-[120px]" />
+          <div className="absolute right-0 bottom-0 translate-x-1/4 translate-y-1/4 h-[300px] w-[300px] rounded-full bg-fp-accent/8 blur-[100px]" />
         </div>
 
         <div className="mx-auto w-full max-w-screen-sm">
@@ -286,16 +286,8 @@ export default function HomePage() {
           >
             <AppCard
               glow="primary"
-              className="relative overflow-hidden text-center py-10 px-6"
+              className="text-center py-10 px-6 bg-fp-accent/6"
             >
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-primary/10 via-transparent to-fp-accent/5 rounded-2xl"
-              />
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-0 -z-10 border border-primary/20 rounded-2xl"
-              />
               <div className="space-y-2 mb-6">
                 <h2 className="text-xl font-bold tracking-tight text-foreground">
                   {t("finalCta.title")}
