@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { ArrowDown, ArrowUp, Check, Pencil, Trash2, X } from "lucide-react";
 import type { Player } from "@/domain/team";
 import { AppCard } from "@/components/ui/AppCard";
+import { Badge } from "@/components/ui/badge";
 import { FpButton } from "@/components/ui/FpButton";
 import { transitions } from "@/lib/tokens";
 import { teamTextInputClassName } from "@/components/team/styles";
@@ -137,9 +138,9 @@ export function PlayerList({
                       {index + 1}. {player.name}
                     </p>
                     {player.source === "spond" ? (
-                      <span className="shrink-0 rounded-full border border-fp-accent/40 bg-fp-accent/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-accent">
+                      <Badge variant="spond" className="shrink-0 uppercase tracking-wide">
                         {copy.sourceSpondBadge}
-                      </span>
+                      </Badge>
                     ) : null}
                   </div>
                   {!isManagedPlayer ? (

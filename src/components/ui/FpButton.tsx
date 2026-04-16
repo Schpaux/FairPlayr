@@ -51,9 +51,9 @@ export const FpButton = forwardRef<HTMLButtonElement, FpButtonProps>(
       <button
         ref={ref}
         className={cn(
-          "inline-flex items-center justify-center font-medium transition-all duration-150",
+          "inline-flex items-center justify-center font-medium transition-all duration-150 cursor-pointer",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-          "disabled:pointer-events-none disabled:opacity-40",
+          "disabled:pointer-events-none disabled:opacity-40 disabled:cursor-not-allowed",
           variantClasses[variant],
           sizeClasses[size],
           fullWidth && "w-full",

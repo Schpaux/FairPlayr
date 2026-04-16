@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Minus, Plus, ArrowRightLeft } from "lucide-react";
+import { Play, Minus, Plus, ArrowRightLeft, ChevronLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -51,7 +51,6 @@ import {
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
 import { useActiveMatch } from "@/components/providers/ActiveMatchProvider";
 import { PageShell } from "@/components/ui/PageShell";
-import { SectionHeader } from "@/components/ui/SectionHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AppCard } from "@/components/ui/AppCard";
 import { FpButton } from "@/components/ui/FpButton";
@@ -841,7 +840,6 @@ export function MatchLiveManager() {
 
     return (
       <PageShell>
-        <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
         {showRecovery ? (
           <AppCard className="space-y-3 p-4">
             <p className="text-base font-semibold text-foreground">{t("recovery.title")}</p>
@@ -915,98 +913,135 @@ export function MatchLiveManager() {
   }
 
   return (
-    <PageShell className="space-y-4 pb-6">
-      <SectionHeader
-        title={t("title")}
-        subtitle={t("subtitle")}
-        accent
-        action={
-          <Link href="/match/setup">
-            <FpButton variant="ghost" size="sm" className="tap-target">
-              {common("back")}
-            </FpButton>
-          </Link>
-        }
-      />
+    <PageShell className="space-y-3 pb-6">
+      {/* ── Minimal back nav ─────────────────────────────────── */}
+      <Link
+        href="/match/setup"
+        className="tap-target -ml-1 inline-flex items-center gap-0.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ChevronLeft size={14} />
+        {common("back")}
+      </Link>
 
       <motion.div
         initial="hidden"
         animate="visible"
         variants={variants.staggerContainer}
-        className="space-y-4"
+        className="space-y-3"
       >
         {error ? <AppCard className="p-3 text-xs text-danger">{error}</AppCard> : null}
+
+        {/* ── Combined score + timer card ──────────────────────── */}
         <motion.div variants={variants.fadeInUp}>
-          <AppCard className="p-3">
-            {/* Compact 3-column score row */}
+          <AppCard
+            glow={liveMatch.status === "running" ? "accent" : "none"}
+            className="space-y-4 p-4"
+          >
+            {/* Score row: [- score +] : [- score +] */}
             <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-              {/* Team side */}
+              {/* Team */}
               <div className="flex flex-col items-center gap-1.5">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                   {t("score.team")}
                 </p>
-                <p className="text-4xl font-black tabular-nums text-foreground leading-none">
-                  {liveMatch.teamScore}
-                </p>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     aria-label={t("score.decreaseTeam")}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-fp-border bg-fp-surface-2 transition-colors active:bg-fp-surface disabled:opacity-40"
+                    className="tap-target flex h-11 w-11 items-center justify-center rounded-full border border-fp-border bg-fp-surface-2 transition-colors active:bg-fp-surface disabled:opacity-40"
                     onClick={() => handleTeamScore(-1)}
                     disabled={liveMatch.teamScore === 0 || liveMatch.status === "ended"}
                   >
-                    <Minus size={16} />
+                    <Minus size={15} />
                   </button>
+                  <p className="min-w-[2rem] text-center text-4xl font-black tabular-nums text-foreground leading-none">
+                    {liveMatch.teamScore}
+                  </p>
                   <button
                     type="button"
                     aria-label={t("score.increaseTeam")}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-fp-cta/40 bg-fp-cta/15 text-fp-cta transition-colors active:bg-fp-cta/25 disabled:opacity-40"
+                    className="tap-target flex h-11 w-11 items-center justify-center rounded-full border border-fp-cta/40 bg-fp-cta/15 text-fp-cta transition-colors active:bg-fp-cta/25 disabled:opacity-40"
                     onClick={() => handleTeamScore(1)}
                     disabled={liveMatch.status === "ended"}
                   >
-                    <Plus size={16} />
+                    <Plus size={15} />
                   </button>
                 </div>
               </div>
 
-              {/* Center divider */}
-              <p className="text-2xl font-black leading-none text-muted-foreground/30">:</p>
+              {/* Divider */}
+              <p className="text-xl font-black leading-none text-muted-foreground/30">:</p>
 
-              {/* Opponent side */}
+              {/* Opponent */}
               <div className="flex flex-col items-center gap-1.5">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                   {t("score.opponent")}
                 </p>
-                <p className="text-4xl font-black tabular-nums text-foreground leading-none">
-                  {liveMatch.opponentScore}
-                </p>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     aria-label={t("score.decreaseOpponent")}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-fp-border bg-fp-surface-2 transition-colors active:bg-fp-surface disabled:opacity-40"
+                    className="tap-target flex h-11 w-11 items-center justify-center rounded-full border border-fp-border bg-fp-surface-2 transition-colors active:bg-fp-surface disabled:opacity-40"
                     onClick={() => handleOpponentScore(-1)}
                     disabled={liveMatch.opponentScore === 0 || liveMatch.status === "ended"}
                   >
-                    <Minus size={16} />
+                    <Minus size={15} />
                   </button>
+                  <p className="min-w-[2rem] text-center text-4xl font-black tabular-nums text-foreground leading-none">
+                    {liveMatch.opponentScore}
+                  </p>
                   <button
                     type="button"
                     aria-label={t("score.increaseOpponent")}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-fp-border bg-fp-surface-2 transition-colors active:bg-fp-surface disabled:opacity-40"
+                    className="tap-target flex h-11 w-11 items-center justify-center rounded-full border border-fp-border bg-fp-surface-2 transition-colors active:bg-fp-surface disabled:opacity-40"
                     onClick={() => handleOpponentScore(1)}
                     disabled={liveMatch.status === "ended"}
                   >
-                    <Plus size={16} />
+                    <Plus size={15} />
                   </button>
                 </div>
               </div>
             </div>
 
+            {/* Separator */}
+            <div className="h-px bg-fp-border" />
+
+            {/* Timer panel (bare, no own card) */}
+            <MatchTimerPanel
+              status={liveMatch.status}
+              statusLabel={statusLabel(liveMatch.status, t)}
+              timerLabel={t("timer.elapsedPrimary")}
+              durationLabel={t("timer.duration", {
+                duration: Math.floor(liveMatch.durationSeconds / 60),
+              })}
+              primaryClock={elapsedClock}
+              secondaryLabel={t("timer.remainingSecondary", { remaining: remainingClock })}
+              phaseLabel={
+                liveMatch.phase === "half_time"
+                  ? t("phase.halfTime")
+                  : currentHalf === 2
+                    ? t("phase.secondHalf")
+                    : t("phase.firstHalf")
+              }
+              stoppageLabel={inStoppage ? t("timer.stoppage", { value: formatClock(phaseStoppageSeconds) }) : null}
+              onStart={handleStart}
+              onPause={handlePause}
+              onResume={handleResume}
+              onEnd={handleEnd}
+              onEndHalf={handleEndHalf}
+              startLabel={t("actions.start")}
+              pauseLabel={t("actions.pause")}
+              resumeLabel={t("actions.resume")}
+              endLabel={t("actions.end")}
+              endHalfLabel={t("actions.endHalf")}
+              startSecondHalfLabel={t("actions.startSecondHalf")}
+              canEndHalf={liveMatch.halves === 2 && (liveMatch.phase === "first_half" || liveMatch.phase === "second_half") && liveMatch.status !== "ended"}
+              canStartSecondHalf={liveMatch.phase === "half_time" && liveMatch.status === "paused"}
+            />
+
             {/* Compact event strip */}
-            {liveEvents.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 border-t border-fp-border pt-2">
+            {liveEvents.length > 0 ? (
+              <div className="flex flex-wrap gap-x-3 gap-y-0.5 border-t border-fp-border pt-3">
                 {liveEvents.slice(-8).map((ev) => (
                   <span key={ev.id} className="text-[10px] tabular-nums text-muted-foreground">
                     {ev.minute !== null ? `${ev.minute}'` : ""}
@@ -1016,44 +1051,11 @@ export function MatchLiveManager() {
                   </span>
                 ))}
               </div>
-            )}
+            ) : null}
           </AppCard>
         </motion.div>
 
-        <motion.div variants={variants.fadeInUp}>
-          <MatchTimerPanel
-            status={liveMatch.status}
-            statusLabel={statusLabel(liveMatch.status, t)}
-            timerLabel={t("timer.elapsedPrimary")}
-            durationLabel={t("timer.duration", {
-              duration: Math.floor(liveMatch.durationSeconds / 60),
-            })}
-            primaryClock={elapsedClock}
-            secondaryLabel={t("timer.remainingSecondary", { remaining: remainingClock })}
-            phaseLabel={
-              liveMatch.phase === "half_time"
-                ? t("phase.halfTime")
-                : currentHalf === 2
-                  ? t("phase.secondHalf")
-                  : t("phase.firstHalf")
-            }
-            stoppageLabel={inStoppage ? t("timer.stoppage", { value: formatClock(phaseStoppageSeconds) }) : null}
-            onStart={handleStart}
-            onPause={handlePause}
-            onResume={handleResume}
-            onEnd={handleEnd}
-            onEndHalf={handleEndHalf}
-            startLabel={t("actions.start")}
-            pauseLabel={t("actions.pause")}
-            resumeLabel={t("actions.resume")}
-            endLabel={t("actions.end")}
-            endHalfLabel={t("actions.endHalf")}
-            startSecondHalfLabel={t("actions.startSecondHalf")}
-            canEndHalf={liveMatch.halves === 2 && (liveMatch.phase === "first_half" || liveMatch.phase === "second_half") && liveMatch.status !== "ended"}
-            canStartSecondHalf={liveMatch.phase === "half_time" && liveMatch.status === "paused"}
-          />
-        </motion.div>
-
+        {/* ── Pitch ────────────────────────────────────────────── */}
         <motion.div variants={variants.fadeInUp}>
           <AppCard className="p-3">
             <p className="mb-3 text-sm font-semibold text-foreground">
@@ -1075,6 +1077,7 @@ export function MatchLiveManager() {
           </AppCard>
         </motion.div>
 
+        {/* ── Substitution suggestion ──────────────────────────── */}
         <motion.div variants={variants.fadeInUp}>
           <AppCard glow="accent" className="space-y-3 border-fp-accent/25 p-4">
             <p className="text-sm font-semibold text-foreground">{t("suggestion.title")}</p>

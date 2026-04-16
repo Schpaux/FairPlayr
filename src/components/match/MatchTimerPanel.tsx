@@ -1,17 +1,17 @@
 "use client";
 
 import { Pause, Play, RotateCcw, StopCircle } from "lucide-react";
-import { AppCard } from "@/components/ui/AppCard";
 import { FpButton } from "@/components/ui/FpButton";
+import { cn } from "@/lib/utils";
 import type { LiveMatchStatus } from "@/domain/liveMatch";
 
 interface MatchTimerPanelProps {
   status: LiveMatchStatus;
-  statusLabel: string;
   timerLabel: string;
   durationLabel: string;
   primaryClock: string;
   secondaryLabel: string;
+  statusLabel: string;
   phaseLabel?: string;
   stoppageLabel?: string | null;
   onStart: () => void;
@@ -29,22 +29,15 @@ interface MatchTimerPanelProps {
   canStartSecondHalf?: boolean;
 }
 
-function statusClassName(status: LiveMatchStatus) {
-  if (status === "running") {
-    return "bg-fp-accent/15 text-fp-accent border-fp-accent/30";
-  }
-
-  if (status === "ended") {
-    return "bg-danger/15 text-danger border-danger/30";
-  }
-
+function statusBadgeClass(status: LiveMatchStatus) {
+  if (status === "running") return "bg-fp-accent/15 text-fp-accent border-fp-accent/30";
+  if (status === "ended") return "bg-danger/15 text-danger border-danger/30";
   return "bg-fp-surface-2 text-muted-foreground border-fp-border";
 }
 
 export function MatchTimerPanel({
   status,
   statusLabel,
-  timerLabel,
   durationLabel,
   primaryClock,
   secondaryLabel,
@@ -64,100 +57,112 @@ export function MatchTimerPanel({
   canEndHalf,
   canStartSecondHalf,
 }: MatchTimerPanelProps) {
+  const hasBothSecondary = Boolean(canEndHalf && onEndHalf) && status !== "ended";
+
   return (
-    <AppCard glow={status === "running" ? "accent" : "none"} className="space-y-4 p-5">
-      <div className="flex items-center justify-between">
-        <span
-          className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${statusClassName(status)}`}
-        >
-          {statusLabel}
-        </span>
-        <span className="text-xs text-muted-foreground">{durationLabel}</span>
+    <div className="space-y-3">
+      {/* ── Status + phase + duration ─────────────────────────── */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span
+            className={cn(
+              "rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
+              statusBadgeClass(status)
+            )}
+          >
+            {statusLabel}
+          </span>
+          {phaseLabel ? (
+            <span className="text-[11px] font-medium text-muted-foreground">{phaseLabel}</span>
+          ) : null}
+        </div>
+        <span className="text-[11px] text-muted-foreground tabular-nums">{durationLabel}</span>
       </div>
 
-      <div className="text-center">
-        {phaseLabel ? (
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {phaseLabel}
-          </p>
-        ) : null}
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {timerLabel}
-        </p>
-        <p className="mt-1 text-6xl font-black tracking-tight text-foreground tabular-nums">
+      {/* ── Clock row ─────────────────────────────────────────── */}
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-4xl font-black tracking-tight text-foreground tabular-nums leading-none">
           {primaryClock}
         </p>
-        <p className="mt-1 text-sm text-muted-foreground tabular-nums">
-          {secondaryLabel}
-        </p>
-        {stoppageLabel ? (
-          <p className="mt-1 text-xs font-semibold text-danger tabular-nums">
-            {stoppageLabel}
-          </p>
-        ) : null}
+        <div className="text-right">
+          <p className="text-sm text-muted-foreground tabular-nums leading-tight">{secondaryLabel}</p>
+          {stoppageLabel ? (
+            <p className="mt-0.5 text-xs font-semibold text-danger tabular-nums">{stoppageLabel}</p>
+          ) : null}
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      {/* ── Action buttons ────────────────────────────────────── */}
+      <div className="space-y-2">
+        {/* Primary: Start second half */}
         {canStartSecondHalf ? (
           <FpButton
             variant="primary"
             size="lg"
-            className="tap-target col-span-2"
+            fullWidth
+            className="tap-target"
             onClick={onStart}
           >
-            <Play size={18} />
+            <Play size={16} />
             {startSecondHalfLabel ?? startLabel}
           </FpButton>
         ) : null}
 
-        {(status === "not_started" || status === "paused") && (
+        {/* Primary: Start / Resume */}
+        {(status === "not_started" || status === "paused") && !canStartSecondHalf ? (
           <FpButton
             variant="primary"
             size="lg"
-            className="tap-target col-span-2"
+            fullWidth
+            className="tap-target"
             onClick={status === "not_started" ? onStart : onResume}
-            disabled={Boolean(canStartSecondHalf)}
           >
-            {status === "not_started" ? <Play size={18} /> : <RotateCcw size={18} />}
+            {status === "not_started" ? <Play size={16} /> : <RotateCcw size={16} />}
             {status === "not_started" ? startLabel : resumeLabel}
           </FpButton>
-        )}
+        ) : null}
 
-        {status === "running" && (
+        {/* Primary: Pause */}
+        {status === "running" ? (
           <FpButton
             variant="secondary"
             size="lg"
-            className="tap-target col-span-2"
+            fullWidth
+            className="tap-target"
             onClick={onPause}
           >
-            <Pause size={18} />
+            <Pause size={16} />
             {pauseLabel}
           </FpButton>
-        )}
+        ) : null}
 
-        {status !== "ended" && (
-          <FpButton
-            variant="danger"
-            size="md"
-            className="tap-target col-span-2"
-            onClick={onEnd}
-          >
-            <StopCircle size={16} />
-            {endLabel}
-          </FpButton>
-        )}
-
-        {canEndHalf && onEndHalf ? (
-          <FpButton
-            variant="secondary"
-            size="md"
-            className="tap-target col-span-2"
-            onClick={onEndHalf}
-          >
-            {endHalfLabel ?? endLabel}
-          </FpButton>
+        {/* Secondary: End Half + End Match (side by side when both present) */}
+        {status !== "ended" ? (
+          <div className={cn("grid gap-2", hasBothSecondary ? "grid-cols-2" : "grid-cols-1")}>
+            {canEndHalf && onEndHalf ? (
+              <FpButton
+                variant="secondary"
+                size="sm"
+                fullWidth
+                className="tap-target"
+                onClick={onEndHalf}
+              >
+                {endHalfLabel ?? endLabel}
+              </FpButton>
+            ) : null}
+            <FpButton
+              variant="danger"
+              size="sm"
+              fullWidth
+              className="tap-target"
+              onClick={onEnd}
+            >
+              <StopCircle size={14} />
+              {endLabel}
+            </FpButton>
+          </div>
         ) : null}
       </div>
-    </AppCard>
+    </div>
   );
 }

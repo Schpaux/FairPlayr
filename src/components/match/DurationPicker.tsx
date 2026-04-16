@@ -34,7 +34,7 @@ export function DurationPicker({
           <button
             type="button"
             className={cn(
-              "h-10 rounded-xl border px-3 text-sm font-semibold tap-target transition-all duration-150",
+              "h-11 rounded-xl border px-3 text-sm font-semibold tap-target transition-all duration-150",
               currentHalves === 2
                 ? "border-fp-cta/40 bg-fp-cta/15 text-fp-cta"
                 : "border-fp-border bg-fp-surface-2 text-muted-foreground hover:text-foreground"
@@ -46,7 +46,7 @@ export function DurationPicker({
           <button
             type="button"
             className={cn(
-              "h-10 rounded-xl border px-3 text-sm font-semibold tap-target transition-all duration-150",
+              "h-11 rounded-xl border px-3 text-sm font-semibold tap-target transition-all duration-150",
               currentHalves === 1
                 ? "border-fp-cta/40 bg-fp-cta/15 text-fp-cta"
                 : "border-fp-border bg-fp-surface-2 text-muted-foreground hover:text-foreground"
@@ -72,7 +72,7 @@ export function DurationPicker({
               onClick={() => onPresetChange(presetId)}
               aria-pressed={isSelected}
               className={cn(
-                "h-10 min-w-[72px] rounded-xl border px-3 text-sm font-semibold transition-all duration-150 tap-target",
+                "h-11 min-w-[72px] rounded-xl border px-3 text-sm font-semibold transition-all duration-150 tap-target",
                 isSelected
                   ? "border-fp-cta/40 bg-fp-cta/15 text-fp-cta glow-cta-sm"
                   : "border-fp-border bg-fp-surface-2 text-muted-foreground hover:text-foreground"
@@ -104,7 +104,7 @@ export function DurationPicker({
               if (Number.isNaN(next)) return;
               onCustomChange(next);
             }}
-            className="h-11 w-24 rounded-xl border border-fp-border bg-background px-3 text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-12 w-28 rounded-2xl border border-fp-border bg-fp-surface-2 px-4 text-sm font-medium text-foreground placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-transparent transition-colors"
           />
           <span className="text-sm text-muted-foreground">{t("customSuffix")}</span>
         </div>

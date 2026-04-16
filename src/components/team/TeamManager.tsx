@@ -197,7 +197,7 @@ export function TeamManager() {
                 <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   {t("activeTeamLabel")}
                 </p>
-                <h1 className="truncate text-2xl font-bold tracking-tight gradient-text-primary">
+                <h1 className="truncate text-2xl font-bold tracking-tight text-foreground">
                   {team?.name ?? "—"}
                 </h1>
               </div>

@@ -27,7 +27,7 @@ export function SectionHeader({
         <h1
           className={cn(
             "text-2xl font-bold tracking-tight",
-            accent ? "gradient-text-primary" : "text-foreground"
+            accent ? "text-fp-cta" : "text-foreground"
           )}
         >
           {title}

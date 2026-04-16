@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import type { Player } from "@/domain/team";
 import type { MatchSetup } from "@/domain/match";
 import { getBenchPlayerIds, getFormationSlots, getRequiredStarters } from "@/domain/match";
+import { FpButton } from "@/components/ui/FpButton";
 import { cn } from "@/lib/utils";
 
 interface LineupAssignerProps {
@@ -100,13 +101,15 @@ export function LineupAssigner({
           >
             {t("starterSlots", { current: currentStarters, required })}
           </span>
-          <button
+          <FpButton
             type="button"
+            variant="ghost"
+            size="sm"
+            className="tap-target"
             onClick={onAutoFill}
-            className="tap-target rounded-lg border border-fp-border bg-fp-surface-2 px-2 py-1 text-[11px] font-medium text-muted-foreground"
           >
             {t("autoFill")}
-          </button>
+          </FpButton>
         </div>
       </div>
 
@@ -203,23 +206,26 @@ export function LineupAssigner({
                 <p className="text-sm font-semibold text-foreground">{t("pickerTitle")}</p>
                 <p className="text-xs text-muted-foreground">{t("pickerSubtitle")}</p>
               </div>
-              <button
+              <FpButton
                 type="button"
-                className="tap-target rounded-lg border border-fp-border bg-fp-surface-2 p-2 text-muted-foreground"
+                variant="ghost"
+                size="sm"
+                className="tap-target px-2"
+                aria-label={t("closePicker")}
                 onClick={() => setActiveSlotId(null)}
               >
-                <X size={14} />
-              </button>
+                <X size={16} />
+              </FpButton>
             </div>
 
             <div className="border-b border-fp-border px-4 py-3">
-              <label className="flex items-center gap-2 rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2">
-                <Search size={14} className="text-muted-foreground" />
+              <label className="flex items-center gap-2 rounded-2xl border border-fp-border bg-fp-surface-2 px-4 py-3 transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20">
+                <Search size={15} className="shrink-0 text-muted-foreground" />
                 <input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder={t("searchPlaceholder")}
-                  className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                  className="w-full bg-transparent text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground/60"
                 />
               </label>
             </div>
@@ -266,27 +272,29 @@ export function LineupAssigner({
             </div>
 
             <div className="grid grid-cols-2 gap-2 border-t border-fp-border p-3">
-              <button
+              <FpButton
                 type="button"
-                className="tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-xs font-medium text-muted-foreground"
+                variant="secondary"
+                size="sm"
+                className="tap-target"
                 onClick={() => setActiveSlotId(null)}
               >
                 {t("closePicker")}
-              </button>
-              <button
+              </FpButton>
+              <FpButton
                 type="button"
-                className="tap-target rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-xs font-medium text-danger"
+                variant="danger"
+                size="sm"
+                className="tap-target"
                 onClick={() => {
                   onClearSlot(activeSlotId);
                   setActiveSlotId(null);
                 }}
                 disabled={!activeSlotPlayerId}
               >
-                <span className="inline-flex items-center gap-1">
-                  <UserPlus size={12} />
-                  {t("sendToBench")}
-                </span>
-              </button>
+                <UserPlus size={13} />
+                {t("sendToBench")}
+              </FpButton>
             </div>
           </div>
         </div>

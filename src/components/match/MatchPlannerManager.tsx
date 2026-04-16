@@ -488,8 +488,16 @@ export function MatchPlannerManager() {
         {t("activeTeam", { name: team.name })}
       </AppCard>
 
-      {notice ? <AppCard className="p-3 text-xs text-fp-accent">{notice}</AppCard> : null}
-      {error ? <AppCard className="p-3 text-xs text-danger">{error}</AppCard> : null}
+      {notice ? (
+        <div className="rounded-2xl border border-fp-accent/30 bg-fp-accent/10 px-4 py-3 text-xs font-medium text-fp-accent">
+          {notice}
+        </div>
+      ) : null}
+      {error ? (
+        <div className="rounded-2xl border border-danger/25 bg-danger/8 px-4 py-3 text-xs font-medium text-danger">
+          {error}
+        </div>
+      ) : null}
 
       <AppCard className="space-y-3 p-4">
         {isResolvingEntryMode ? (
@@ -709,9 +717,11 @@ export function MatchPlannerManager() {
         <h3 className="text-sm font-semibold text-foreground">{t("ongoingTitle")}</h3>
 
         {activeMatch ? (
-          <div className="rounded-xl border border-fp-cta/30 bg-fp-cta/8 p-3 space-y-2">
-            <p className="text-xs uppercase tracking-wide text-fp-cta font-semibold">{t("status.live")}</p>
-            <p className="text-sm font-semibold text-foreground">{activeMatch.title}</p>
+          <div className="rounded-xl border border-fp-cta/45 bg-fp-cta/15 p-4 space-y-3">
+            <span className="inline-block rounded-full bg-fp-cta px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-fp-cta-foreground">
+              {t("status.live")}
+            </span>
+            <p className="text-base font-bold text-foreground leading-tight">{activeMatch.title}</p>
             <div className="grid grid-cols-2 gap-2">
               <Link href={activeMatchHref}>
                 <FpButton variant="primary" size="sm" fullWidth>{t("activeActions.continue")}</FpButton>
@@ -753,19 +763,17 @@ export function MatchPlannerManager() {
         ) : (
           <ul className="space-y-2">
             {ongoingMatches.map((match) => (
-              <li key={match.id} className="rounded-xl border border-fp-cta/25 bg-fp-cta/8 p-3">
+              <li key={match.id} className="rounded-xl border border-fp-cta/45 bg-fp-cta/15 p-3">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-full border border-fp-cta/40 bg-fp-cta/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-cta">
-                        {t("status.live")}
-                      </span>
-                    </div>
-                    <p className="text-sm font-semibold text-foreground truncate">{match.title}</p>
+                  <div className="min-w-0 space-y-1.5">
+                    <span className="inline-block rounded-full bg-fp-cta px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-fp-cta-foreground">
+                      {t("status.live")}
+                    </span>
+                    <p className="text-sm font-bold text-foreground truncate">{match.title}</p>
                     <p className="text-xs text-muted-foreground">{formatDate(match.startsAt)}</p>
                   </div>
                   <Link href={`/match/live?matchId=${encodeURIComponent(match.id)}`}>
-                    <span className="text-xs font-semibold text-fp-cta">{t("activeActions.continue")}</span>
+                    <FpButton variant="primary" size="sm">{t("activeActions.continue")}</FpButton>
                   </Link>
                 </div>
               </li>
@@ -811,15 +819,17 @@ export function MatchPlannerManager() {
                     <span className={
                       match.status === "live"
                         ? "rounded-full border border-fp-cta/40 bg-fp-cta/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-cta"
-                        : "rounded-full border border-fp-border bg-fp-surface-2 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
+                        : match.status === "upcoming"
+                          ? "rounded-full border border-fp-border bg-fp-surface-3 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-foreground/70"
+                          : "rounded-full border border-dashed border-fp-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
                     }>
                       {formatStatus(match.status)}
                     </span>
                     <Link href={`/match/${match.id}`}>
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-fp-cta">
+                      <FpButton variant="ghost" size="sm">
                         {t("openMatch")}
                         <ExternalLink size={12} />
-                      </span>
+                      </FpButton>
                     </Link>
                   </div>
                 </div>

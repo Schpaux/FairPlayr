@@ -5,8 +5,12 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   FairPlayr Design Token System — Wise-inspired edition
+   FairPlayr Design Token System
    Single source of truth for all visual values.
+
+   Brand: lime (#9fe870 light / #a3e635 dark) + neutrals.
+   One accent color. Neutrals carry the interface; lime signals action.
+   No secondary brand color. No indigo. No purple.
 ───────────────────────────────────────────────────────────────────────────── */
 
 @theme inline {
@@ -39,11 +43,11 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* FairPlayr brand colors — constant across themes */
-  --color-fp-primary: #6366f1;
-  --color-fp-accent: #22c55e;
+  /* FairPlayr brand tokens — theme-aware */
+  --color-fp-accent: var(--fp-accent);           /* Lime — active/positive/action states */
   --color-fp-warning: #f59e0b;
   --color-fp-danger: #ef4444;
+  --color-danger: #ef4444;                       /* Direct alias — used in inline error text */
   --color-fp-spond: var(--fp-spond);
   --color-fp-spond-soft: var(--fp-spond-soft);
   --color-fp-spond-foreground: var(--fp-spond-foreground);
@@ -52,28 +56,31 @@
   /* FairPlayr surface tokens — theme-aware */
   --color-fp-surface: var(--fp-surface);
   --color-fp-surface-2: var(--fp-surface-2);
+  --color-fp-surface-3: var(--fp-surface-3);
   --color-fp-text-primary: var(--fp-text-primary);
   --color-fp-text-secondary: var(--fp-text-secondary);
   --color-fp-border: var(--fp-border);
 
-  /* Wise-inspired CTA token — lime green, used for primary buttons */
+  /* CTA token — lime green, primary action color */
   --color-fp-cta: var(--fp-cta);
   --color-fp-cta-foreground: var(--fp-cta-foreground);
 
   /* Typography */
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-heading: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 
-  /* Radius scale — Wise-inspired: larger, more generous */
+  /* Radius scale — Wise-inspired: generous, rounded */
   --radius-sm: 10px;
   --radius-md: 14px;
   --radius-lg: 20px;
   --radius-xl: 28px;
-  --radius: 0.875rem; /* 14px base radius for shadcn components */
+  --radius: 0.875rem; /* 14px — shadcn component base */
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   Light Theme
+   Light Theme — primary experience
+   Optimised for outdoor, bright-condition readability.
 ───────────────────────────────────────────────────────────────────────────── */
 :root {
   color-scheme: light;
@@ -85,57 +92,70 @@
   --card-foreground: #0e0f0c;
   --popover: #ffffff;
   --popover-foreground: #0e0f0c;
-  --primary: #6366f1;
-  --primary-foreground: #ffffff;
+
+  /* Primary = lime. Dark green foreground for contrast on lime. */
+  --primary: oklch(0.845 0.18 132);
+  --primary-foreground: oklch(0.215 0.074 135);
+
   --secondary: #f0f4eb;
   --secondary-foreground: #0e0f0c;
   --muted: #f0f4eb;
   --muted-foreground: #686b66;
-  --accent: #22c55e;
-  --accent-foreground: #ffffff;
+
+  /* Accent = lime (same as primary — one accent only) */
+  --accent: oklch(0.845 0.18 132);
+  --accent-foreground: oklch(0.215 0.074 135);
+
   --destructive: #d03238;
   --destructive-foreground: #ffffff;
   --border: rgba(14, 15, 12, 0.10);
   --input: rgba(14, 15, 12, 0.08);
-  --ring: #6366f1;
+
+  /* Ring = dark green: high contrast on light backgrounds, on-brand */
+  --ring: oklch(0.215 0.074 135);
   --radius: 0.875rem;
 
   /* FairPlayr semantic surface tokens */
   --fp-surface: #f8faf5;
   --fp-surface-2: #f0f4eb;
+  --fp-surface-3: #e4edda;
   --fp-text-primary: #0e0f0c;
   --fp-text-secondary: #686b66;
   --fp-border: rgba(14, 15, 12, 0.10);
+
+  /* Lime alias — used for active/positive/success states in components */
+  --fp-accent: oklch(0.845 0.18 132);
+
   --fp-spond: #e15a37;
   --fp-spond-soft: rgba(225, 90, 55, 0.10);
   --fp-spond-foreground: #7a2d1b;
   --fp-spond-border: rgba(225, 90, 55, 0.30);
 
-  /* Wise-inspired CTA — lime green on light */
-  --fp-cta: #9fe870;
-  --fp-cta-foreground: #163300;
+  /* CTA — lime */
+  --fp-cta: oklch(0.845 0.18 132);
+  --fp-cta-foreground: oklch(0.215 0.074 135);
 
   /* Sidebar */
   --sidebar: #f8faf5;
   --sidebar-foreground: #0e0f0c;
-  --sidebar-primary: #6366f1;
-  --sidebar-primary-foreground: #ffffff;
+  --sidebar-primary: oklch(0.845 0.18 132);
+  --sidebar-primary-foreground: oklch(0.215 0.074 135);
   --sidebar-accent: #f0f4eb;
   --sidebar-accent-foreground: #0e0f0c;
   --sidebar-border: rgba(14, 15, 12, 0.10);
-  --sidebar-ring: #6366f1;
+  --sidebar-ring: oklch(0.215 0.074 135);
 
-  /* Glow — subtle in light mode */
-  --glow-primary: 0 0 20px rgba(99, 102, 241, 0.15);
-  --glow-primary-sm: 0 0 10px rgba(99, 102, 241, 0.10);
-  --glow-accent: 0 0 20px rgba(34, 197, 94, 0.15);
-  --glow-accent-sm: 0 0 10px rgba(34, 197, 94, 0.10);
+  /* Glow — all unified to lime */
+  --glow-primary: 0 0 20px rgba(159, 232, 112, 0.30);
+  --glow-primary-sm: 0 0 10px rgba(159, 232, 112, 0.22);
+  --glow-accent: 0 0 20px rgba(159, 232, 112, 0.25);
+  --glow-accent-sm: 0 0 10px rgba(159, 232, 112, 0.18);
   --glow-cta: 0 0 20px rgba(159, 232, 112, 0.25);
   --glow-cta-sm: 0 0 10px rgba(159, 232, 112, 0.18);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   Dark Theme
+   Dark Theme — fully supported, equally refined
 ───────────────────────────────────────────────────────────────────────────── */
 .dark {
   color-scheme: dark;
@@ -147,50 +167,63 @@
   --card-foreground: #f4f8f0;
   --popover: #111827;
   --popover-foreground: #f4f8f0;
-  --primary: #6366f1;
-  --primary-foreground: #ffffff;
+
+  /* Primary = lime (brighter variant for dark backgrounds) */
+  --primary: oklch(0.822 0.229 130);
+  --primary-foreground: oklch(0.22 0.08 135);
+
   --secondary: #1a2332;
   --secondary-foreground: #f4f8f0;
   --muted: #1a2332;
   --muted-foreground: #9ca3af;
-  --accent: #22c55e;
-  --accent-foreground: #ffffff;
+
+  /* Accent = lime */
+  --accent: oklch(0.822 0.229 130);
+  --accent-foreground: oklch(0.22 0.08 135);
+
   --destructive: #d03238;
   --destructive-foreground: #ffffff;
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.07);
-  --ring: #6366f1;
+
+  /* Ring = lime in dark mode — visible against dark backgrounds */
+  --ring: oklch(0.822 0.229 130);
 
   /* FairPlayr semantic surface tokens */
   --fp-surface: #111827;
   --fp-surface-2: #1a2332;
+  --fp-surface-3: #1e2d3e;
   --fp-text-primary: #f4f8f0;
   --fp-text-secondary: #9ca3af;
   --fp-border: rgba(255, 255, 255, 0.08);
+
+  /* Lime alias */
+  --fp-accent: oklch(0.822 0.229 130);
+
   --fp-spond: #ff815f;
   --fp-spond-soft: rgba(255, 129, 95, 0.15);
   --fp-spond-foreground: #ffd9cf;
   --fp-spond-border: rgba(255, 129, 95, 0.40);
 
-  /* Wise-inspired CTA — brighter lime on dark */
-  --fp-cta: #a3e635;
-  --fp-cta-foreground: #1a3300;
+  /* CTA — brighter lime for dark surfaces */
+  --fp-cta: oklch(0.822 0.229 130);
+  --fp-cta-foreground: oklch(0.22 0.08 135);
 
   /* Sidebar */
   --sidebar: #111827;
   --sidebar-foreground: #f4f8f0;
-  --sidebar-primary: #6366f1;
-  --sidebar-primary-foreground: #ffffff;
+  --sidebar-primary: oklch(0.822 0.229 130);
+  --sidebar-primary-foreground: oklch(0.22 0.08 135);
   --sidebar-accent: #1a2332;
   --sidebar-accent-foreground: #f4f8f0;
   --sidebar-border: rgba(255, 255, 255, 0.08);
-  --sidebar-ring: #6366f1;
+  --sidebar-ring: oklch(0.822 0.229 130);
 
-  /* Glow — richer in dark mode */
-  --glow-primary: 0 0 30px rgba(99, 102, 241, 0.28);
-  --glow-primary-sm: 0 0 15px rgba(99, 102, 241, 0.18);
-  --glow-accent: 0 0 30px rgba(34, 197, 94, 0.28);
-  --glow-accent-sm: 0 0 15px rgba(34, 197, 94, 0.18);
+  /* Glow — all unified to lime (richer on dark) */
+  --glow-primary: 0 0 30px rgba(163, 230, 53, 0.35);
+  --glow-primary-sm: 0 0 15px rgba(163, 230, 53, 0.22);
+  --glow-accent: 0 0 30px rgba(163, 230, 53, 0.32);
+  --glow-accent-sm: 0 0 15px rgba(163, 230, 53, 0.20);
   --glow-cta: 0 0 30px rgba(163, 230, 53, 0.35);
   --glow-cta-sm: 0 0 15px rgba(163, 230, 53, 0.22);
 }
@@ -216,7 +249,14 @@
     overscroll-behavior: none;
   }
 
-  /* Remove focus outline on mouse click, keep it for keyboard nav */
+  /* Heading defaults — tight tracking creates clear hierarchy in product UI */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  /* Focus — keyboard only, not on click */
   :focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
@@ -226,78 +266,27 @@
    Utility Classes
 ───────────────────────────────────────────────────────────────────────────── */
 @layer utilities {
-  /* Glow effects — primary (indigo) */
-  .glow-primary {
-    box-shadow: var(--glow-primary);
-  }
-  .glow-primary-sm {
-    box-shadow: var(--glow-primary-sm);
-  }
-
-  /* Glow effects — accent (green) */
-  .glow-accent {
-    box-shadow: var(--glow-accent);
-  }
-  .glow-accent-sm {
-    box-shadow: var(--glow-accent-sm);
-  }
-
-  /* Glow effects — CTA (lime) */
-  .glow-cta {
-    box-shadow: var(--glow-cta);
-  }
-  .glow-cta-sm {
-    box-shadow: var(--glow-cta-sm);
-  }
-
-  /* FairPlayr gradient text — indigo/violet for premium display headings */
-  .gradient-text-primary {
-    background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  /* Lime gradient text — for Wise-inspired sporty accents */
-  .gradient-text-cta {
-    background: linear-gradient(135deg, #9fe870 0%, #d9f99d 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .gradient-text-accent {
-    background: linear-gradient(135deg, #22c55e 0%, #4ade80 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
+  /* Glow effects — all emit lime, consistent with single-accent system */
+  .glow-primary    { box-shadow: var(--glow-primary); }
+  .glow-primary-sm { box-shadow: var(--glow-primary-sm); }
+  .glow-accent     { box-shadow: var(--glow-accent); }
+  .glow-accent-sm  { box-shadow: var(--glow-accent-sm); }
+  .glow-cta        { box-shadow: var(--glow-cta); }
+  .glow-cta-sm     { box-shadow: var(--glow-cta-sm); }
 
   /* FairPlayr surface helpers */
-  .surface {
-    background-color: var(--fp-surface);
-  }
-  .surface-2 {
-    background-color: var(--fp-surface-2);
-  }
+  .surface   { background-color: var(--fp-surface); }
+  .surface-2 { background-color: var(--fp-surface-2); }
 
-  /* Tap target minimum size for mobile */
+  /* Tap target minimum size for mobile (44pt iOS HIG) */
   .tap-target {
     min-height: 44px;
     min-width: 44px;
   }
 
-  /* Safe area padding */
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-  .pt-safe {
-    padding-top: env(safe-area-inset-top);
-  }
-  .pl-safe {
-    padding-left: env(safe-area-inset-left);
-  }
-  .pr-safe {
-    padding-right: env(safe-area-inset-right);
-  }
+  /* Safe area padding for iOS / Capacitor WKWebView */
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+  .pt-safe { padding-top: env(safe-area-inset-top); }
+  .pl-safe { padding-left: env(safe-area-inset-left); }
+  .pr-safe { padding-right: env(safe-area-inset-right); }
 }

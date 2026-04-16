@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 import { Check } from "lucide-react";
 import type { Player } from "@/domain/team";
+import { FpButton } from "@/components/ui/FpButton";
 import { cn } from "@/lib/utils";
 
 interface SquadSelectorProps {
@@ -33,20 +34,24 @@ export function SquadSelector({
           {t("selectedCount", { selected: selectedCount, total: players.length })}
         </p>
         <div className="flex items-center gap-1">
-          <button
+          <FpButton
             type="button"
+            variant="ghost"
+            size="sm"
+            className="tap-target"
             onClick={onSelectAll}
-            className="tap-target rounded-lg border border-fp-border bg-fp-surface-2 px-2 py-1 text-[11px] font-medium text-muted-foreground"
           >
             {selectAllLabel}
-          </button>
-          <button
+          </FpButton>
+          <FpButton
             type="button"
+            variant="ghost"
+            size="sm"
+            className="tap-target"
             onClick={onClearSelection}
-            className="tap-target rounded-lg border border-fp-border bg-fp-surface-2 px-2 py-1 text-[11px] font-medium text-muted-foreground"
           >
             {clearLabel}
-          </button>
+          </FpButton>
         </div>
       </div>
 

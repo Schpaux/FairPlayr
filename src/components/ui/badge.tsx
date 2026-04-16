@@ -19,6 +19,10 @@ const badgeVariants = cva(
         ghost:
           "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
         link: "text-primary underline-offset-4 hover:underline",
+        /** Lime CTA — for active/positive status indicators */
+        cta: "border-fp-cta/30 bg-fp-cta/15 text-fp-cta",
+        /** Spond integration badge */
+        spond: "border-fp-spond-border/50 bg-fp-spond-soft text-fp-spond-foreground",
       },
     },
     defaultVariants: {

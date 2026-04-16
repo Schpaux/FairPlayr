@@ -293,15 +293,15 @@ export function LivePitchLineupEditor({
     >
       {/* ── Pitch ──────────────────────────────────────────────────────────── */}
       <div
-        className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-gradient-to-b from-emerald-500/25 via-emerald-500/15 to-emerald-600/25"
+        className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-gradient-to-b from-[#21592a] via-[#1c4e24] to-[#16401e]"
         style={{ touchAction: "none" }}
       >
         {/* Field markings */}
-        <div className="pointer-events-none absolute inset-4 rounded-2xl border-2 border-white/35">
-          <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/20" />
-          <div className="absolute left-1/2 top-1/2 h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20" />
-          <div className="absolute left-1/2 top-2 h-5 w-20 -translate-x-1/2 rounded-b-xl border border-t-0 border-white/20" />
-          <div className="absolute bottom-2 left-1/2 h-5 w-20 -translate-x-1/2 rounded-t-xl border border-b-0 border-white/20" />
+        <div className="pointer-events-none absolute inset-4 rounded-2xl border-2 border-white/40">
+          <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/30" />
+          <div className="absolute left-1/2 top-1/2 h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/30" />
+          <div className="absolute left-1/2 top-2 h-5 w-20 -translate-x-1/2 rounded-b-xl border border-t-0 border-white/30" />
+          <div className="absolute bottom-2 left-1/2 h-5 w-20 -translate-x-1/2 rounded-t-xl border border-b-0 border-white/30" />
         </div>
 
         {/* Slots */}
@@ -326,19 +326,19 @@ export function LivePitchLineupEditor({
               data-slot-id={slot.id}
               disabled={disabled && !occupantId}
               className={cn(
-                "tap-target absolute -translate-x-1/2 -translate-y-1/2 rounded-2xl border px-2 py-1.5 text-center transition-all",
-                "min-w-[52px]",
-                isBeingDragged && "opacity-30",
+                "tap-target absolute -translate-x-1/2 -translate-y-1/2 rounded-xl border px-2.5 py-1.5 text-center transition-all duration-150",
+                "min-w-[56px]",
+                isBeingDragged && "opacity-20",
                 disabled && "cursor-default",
                 isSelected
-                  ? "border-fp-cta bg-fp-cta/20 text-fp-cta shadow-[var(--glow-cta-sm)] scale-105"
+                  ? "border-fp-cta bg-fp-cta text-fp-cta-foreground shadow-[var(--glow-cta-sm)] scale-110"
                   : isDropTarget || isTapTarget
                     ? isOccupied
-                      ? "border-warning/60 bg-warning/20 text-white"
-                      : "border-fp-cta/60 bg-fp-cta/20 text-white"
+                      ? "border-amber-300/90 bg-amber-50/90 text-amber-900"
+                      : "border-fp-cta/60 bg-fp-cta/20 text-fp-cta"
                     : isOccupied
-                      ? "border-white/40 bg-black/50 text-white"
-                      : "border-dashed border-white/30 bg-white/8 text-white/60"
+                      ? "border-white/20 bg-white/90 text-fp-cta-foreground shadow-sm"
+                      : "border-dashed border-white/25 bg-white/6 text-white/40"
               )}
               style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
               onPointerDown={
@@ -377,7 +377,7 @@ export function LivePitchLineupEditor({
       {/* ── Bench ──────────────────────────────────────────────────────────── */}
       <div
         data-bench-area="true"
-        className="mt-3 rounded-xl border border-fp-border bg-fp-surface-2 p-3"
+        className="mt-4 rounded-xl border border-fp-border bg-fp-surface-2 p-3"
       >
         <div className="mb-2 flex items-center justify-between gap-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -411,7 +411,7 @@ export function LivePitchLineupEditor({
                     disabled && "cursor-default",
                     selected
                       ? "border-fp-cta/40 bg-fp-cta/15 text-fp-cta shadow-[var(--glow-cta-sm)] scale-105"
-                      : "border-fp-border bg-background text-foreground"
+                      : "border-fp-border bg-fp-surface text-foreground shadow-sm"
                   )}
                   style={{ touchAction: "none" }}
                   onPointerDown={
@@ -449,7 +449,7 @@ export function LivePitchLineupEditor({
       {/* ── Drag ghost ────────────────────────────────────────────────────── */}
       {drag?.active && (
         <div
-          className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-fp-cta/60 bg-fp-cta px-3 py-1.5 text-xs font-semibold text-fp-cta-foreground shadow-lg"
+          className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-white/20 bg-white/95 px-3 py-1.5 text-xs font-semibold text-fp-cta-foreground shadow-xl"
           style={{ left: drag.currentX, top: drag.currentY }}
         >
           {getShort(drag.source.playerId)}
