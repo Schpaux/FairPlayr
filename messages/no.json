@@ -41,80 +41,48 @@
         "label": "Alle får spille"
       }
     },
-    "problem": {
-      "title": "Kjenner du deg igjen?",
-      "intro": "Mange trenere mister oversikten i kampens hete. FairPlayr gjør det enklere å ta gode valg underveis.",
-      "problemLabel": "Problem",
-      "solutionLabel": "Løsning",
+    "features": {
       "items": {
-        "overview": {
-          "problem": "Du mister oversikten over spilletid",
-          "solution": "Full oversikt - hele kampen"
+        "teamControl": {
+          "title": "Styr laget ditt",
+          "point1": "Sett opp lag raskt",
+          "point2": "Dra spillere inn på banen"
         },
-        "randomSubs": {
-          "problem": "Bytter skjer litt tilfeldig",
-          "solution": "Struktur på byttene"
+        "liveControl": {
+          "title": "Full kontroll live",
+          "point1": "Se hvem som spiller",
+          "point2": "Bytt med ett trykk"
         },
-        "unevenTime": {
-          "problem": "Noen spiller mer enn andre",
-          "solution": "Jevnere spilletid"
+        "fairPlaytime": {
+          "title": "Rettferdig spilletid",
+          "point1": "Se hvem som har spilt mest",
+          "point2": "Unngå gjessing"
         },
-        "parentQuestions": {
-          "problem": "Foreldre stiller spørsmål",
-          "solution": "Mindre stress"
+        "autoReport": {
+          "title": "Automatisk kampoppsummering",
+          "point1": "Genereres etter kamp",
+          "point2": "Klar til å deles"
         }
       }
     },
-    "features": {
-      "title": "Alt du trenger på sidelinja",
-      "subtitle": "Laget for trenere som vil gjøre kampdagen enklere.",
-      "items": {
-        "smartBuilder": {
-          "title": "Smart lagbygger",
-          "description": "Sett opp laget på sekunder - ferdig tilpasset kampformat og antall spillere."
-        },
-        "livePlaytime": {
-          "title": "Spilletid i sanntid",
-          "description": "Se nøyaktig hvem som har spilt - og hvem som bør innpå."
-        },
-        "smartSubs": {
-          "title": "Smarte bytter",
-          "description": "Få forslag til hvem du bør bytte - basert på faktisk spilletid."
-        },
-        "alwaysFair": {
-          "title": "Alltid rettferdig",
-          "description": "FairPlayr hjelper deg å fordele spilletiden jevnt - uten at du må tenke på det."
-        }
+    "howItWorks": {
+      "title": "Hvordan det funker",
+      "steps": {
+        "1": "Velg lag",
+        "2": "Sett opp lagoppstilling",
+        "3": "Styr kampen live",
+        "4": "Få rapport"
       }
     },
     "spond": {
       "badge": "Integreres med Spond",
-      "title": "Bruker du Spond? Perfekt.",
-      "subtitle": "Koble FairPlayr til Spond og få spillerne dine rett inn i kampoppsettet - klart på sekunder.",
-      "benefits": {
-        "autoImport": {
-          "title": "Importer spillere automatisk",
-          "description": "Slipp å legge inn laget manuelt"
-        },
-        "attendance": {
-          "title": "Se hvem som kommer på kamp",
-          "description": "Bruk påmeldinger direkte i laguttaket"
-        },
-        "lessDoubleWork": {
-          "title": "Mindre dobbeltarbeid",
-          "description": "Spond til organisering, FairPlayr til kamp"
-        },
-        "fasterSetup": {
-          "title": "Raskere oppsett",
-          "description": "Gå fra tropp til ferdig lag på sekunder"
-        }
-      },
-      "stepLabel": "Steg {number}",
-      "steps": {
-        "1": "Koble til Spond",
-        "2": "Velg kamp og spillere",
-        "3": "Start kampen med full oversikt"
-      }
+      "title": "Bruk spillerne dine direkte fra Spond",
+      "benefit1": "Importer spillere på sekunder",
+      "benefit2": "Ingen dobbeltarbeid",
+      "benefit3": "Klar til kamp med en gang"
+    },
+    "trust": {
+      "quote": "Endelig en app som faktisk funker under kamp."
     },
     "finalCta": {
       "title": "Klar for en enklere kampdag?",
