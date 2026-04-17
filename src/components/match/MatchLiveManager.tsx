@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Minus, Plus, ArrowRightLeft, ChevronLeft } from "lucide-react";
+import { Play, Minus, Plus, ChevronLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -20,18 +20,17 @@ import {
   getPlayerAccumulatedSeconds,
   getRemainingSeconds,
   isInStoppageTime,
-  moveBenchPlayerToSlot,
   pauseLiveMatch,
   reconcileLiveMatchWithSquad,
-  removePlayerFromField,
-  repositionLivePlayers,
   resumeLiveMatch,
   startLiveMatch,
   substitutePlayers,
   updateScore,
   type LiveMatchState,
 } from "@/domain/liveMatch";
+import { getFormationSlots } from "@/domain/match";
 import { getSubstitutionSuggestion } from "@/domain/substitutionSuggestion";
+import { getPlayerFatigue, type FatigueLevel } from "@/domain/playerFatigue";
 import {
   createGoalEvent,
   createSubstitutionEvent,
@@ -48,6 +47,7 @@ import {
   normalizeLiveMatchState,
   saveStoredLiveMatch,
 } from "@/lib/storage/liveMatchStorage";
+import { buildShortNameMap } from "@/lib/utils/playerName";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
 import { useActiveMatch } from "@/components/providers/ActiveMatchProvider";
 import { PageShell } from "@/components/ui/PageShell";
@@ -55,7 +55,10 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { AppCard } from "@/components/ui/AppCard";
 import { FpButton } from "@/components/ui/FpButton";
 import { MatchTimerPanel } from "@/components/match/MatchTimerPanel";
-import { LivePitchLineupEditor } from "@/components/match/LivePitchLineupEditor";
+import { LivePitchView } from "@/components/match/LivePitchView";
+import { LiveBenchStrip } from "@/components/match/LiveBenchStrip";
+import { UndoToast } from "@/components/match/UndoToast";
+import { useLiveSubstitution } from "@/components/match/useLiveSubstitution";
 import { useMatchClock } from "@/components/match/useMatchClock";
 import { variants } from "@/lib/tokens";
 
@@ -489,26 +492,19 @@ export function MatchLiveManager() {
     );
   };
 
-  // ─── Pitch lineup handlers ─────────────────────────────────────────────────
+  // ─── Substitution handlers (used by useLiveSubstitution) ──────────────────
 
-  const handlePitchBenchToSlot = (
-    benchPlayerId: string,
-    slotId: string,
-    displacedPlayerId: string | null
-  ) => {
+  const handleSwap = (outgoingPlayerId: string, incomingPlayerId: string) => {
     if (!liveMatch || liveMatch.status === "ended") return;
 
-    const inPlayer = playersById.get(benchPlayerId);
-    const outPlayer = displacedPlayerId ? playersById.get(displacedPlayerId) : null;
+    const inPlayer = playersById.get(incomingPlayerId);
+    const outPlayer = playersById.get(outgoingPlayerId);
     const minute = Math.floor(elapsedSeconds / 60);
     const timestampMs = elapsedSeconds * 1000;
-    const nowMs = Date.now();
 
     setLiveMatch((prev) => {
       if (!prev) return prev;
-      const next = moveBenchPlayerToSlot(prev, slotId, benchPlayerId, nowMs);
-      // Only create a substitution event when a player was actually displaced
-      if (!displacedPlayerId) return next;
+      const next = substitutePlayers(prev, outgoingPlayerId, incomingPlayerId, Date.now());
       return {
         ...next,
         events: [
@@ -516,9 +512,9 @@ export function MatchLiveManager() {
           createSubstitutionEvent({
             minute,
             timestampMs,
-            inPlayerId: benchPlayerId,
+            inPlayerId: incomingPlayerId,
             inPlayerName: inPlayer?.name ?? null,
-            outPlayerId: displacedPlayerId,
+            outPlayerId: outgoingPlayerId,
             outPlayerName: outPlayer?.name ?? null,
           }),
         ],
@@ -526,18 +522,42 @@ export function MatchLiveManager() {
     });
   };
 
-  const handlePitchSlotToSlot = (slotAId: string, slotBId: string) => {
-    if (!liveMatch || liveMatch.status === "ended") return;
-    // Pure reposition — no substitution event
-    setLiveMatch((prev) => (prev ? repositionLivePlayers(prev, slotAId, slotBId) : prev));
+  const handleUndo = (snapshot: LiveMatchState) => {
+    setLiveMatch(snapshot);
   };
 
-  const handlePitchSlotToBench = (playerId: string, slotId: string) => {
-    if (!liveMatch || liveMatch.status === "ended") return;
-    setLiveMatch((prev) =>
-      prev ? removePlayerFromField(prev, slotId, Date.now()) : prev
-    );
-  };
+  // ─── useLiveSubstitution ───────────────────────────────────────────────────
+
+  const subInteraction = useLiveSubstitution({
+    liveMatch: liveMatch ?? {
+      onFieldPlayerIds: [],
+      benchPlayerIds: [],
+      liveSlotAssignments: {},
+    } as unknown as LiveMatchState,
+    onSwap: handleSwap,
+    onUndo: handleUndo,
+    disabled: !liveMatch || liveMatch.status === "ended",
+  });
+
+  // ─── Short names + fatigue ─────────────────────────────────────────────────
+
+  const shortNameMap = useMemo(
+    () => buildShortNameMap(teamPlayers),
+    [teamPlayers]
+  );
+
+  const getShortName = (playerId: string) =>
+    shortNameMap.get(playerId) ?? playersById.get(playerId)?.name ?? playerId;
+
+  const fatigueMap = useMemo((): Record<string, FatigueLevel> => {
+    if (!liveMatch) return {};
+    const result: Record<string, FatigueLevel> = {};
+    for (const playerId of liveMatch.onFieldPlayerIds) {
+      const seconds = getPlayerAccumulatedSeconds(liveMatch, playerId, matchClock.nowMs);
+      result[playerId] = getPlayerFatigue(seconds, liveMatch.regularSecondsPerHalf);
+    }
+    return result;
+  }, [liveMatch, matchClock.nowMs]);
 
   const handleResetView = () => {
     clearStoredLiveMatch();
@@ -1055,56 +1075,73 @@ export function MatchLiveManager() {
           </AppCard>
         </motion.div>
 
-        {/* ── Pitch ────────────────────────────────────────────── */}
+        {/* ── Pitch + bench (unified drag surface) ─────────────── */}
         <motion.div variants={variants.fadeInUp}>
           <AppCard className="p-3">
-            <p className="mb-3 text-sm font-semibold text-foreground">
-              {t("field.title")}
-            </p>
-            <LivePitchLineupEditor
-              format={liveMatch.format}
-              formationId={liveMatch.formationId}
-              liveSlotAssignments={liveMatch.liveSlotAssignments}
-              onFieldPlayerIds={liveMatch.onFieldPlayerIds}
-              benchPlayerIds={liveMatch.benchPlayerIds}
-              players={teamPlayers}
-              disabled={liveMatch.status === "ended"}
-              getPlayerSubtitle={getPlayerPlaytime}
-              onBenchToSlot={handlePitchBenchToSlot}
-              onSlotToSlot={handlePitchSlotToSlot}
-              onSlotToBench={handlePitchSlotToBench}
-            />
-          </AppCard>
-        </motion.div>
-
-        {/* ── Substitution suggestion ──────────────────────────── */}
-        <motion.div variants={variants.fadeInUp}>
-          <AppCard glow="accent" className="space-y-3 border-fp-accent/25 p-4">
-            <p className="text-sm font-semibold text-foreground">{t("suggestion.title")}</p>
-            {suggestion && suggestedOutgoingPlayer && suggestedIncomingPlayer ? (
-              <>
-                <p className="text-xs text-muted-foreground">
-                  {t("suggestion.reason", {
-                    outgoing: suggestedOutgoingPlayer.name,
-                    outgoingTime: formatPlaytime(suggestion.outgoingSeconds),
-                    incoming: suggestedIncomingPlayer.name,
-                    incomingTime: formatPlaytime(suggestion.incomingSeconds),
-                  })}
-                </p>
-                <FpButton
-                  variant="secondary"
-                  size="md"
-                  fullWidth
-                  className="tap-target border-fp-accent/30"
-                  onClick={handleApplySuggestion}
-                  disabled={liveMatch.status === "ended"}
+            <div
+              className="relative select-none"
+              {...subInteraction.pointerSurfaceHandlers}
+            >
+              {/* Fatigue strip: passive coach intelligence hint. Tap to pre-select. */}
+              {suggestion && liveMatch.status !== "ended" && (
+                <button
+                  type="button"
+                  className="mb-2 flex w-full items-center gap-1.5 rounded-lg px-2 py-1 text-left transition-colors hover:bg-fp-surface-2 active:bg-fp-surface-2"
+                  onClick={() => {
+                    subInteraction.tapFieldPlayer(suggestion.outgoingPlayerId);
+                  }}
                 >
-                  {t("suggestion.accept")}
-                </FpButton>
-              </>
-            ) : (
-              <p className="text-xs text-muted-foreground">{t("suggestion.unavailable")}</p>
-            )}
+                  <span className="text-[11px] text-muted-foreground">
+                    ↻ {suggestedOutgoingPlayer?.name ?? suggestion.outgoingPlayerId}{" "}
+                    · {formatPlaytime(suggestion.outgoingSeconds)}
+                  </span>
+                </button>
+              )}
+
+              <LivePitchView
+                slots={getFormationSlots(liveMatch.format, liveMatch.formationId)}
+                liveSlotAssignments={liveMatch.liveSlotAssignments}
+                onFieldPlayerIds={liveMatch.onFieldPlayerIds}
+                interactionState={subInteraction.state}
+                fatigueMap={fatigueMap}
+                getShortName={getShortName}
+                getPlaytime={getPlayerPlaytime}
+                disabled={liveMatch.status === "ended"}
+                onSlotTap={(playerId) => subInteraction.tapFieldPlayer(playerId)}
+                onBackgroundTap={() => subInteraction.cancel()}
+                onSlotPointerDown={(_playerId, _slotId, _e) => {
+                  // Field-to-field drag (position swap) is handled via tap flow
+                  // in the Field Command model. PointerDown on field chips is a
+                  // no-op here — tap selection is sufficient for swaps.
+                }}
+              />
+
+              <LiveBenchStrip
+                benchPlayerIds={liveMatch.benchPlayerIds}
+                interactionState={subInteraction.state}
+                getShortName={getShortName}
+                getPlaytime={getPlayerPlaytime}
+                suggestedIncomingPlayerId={suggestion?.incomingPlayerId ?? null}
+                disabled={liveMatch.status === "ended"}
+                onTap={(benchPlayerId) => subInteraction.tapBenchPlayer(benchPlayerId)}
+                onPointerDown={(benchPlayerId, e) =>
+                  subInteraction.getBenchPointerDownHandler(benchPlayerId)(e)
+                }
+              />
+
+              {/* Drag ghost chip */}
+              {subInteraction.ghostChip && (
+                <div
+                  className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 flex h-[52px] w-[52px] items-center justify-center rounded-full border-2 border-white/20 bg-fp-surface-2 text-[10px] font-bold text-foreground shadow-2xl"
+                  style={{
+                    left: subInteraction.ghostChip.x,
+                    top: subInteraction.ghostChip.y,
+                  }}
+                >
+                  {getShortName(subInteraction.ghostChip.benchPlayerId)}
+                </div>
+              )}
+            </div>
           </AppCard>
         </motion.div>
 
@@ -1181,6 +1218,12 @@ export function MatchLiveManager() {
           </AppCard>
         </div>
       ) : null}
+
+      {/* ── Undo toast ───────────────────────────────────────── */}
+      <UndoToast
+        secondsRemaining={subInteraction.undoSecondsRemaining}
+        onUndo={subInteraction.triggerUndo}
+      />
 
       <AnimatePresence>
         {isEndingMatch && (
