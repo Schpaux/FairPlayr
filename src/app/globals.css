@@ -66,9 +66,11 @@
   --color-fp-cta-foreground: var(--fp-cta-foreground);
 
   /* Typography */
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  --font-heading: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, monospace;
+  /* Urbanist at 900 — Wise Sans substitute: heavy grotesque, ultra-tight for display */
+  --font-heading: var(--font-urbanist), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-urbanist), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
   /* Radius scale — Wise-inspired: generous, rounded */
   --radius-sm: 10px;
@@ -249,11 +251,12 @@
     overscroll-behavior: none;
   }
 
-  /* Heading defaults — tight tracking creates clear hierarchy in product UI */
+  /* Heading defaults — Urbanist for all headings, tight tracking */
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
-    letter-spacing: -0.02em;
-    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.15;
   }
 
   /* Focus — keyboard only, not on click */
@@ -277,6 +280,24 @@
   /* FairPlayr surface helpers */
   .surface   { background-color: var(--fp-surface); }
   .surface-2 { background-color: var(--fp-surface-2); }
+
+  /* font-display utility — apply Urbanist to any element */
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  /*
+   * heading-display — Wise-style display headings.
+   * Urbanist weight 900, line-height 0.85 (ultra-tight, billboard-scale).
+   * Use on hero h1 elements only — not in app UI.
+   */
+  .heading-display {
+    font-family: var(--font-display);
+    font-weight: 900;
+    line-height: 0.88;
+    letter-spacing: -0.03em;
+    font-feature-settings: "calt";
+  }
 
   /* Tap target minimum size for mobile (44pt iOS HIG) */
   .tap-target {

@@ -82,11 +82,11 @@ export default function HomePage() {
             </motion.div>
 
             {/* Headline */}
-            <motion.div variants={heroItem} className="space-y-1">
+            <motion.div variants={heroItem} className="space-y-3">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {t("hero.eyebrow")}
               </p>
-              <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+              <h1 className="heading-display text-[3rem] text-foreground sm:text-[4rem]">
                 {t("hero.headline")}
               </h1>
             </motion.div>
@@ -150,7 +150,7 @@ export default function HomePage() {
             variants={variants.staggerContainer}
           >
             <motion.div variants={heroItem} className="text-center mb-8">
-              <h2 className="text-2xl font-bold tracking-tight text-foreground">
+              <h2 className="font-display text-3xl font-black tracking-tight text-foreground">
                 {t("problem.title")}
               </h2>
               <p className="mt-2 text-sm text-muted-foreground max-w-xs mx-auto">
@@ -193,7 +193,7 @@ export default function HomePage() {
             variants={variants.staggerContainer}
           >
             <motion.div variants={heroItem} className="text-center mb-8">
-              <h2 className="text-2xl font-bold tracking-tight text-foreground">
+              <h2 className="font-display text-3xl font-black tracking-tight text-foreground">
                 {t("features.title")}
               </h2>
               <p className="mt-2 text-sm text-muted-foreground max-w-xs mx-auto">
@@ -242,7 +242,7 @@ export default function HomePage() {
                   <span className="inline-flex rounded-full border border-fp-accent/35 bg-fp-accent/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-fp-accent">
                     {t("spond.badge")}
                   </span>
-                  <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                  <h2 className="font-display text-3xl font-black tracking-tight text-foreground">
                     {t("spond.title")}
                   </h2>
                   <p className="text-sm text-muted-foreground">{t("spond.subtitle")}</p>
@@ -289,7 +289,7 @@ export default function HomePage() {
               className="text-center py-10 px-6 bg-fp-accent/6"
             >
               <div className="space-y-2 mb-6">
-                <h2 className="text-xl font-bold tracking-tight text-foreground">
+                <h2 className="font-display text-3xl font-black tracking-tight text-foreground">
                   {t("finalCta.title")}
                 </h2>
                 <p className="text-sm text-muted-foreground">{t("finalCta.subtitle")}</p>
