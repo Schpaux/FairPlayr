@@ -1,348 +1,337 @@
-"use client";
-
-import { useTranslations } from "next-intl";
-import { motion } from "framer-motion";
+import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
+import { ArrowRight, Bell, Users, History, Sparkles } from "lucide-react";
 import {
-  ArrowRight,
-  Link2,
-  Check,
-  Users,
-  Zap,
-  Clock,
-  FileText,
-} from "lucide-react";
-import { AppCard } from "@/components/ui/AppCard";
-import { FpButton } from "@/components/ui/FpButton";
-import { variants, transitions } from "@/lib/tokens";
+  getSeasonStats,
+  getUpcomingMatch,
+  getFirstCloudTeamId,
+  getFirstCloudTeamName,
+} from "@/lib/server/seasonStats";
+import { getFormationSlots } from "@/domain/match";
 
-/* ─── Animation variants ─────────────────────────────────────────────────── */
-const heroItem = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: transitions.slow },
-};
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const valueProps = ["format", "realtime", "fair"] as const;
-const howItWorksSteps = [1, 2, 3, 4] as const;
-const spondBenefitKeys = ["benefit1", "benefit2", "benefit3"] as const;
-const featureBulletKeys = ["point1", "point2"] as const;
+function getCountdownParts(startsAt: string): { days: number; hours: number } | null {
+  const diffMs = new Date(startsAt).getTime() - Date.now();
+  if (diffMs <= 0) return null;
+  return {
+    days: Math.floor(diffMs / (1000 * 60 * 60 * 24)),
+    hours: Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+  };
+}
 
-export default function HomePage() {
-  const t = useTranslations("home");
+function formatKickoff(startsAt: string): string {
+  const date = new Date(startsAt);
+  return (
+    date.toLocaleDateString("en", { weekday: "short", month: "short", day: "numeric" }) +
+    " · " +
+    date.toLocaleTimeString("en", { hour: "2-digit", minute: "2-digit" })
+  );
+}
+
+function formatLastMatchDay(when: string): string {
+  return new Date(when).toLocaleDateString("en", { weekday: "short" });
+}
+
+function getInitials(name: string): string {
+  const parts = name.split(" ");
+  return parts.length >= 2
+    ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+    : name.slice(0, 2).toUpperCase();
+}
+
+// ─── Decorative formation dots ────────────────────────────────────────────────
+// Used in hero card background — purely visual, 5v5 2-2 as default.
+const HERO_SLOTS = getFormationSlots("5v5", "5v5-2-2");
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default async function HomePage() {
+  const t = await getTranslations("home");
+
+  // Attempt to load server-side data — gracefully degrade if unavailable.
+  let teamId: string | null = null;
+  let teamName: string | null = null;
+
+  try {
+    teamId = await getFirstCloudTeamId();
+    if (teamId) {
+      teamName = await getFirstCloudTeamName(teamId);
+    }
+  } catch {
+    // No auth or DB error — show fallback
+  }
+
+  const [stats, upcoming] = await Promise.all([
+    teamId
+      ? getSeasonStats(teamId).catch(() => null)
+      : Promise.resolve(null),
+    teamId
+      ? getUpcomingMatch(teamId).catch(() => null)
+      : Promise.resolve(null),
+  ]);
+
+  const hasStats = stats !== null && stats.matchesPlayed > 0;
 
   return (
-    <div className="relative overflow-hidden">
-      {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="relative min-h-[calc(100svh-4rem)] flex flex-col justify-center px-4 pt-8 pb-16">
-        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/4 h-[500px] w-[500px] rounded-full bg-fp-accent/15 blur-[120px]" />
-        </div>
+    <div className="flex flex-col gap-3 px-4 pt-3 pb-8">
+      {/* ── Block 1: Pitch-motif hero card ───────────────────────────────── */}
+      <div
+        className="relative w-full overflow-hidden rounded-[26px]"
+        style={{
+          height: "320px",
+          background: "linear-gradient(180deg, var(--fp-pitch-a) 0%, var(--fp-pitch-b) 100%)",
+          boxShadow: "inset 0 0 0 1px var(--fp-border)",
+        }}
+      >
+        {/* Grass stripes */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-40"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(90deg, var(--fp-pitch-stripe-a) 0, var(--fp-pitch-stripe-a) 12.5%, var(--fp-pitch-stripe-b) 12.5%, var(--fp-pitch-stripe-b) 25%)",
+          }}
+        />
 
-        <div className="mx-auto w-full max-w-screen-sm">
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={variants.staggerContainer}
-            className="flex flex-col items-center text-center gap-6"
-          >
-            <motion.div variants={heroItem}>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-fp-accent/35 bg-fp-accent/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-fp-accent">
-                <Link2 size={12} />
-                {t("hero.spondBadge")}
-              </span>
-            </motion.div>
+        {/* Top half of pitch markings */}
+        <svg
+          aria-hidden
+          viewBox="0 0 100 55"
+          preserveAspectRatio="none"
+          className="pointer-events-none absolute inset-0 h-full w-full opacity-60"
+        >
+          <g stroke="var(--fp-pitch-line)" strokeWidth="0.5" fill="none">
+            <rect x="1.5" y="1.5" width="97" height="52" rx="1" />
+            <line x1="1.5" y1="52" x2="98.5" y2="52" strokeWidth="0.6" />
+            <path d="M 40 52 A 10 10 0 0 1 60 52" />
+            <rect x="22" y="1.5" width="56" height="20" />
+            <rect x="34" y="1.5" width="32" height="8" />
+            <path d="M 42 21.5 A 8 8 0 0 0 58 21.5" />
+          </g>
+        </svg>
 
-            <motion.div variants={heroItem} className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {t("hero.eyebrow")}
+        {/* Dark gradient overlay for text legibility */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.35) 100%)",
+          }}
+        />
+
+        {/* Top row */}
+        <div className="absolute inset-x-0 top-0 flex items-start justify-between px-5 pt-5">
+          <div>
+            {teamName && (
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-white/75">
+                {teamName}
               </p>
-              <h1 className="heading-display text-[3rem] text-foreground sm:text-[4rem]">
-                {t("hero.headline")}
-              </h1>
-            </motion.div>
-
-            <motion.p
-              variants={heroItem}
-              className="max-w-sm text-base text-muted-foreground leading-relaxed"
-            >
-              {t("hero.subtitle")}
-            </motion.p>
-
-            <motion.div
-              variants={heroItem}
-              className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto"
-            >
-              <Link href="/match/setup" className="w-full sm:w-auto">
-                <FpButton variant="primary" size="lg" fullWidth className="group">
-                  {t("hero.ctaPrimary")}
-                  <ArrowRight
-                    size={18}
-                    className="transition-transform group-hover:translate-x-0.5"
-                  />
-                </FpButton>
-              </Link>
-              <Link href="/team" className="w-full sm:w-auto">
-                <FpButton variant="secondary" size="lg" fullWidth>
-                  {t("hero.ctaSecondary")}
-                </FpButton>
-              </Link>
-            </motion.div>
-
-            <motion.div
-              variants={heroItem}
-              className="grid grid-cols-3 gap-4 w-full max-w-xs mt-2"
-            >
-              {valueProps.map((item) => (
-                <div key={item} className="flex flex-col items-center gap-0.5">
-                  <span className="text-sm font-semibold text-foreground">
-                    {t(`valueProps.${item}.value`)}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground text-center leading-tight">
-                    {t(`valueProps.${item}.label`)}
-                  </span>
-                </div>
-              ))}
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ── Features bento ──────────────────────────────────────────────── */}
-      <section className="px-4 pb-16">
-        <div className="mx-auto w-full max-w-screen-sm">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.15 }}
-            variants={variants.staggerContainer}
+            )}
+            <p className="font-mono text-[11px] text-white/50">{t("hero.seasonLabel")}</p>
+          </div>
+          <button
+            type="button"
+            aria-label="Notifications"
+            className="tap-target flex h-9 w-9 items-center justify-center rounded-full text-white backdrop-blur-md"
+            style={{ background: "rgba(255,255,255,0.15)" }}
           >
-            <div className="grid grid-cols-2 gap-3">
-              {/* Card 1: Styr laget ditt */}
-              <motion.div variants={heroItem}>
-                <AppCard glow="primary" className="p-4 h-full flex flex-col gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-fp-accent/10">
-                    <Users size={18} className="text-fp-accent" />
-                  </div>
-                  <div>
-                    <h3 className="font-display font-black text-sm tracking-tight text-foreground">
-                      {t("features.items.teamControl.title")}
-                    </h3>
-                    <ul className="mt-2 space-y-1.5">
-                      {featureBulletKeys.map((k) => (
-                        <li key={k} className="flex items-start gap-1.5">
-                          <span className="mt-[3px] h-2.5 w-2.5 shrink-0 rounded-full bg-fp-accent/20 ring-1 ring-fp-accent/30" />
-                          <span className="text-[11px] leading-tight text-muted-foreground">
-                            {t(`features.items.teamControl.${k}`)}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </AppCard>
-              </motion.div>
-
-              {/* Card 2: Full kontroll live */}
-              <motion.div variants={heroItem}>
-                <AppCard className="p-4 h-full flex flex-col gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-fp-surface-2">
-                    <Zap size={18} className="text-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="font-display font-black text-sm tracking-tight text-foreground">
-                      {t("features.items.liveControl.title")}
-                    </h3>
-                    <ul className="mt-2 space-y-1.5">
-                      {featureBulletKeys.map((k) => (
-                        <li key={k} className="flex items-start gap-1.5">
-                          <span className="mt-[3px] h-2.5 w-2.5 shrink-0 rounded-full bg-fp-surface-3" />
-                          <span className="text-[11px] leading-tight text-muted-foreground">
-                            {t(`features.items.liveControl.${k}`)}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </AppCard>
-              </motion.div>
-
-              {/* Card 3: Rettferdig spilletid — full width */}
-              <motion.div variants={heroItem} className="col-span-2">
-                <AppCard glow="accent" className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-fp-accent/10">
-                      <Clock size={20} className="text-fp-accent" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-display font-black text-base tracking-tight text-foreground">
-                        {t("features.items.fairPlaytime.title")}
-                      </h3>
-                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
-                        {featureBulletKeys.map((k) => (
-                          <span key={k} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Check size={12} className="shrink-0 text-fp-accent" />
-                            {t(`features.items.fairPlaytime.${k}`)}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </AppCard>
-              </motion.div>
-
-              {/* Card 4: Automatisk kampoppsummering — full width */}
-              <motion.div variants={heroItem} className="col-span-2">
-                <AppCard className="p-4 bg-fp-surface-2">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-fp-surface-3">
-                      <FileText size={20} className="text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-display font-black text-base tracking-tight text-foreground">
-                        {t("features.items.autoReport.title")}
-                      </h3>
-                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
-                        {featureBulletKeys.map((k) => (
-                          <span key={k} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Check size={12} className="shrink-0 text-muted-foreground/50" />
-                            {t(`features.items.autoReport.${k}`)}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </AppCard>
-              </motion.div>
-            </div>
-          </motion.div>
+            <Bell size={16} />
+          </button>
         </div>
-      </section>
 
-      {/* ── How it works ─────────────────────────────────────────────────── */}
-      <section className="px-4 pb-16">
-        <div className="mx-auto w-full max-w-screen-sm">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.2 }}
-            variants={variants.staggerContainer}
+        {/* Center-left headline */}
+        <div className="absolute bottom-14 left-5 right-16">
+          <h1
+            className="heading-display text-[52px] text-white"
+            style={{ textShadow: "0 2px 10px rgba(0,0,0,0.2)", whiteSpace: "pre-line" }}
           >
-            <motion.h2
-              variants={heroItem}
-              className="font-display text-2xl font-black tracking-tight text-foreground mb-6"
-            >
-              {t("howItWorks.title")}
-            </motion.h2>
-
-            <div>
-              {howItWorksSteps.map((step, idx) => (
-                <motion.div key={step} variants={heroItem} className="flex gap-4">
-                  <div className="flex flex-col items-center">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-fp-accent text-[13px] font-black text-background">
-                      {step}
-                    </div>
-                    {idx < howItWorksSteps.length - 1 && (
-                      <div className="w-px flex-1 bg-fp-border min-h-[1.5rem] my-1" />
-                    )}
-                  </div>
-                  <p
-                    className={`text-sm font-semibold text-foreground pt-1 ${
-                      idx < howItWorksSteps.length - 1 ? "pb-6" : "pb-0"
-                    }`}
-                  >
-                    {t(`howItWorks.steps.${step}`)}
-                  </p>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
+            {t("hero.headline")}
+          </h1>
         </div>
-      </section>
 
-      {/* ── Spond ────────────────────────────────────────────────────────── */}
-      <section className="px-4 pb-16">
-        <div className="mx-auto w-full max-w-screen-sm">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.2 }}
-            variants={variants.staggerContainer}
-          >
-            <motion.div variants={heroItem}>
-              <AppCard glow="accent" className="p-5 space-y-4">
-                <div className="space-y-2">
-                  <span className="inline-flex rounded-full border border-fp-accent/35 bg-fp-accent/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-fp-accent">
-                    {t("spond.badge")}
-                  </span>
-                  <h2 className="font-display text-2xl font-black tracking-tight text-foreground">
-                    {t("spond.title")}
-                  </h2>
-                </div>
+        {/* Decorative formation dots */}
+        {HERO_SLOTS.map((slot) => (
+          <div
+            key={slot.id}
+            aria-hidden
+            className="pointer-events-none absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/20"
+            style={{ left: `${slot.x}%`, bottom: `${(slot.y / 100) * 56}px` }}
+          />
+        ))}
+      </div>
 
-                <ul className="space-y-3">
-                  {spondBenefitKeys.map((key) => (
-                    <li key={key} className="flex items-center gap-3">
-                      <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-fp-accent/15">
-                        <Check size={12} className="text-fp-accent" />
-                      </div>
-                      <span className="text-sm font-medium text-foreground">
-                        {t(`spond.${key}`)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </AppCard>
-            </motion.div>
-          </motion.div>
+      {/* ── Block 2: Dark "Next Match" CTA ───────────────────────────────── */}
+      <Link
+        href="/match/setup"
+        className="flex w-full items-center gap-3.5 rounded-[24px] bg-foreground p-4 text-background shadow-[0_12px_28px_-12px_rgba(0,0,0,0.3)] transition-all hover:scale-[1.01] active:scale-[0.98]"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex items-center gap-1.5">
+            <span className="rounded-full bg-fp-cta px-2 py-0.5 text-[10px] font-bold text-fp-cta-foreground">
+              {t("nextMatch.badge")}
+            </span>
+            {upcoming && (() => {
+              const cd = getCountdownParts(upcoming.startsAt);
+              return cd ? (
+                <span className="font-mono text-[10px] opacity-55">
+                  {t("nextMatch.countdown", { days: cd.days, hours: cd.hours })}
+                </span>
+              ) : null;
+            })()}
+          </div>
+          <p className="heading-display text-[22px] leading-none">
+            {upcoming ? `vs ${upcoming.opponent ?? "–"}` : t("nextMatch.setup")}
+          </p>
+          {upcoming && (
+            <p className="mt-1.5 text-[11px] opacity-55">
+              {formatKickoff(upcoming.startsAt)}
+              {upcoming.location ? ` · ${upcoming.location}` : ""}
+            </p>
+          )}
         </div>
-      </section>
-
-      {/* ── Trust quote ──────────────────────────────────────────────────── */}
-      <section className="px-4 pb-16">
-        <div className="mx-auto w-full max-w-screen-sm">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.3 }}
-            variants={variants.fadeInUp}
-          >
-            <div className="text-center px-4">
-              <p className="font-display text-xl font-black tracking-tight text-foreground/75">
-                &ldquo;{t("trust.quote")}&rdquo;
-              </p>
-            </div>
-          </motion.div>
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-fp-cta text-fp-cta-foreground">
+          <ArrowRight size={20} />
         </div>
-      </section>
+      </Link>
 
-      {/* ── Final CTA ────────────────────────────────────────────────────── */}
-      <section className="px-4 pb-16">
-        <div className="mx-auto w-full max-w-screen-sm">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.3 }}
-            variants={variants.fadeInUp}
-          >
-            <AppCard glow="primary" className="text-center py-10 px-6 bg-fp-accent/6">
-              <div className="space-y-2 mb-6">
-                <h2 className="font-display text-3xl font-black tracking-tight text-foreground">
-                  {t("finalCta.title")}
-                </h2>
-                <p className="text-sm text-muted-foreground">{t("finalCta.subtitle")}</p>
+      {/* ── Blocks 3–4: Only shown when season data is available ──────────── */}
+      {hasStats && stats && (
+        <>
+          {/* ── Block 3: Season balance + last match ─────────────────────── */}
+          <div className="grid grid-cols-[1.4fr_1fr] gap-2">
+            {/* Left: Balance card */}
+            <div className="flex flex-col justify-between rounded-[20px] bg-fp-surface p-4 shadow-[inset_0_0_0_1px_var(--fp-border)]">
+              <div className="flex items-center gap-1.5">
+                <Sparkles size={14} className="text-fp-cta shrink-0" />
+                <p className="text-[11px] font-semibold text-fp-text-secondary">
+                  {t("balance.title")}
+                </p>
               </div>
-              <Link href="/match/setup">
-                <FpButton variant="primary" size="lg" fullWidth className="group">
-                  {t("finalCta.button")}
-                  <ArrowRight
-                    size={18}
-                    className="transition-transform group-hover:translate-x-0.5"
+              <div>
+                <p className="font-mono text-[44px] font-bold leading-none text-foreground tabular-nums">
+                  {stats.balance}
+                  <span className="text-[22px] text-fp-text-secondary">%</span>
+                </p>
+                {/* Progress bar */}
+                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-fp-surface-3">
+                  <div
+                    className="h-full rounded-full bg-fp-cta transition-all"
+                    style={{ width: `${stats.balance}%` }}
                   />
-                </FpButton>
-              </Link>
-            </AppCard>
-          </motion.div>
-        </div>
-      </section>
+                </div>
+                <p className="mt-2 text-[10px] text-fp-text-secondary">
+                  {t("balance.spread", {
+                    hours: (stats.spreadMinutes / 60).toFixed(1),
+                    count: stats.matchesPlayed,
+                  })}
+                </p>
+              </div>
+            </div>
+
+            {/* Right: Two stacked cards */}
+            <div className="flex flex-col gap-2">
+              {/* Last match */}
+              {stats.lastMatch && (
+                <div className="flex flex-col justify-between rounded-[20px] bg-fp-cta/10 p-3 shadow-[inset_0_0_0_1px_var(--fp-border)]">
+                  <p className="font-mono text-[10px] text-fp-text-secondary">
+                    {t("lastMatch.title", {
+                      when: formatLastMatchDay(stats.lastMatch.when),
+                    })}
+                  </p>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[11px] font-bold text-fp-cta">
+                      {t(`lastMatch.${stats.lastMatch.result}`)}
+                    </span>
+                    <span className="font-mono text-base font-bold text-foreground tabular-nums">
+                      {stats.lastMatch.scoreFor}–{stats.lastMatch.scoreAgainst}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Played */}
+              <div className="flex flex-1 flex-col justify-between rounded-[20px] bg-fp-surface p-3 shadow-[inset_0_0_0_1px_var(--fp-border)]">
+                <p className="font-mono text-[10px] text-fp-text-secondary">{t("played")}</p>
+                <p className="font-mono text-xl font-bold tabular-nums text-foreground">
+                  {stats.matchesPlayed}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Block 4: Needs minutes ──────────────────────────────────── */}
+          {stats.needsMinutes.length > 0 && (
+            <div className="rounded-[20px] bg-fp-surface p-4 shadow-[inset_0_0_0_1px_var(--fp-border)]">
+              <div className="mb-3 flex items-center gap-2">
+                <p className="text-[13px] font-semibold text-foreground">
+                  {t("needsMinutes.title")}
+                </p>
+                <span className="rounded-full bg-fp-surface-2 px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-wider text-fp-text-secondary">
+                  {t("needsMinutes.subtitle")}
+                </span>
+              </div>
+              <div className="flex flex-col gap-2">
+                {stats.needsMinutes.map((player) => (
+                  <div key={player.playerId} className="flex items-center gap-3">
+                    {/* Avatar */}
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-fp-cta text-[11px] font-black text-fp-cta-foreground">
+                      {getInitials(player.name)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-semibold text-foreground">
+                        {player.name}
+                      </p>
+                      <p className="text-[11px] text-fp-text-secondary">
+                        {player.position ?? "–"} · {player.totalMinutes}min
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-fp-cta/15 px-2 py-0.5 text-[11px] font-bold text-fp-cta">
+                      {t("needsMinutes.deficit", {
+                        hours: (player.deficitMinutes / 60).toFixed(1),
+                      })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Block 5: Quick action tiles ──────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-2">
+        <Link
+          href="/team"
+          className="flex flex-col gap-3 rounded-[20px] bg-fp-surface p-4 shadow-[inset_0_0_0_1px_var(--fp-border)] transition-all hover:scale-[1.02] active:scale-[0.97]"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-fp-surface-2">
+            <Users size={20} className="text-foreground" />
+          </div>
+          <div>
+            <p className="text-[13px] font-bold text-foreground">{t("actions.editSquad")}</p>
+            <p className="text-[11px] text-fp-text-secondary">{t("actions.editSquadHint")}</p>
+          </div>
+        </Link>
+
+        <Link
+          href="/historikk"
+          className="flex flex-col gap-3 rounded-[20px] bg-fp-surface p-4 shadow-[inset_0_0_0_1px_var(--fp-border)] transition-all hover:scale-[1.02] active:scale-[0.97]"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-fp-surface-2">
+            <History size={20} className="text-foreground" />
+          </div>
+          <div>
+            <p className="text-[13px] font-bold text-foreground">{t("actions.history")}</p>
+            <p className="text-[11px] text-fp-text-secondary">
+              {hasStats && stats
+                ? t("actions.historyHint", { count: stats.matchesPlayed })
+                : t("actions.historyHintEmpty")}
+            </p>
+          </div>
+        </Link>
+      </div>
     </div>
   );
 }
