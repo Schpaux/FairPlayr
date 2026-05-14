@@ -21,11 +21,40 @@
   "home": {
     "hero": {
       "eyebrow": "Din assistenttrener i lomma.",
-      "headline": "Full kontroll på kampdagen.",
+      "headline": "Alle barn,\nhver kamp.",
+      "seasonLabel": "Vårsesong · 2026",
       "subtitle": "Hold oversikt, gjør smarte bytter og gi alle spillerne den spilletiden de fortjener - helt uten kaos på sidelinja.",
       "ctaPrimary": "Kom i gang gratis",
       "ctaSecondary": "Se hvordan det funker",
       "spondBadge": "Fungerer med Spond"
+    },
+    "nextMatch": {
+      "badge": "NESTE KAMP",
+      "countdown": "{days}D {hours}T",
+      "setup": "Sett opp neste kamp"
+    },
+    "balance": {
+      "title": "Sesongbalanse",
+      "spread": "Spread {hours}t over {count} kamper"
+    },
+    "lastMatch": {
+      "title": "Sist · {when}",
+      "win": "S",
+      "draw": "U",
+      "loss": "T"
+    },
+    "played": "Spilt",
+    "needsMinutes": {
+      "title": "Trenger minutter",
+      "subtitle": "UNDER SNITT",
+      "deficit": "−{hours}t"
+    },
+    "actions": {
+      "editSquad": "Rediger tropp",
+      "editSquadHint": "Tilgjengelighet og spillere",
+      "history": "Kamphistorikk",
+      "historyHint": "{count} kamper denne sesongen",
+      "historyHintEmpty": "Ingen kamper ennå"
     },
     "valueProps": {
       "format": {

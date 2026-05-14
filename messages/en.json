@@ -21,11 +21,40 @@
   "home": {
     "hero": {
       "eyebrow": "Your assistant coach in your pocket.",
-      "headline": "Full control on matchday.",
+      "headline": "Every kid,\nevery match.",
+      "seasonLabel": "Spring season · 2026",
       "subtitle": "Stay in control, make smart substitutions, and give every player the minutes they deserve - without sideline chaos.",
       "ctaPrimary": "Get started for free",
       "ctaSecondary": "See how it works",
       "spondBadge": "Works with Spond"
+    },
+    "nextMatch": {
+      "badge": "NEXT MATCH",
+      "countdown": "{days}D {hours}H",
+      "setup": "Set up next match"
+    },
+    "balance": {
+      "title": "Season balance",
+      "spread": "Spread {hours}h across {count} matches"
+    },
+    "lastMatch": {
+      "title": "Last · {when}",
+      "win": "W",
+      "draw": "D",
+      "loss": "L"
+    },
+    "played": "Played",
+    "needsMinutes": {
+      "title": "Needs minutes",
+      "subtitle": "BELOW AVG",
+      "deficit": "−{hours}h"
+    },
+    "actions": {
+      "editSquad": "Edit squad",
+      "editSquadHint": "Availability & roster",
+      "history": "Match history",
+      "historyHint": "{count} matches this season",
+      "historyHintEmpty": "No matches yet"
     },
     "valueProps": {
       "format": {
