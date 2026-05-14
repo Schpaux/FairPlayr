@@ -89,42 +89,45 @@ export function LivePitchView({
 
   return (
     <div
-      className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl"
+      className="relative w-full overflow-hidden rounded-[22px]"
       style={{
-        background:
-          "linear-gradient(180deg, #1d5227 0%, #1a4a22 50%, #163d1b 100%)",
+        aspectRatio: "340 / 260",
+        background: "linear-gradient(180deg, var(--fp-pitch-a) 0%, var(--fp-pitch-b) 100%)",
+        boxShadow: "inset 0 0 0 1px var(--fp-border)",
         touchAction: "none",
       }}
       onClick={onBackgroundTap}
     >
-      {/* ── Field markings ──────────────────────────────────────────────── */}
+      {/* ── Grass stripes ───────────────────────────────────────────────── */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-[5%] rounded-xl border-2 border-white/30"
-      >
-        {/* Centre line */}
-        <div className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-white/20" />
-        {/* Centre circle */}
-        <div className="absolute left-1/2 top-1/2 h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20" />
-        {/* Top box */}
-        <div className="absolute left-1/2 top-0 h-[14%] w-[52%] -translate-x-1/2 rounded-b-lg border border-t-0 border-white/20" />
-        {/* Bottom box */}
-        <div className="absolute bottom-0 left-1/2 h-[14%] w-[52%] -translate-x-1/2 rounded-t-lg border border-b-0 border-white/20" />
-      </div>
+        className="pointer-events-none absolute inset-0 opacity-50"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(90deg, var(--fp-pitch-stripe-a) 0, var(--fp-pitch-stripe-a) 12.5%, var(--fp-pitch-stripe-b) 12.5%, var(--fp-pitch-stripe-b) 25%)",
+        }}
+      />
 
-      {/* ── Subtle zone bands ────────────────────────────────────────────── */}
-      <div
+      {/* ── Half-pitch markings ──────────────────────────────────────────── */}
+      <svg
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-1/4 h-px bg-white/[0.04]"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-1/2 h-px bg-white/[0.04]"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-3/4 h-px bg-white/[0.04]"
-      />
+        viewBox="0 0 100 80"
+        preserveAspectRatio="none"
+        className="pointer-events-none absolute inset-0 h-full w-full"
+      >
+        <g stroke="var(--fp-pitch-line)" strokeWidth="0.4" fill="none">
+          <rect x="1.5" y="1.5" width="97" height="77" rx="1" />
+          <line x1="1.5" y1="77" x2="98.5" y2="77" strokeWidth="0.5" />
+          <path d="M 40 77 A 10 10 0 0 1 60 77" />
+          <circle cx="50" cy="77" r="0.8" fill="var(--fp-pitch-line)" stroke="none" />
+          <rect x="22" y="1.5" width="56" height="18" />
+          <rect x="34" y="1.5" width="32" height="7" />
+          <circle cx="50" cy="13" r="0.6" fill="var(--fp-pitch-line)" stroke="none" />
+          <path d="M 42 19.5 A 8 8 0 0 0 58 19.5" />
+          <path d="M 1.5 4 A 2.5 2.5 0 0 0 4 1.5" />
+          <path d="M 96 1.5 A 2.5 2.5 0 0 0 98.5 4" />
+        </g>
+      </svg>
 
       {/* ── Player chips ─────────────────────────────────────────────────── */}
       {slots.map((slot) => {
