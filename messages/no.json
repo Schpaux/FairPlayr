@@ -572,6 +572,16 @@
     },
     "errors": {
       "endFailed": "Kunne ikke avslutte kampen."
+    },
+    "pendingSync": {
+      "title": "Kampen er avsluttet og lagret på enheten",
+      "descriptionOffline": "Den sendes til FairPlayr automatisk når du er tilkoblet igjen.",
+      "descriptionOnline": "Den har ikke kommet fram til FairPlayr ennå. Prøv å sende på nytt.",
+      "retry": "Send nå",
+      "syncing": "Sender…",
+      "notSavedTitle": "Kampen er avsluttet, men kunne ikke lagres på enheten",
+      "notSavedDescriptionOffline": "Lagringsplassen på enheten er full. La denne skjermen være åpen – resultatet finnes bare her til det er sendt til FairPlayr når du er tilkoblet igjen.",
+      "notSavedDescriptionOnline": "Lagringsplassen på enheten er full, og resultatet har ikke kommet fram til FairPlayr ennå. La denne skjermen være åpen og send på nytt."
     }
   },
   "matchPlanner": {
@@ -869,9 +879,8 @@
   },
   "native": {
     "offline": {
-      "title": "Ingen internettforbindelse",
-      "description": "FairPlayr trenger nett for å laste kampdata.",
-      "retry": "Prøv igjen"
+      "label": "Frakoblet",
+      "detail": "Kampen lagres på enheten"
     }
   }
 }

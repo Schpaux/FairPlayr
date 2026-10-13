@@ -2,8 +2,6 @@
 
 import { useEffect, type ReactNode } from "react";
 import { initNative } from "@/lib/native";
-import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { OfflineScreen } from "./OfflineScreen";
 
 interface Props {
   children: ReactNode;
@@ -12,29 +10,20 @@ interface Props {
 /**
  * Central app shell wrapper.
  *
- * Replaces the standalone NativeInit component and adds offline detection.
- *
  * Responsibilities:
  * - Initialises Capacitor native plugins on mount (SplashScreen, StatusBar).
  *   No-op in a regular browser — initNative() checks isNative() first.
- * - Tracks online/offline state via the browser online/offline events.
- * - Replaces the entire child tree with a localised offline screen when the
- *   device loses connectivity. Automatically restores children when
- *   connectivity returns (no reload required for that direction).
  *
- * The offline screen is shown in both native and web contexts: the browser's
- * own offline page is a worse experience than this fallback.
+ * The child tree is always rendered, regardless of connectivity. Swapping it
+ * out would unmount the live match view and discard its in-memory state
+ * (clock, substitutions, score prompts) — the match must keep running offline.
+ * Connectivity is surfaced by the OfflineIndicator in the Header, which tracks
+ * online state itself so going offline never re-renders or remounts this tree.
  */
 export function NativeAppShell({ children }: Props) {
-  const isOnline = useOnlineStatus();
-
   useEffect(() => {
     void initNative();
   }, []);
-
-  if (!isOnline) {
-    return <OfflineScreen />;
-  }
 
   return <>{children}</>;
 }

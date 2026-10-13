@@ -1,6 +1,7 @@
 import { Link } from "@/i18n/navigation";
 import { ActiveTeamSwitcher } from "@/components/team/ActiveTeamSwitcher";
 import { ProfileMenu } from "@/components/layout/ProfileMenu";
+import { OfflineIndicator } from "@/components/layout/OfflineIndicator";
 
 export function Header() {
   return (
@@ -36,6 +37,7 @@ export function Header() {
         </Link>
 
         <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
+          <OfflineIndicator />
           <ActiveTeamSwitcher />
           <ProfileMenu />
         </div>

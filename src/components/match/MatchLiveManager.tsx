@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Minus, Plus, ChevronLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -48,6 +48,16 @@ import {
   saveStoredLiveMatch,
 } from "@/lib/storage/liveMatchStorage";
 import { buildShortNameMap } from "@/lib/utils/playerName";
+import { fetchOrNull, readJsonOrNull } from "@/lib/utils/fetchOrNull";
+import {
+  getPendingMatchCompletion,
+  type PendingMatchCompletion,
+} from "@/lib/storage/pendingMatchCompletionStorage";
+import {
+  submitMatchCompletion,
+  type MatchCompletionResult,
+} from "@/lib/match/matchCompletion";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
 import { useActiveMatch } from "@/components/providers/ActiveMatchProvider";
 import { PageShell } from "@/components/ui/PageShell";
@@ -146,6 +156,15 @@ export function MatchLiveManager() {
   const [isEndingMatch, setIsEndingMatch] = useState(false);
   const [endMatchDone, setEndMatchDone] = useState(false);
   const endedMatchIdRef = useRef<string | null>(null);
+  const isOnline = useOnlineStatus();
+  // `persisted: false` means the completion could not be written to device
+  // storage and only exists in this component's memory until it is sent.
+  const [pendingCompletion, setPendingCompletion] = useState<{
+    record: PendingMatchCompletion;
+    persisted: boolean;
+  } | null>(null);
+  const [isSyncingCompletion, setIsSyncingCompletion] = useState(false);
+  const isSyncingCompletionRef = useRef(false);
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -196,7 +215,14 @@ export function MatchLiveManager() {
       return;
     }
 
-    saveStoredLiveMatch(liveMatch);
+    // A full device (quota) must not throw out of this effect: that would
+    // unmount the screen and lose the in-memory match. The end flow detects
+    // and warns about failed persistence for the completion itself.
+    try {
+      saveStoredLiveMatch(liveMatch);
+    } catch {
+      // Keep running on in-memory state.
+    }
   }, [liveMatch, isHydrated]);
 
   useEffect(() => {
@@ -205,7 +231,7 @@ export function MatchLiveManager() {
     }
 
     const timeout = window.setTimeout(() => {
-      void fetch(`/api/matches/${encodeURIComponent(activeMatchId)}`, {
+      void fetchOrNull(`/api/matches/${encodeURIComponent(activeMatchId)}`, {
         method: "PATCH",
         headers: {
           "content-type": "application/json",
@@ -229,19 +255,19 @@ export function MatchLiveManager() {
     }
 
     void (async () => {
-      const response = await fetch(`/api/matches/${encodeURIComponent(activeMatchId)}`, {
+      const response = await fetchOrNull(`/api/matches/${encodeURIComponent(activeMatchId)}`, {
         method: "GET",
       });
 
-      if (!response.ok) {
+      if (!response?.ok) {
         return;
       }
 
-      const payload = (await response.json()) as {
+      const payload = await readJsonOrNull<{
         match?: { reportEnabled?: boolean };
-      };
+      }>(response);
 
-      setReportEnabled(payload.match?.reportEnabled === true);
+      setReportEnabled(payload?.match?.reportEnabled === true);
     })();
   }, [activeMatchId, auth.status, isHydrated]);
 
@@ -282,19 +308,19 @@ export function MatchLiveManager() {
     }
 
     void (async () => {
-      const response = await fetch(`/api/matches/${encodeURIComponent(activeMatchId)}`, {
+      const response = await fetchOrNull(`/api/matches/${encodeURIComponent(activeMatchId)}`, {
         method: "GET",
       });
 
-      if (!response.ok) {
+      if (!response?.ok) {
         return;
       }
 
-      const payload = (await response.json()) as {
+      const payload = await readJsonOrNull<{
         match?: { runtimeState?: LiveMatchState | null };
-      };
+      }>(response);
 
-      const runtimeState = payload.match?.runtimeState;
+      const runtimeState = payload?.match?.runtimeState;
 
       if (!runtimeState || typeof runtimeState !== "object") {
         return;
@@ -398,6 +424,130 @@ export function MatchLiveManager() {
     );
   };
 
+  // Runs once the server has confirmed completion: show "Done!" and open the
+  // report. Refreshing the active-match banner is best-effort — a failure there
+  // must not leave the coach stuck on the loading overlay.
+  const finishEndedMatch = async (matchId: string | null) => {
+    await refreshActiveMatch().catch(() => undefined);
+    setEndMatchDone(true);
+    endedMatchIdRef.current = matchId;
+
+    // Brief pause so user sees the "Done!" state, then navigate to report
+    window.setTimeout(() => {
+      if (matchId) {
+        router.push(`/match/${encodeURIComponent(matchId)}`);
+      } else {
+        router.push("/historikk");
+      }
+    }, 1200);
+  };
+
+  // The match is already ended and stored locally when this runs. Offline or
+  // server failures keep it that way and leave a pending completion for retry
+  // instead of blocking the coach.
+  const handleCompletionNotConfirmed = (
+    record: PendingMatchCompletion,
+    result: Exclude<MatchCompletionResult, { status: "completed" }>
+  ) => {
+    // Keep the body we just sent rather than re-reading storage: if the write
+    // failed, storage has nothing and the final state would silently vanish.
+    setPendingCompletion({ record, persisted: result.persisted });
+    setError(result.status === "failed" ? result.message ?? t("errors.endFailed") : null);
+    setIsEndingMatch(false);
+  };
+
+  const syncPendingCompletion = async (record: PendingMatchCompletion) => {
+    if (isSyncingCompletionRef.current) {
+      return;
+    }
+
+    isSyncingCompletionRef.current = true;
+    setIsSyncingCompletion(true);
+
+    // Re-sends from the in-memory record, which also retries the storage
+    // write. submitMatchCompletion never rejects (network failures resolve to
+    // "offline"), so the flag is always reset. No try/finally: the React
+    // Compiler cannot compile it and would skip this whole component.
+    const result = await submitMatchCompletion(record.matchId, record.body, record.endedAt);
+
+    isSyncingCompletionRef.current = false;
+    setIsSyncingCompletion(false);
+
+    if (result.status !== "completed") {
+      handleCompletionNotConfirmed(record, result);
+      return;
+    }
+
+    setPendingCompletion(null);
+    setError(null);
+    setIsEndingMatch(true);
+    await finishEndedMatch(record.matchId);
+  };
+
+  const onPendingCompletionSyncTrigger = useEffectEvent((record: PendingMatchCompletion) => {
+    void syncPendingCompletion(record);
+  });
+
+  // Pick up a completion left pending by an earlier session (offline end,
+  // app closed mid-request) and retry it straight away if we look online.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!isHydrated || !activeMatchId) {
+      setPendingCompletion(null);
+      return;
+    }
+
+    const pending = getPendingMatchCompletion(activeMatchId);
+
+    // Never replace an unpersisted in-memory completion for this match with
+    // "nothing in storage" (e.g. when auth status changes after ending).
+    setPendingCompletion((previous) =>
+      pending
+        ? { record: pending, persisted: true }
+        : previous?.record.matchId === activeMatchId
+          ? previous
+          : null
+    );
+
+    if (pending && auth.status === "authenticated" && navigator.onLine) {
+      onPendingCompletionSyncTrigger(pending);
+    }
+  }, [activeMatchId, auth.status, isHydrated]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Retry automatically when connectivity returns.
+  const pendingRecord = pendingCompletion?.record ?? null;
+  useEffect(() => {
+    if (!pendingRecord || auth.status !== "authenticated") {
+      return;
+    }
+
+    const handleOnline = () => onPendingCompletionSyncTrigger(pendingRecord);
+    window.addEventListener("online", handleOnline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+    };
+  }, [auth.status, pendingRecord]);
+
+  // While the completion only exists in memory, ask before the page is closed
+  // or reloaded so the final match state is not discarded without warning.
+  const hasUnpersistedCompletion = pendingCompletion !== null && !pendingCompletion.persisted;
+  useEffect(() => {
+    if (!hasUnpersistedCompletion) {
+      return;
+    }
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [hasUnpersistedCompletion]);
+
   const handleEnd = () => {
     if (!window.confirm(t("actions.confirmEnd"))) {
       return;
@@ -407,54 +557,49 @@ export function MatchLiveManager() {
     setIsEndingMatch(true);
 
     const storedSetup = getStoredMatchSetup();
-    const finalTeamScore = liveMatch?.teamScore ?? 0;
-    const finalOpponentScore = liveMatch?.opponentScore ?? 0;
+    const endedAtMs = Date.now();
+    const endedLiveMatch = liveMatch ? endLiveMatch(liveMatch, endedAtMs) : null;
     const matchIdToEnd = activeMatchId;
 
-    setLiveMatch((previous) =>
-      previous ? endLiveMatch(previous, Date.now()) : previous
-    );
+    setLiveMatch(endedLiveMatch);
 
     if (storedSetup) {
-      endMatch(storedSetup.config);
+      // On a full device this write can throw; the completion below must still
+      // be sent (or kept in memory), so don't let it abort the end flow.
+      try {
+        endMatch(storedSetup.config);
+      } catch {
+        // Setup status is also tracked in component state below.
+      }
       setSetupStatus("ended");
     }
 
     void (async () => {
       if (matchIdToEnd) {
-        const response = await fetch(`/api/matches/${encodeURIComponent(matchIdToEnd)}`, {
-          method: "PATCH",
-          headers: {
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({
+        const completion: PendingMatchCompletion = {
+          matchId: matchIdToEnd,
+          body: {
             status: "completed",
-            scoreFor: finalTeamScore,
-            scoreAgainst: finalOpponentScore,
+            scoreFor: endedLiveMatch?.teamScore ?? 0,
+            scoreAgainst: endedLiveMatch?.opponentScore ?? 0,
             reportEnabled,
-          }),
-        });
+            runtimeState: endedLiveMatch,
+          },
+          endedAt: new Date(endedAtMs).toISOString(),
+        };
+        const result = await submitMatchCompletion(
+          completion.matchId,
+          completion.body,
+          completion.endedAt
+        );
 
-        if (!response.ok) {
-          const payload = (await response.json()) as { message?: string };
-          setError(payload.message ?? t("errors.endFailed"));
-          setIsEndingMatch(false);
+        if (result.status !== "completed") {
+          handleCompletionNotConfirmed(completion, result);
           return;
         }
       }
 
-      await refreshActiveMatch();
-      setEndMatchDone(true);
-      endedMatchIdRef.current = matchIdToEnd;
-
-      // Brief pause so user sees the "Done!" state, then navigate to report
-      window.setTimeout(() => {
-        if (matchIdToEnd) {
-          router.push(`/match/${encodeURIComponent(matchIdToEnd)}`);
-        } else {
-          router.push("/historikk");
-        }
-      }, 1200);
+      await finishEndedMatch(matchIdToEnd);
     })();
 
   };
@@ -572,7 +717,7 @@ export function MatchLiveManager() {
       return null;
     }
 
-    const response = await fetch(`/api/matches/${encodeURIComponent(activeMatchId)}/events`, {
+    const response = await fetchOrNull(`/api/matches/${encodeURIComponent(activeMatchId)}/events`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -586,15 +731,15 @@ export function MatchLiveManager() {
       }),
     });
 
-    if (!response.ok) {
+    if (!response?.ok) {
       return null;
     }
 
-    const payload = (await response.json()) as {
+    const payload = await readJsonOrNull<{
       event?: { id: string };
-    };
+    }>(response);
 
-    return payload.event?.id ?? null;
+    return payload?.event?.id ?? null;
   };
 
   const patchGoalEvent = async (eventId: string, data: Record<string, unknown>) => {
@@ -602,7 +747,7 @@ export function MatchLiveManager() {
       return;
     }
 
-    await fetch(`/api/matches/${encodeURIComponent(activeMatchId)}/events/${encodeURIComponent(eventId)}`, {
+    await fetchOrNull(`/api/matches/${encodeURIComponent(activeMatchId)}/events/${encodeURIComponent(eventId)}`, {
       method: "PATCH",
       headers: {
         "content-type": "application/json",
@@ -950,6 +1095,38 @@ export function MatchLiveManager() {
         className="space-y-3"
       >
         {error ? <AppCard className="p-3 text-xs text-danger">{error}</AppCard> : null}
+
+        {pendingCompletion ? (
+          <AppCard className="space-y-2 p-3">
+            {pendingCompletion.persisted ? (
+              <div role="status" className="space-y-1">
+                <p className="text-sm font-semibold text-foreground">{t("pendingSync.title")}</p>
+                <p className="text-xs text-muted-foreground">
+                  {isOnline ? t("pendingSync.descriptionOnline") : t("pendingSync.descriptionOffline")}
+                </p>
+              </div>
+            ) : (
+              <div role="alert" className="space-y-1">
+                <p className="text-sm font-semibold text-danger">{t("pendingSync.notSavedTitle")}</p>
+                <p className="text-xs text-muted-foreground">
+                  {isOnline
+                    ? t("pendingSync.notSavedDescriptionOnline")
+                    : t("pendingSync.notSavedDescriptionOffline")}
+                </p>
+              </div>
+            )}
+            <FpButton
+              variant="secondary"
+              size="sm"
+              disabled={!isOnline || isSyncingCompletion}
+              onClick={() => {
+                void syncPendingCompletion(pendingCompletion.record);
+              }}
+            >
+              {isSyncingCompletion ? t("pendingSync.syncing") : t("pendingSync.retry")}
+            </FpButton>
+          </AppCard>
+        ) : null}
 
         {/* ── Combined score + timer card ──────────────────────── */}
         <motion.div variants={variants.fadeInUp}>

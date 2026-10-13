@@ -572,6 +572,16 @@
     },
     "errors": {
       "endFailed": "Could not end the match."
+    },
+    "pendingSync": {
+      "title": "Match ended and saved on this device",
+      "descriptionOffline": "It will be sent to FairPlayr automatically when you are back online.",
+      "descriptionOnline": "It has not reached FairPlayr yet. Try sending it again.",
+      "retry": "Send now",
+      "syncing": "Sending…",
+      "notSavedTitle": "Match ended, but could not be saved on this device",
+      "notSavedDescriptionOffline": "Device storage is full. Keep this screen open — the result is only kept here until it has been sent to FairPlayr when you are back online.",
+      "notSavedDescriptionOnline": "Device storage is full and the result has not reached FairPlayr yet. Keep this screen open and send it again."
     }
   },
   "matchPlanner": {
@@ -869,9 +879,8 @@
   },
   "native": {
     "offline": {
-      "title": "No internet connection",
-      "description": "FairPlayr needs internet to load match data.",
-      "retry": "Try again"
+      "label": "Offline",
+      "detail": "Match is saved on this device"
     }
   }
 }
