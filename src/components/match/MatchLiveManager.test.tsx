@@ -25,7 +25,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 const ROUTER = { push: routerPush };
-const AUTH = { status: "authenticated" };
+// Mutated (not replaced) between tests so the mocked hook stays stable.
+const AUTH: { status: string } = { status: "authenticated" };
 
 vi.mock("@/i18n/navigation", () => ({
   Link: ({ href, children, ...rest }: { href: string; children: ReactNode }) => (
@@ -58,8 +59,19 @@ const WORKSPACE = {
   teams: [{ id: "team-1", players: PLAYERS }],
 };
 
-const ACTIVE_MATCH = {
-  activeMatch: { id: "match-1", teamId: "team-1", title: "Match", status: "live" },
+const SERVER_ACTIVE_MATCH = { id: "match-1", teamId: "team-1", title: "Match", status: "live" };
+
+const ACTIVE_MATCH: {
+  activeMatch: {
+    id: string;
+    teamId: string;
+    title: string;
+    status: string;
+    runtimeState?: Record<string, unknown> | null;
+  } | null;
+  [key: string]: unknown;
+} = {
+  activeMatch: SERVER_ACTIVE_MATCH,
   activeMatchHref: "/match/live?matchId=match-1",
   needsRecovery: false,
   forceCloseActiveMatch: vi.fn(),
@@ -125,6 +137,11 @@ function renderManager() {
   );
 }
 
+// Longer than the 1200 ms "Done!" pause before the automatic report navigation.
+function waitForTimerWindow() {
+  return act(() => new Promise((resolve) => window.setTimeout(resolve, 1500)));
+}
+
 function startAndScoreAndEnd() {
   fireEvent.click(screen.getByRole("button", { name: en.matchLive.actions.start }));
   fireEvent.click(screen.getByRole("button", { name: en.matchLive.score.increaseTeam }));
@@ -136,7 +153,9 @@ describe("MatchLiveManager match completion", () => {
   beforeEach(() => {
     window.localStorage.clear();
     searchParams = new URLSearchParams("matchId=match-1");
-    activateMatch(SETUP);
+    activateMatch(SETUP, "match-1");
+    AUTH.status = "authenticated";
+    ACTIVE_MATCH.activeMatch = SERVER_ACTIVE_MATCH;
     online = true;
     routerPush.mockReset();
     refreshActiveMatch.mockReset().mockResolvedValue(undefined);
@@ -196,7 +215,7 @@ describe("MatchLiveManager match completion", () => {
     ).toHaveLength(2);
   });
 
-  it("syncs the pending completion when connectivity returns and opens the report", async () => {
+  it("syncs the pending completion when connectivity returns and offers the report without navigating", async () => {
     renderManager();
     setOnline(false);
     startAndScoreAndEnd();
@@ -207,8 +226,14 @@ describe("MatchLiveManager match completion", () => {
     await waitFor(() => {
       expect(getPendingMatchCompletion("match-1")).toBeNull();
     });
-    expect(await screen.findByText(en.matchLive.endingSequence.done)).toBeTruthy();
-    await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/match/match-1"), { timeout: 2500 });
+    expect(await screen.findByText(en.matchLive.pendingSync.syncedTitle)).toBeTruthy();
+    expect(screen.queryByText(en.matchLive.pendingSync.title)).toBeNull();
+    expect(screen.queryByText(en.matchLive.endingSequence.done)).toBeNull();
+    await waitForTimerWindow();
+    expect(routerPush).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: en.matchLive.endingSequence.goToReport }));
+    expect(routerPush).toHaveBeenCalledWith("/match/match-1");
 
     const [, init] = completionCalls().at(-1)!;
     expect(JSON.parse(init.body as string)).toMatchObject({
@@ -217,6 +242,73 @@ describe("MatchLiveManager match completion", () => {
       scoreAgainst: 1,
       runtimeState: { status: "ended" },
     });
+  });
+
+  it("syncs when connectivity returns before the pending completion is shown", async () => {
+    renderManager();
+    setOnline(false);
+    startAndScoreAndEnd();
+    // The offline send is still settling, so the pending state has not been
+    // rendered (or subscribed to anything) yet when the device is back online.
+    setOnline(true);
+
+    await waitFor(() => {
+      expect(getPendingMatchCompletion("match-1")).toBeNull();
+    });
+    expect(await screen.findByText(en.matchLive.pendingSync.syncedTitle)).toBeTruthy();
+    expect(completionCalls().map(([url]) => url)).toEqual([
+      "/api/matches/match-1",
+      "/api/matches/match-1",
+    ]);
+  });
+
+  it("retries once the send that was in flight while connectivity returned has failed", async () => {
+    let failFirstSend: (error: Error) => void = () => {};
+    respondToCompletion = () =>
+      new Promise<Response>((_resolve, reject) => {
+        failFirstSend = reject;
+      });
+    renderManager();
+    startAndScoreAndEnd();
+    await waitFor(() => expect(completionCalls()).toHaveLength(1));
+
+    setOnline(false);
+    setOnline(true);
+    respondToCompletion = () => Promise.resolve(new Response(null, { status: 204 }));
+    await act(async () => {
+      failFirstSend(new TypeError("Failed to fetch"));
+    });
+
+    expect(await screen.findByText(en.matchLive.pendingSync.syncedTitle)).toBeTruthy();
+    expect(getPendingMatchCompletion("match-1")).toBeNull();
+    expect(completionCalls()).toHaveLength(2);
+    expect(routerPush).not.toHaveBeenCalled();
+  });
+
+  it("retries a failed completion at most once per reconnect", async () => {
+    respondToCompletion = () =>
+      Promise.resolve(
+        new Response(JSON.stringify({ error: "Server unavailable" }), {
+          status: 500,
+          headers: { "content-type": "application/json" },
+        })
+      );
+    renderManager();
+    startAndScoreAndEnd();
+    await screen.findByText(en.matchLive.pendingSync.title);
+    await waitForTimerWindow();
+    expect(completionCalls()).toHaveLength(1);
+
+    setOnline(false);
+    setOnline(true);
+    await waitFor(() => expect(completionCalls()).toHaveLength(2));
+    await waitForTimerWindow();
+    expect(completionCalls()).toHaveLength(2);
+    expect(getPendingMatchCompletion("match-1")).not.toBeNull();
+
+    // The manual retry still works.
+    fireEvent.click(screen.getByRole("button", { name: en.matchLive.pendingSync.retry }));
+    await waitFor(() => expect(completionCalls()).toHaveLength(3));
   });
 
   it("falls back to a safe message for a non-JSON error response and keeps the completion pending", async () => {
@@ -264,6 +356,8 @@ describe("MatchLiveManager match completion", () => {
 
     expect(await screen.findByText(en.matchLive.endingSequence.done)).toBeTruthy();
     expect(getPendingMatchCompletion("match-1")).toBeNull();
+    // Let the report navigation fire here rather than in a later test.
+    await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/match/match-1"), { timeout: 2500 });
   });
 
   it("retries a completion left pending by an earlier session on mount", async () => {
@@ -323,8 +417,9 @@ describe("MatchLiveManager match completion", () => {
 
       setOnline(true);
 
-      expect(await screen.findByText(en.matchLive.endingSequence.done)).toBeTruthy();
-      await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/match/match-1"), { timeout: 2500 });
+      expect(await screen.findByText(en.matchLive.pendingSync.syncedTitle)).toBeTruthy();
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(routerPush).not.toHaveBeenCalled();
 
       const [, init] = completionCalls().at(-1)!;
       const sent = JSON.parse(init.body as string) as {
@@ -349,8 +444,9 @@ describe("MatchLiveManager match completion", () => {
       respondToCompletion = () => Promise.resolve(new Response(null, { status: 204 }));
       fireEvent.click(screen.getByRole("button", { name: en.matchLive.pendingSync.retry }));
 
-      expect(await screen.findByText(en.matchLive.endingSequence.done)).toBeTruthy();
+      expect(await screen.findByText(en.matchLive.pendingSync.syncedTitle)).toBeTruthy();
       expect(completionCalls()).toHaveLength(2);
+      expect(routerPush).not.toHaveBeenCalled();
     });
 
     it("asks before the page is unloaded while the result only exists in memory", async () => {
@@ -380,7 +476,10 @@ describe("MatchLiveManager match completion", () => {
       vi.mocked(Storage.prototype.setItem).mockRestore();
       setOnline(true);
 
-      await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/match/match-1"), { timeout: 2500 });
+      fireEvent.click(
+        await screen.findByRole("button", { name: en.matchLive.endingSequence.goToReport })
+      );
+      expect(routerPush).toHaveBeenCalledWith("/match/match-1");
       const [, init] = completionCalls().at(-1)!;
       expect(JSON.parse(init.body as string)).toMatchObject({ scoreFor: 1, scoreAgainst: 0 });
     });
@@ -398,7 +497,7 @@ describe("MatchLiveManager match completion", () => {
 
     // Match B is set up and started the way MatchSetupManager does it.
     clearStoredLiveMatch();
-    activateMatch({ ...SETUP, id: "setup-2" });
+    activateMatch({ ...SETUP, id: "setup-2" }, "match-2");
     searchParams = new URLSearchParams("matchId=match-2");
     online = true;
 
@@ -419,5 +518,252 @@ describe("MatchLiveManager match completion", () => {
     expect(
       getPendingMatchCompletion("match-1")?.body.runtimeState?.events.filter((event) => event.type === "goal")
     ).toHaveLength(2);
+  });
+
+  it("opens the report automatically after an online end the server confirmed", async () => {
+    renderManager();
+    startAndScoreAndEnd();
+
+    expect(await screen.findByText(en.matchLive.endingSequence.done)).toBeTruthy();
+    await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/match/match-1"), { timeout: 2500 });
+    expect(completionCalls()[0]?.[0]).toBe("/api/matches/match-1");
+  });
+
+  it("stays on the page if the connection drops before the report navigation", async () => {
+    renderManager();
+    startAndScoreAndEnd();
+    await screen.findByText(en.matchLive.endingSequence.done);
+
+    setOnline(false);
+    await waitForTimerWindow();
+
+    expect(routerPush).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByText(en.matchLive.endingSequence.done)).toBeNull());
+    fireEvent.click(screen.getByRole("button", { name: en.matchLive.endingSequence.goToReport }));
+    expect(routerPush).toHaveBeenCalledWith("/match/match-1");
+  });
+
+  describe("server-backed match restored without a URL match id", () => {
+    beforeEach(() => {
+      // Started via /match/setup?matchId=match-1, then reopened from
+      // /match/live while offline: the provider could not reach the server.
+      window.localStorage.clear();
+      activateMatch(SETUP, "match-1");
+      searchParams = new URLSearchParams();
+      ACTIVE_MATCH.activeMatch = null;
+    });
+
+    it("keeps the completion pending for the stored server match and does not navigate", async () => {
+      renderManager();
+      setOnline(false);
+      startAndScoreAndEnd();
+
+      expect(await screen.findByText(en.matchLive.pendingSync.title)).toBeTruthy();
+      await waitForTimerWindow();
+      expect(routerPush).not.toHaveBeenCalled();
+      expect(screen.queryByText(en.matchLive.endedLocally.saved)).toBeNull();
+      expect(getPendingMatchCompletion("match-1")?.body).toMatchObject({ scoreFor: 1, scoreAgainst: 1 });
+    });
+
+    it("syncs to the correct server record after reconnecting, even after a reload", async () => {
+      const first = renderManager();
+      setOnline(false);
+      startAndScoreAndEnd();
+      await screen.findByText(en.matchLive.pendingSync.title);
+      first.unmount();
+
+      renderManager();
+      expect(await screen.findByText(en.matchLive.pendingSync.title)).toBeTruthy();
+      setOnline(true);
+
+      expect(await screen.findByText(en.matchLive.pendingSync.syncedTitle)).toBeTruthy();
+      expect(getPendingMatchCompletion("match-1")).toBeNull();
+      const [url, init] = completionCalls().at(-1)!;
+      expect(url).toBe("/api/matches/match-1");
+      expect(JSON.parse(init.body as string)).toMatchObject({ scoreFor: 1, scoreAgainst: 1 });
+      expect(routerPush).not.toHaveBeenCalled();
+    });
+
+    it("sends the completion to the match the local state belongs to, not a different URL match", async () => {
+      searchParams = new URLSearchParams("matchId=match-2");
+      renderManager();
+      startAndScoreAndEnd();
+
+      await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/match/match-1"), { timeout: 2500 });
+      expect(completionCalls().map(([url]) => url)).toEqual(["/api/matches/match-1"]);
+    });
+  });
+
+  describe("local-only match open while another server match is referenced", () => {
+    beforeEach(() => {
+      // A signed-in coach runs a local-only match (no server record) while
+      // the URL and the active match provider point at an unrelated match.
+      window.localStorage.clear();
+      activateMatch(SETUP, null);
+      searchParams = new URLSearchParams("matchId=match-9");
+      ACTIVE_MATCH.activeMatch = { ...SERVER_ACTIVE_MATCH, id: "match-9" };
+    });
+
+    function apiCallsFor(matchId: string) {
+      return fetchMock.mock.calls.filter(([url]) => String(url).includes(matchId));
+    }
+
+    it("never sends its result to the URL's or the provider's match when ended online", async () => {
+      renderManager();
+      startAndScoreAndEnd();
+
+      expect(await screen.findByText(en.matchLive.endedLocally.saved)).toBeTruthy();
+      await waitForTimerWindow();
+      expect(completionCalls()).toHaveLength(0);
+      expect(apiCallsFor("match-9")).toHaveLength(0);
+      expect(getPendingMatchCompletion("match-9")).toBeNull();
+      expect(routerPush).not.toHaveBeenCalled();
+    });
+
+    it("never queues or syncs a completion for that match after ending offline", async () => {
+      const first = renderManager();
+      setOnline(false);
+      startAndScoreAndEnd();
+      expect(await screen.findByText(en.matchLive.endedLocally.saved)).toBeTruthy();
+      first.unmount();
+
+      renderManager();
+      setOnline(true);
+      await waitForTimerWindow();
+
+      expect(completionCalls()).toHaveLength(0);
+      expect(apiCallsFor("match-9")).toHaveLength(0);
+      expect(getPendingMatchCompletion("match-9")).toBeNull();
+    });
+  });
+
+  describe("setup stored before the server match id was recorded", () => {
+    function storeLegacySetup() {
+      window.localStorage.clear();
+      window.localStorage.setItem(
+        "fairplayr.matchSetup.v1",
+        JSON.stringify({ version: 2, config: SETUP, status: "active" })
+      );
+    }
+
+    it("does not guess the server match from the URL or an unrelated provider match", async () => {
+      storeLegacySetup();
+      searchParams = new URLSearchParams("matchId=match-9");
+      ACTIVE_MATCH.activeMatch = {
+        ...SERVER_ACTIVE_MATCH,
+        id: "match-9",
+        runtimeState: { setupId: "setup-other" },
+      };
+      renderManager();
+      startAndScoreAndEnd();
+
+      expect(await screen.findByText(en.matchLive.endedLocally.saved)).toBeTruthy();
+      await waitForTimerWindow();
+      expect(completionCalls()).toHaveLength(0);
+      expect(fetchMock.mock.calls.some(([url]) => String(url).includes("match-9"))).toBe(false);
+    });
+
+    it("keeps completing to the provider's match when its runtime state names this setup", async () => {
+      storeLegacySetup();
+      searchParams = new URLSearchParams();
+      ACTIVE_MATCH.activeMatch = { ...SERVER_ACTIVE_MATCH, runtimeState: { setupId: SETUP.id } };
+      renderManager();
+      startAndScoreAndEnd();
+
+      await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/match/match-1"), { timeout: 2500 });
+      expect(completionCalls().map(([url]) => url)).toEqual(["/api/matches/match-1"]);
+    });
+  });
+
+  describe("guest user with a local team (new match through Kamper)", () => {
+    beforeEach(() => {
+      // Kamper → /match/setup → Start: no server match, setup activated
+      // without a server id, then /match/live without ?matchId. The active
+      // match provider resolved before the setup existed.
+      window.localStorage.clear();
+      AUTH.status = "unauthenticated";
+      ACTIVE_MATCH.activeMatch = null;
+      searchParams = new URLSearchParams();
+      activateMatch(SETUP);
+    });
+
+    it("ends offline on the page with a persistent saved state and no navigation", async () => {
+      const first = renderManager();
+      setOnline(false);
+      startAndScoreAndEnd();
+
+      const card = (await screen.findByText(en.matchLive.endedLocally.saved)).closest("[role=status]");
+      expect(card?.textContent).toContain(en.matchLive.endedLocally.title);
+      expect(screen.queryByText(en.matchLive.endingSequence.title)).toBeNull();
+      await waitForTimerWindow();
+      expect(routerPush).not.toHaveBeenCalled();
+      expect(completionCalls()).toHaveLength(0);
+      expect(screen.queryByRole("link", { name: en.matchLive.endedLocally.historyCta })).toBeNull();
+
+      // Score, events and playtime survive on the device.
+      const stored = getStoredLiveMatch();
+      expect(stored?.status).toBe("ended");
+      expect(stored?.teamScore).toBe(1);
+      expect(stored?.opponentScore).toBe(1);
+      expect(stored?.events.filter((event) => event.type === "goal")).toHaveLength(2);
+      expect(stored?.endedAt).not.toBeNull();
+      expect(stored?.playerAccumulatedMs).toHaveProperty("p1");
+
+      // Still shown as ended after the app is reopened.
+      first.unmount();
+      renderManager();
+      expect(await screen.findByText(en.matchLive.endedLocally.saved)).toBeTruthy();
+      expect(routerPush).not.toHaveBeenCalled();
+    });
+
+    it("never sends the local setup id to the API when it is in the URL", async () => {
+      searchParams = new URLSearchParams(`matchId=${SETUP.id}`);
+      ACTIVE_MATCH.activeMatch = { id: SETUP.id, teamId: "team-1", title: "Live match", status: "live" };
+      renderManager();
+      setOnline(false);
+      startAndScoreAndEnd();
+
+      expect(await screen.findByText(en.matchLive.endedLocally.saved)).toBeTruthy();
+      setOnline(true);
+      await waitForTimerWindow();
+
+      expect(fetchMock.mock.calls.some(([url]) => String(url).includes(SETUP.id))).toBe(false);
+      expect(getPendingMatchCompletion(SETUP.id)).toBeNull();
+      expect(routerPush).not.toHaveBeenCalled();
+    });
+
+    it("does not navigate automatically when ended online either", async () => {
+      renderManager();
+      startAndScoreAndEnd();
+
+      expect(await screen.findByText(en.matchLive.endedLocally.saved)).toBeTruthy();
+      await waitForTimerWindow();
+      expect(routerPush).not.toHaveBeenCalled();
+      expect(screen.getByRole("link", { name: en.matchLive.endedLocally.historyCta })).toBeTruthy();
+    });
+
+    it("does not claim the match was saved when the device storage write fails", async () => {
+      renderManager();
+      setOnline(false);
+      fireEvent.click(screen.getByRole("button", { name: en.matchLive.actions.start }));
+      fireEvent.click(screen.getByRole("button", { name: en.matchLive.score.increaseTeam }));
+
+      vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+        throw new DOMException("The quota has been exceeded.", "QuotaExceededError");
+      });
+      fireEvent.click(screen.getByRole("button", { name: en.matchLive.actions.end }));
+
+      const alert = await screen.findByRole("alert");
+      expect(alert.textContent).toContain(en.matchLive.endedLocally.title);
+      expect(alert.textContent).toContain(en.matchLive.endedLocally.notSaved);
+      expect(screen.queryByText(en.matchLive.endedLocally.saved)).toBeNull();
+      expect(routerPush).not.toHaveBeenCalled();
+
+      // The in-memory result is still on screen and protected from unload.
+      expect(screen.getAllByText("1").length).toBeGreaterThan(0);
+      const event = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(true);
+    });
   });
 });

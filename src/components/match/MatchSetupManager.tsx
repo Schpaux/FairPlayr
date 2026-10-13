@@ -213,7 +213,9 @@ export function MatchSetupManager() {
     clearStoredLiveMatch();
     const liveState = createLiveMatchFromSetup(setup);
     saveStoredLiveMatch(liveState);
-    activateMatch(setup);
+    // Keep the server record with the local setup so the live screen can still
+    // sync the completion when it is reopened without ?matchId (e.g. offline).
+    activateMatch(setup, matchId);
 
     try {
       if (matchId) {

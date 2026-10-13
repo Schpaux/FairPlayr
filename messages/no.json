@@ -581,7 +581,15 @@
       "syncing": "Sender…",
       "notSavedTitle": "Kampen er avsluttet, men kunne ikke lagres på enheten",
       "notSavedDescriptionOffline": "Lagringsplassen på enheten er full. La denne skjermen være åpen – resultatet finnes bare her til det er sendt til FairPlayr når du er tilkoblet igjen.",
-      "notSavedDescriptionOnline": "Lagringsplassen på enheten er full, og resultatet har ikke kommet fram til FairPlayr ennå. La denne skjermen være åpen og send på nytt."
+      "notSavedDescriptionOnline": "Lagringsplassen på enheten er full, og resultatet har ikke kommet fram til FairPlayr ennå. La denne skjermen være åpen og send på nytt.",
+      "syncedTitle": "Kampen er sendt til FairPlayr",
+      "syncedDescription": "Alt som ble registrert på enheten er lagret."
+    },
+    "endedLocally": {
+      "title": "Kampen er avsluttet",
+      "saved": "Resultat, hendelser og spilletid er lagret på enheten.",
+      "notSaved": "Lagringsplassen på enheten er full, så resultatet kunne ikke lagres på enheten. La denne skjermen være åpen for å beholde resultatet.",
+      "historyCta": "Gå til kamphistorikk"
     }
   },
   "matchPlanner": {

@@ -138,7 +138,32 @@ export function MatchLiveManager() {
     discardActiveMatch,
     refreshActiveMatch,
   } = useActiveMatch();
-  const activeMatchId = searchParams.get("matchId") ?? activeMatch?.id ?? null;
+  // Set by the hydration effect from the stored local setup. Until it has run,
+  // `setupSource` is "pending" and no server match id is used at all.
+  // "setup" means the live state on screen comes from the stored setup, whose
+  // own server match id (null for a local-only match, undefined when stored
+  // before the field existed) is then the only match identity considered.
+  const [localSetupId, setLocalSetupId] = useState<string | null>(null);
+  const [setupSource, setSetupSource] = useState<"pending" | "none" | "setup">("pending");
+  const [setupServerMatchId, setSetupServerMatchId] = useState<string | null | undefined>(undefined);
+  // A guest/local-only match has no server record; its local setup id (which
+  // can reach the URL via the active-match banner) must never be sent to the API.
+  const asServerMatchId = (id: string | null | undefined) =>
+    id && id !== localSetupId ? id : null;
+  // A setup stored before its server id was recorded only pairs with the
+  // provider's match when that match's runtime state names this setup.
+  const verifiedLegacyServerMatchId =
+    localSetupId && activeMatch?.runtimeState?.setupId === localSetupId
+      ? asServerMatchId(activeMatch.id)
+      : null;
+  const activeMatchId =
+    setupSource === "pending"
+      ? null
+      : setupSource === "setup"
+        ? setupServerMatchId === undefined
+          ? verifiedLegacyServerMatchId
+          : setupServerMatchId
+        : asServerMatchId(searchParams.get("matchId")) ?? asServerMatchId(activeMatch?.id);
 
   const isHydrated = useSyncExternalStore(
     () => () => {},
@@ -155,6 +180,12 @@ export function MatchLiveManager() {
   const [isResolvingRecoveryAction, setIsResolvingRecoveryAction] = useState(false);
   const [isEndingMatch, setIsEndingMatch] = useState(false);
   const [endMatchDone, setEndMatchDone] = useState(false);
+  // Server match whose completion was confirmed after a deferred sync (or
+  // while the device looked offline); the coach opens its report explicitly.
+  const [syncedMatchId, setSyncedMatchId] = useState<string | null>(null);
+  // True when a local-only match was ended but could not be written to device
+  // storage, so the result only exists on this screen.
+  const [localEndUnsaved, setLocalEndUnsaved] = useState(false);
   const endedMatchIdRef = useRef<string | null>(null);
   const isOnline = useOnlineStatus();
   // `persisted: false` means the completion could not be written to device
@@ -165,6 +196,14 @@ export function MatchLiveManager() {
   } | null>(null);
   const [isSyncingCompletion, setIsSyncingCompletion] = useState(false);
   const isSyncingCompletionRef = useRef(false);
+  // Bumped on every connectivity change. Each completion attempt records the
+  // period it started in, so a pending completion is retried automatically at
+  // most once per connectivity change — never in a loop after a failure.
+  const connectivityEpochRef = useRef(0);
+  const lastCompletionAttemptRef = useRef<{ matchId: string; epoch: number } | null>(null);
+  const markCompletionAttempt = (matchId: string) => {
+    lastCompletionAttemptRef.current = { matchId, epoch: connectivityEpochRef.current };
+  };
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -174,6 +213,10 @@ export function MatchLiveManager() {
 
     const storedSetup = getStoredMatchSetup();
     const storedLiveMatch = getStoredLiveMatch();
+
+    setLocalSetupId(storedSetup?.config.id ?? null);
+    setSetupSource("none");
+    setSetupServerMatchId(undefined);
 
     if (!storedSetup) {
       setTeamPlayers([]);
@@ -197,12 +240,16 @@ export function MatchLiveManager() {
         reconcileLiveMatchWithSquad(storedLiveMatch, storedSetup.config.selectedPlayerIds)
       );
       setSetupStatus(storedSetup.status);
+      setSetupSource("setup");
+      setSetupServerMatchId(storedSetup.serverMatchId);
       return;
     }
 
     if (storedSetup.status === "active") {
       setLiveMatch(createLiveMatchFromSetup(storedSetup.config));
       setSetupStatus(storedSetup.status);
+      setSetupSource("setup");
+      setSetupServerMatchId(storedSetup.serverMatchId);
       return;
     }
     setLiveMatch(null);
@@ -424,21 +471,26 @@ export function MatchLiveManager() {
     );
   };
 
-  // Runs once the server has confirmed completion: show "Done!" and open the
-  // report. Refreshing the active-match banner is best-effort — a failure there
-  // must not leave the coach stuck on the loading overlay.
-  const finishEndedMatch = async (matchId: string | null) => {
+  // Runs once the server has confirmed completion right after End Match: show
+  // "Done!" and open the report. Refreshing the active-match banner is
+  // best-effort — a failure there must not leave the coach stuck on the overlay.
+  const finishEndedMatch = async (matchId: string) => {
     await refreshActiveMatch().catch(() => undefined);
     setEndMatchDone(true);
     endedMatchIdRef.current = matchId;
 
-    // Brief pause so user sees the "Done!" state, then navigate to report
+    // Brief pause so user sees the "Done!" state, then navigate to report. If
+    // the connection dropped in the meantime the report page cannot load, so
+    // stay here and let the coach open it explicitly.
     window.setTimeout(() => {
-      if (matchId) {
-        router.push(`/match/${encodeURIComponent(matchId)}`);
-      } else {
-        router.push("/historikk");
+      if (!navigator.onLine) {
+        setIsEndingMatch(false);
+        setEndMatchDone(false);
+        setSyncedMatchId(matchId);
+        return;
       }
+
+      router.push(`/match/${encodeURIComponent(matchId)}`);
     }, 1200);
   };
 
@@ -463,6 +515,7 @@ export function MatchLiveManager() {
 
     isSyncingCompletionRef.current = true;
     setIsSyncingCompletion(true);
+    markCompletionAttempt(record.matchId);
 
     // Re-sends from the in-memory record, which also retries the storage
     // write. submitMatchCompletion never rejects (network failures resolve to
@@ -478,10 +531,12 @@ export function MatchLiveManager() {
       return;
     }
 
+    // A deferred sync never navigates on its own: connectivity may still be
+    // flaky, so the coach opens the report explicitly.
     setPendingCompletion(null);
     setError(null);
-    setIsEndingMatch(true);
-    await finishEndedMatch(record.matchId);
+    setSyncedMatchId(record.matchId);
+    void refreshActiveMatch().catch(() => undefined);
   };
 
   const onPendingCompletionSyncTrigger = useEffectEvent((record: PendingMatchCompletion) => {
@@ -515,24 +570,36 @@ export function MatchLiveManager() {
   }, [activeMatchId, auth.status, isHydrated]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Retry automatically when connectivity returns.
+  // Must run before the retry effect below so it sees the new period.
+  useEffect(() => {
+    connectivityEpochRef.current += 1;
+  }, [isOnline]);
+
+  // Retry automatically when connectivity returns. Driven by the online state
+  // rather than the `online` event, so a reconnect is not missed when it
+  // happens before this effect subscribes or while a send is in flight (the
+  // retry then runs once that send has finished without success).
   const pendingRecord = pendingCompletion?.record ?? null;
   useEffect(() => {
-    if (!pendingRecord || auth.status !== "authenticated") {
+    if (!pendingRecord || auth.status !== "authenticated" || !isOnline || isSyncingCompletion) {
       return;
     }
 
-    const handleOnline = () => onPendingCompletionSyncTrigger(pendingRecord);
-    window.addEventListener("online", handleOnline);
+    const lastAttempt = lastCompletionAttemptRef.current;
+    if (
+      lastAttempt?.matchId === pendingRecord.matchId &&
+      lastAttempt.epoch === connectivityEpochRef.current
+    ) {
+      return;
+    }
 
-    return () => {
-      window.removeEventListener("online", handleOnline);
-    };
-  }, [auth.status, pendingRecord]);
+    onPendingCompletionSyncTrigger(pendingRecord);
+  }, [auth.status, isOnline, isSyncingCompletion, pendingRecord]);
 
   // While the completion only exists in memory, ask before the page is closed
   // or reloaded so the final match state is not discarded without warning.
-  const hasUnpersistedCompletion = pendingCompletion !== null && !pendingCompletion.persisted;
+  const hasUnpersistedCompletion =
+    (pendingCompletion !== null && !pendingCompletion.persisted) || localEndUnsaved;
   useEffect(() => {
     if (!hasUnpersistedCompletion) {
       return;
@@ -562,14 +629,27 @@ export function MatchLiveManager() {
     const matchIdToEnd = activeMatchId;
 
     setLiveMatch(endedLiveMatch);
+    setSyncedMatchId(null);
+
+    // Write the final state now (not only via the persistence effect) so we
+    // know whether it actually reached device storage. On a full device these
+    // writes can throw; the completion below must still be sent (or kept in
+    // memory), so don't let them abort the end flow.
+    let savedOnDevice = true;
+
+    if (endedLiveMatch) {
+      try {
+        saveStoredLiveMatch(endedLiveMatch);
+      } catch {
+        savedOnDevice = false;
+      }
+    }
 
     if (storedSetup) {
-      // On a full device this write can throw; the completion below must still
-      // be sent (or kept in memory), so don't let it abort the end flow.
       try {
         endMatch(storedSetup.config);
       } catch {
-        // Setup status is also tracked in component state below.
+        savedOnDevice = false;
       }
       setSetupStatus("ended");
     }
@@ -587,6 +667,7 @@ export function MatchLiveManager() {
           },
           endedAt: new Date(endedAtMs).toISOString(),
         };
+        markCompletionAttempt(completion.matchId);
         const result = await submitMatchCompletion(
           completion.matchId,
           completion.body,
@@ -597,9 +678,15 @@ export function MatchLiveManager() {
           handleCompletionNotConfirmed(completion, result);
           return;
         }
+
+        await finishEndedMatch(matchIdToEnd);
+        return;
       }
 
-      await finishEndedMatch(matchIdToEnd);
+      // Guest/local-only match: there is no server record to confirm and no
+      // way to know a page will load, so stay here and show the ended state.
+      setLocalEndUnsaved(!savedOnDevice);
+      setIsEndingMatch(false);
     })();
 
   };
@@ -1125,6 +1212,47 @@ export function MatchLiveManager() {
             >
               {isSyncingCompletion ? t("pendingSync.syncing") : t("pendingSync.retry")}
             </FpButton>
+          </AppCard>
+        ) : null}
+
+        {syncedMatchId ? (
+          <AppCard className="space-y-2 p-3">
+            <div role="status" className="space-y-1">
+              <p className="text-sm font-semibold text-foreground">{t("pendingSync.syncedTitle")}</p>
+              <p className="text-xs text-muted-foreground">{t("pendingSync.syncedDescription")}</p>
+            </div>
+            <FpButton
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                router.push(`/match/${encodeURIComponent(syncedMatchId)}`);
+              }}
+            >
+              {t("endingSequence.goToReport")}
+            </FpButton>
+          </AppCard>
+        ) : null}
+
+        {liveMatch.status === "ended" && !activeMatchId && !pendingCompletion && !syncedMatchId ? (
+          <AppCard className="space-y-2 p-3">
+            {localEndUnsaved ? (
+              <div role="alert" className="space-y-1">
+                <p className="text-sm font-semibold text-danger">{t("endedLocally.title")}</p>
+                <p className="text-xs text-muted-foreground">{t("endedLocally.notSaved")}</p>
+              </div>
+            ) : (
+              <div role="status" className="space-y-1">
+                <p className="text-sm font-semibold text-foreground">{t("endedLocally.title")}</p>
+                <p className="text-xs text-muted-foreground">{t("endedLocally.saved")}</p>
+              </div>
+            )}
+            {isOnline ? (
+              <Link href="/historikk" className="inline-block">
+                <FpButton variant="secondary" size="sm">
+                  {t("endedLocally.historyCta")}
+                </FpButton>
+              </Link>
+            ) : null}
           </AppCard>
         ) : null}
 

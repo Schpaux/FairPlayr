@@ -22,6 +22,12 @@ export type MatchStatus = "draft" | "active" | "ended";
 export interface StoredMatchConfig {
   config: MatchConfig;
   status: MatchStatus;
+  /**
+   * Server match this setup was started for, or null for a guest/local-only
+   * match. Undefined for setups stored before this field existed: their
+   * server match is unknown and must be verified, never guessed.
+   */
+  serverMatchId: string | null | undefined;
 }
 
 // ─── Envelope ─────────────────────────────────────────────────────────────────
@@ -30,6 +36,8 @@ interface StorageEnvelope {
   version: number;
   config: MatchConfig;
   status: MatchStatus;
+  // Optional so setups written before it existed stay valid (read as unknown).
+  serverMatchId?: string | null;
 }
 
 interface LegacyEnvelope {
@@ -213,7 +221,14 @@ export function getStoredMatchSetup(): StoredMatchConfig | null {
       const config = toValidMatchConfig(parsed.config);
       if (!config) return null;
 
-      return { config, status: parsed.status };
+      const serverMatchId =
+        parsed.serverMatchId === undefined
+          ? undefined
+          : typeof parsed.serverMatchId === "string" && parsed.serverMatchId.length > 0
+            ? parsed.serverMatchId
+            : null;
+
+      return { config, status: parsed.status, serverMatchId };
     }
 
     if (!isLegacyEnvelope(parsed)) {
@@ -228,9 +243,10 @@ export function getStoredMatchSetup(): StoredMatchConfig | null {
     const migrated: StoredMatchConfig = {
       config,
       status: parsed.status,
+      serverMatchId: null,
     };
 
-    writeEnvelope(config, parsed.status);
+    writeEnvelope(config, parsed.status, null);
 
     return migrated;
   } catch {
@@ -246,9 +262,13 @@ export function saveMatchSetupDraft(config: MatchConfig): void {
 /**
  * Mark the match as active (coach tapped "Start Match").
  * The live match screen reads this to know a match is in progress.
+ *
+ * `serverMatchId` is the server record the match was started for, or null for
+ * a guest/local-only match. It is always set explicitly here, so a new start
+ * never inherits the server id of a previous match.
  */
-export function activateMatch(config: MatchConfig): void {
-  writeEnvelope(config, "active");
+export function activateMatch(config: MatchConfig, serverMatchId: string | null = null): void {
+  writeEnvelope(config, "active", serverMatchId);
 }
 
 /** Mark the match as ended. */
@@ -274,12 +294,23 @@ export function clearStoredMatchSetup(): void {
 
 // ─── Internal ─────────────────────────────────────────────────────────────────
 
-function writeEnvelope(config: MatchConfig, status: MatchStatus): void {
+/** Server match id of the stored setup, kept only while it is the same setup. */
+function storedServerMatchIdFor(configId: string): string | null | undefined {
+  const stored = getStoredMatchSetup();
+  return stored && stored.config.id === configId ? stored.serverMatchId : null;
+}
+
+function writeEnvelope(
+  config: MatchConfig,
+  status: MatchStatus,
+  serverMatchId: string | null | undefined = storedServerMatchIdFor(config.id)
+): void {
   if (typeof window === "undefined") return;
   const envelope: StorageEnvelope = {
     version: STORAGE_VERSION,
     config,
     status,
+    serverMatchId,
   };
   window.localStorage.setItem(MATCH_SETUP_KEY, JSON.stringify(envelope));
 }
