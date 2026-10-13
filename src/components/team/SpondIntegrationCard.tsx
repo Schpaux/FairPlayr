@@ -98,6 +98,15 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
         return t("errors.teamAccess");
       case "INVALID_CREDENTIALS":
         return t("errors.invalidCredentials");
+      case "SPOND_2FA_REQUIRED":
+        return t("errors.twoFactorRequired");
+      case "SPOND_RATE_LIMITED":
+        return t("errors.rateLimited");
+      case "SPOND_UNAVAILABLE":
+        return t("errors.spondUnavailable");
+      case "SPOND_AUTH_FAILED":
+      case "SPOND_BAD_RESPONSE":
+        return t("errors.authFailed");
       case "CONNECTION_NOT_FOUND":
         return t("errors.notConnected");
       case "NO_MEMBERS_FOUND":
