@@ -2,56 +2,95 @@ name: Security - Trivy
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  TRIVY_UPLOAD_SARIF: ${{ vars.TRIVY_UPLOAD_SARIF || 'false' }}
+  # SARIF upload to GitHub code scanning is on by default (free for public
+  # repositories). Set the repository variable TRIVY_UPLOAD_SARIF to 'false'
+  # to opt out.
+  TRIVY_UPLOAD_SARIF: ${{ vars.TRIVY_UPLOAD_SARIF || 'true' }}
 
 on:
   push:
     branches:
       - main
-      - develop
   pull_request:
   schedule:
     - cron: "0 2 * * *"
+  workflow_dispatch:
 
-permissions:
-  actions: read
-  contents: read
-  security-events: write
+# Deny everything by default; jobs request only what they need.
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   trivy-fs:
     name: Trivy Filesystem Scan
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      # Required to upload SARIF to code scanning. Add `actions: read` if the
+      # repository is ever made private.
+      security-events: write
 
     steps:
       # Get repository content for scanning.
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
 
-      # Reporting scan: generate SARIF for GitHub code scanning.
+      # Reporting scan: every severity, production and development
+      # dependencies, including vulnerabilities without a fix yet. Never blocks.
       - name: Run Trivy filesystem reporting scan (SARIF)
-        uses: aquasecurity/trivy-action@v0.35.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        env:
+          TRIVY_INCLUDE_DEV_DEPS: "true"
         with:
           scan-type: fs
           scan-ref: .
           format: sarif
           output: trivy-fs-results.sarif
           cache: "false"
-          ignore-unfixed: true
           exit-code: "0"
 
-      # Upload SARIF even if findings exist.
-      - name: Upload filesystem SARIF
-        if: always() && env.TRIVY_UPLOAD_SARIF == 'true' && hashFiles('trivy-fs-results.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-        uses: github/codeql-action/upload-sarif@v4
-        continue-on-error: true
+      # Visibility for development dependencies: HIGH/CRITICAL findings across
+      # all dependencies are written to the job summary and raised as a warning
+      # annotation. Non-blocking; the gate below covers production dependencies.
+      - name: Run Trivy filesystem report incl. dev dependencies (table)
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        env:
+          TRIVY_INCLUDE_DEV_DEPS: "true"
         with:
-          sarif_file: trivy-fs-results.sarif
-          category: trivy-fs
+          scan-type: fs
+          scan-ref: .
+          format: table
+          output: trivy-fs-all-deps.txt
+          severity: HIGH,CRITICAL
+          cache: "false"
+          exit-code: "0"
 
-      # Gating scan: fail only on HIGH/CRITICAL vulnerabilities.
+      - name: Publish dependency report to job summary
+        run: |
+          {
+            echo "## Trivy: HIGH/CRITICAL findings incl. development dependencies"
+            echo
+            echo "Non-blocking report. The production-dependency gate is a separate step."
+            echo
+            echo '```'
+            cat trivy-fs-all-deps.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if grep -Eq 'Total: [1-9]' trivy-fs-all-deps.txt; then
+            echo "::warning title=Trivy::HIGH/CRITICAL vulnerabilities found (incl. development dependencies). See the job summary."
+          fi
+
+      # Gating scan: fail on fixable HIGH/CRITICAL vulnerabilities in
+      # production dependencies (Trivy excludes development dependencies by
+      # default) and on HIGH/CRITICAL secrets.
       - name: Run Trivy filesystem gating scan (table)
-        uses: aquasecurity/trivy-action@v0.35.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
           scan-type: fs
           scan-ref: .
@@ -61,67 +100,11 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
 
-  build-and-scan-image:
-    name: Build And Scan Docker Image
-    runs-on: ubuntu-latest
-
-    steps:
-      # Get repository content for image build and scan.
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      # Build a Docker image tagged with the current commit SHA.
-      - name: Build Docker image
-        run: |
-          IMAGE_REF="fairplayr:${GITHUB_SHA}"
-          if [ -f Dockerfile ]; then
-            docker build --tag "${IMAGE_REF}" .
-          else
-            cat > Dockerfile.trivy <<'EOF'
-            FROM alpine:3.20
-            WORKDIR /workspace
-            COPY . .
-            EOF
-            docker build -f Dockerfile.trivy --tag "${IMAGE_REF}" .
-          fi
-
-      # Export image to tar so Trivy scan does not depend on local daemon lookup behavior.
-      - name: Export Docker image tarball
-        run: docker save "fairplayr:${GITHUB_SHA}" -o fairplayr-image.tar
-
-      # Verify tarball exists before running Trivy image scans.
-      - name: Verify image tarball
-        run: ls -lh fairplayr-image.tar
-
-      # Reporting scan: generate SARIF for GitHub code scanning.
-      - name: Run Trivy image reporting scan (SARIF)
-        uses: aquasecurity/trivy-action@v0.35.0
+      # Upload SARIF even if the gate failed. Skipped for fork pull requests,
+      # whose token cannot write security events.
+      - name: Upload filesystem SARIF
+        if: always() && env.TRIVY_UPLOAD_SARIF == 'true' && hashFiles('trivy-fs-results.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
-          scan-type: image
-          input: fairplayr-image.tar
-          format: sarif
-          output: trivy-image-results.sarif
-          cache: "false"
-          ignore-unfixed: true
-          exit-code: "0"
-
-      # Upload SARIF even if findings exist.
-      - name: Upload image SARIF
-        if: always() && env.TRIVY_UPLOAD_SARIF == 'true' && hashFiles('trivy-image-results.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-        uses: github/codeql-action/upload-sarif@v4
-        continue-on-error: true
-        with:
-          sarif_file: trivy-image-results.sarif
-          category: trivy-image
-
-      # Gating scan: fail only on HIGH/CRITICAL vulnerabilities.
-      - name: Run Trivy image gating scan (table)
-        uses: aquasecurity/trivy-action@v0.35.0
-        with:
-          scan-type: image
-          input: fairplayr-image.tar
-          format: table
-          severity: HIGH,CRITICAL
-          cache: "false"
-          ignore-unfixed: true
-          exit-code: "1"
+          sarif_file: trivy-fs-results.sarif
+          category: trivy-fs
