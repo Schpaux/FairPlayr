@@ -5,12 +5,12 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   FairPlayr Design Token System
-   Single source of truth for all visual values.
+   FairPlayr Design Token System — Modern Sideline
+   Single source of truth for all visual values. Spec: DESIGN.md.
 
-   Brand: lime (#9fe870 light / #a3e635 dark) + neutrals.
-   One accent color. Neutrals carry the interface; lime signals action.
-   No secondary brand color. No indigo. No purple.
+   Lime (#9FE870) = "your next action" (fill/ring only).
+   Club green (#0E4D33) = identity (scoreboard, fixture panel), never a button.
+   Neutrals carry the interface. No indigo. No purple. No glow.
 ───────────────────────────────────────────────────────────────────────────── */
 
 @theme inline {
@@ -61,6 +61,30 @@
   --color-fp-text-secondary: var(--fp-text-secondary);
   --color-fp-border: var(--fp-border);
 
+  /* Modern Sideline tokens — theme-aware (DESIGN.md §2) */
+  --color-fp-canvas: var(--fp-canvas);
+  --color-fp-rule: var(--fp-rule);
+  --color-fp-rule-strong: var(--fp-rule-strong);
+  --color-fp-ink: var(--fp-ink);
+  --color-fp-ink-2: var(--fp-ink-2);
+  --color-fp-club: var(--fp-club);
+  --color-fp-on-club: var(--fp-on-club);
+  --color-fp-on-club-2: var(--fp-on-club-2);
+  --color-fp-club-disc: var(--fp-club-disc);
+  --color-fp-lime: var(--fp-lime);
+  --color-fp-on-lime: var(--fp-on-lime);
+  --color-fp-grass: var(--fp-grass);
+  --color-fp-grass-stripe: var(--fp-grass-stripe);
+  --color-fp-tag: var(--fp-tag);
+  --color-fp-on-tag: var(--fp-on-tag);
+  --color-fp-disc: var(--fp-disc);
+  --color-fp-on-disc: var(--fp-on-disc);
+  --color-fp-keeper: var(--fp-keeper);
+  --color-fp-on-keeper: var(--fp-on-keeper);
+  --color-fp-warn-text: var(--fp-warn-text);
+  --color-fp-danger-text: var(--fp-danger-text);
+  --color-fp-ok-text: var(--fp-ok-text);
+
   /* CTA token — lime green, primary action color */
   --color-fp-cta: var(--fp-cta);
   --color-fp-cta-foreground: var(--fp-cta-foreground);
@@ -75,11 +99,13 @@
   /* Typography */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, monospace;
-  /* Urbanist at 900 — Wise Sans substitute: heavy grotesque, ultra-tight for display */
-  --font-heading: var(--font-urbanist), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-urbanist), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* Inter for every word, including headings (DESIGN.md §3). */
+  --font-heading: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* Barlow Condensed 600 — match numerals only: score, clock, shirt numbers. Never words. */
+  --font-num: var(--font-barlow-condensed), var(--font-inter), ui-sans-serif, sans-serif;
 
-  /* Radius scale — Wise-inspired: generous, rounded */
+  /* Radius scale */
   --radius-sm: 10px;
   --radius-md: 14px;
   --radius-lg: 20px;
@@ -88,52 +114,86 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   Light Theme — primary experience
+   Light Theme — primary experience (DESIGN.md §2)
+   Near-white canvas, white surfaces, subtle neutral hairlines.
    Optimised for outdoor, bright-condition readability.
 ───────────────────────────────────────────────────────────────────────────── */
 :root {
   color-scheme: light;
 
-  /* Shadcn semantic tokens */
-  --background: #ffffff;
-  --foreground: #0e0f0c;
-  --card: #f8faf5;
-  --card-foreground: #0e0f0c;
-  --popover: #ffffff;
-  --popover-foreground: #0e0f0c;
+  /* ── Modern Sideline palette (source of truth; everything below maps to it) */
+  --fp-canvas: #F9FAF8;          /* page background */
+  --fp-surface: #FFFFFF;         /* cards, list groups, bench tiles, sheets */
+  --fp-surface-2: #F1F3F0;       /* pressed / quiet fills */
+  --fp-surface-3: #E7EAE6;       /* stronger quiet fill */
+  --fp-rule: #E3E6E2;            /* hairlines */
+  --fp-rule-strong: #C9CEC8;     /* outlines, secondary-button borders */
+  --fp-ink: #111A15;             /* text */
+  --fp-ink-2: #4A564F;           /* secondary text */
+
+  --fp-club: #0E4D33;            /* identity: scoreboard, fixture panel — never a button fill */
+  --fp-on-club: #F2EFE7;
+  --fp-on-club-2: #B7CCBE;
+  --fp-club-disc: #0E4D33;       /* shirt discs off the pitch */
+
+  --fp-lime: #9FE870;            /* "your next action" — fill/ring/underline only, never text on light */
+  --fp-on-lime: #0B2E1A;
+
+  --fp-grass: #2E6A45;
+  --fp-grass-stripe: #2A6340;
+  --fp-grass-line: rgba(242, 239, 231, 0.42);
+  --fp-tag: #0B2A1C;
+  --fp-on-tag: #F2EFE7;
+  --fp-disc: #FFFFFF;
+  --fp-on-disc: #0E4D33;
+  --fp-keeper: #F3D36A;
+  --fp-on-keeper: #2A2100;
+  --fp-ring-track: rgba(255, 255, 255, 0.22);
+  --fp-ring-fresh: #F2EFE7;
+  --fp-ring-watch: #F2B54E;
+  --fp-ring-act: #FFA899;
+
+  --fp-warn-text: #8A4A00;
+  --fp-danger-text: #B3261E;
+  --fp-ok-text: #1E6B3F;
+  --fp-scrim: rgba(6, 20, 13, 0.52);
+  --fp-focus: #0E4D33;
+
+  /* ── Shadcn semantic tokens */
+  --background: var(--fp-canvas);
+  --foreground: var(--fp-ink);
+  --card: var(--fp-surface);
+  --card-foreground: var(--fp-ink);
+  --popover: var(--fp-surface);
+  --popover-foreground: var(--fp-ink);
 
   /* Primary = lime. Dark green foreground for contrast on lime. */
-  --primary: oklch(0.845 0.18 132);
-  --primary-foreground: oklch(0.215 0.074 135);
+  --primary: var(--fp-lime);
+  --primary-foreground: var(--fp-on-lime);
 
-  --secondary: #f0f4eb;
-  --secondary-foreground: #0e0f0c;
-  --muted: #f0f4eb;
-  --muted-foreground: #686b66;
+  --secondary: var(--fp-surface-2);
+  --secondary-foreground: var(--fp-ink);
+  --muted: var(--fp-surface-2);
+  --muted-foreground: var(--fp-ink-2);
 
-  /* Accent = lime (same as primary — one accent only) */
-  --accent: oklch(0.845 0.18 132);
-  --accent-foreground: oklch(0.215 0.074 135);
+  /* Accent = lime (same as primary — one action colour only) */
+  --accent: var(--fp-lime);
+  --accent-foreground: var(--fp-on-lime);
 
-  --destructive: #d03238;
-  --destructive-foreground: #ffffff;
-  --border: rgba(14, 15, 12, 0.10);
-  --input: rgba(14, 15, 12, 0.08);
+  --destructive: #B3261E;
+  --destructive-foreground: #FFFFFF;
+  --border: var(--fp-rule);
+  --input: var(--fp-rule);
 
-  /* Ring = dark green: high contrast on light backgrounds, on-brand */
-  --ring: oklch(0.215 0.074 135);
+  /* Ring = club green: high contrast on light backgrounds, on-brand */
+  --ring: var(--fp-focus);
   --radius: 0.875rem;
 
-  /* FairPlayr semantic surface tokens */
-  --fp-surface: #f8faf5;
-  --fp-surface-2: #f0f4eb;
-  --fp-surface-3: #e4edda;
-  --fp-text-primary: #0e0f0c;
-  --fp-text-secondary: #686b66;
-  --fp-border: rgba(14, 15, 12, 0.10);
-
-  /* Lime alias — used for active/positive/success states in components */
-  --fp-accent: oklch(0.845 0.18 132);
+  /* FairPlayr legacy semantic aliases (kept so existing components keep working) */
+  --fp-text-primary: var(--fp-ink);
+  --fp-text-secondary: var(--fp-ink-2);
+  --fp-border: var(--fp-rule);
+  --fp-accent: var(--fp-lime);
 
   --fp-spond: #e15a37;
   --fp-spond-soft: rgba(225, 90, 55, 0.10);
@@ -141,27 +201,29 @@
   --fp-spond-border: rgba(225, 90, 55, 0.30);
 
   /* CTA — lime */
-  --fp-cta: oklch(0.845 0.18 132);
-  --fp-cta-foreground: oklch(0.215 0.074 135);
+  --fp-cta: var(--fp-lime);
+  --fp-cta-foreground: var(--fp-on-lime);
 
   /* Sidebar */
-  --sidebar: #f8faf5;
-  --sidebar-foreground: #0e0f0c;
-  --sidebar-primary: oklch(0.845 0.18 132);
-  --sidebar-primary-foreground: oklch(0.215 0.074 135);
-  --sidebar-accent: #f0f4eb;
-  --sidebar-accent-foreground: #0e0f0c;
-  --sidebar-border: rgba(14, 15, 12, 0.10);
-  --sidebar-ring: oklch(0.215 0.074 135);
+  --sidebar: var(--fp-surface);
+  --sidebar-foreground: var(--fp-ink);
+  --sidebar-primary: var(--fp-lime);
+  --sidebar-primary-foreground: var(--fp-on-lime);
+  --sidebar-accent: var(--fp-surface-2);
+  --sidebar-accent-foreground: var(--fp-ink);
+  --sidebar-border: var(--fp-rule);
+  --sidebar-ring: var(--fp-focus);
 
-  /* Pitch surface — hue 148, green field colours */
+  /* Current pitch surface (MatchLiveManager / LivePitchView). Unchanged in this
+     patch; replaced by --fp-grass* when the live UI moves to Modern Sideline. */
   --fp-pitch-a: oklch(0.60 0.14 148);
   --fp-pitch-b: oklch(0.54 0.15 148);
   --fp-pitch-stripe-a: oklch(0.58 0.14 148);
   --fp-pitch-stripe-b: oklch(0.56 0.15 148);
   --fp-pitch-line: oklch(1 0 0 / 0.85);
 
-  /* Glow — all unified to lime */
+  /* Glow — legacy, still referenced by existing components. Modern Sideline
+     uses no glow (DESIGN.md §7); remove with the components that use it. */
   --glow-primary: 0 0 20px rgba(159, 232, 112, 0.30);
   --glow-primary-sm: 0 0 10px rgba(159, 232, 112, 0.22);
   --glow-accent: 0 0 20px rgba(159, 232, 112, 0.25);
@@ -171,84 +233,92 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   Dark Theme — fully supported, equally refined
+   Dark Theme — floodlight mode (DESIGN.md §2)
+   Same club green, lime and grass; only the surfaces change.
 ───────────────────────────────────────────────────────────────────────────── */
 .dark {
   color-scheme: dark;
 
-  /* Shadcn semantic tokens — dark green neutrals, no blue */
-  --background: #0d1209;
-  --foreground: #f0f4eb;
-  --card: #131c10;
-  --card-foreground: #f0f4eb;
-  --popover: #131c10;
-  --popover-foreground: #f0f4eb;
+  /* ── Modern Sideline palette */
+  --fp-canvas: #121B16;
+  --fp-surface: #1A2620;
+  --fp-surface-2: #233229;
+  --fp-surface-3: #2A3A31;
+  --fp-rule: #2C3C34;
+  --fp-rule-strong: #43574C;
+  --fp-ink: #EEF1EA;
+  --fp-ink-2: #A4B3A9;
 
-  /* Primary = lime (brighter variant for dark backgrounds) */
-  --primary: oklch(0.822 0.229 130);
-  --primary-foreground: oklch(0.22 0.08 135);
+  --fp-club-disc: #1D6345;       /* lifted so discs separate from the dark canvas */
 
-  --secondary: #1a2515;
-  --secondary-foreground: #f0f4eb;
-  --muted: #1a2515;
-  --muted-foreground: #9ea89a;
+  --fp-grass: #1E4B31;
+  --fp-grass-stripe: #1B452D;
+  --fp-grass-line: rgba(242, 239, 231, 0.30);
+  --fp-tag: #0A1C13;
+  --fp-disc: #F2EFE7;
 
-  /* Accent = lime */
-  --accent: oklch(0.822 0.229 130);
-  --accent-foreground: oklch(0.22 0.08 135);
+  --fp-warn-text: #F2B54E;
+  --fp-danger-text: #FF8A7A;
+  --fp-ok-text: #9FE870;
+  --fp-scrim: rgba(0, 0, 0, 0.6);
+  --fp-focus: #9FE870;
+
+  /* ── Shadcn semantic tokens */
+  --background: var(--fp-canvas);
+  --foreground: var(--fp-ink);
+  --card: var(--fp-surface);
+  --card-foreground: var(--fp-ink);
+  --popover: var(--fp-surface);
+  --popover-foreground: var(--fp-ink);
+
+  --primary: var(--fp-lime);
+  --primary-foreground: var(--fp-on-lime);
+
+  --secondary: var(--fp-surface-2);
+  --secondary-foreground: var(--fp-ink);
+  --muted: var(--fp-surface-2);
+  --muted-foreground: var(--fp-ink-2);
+
+  --accent: var(--fp-lime);
+  --accent-foreground: var(--fp-on-lime);
 
   --destructive: #d03238;
   --destructive-foreground: #ffffff;
-  --border: rgba(240, 244, 235, 0.08);
-  --input: rgba(240, 244, 235, 0.07);
+  --border: var(--fp-rule);
+  --input: var(--fp-rule);
 
   /* Ring = lime in dark mode — visible against dark backgrounds */
-  --ring: oklch(0.822 0.229 130);
-
-  /* FairPlayr semantic surface tokens */
-  --fp-surface: #131c10;
-  --fp-surface-2: #1a2515;
-  --fp-surface-3: #202f1b;
-  --fp-text-primary: #f0f4eb;
-  --fp-text-secondary: #9ea89a;
-  --fp-border: rgba(240, 244, 235, 0.08);
-
-  /* Lime alias */
-  --fp-accent: oklch(0.822 0.229 130);
+  --ring: var(--fp-focus);
 
   --fp-spond: #ff815f;
   --fp-spond-soft: rgba(255, 129, 95, 0.15);
   --fp-spond-foreground: #ffd9cf;
   --fp-spond-border: rgba(255, 129, 95, 0.40);
 
-  /* CTA — brighter lime for dark surfaces */
-  --fp-cta: oklch(0.822 0.229 130);
-  --fp-cta-foreground: oklch(0.22 0.08 135);
-
   /* Sidebar */
-  --sidebar: #131c10;
-  --sidebar-foreground: #f0f4eb;
-  --sidebar-primary: oklch(0.822 0.229 130);
-  --sidebar-primary-foreground: oklch(0.22 0.08 135);
-  --sidebar-accent: #1a2515;
-  --sidebar-accent-foreground: #f0f4eb;
-  --sidebar-border: rgba(240, 244, 235, 0.08);
-  --sidebar-ring: oklch(0.822 0.229 130);
+  --sidebar: var(--fp-surface);
+  --sidebar-foreground: var(--fp-ink);
+  --sidebar-primary: var(--fp-lime);
+  --sidebar-primary-foreground: var(--fp-on-lime);
+  --sidebar-accent: var(--fp-surface-2);
+  --sidebar-accent-foreground: var(--fp-ink);
+  --sidebar-border: var(--fp-rule);
+  --sidebar-ring: var(--fp-focus);
 
-  /* Pitch surface — darker for dark mode */
+  /* Current pitch surface — darker for dark mode (unchanged in this patch) */
   --fp-pitch-a: oklch(0.42 0.12 148);
   --fp-pitch-b: oklch(0.36 0.13 148);
   --fp-pitch-stripe-a: oklch(0.40 0.12 148);
   --fp-pitch-stripe-b: oklch(0.38 0.13 148);
   --fp-pitch-line: oklch(1 0 0 / 0.55);
 
-  /* Glow — all unified to lime (richer on dark) */
-  --glow-primary: 0 0 30px rgba(163, 230, 53, 0.35);
-  --glow-primary-sm: 0 0 15px rgba(163, 230, 53, 0.22);
-  --glow-accent: 0 0 30px rgba(163, 230, 53, 0.32);
-  --glow-accent-sm: 0 0 15px rgba(163, 230, 53, 0.20);
-  --glow-cta: 0 0 30px rgba(163, 230, 53, 0.35);
-  --glow-cta-sm: 0 0 15px rgba(163, 230, 53, 0.22);
+  /* Glow — legacy */
+  --glow-primary: 0 0 30px rgba(159, 232, 112, 0.35);
+  --glow-primary-sm: 0 0 15px rgba(159, 232, 112, 0.22);
+  --glow-accent: 0 0 30px rgba(159, 232, 112, 0.32);
+  --glow-accent-sm: 0 0 15px rgba(159, 232, 112, 0.20);
+  --glow-cta: 0 0 30px rgba(159, 232, 112, 0.35);
+  --glow-cta-sm: 0 0 15px rgba(159, 232, 112, 0.22);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -272,7 +342,7 @@
     overscroll-behavior: none;
   }
 
-  /* Heading defaults — Urbanist for all headings, tight tracking */
+  /* Heading defaults — Inter, tight tracking */
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
     font-weight: 700;
@@ -302,22 +372,29 @@
   .surface   { background-color: var(--fp-surface); }
   .surface-2 { background-color: var(--fp-surface-2); }
 
-  /* font-display utility — apply Urbanist to any element */
+  /* font-display utility — kept for existing markup; resolves to Inter */
   .font-display {
     font-family: var(--font-display);
   }
 
   /*
-   * heading-display — Wise-style display headings.
-   * Urbanist weight 900, line-height 0.85 (ultra-tight, billboard-scale).
-   * Use on hero h1 elements only — not in app UI.
+   * heading-display — legacy hero heading (home page only).
+   * Inter 800 at tight leading; Modern Sideline replaces the hero (DESIGN.md §9).
    */
   .heading-display {
     font-family: var(--font-display);
-    font-weight: 900;
-    line-height: 0.88;
+    font-weight: 800;
+    line-height: 0.95;
     letter-spacing: -0.03em;
     font-feature-settings: "calt";
+  }
+
+  /* Match numerals: score, clock, shirt numbers (DESIGN.md §3). */
+  .font-num {
+    font-family: var(--font-num);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
   }
 
   /* Tap target minimum size for mobile (44pt iOS HIG) */

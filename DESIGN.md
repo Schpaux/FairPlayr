@@ -1,173 +1,290 @@
-# Design System Inspired by Wise
+# FairPlayr design system: Modern Sideline
 
-## 1. Visual Theme & Atmosphere
+**Status:** approved visual direction, authoritative. **Version:** 1.2 (2026-10-14).
+This document is the single source of truth for FairPlayr's visual and interaction design. Where it conflicts with older notes, prototypes, skills or generic design advice, this document wins. Tokens live in [`src/app/globals.css`](src/app/globals.css); design context for agents lives in [`.impeccable.md`](.impeccable.md).
 
-Wise's website is a bold, confident fintech platform that communicates "money without borders" through massive typography and a distinctive lime-green accent. The design operates on a warm off-white canvas with near-black text (`#0e0f0c`) and a signature Wise Green (`#9fe870`) — a fresh, lime-bright color that feels alive and optimistic, unlike the corporate blues of traditional banking.
+Background and evidence: `design-exploration/modern-sideline/` (prototype v1.1, `FINAL-VALIDATION.md`, `IMPLEMENTATION-PLAN.md`). The prototype is reference material, not spec: where it differs from this document (for example its chalk canvas), this document is correct.
 
-The typography uses Wise Sans — a proprietary font used at extreme weight 900 (black) for display headings with a remarkably tight line-height of 0.85 and OpenType `"calt"` (contextual alternates). At 126px, the text is so dense it feels like a protest sign — bold, urgent, and impossible to ignore. Inter serves as the body font with weight 600 as the default for emphasis, creating a consistently confident voice.
+---
 
-What distinguishes Wise is its green-on-white-on-black material palette. Lime Green (`#9fe870`) appears on buttons with dark green text (`#163300`), creating a nature-inspired CTA that feels fresh. Hover states use `scale(1.05)` expansion rather than color changes — buttons physically grow on interaction. The border-radius system uses 9999px for buttons (pill), 30px–40px for cards, and the shadow system is minimal — just `rgba(14,15,12,0.12) 0px 0px 0px 1px` ring shadows.
+## 1. Direction
 
-**Key Characteristics:**
-- Wise Sans at weight 900, 0.85 line-height — billboard-scale bold headlines
-- Lime Green (`#9fe870`) accent with dark green text (`#163300`) — nature-inspired fintech
-- Inter body at weight 600 as default — confident, not light
-- Near-black (`#0e0f0c`) primary with warm green undertone
-- Scale(1.05) hover animations — buttons physically grow
-- OpenType `"calt"` on all text
-- Pill buttons (9999px) and large rounded cards (30px–40px)
-- Semantic color system with comprehensive state management
+**"Grass, a club scoreboard and nothing else."** Modern Sideline combines:
+- **Football identity on the match surfaces only:** a grass pitch, shirt-number discs and a club-green scoreboard, on Live and in the Setup lineup.
+- **Quiet utility everywhere else:** Inter, hairline lists, white surfaces on a near-white canvas, and no decoration.
+- **One fixed "what now" slot:** the action strip between pitch and bench always says what happens next.
 
-## 2. Color Palette & Roles
-
-### Primary Brand
-- **Near Black** (`#0e0f0c`): Primary text, background for dark sections
-- **Wise Green** (`#9fe870`): Primary CTA button, brand accent
-- **Dark Green** (`#163300`): Button text on green, deep green accent
-- **Light Mint** (`#e2f6d5`): Soft green surface, badge backgrounds
-- **Pastel Green** (`#cdffad`): `--color-interactive-contrast-hover`, hover accent
-
-### Semantic
-- **Positive Green** (`#054d28`): `--color-sentiment-positive-primary`, success
-- **Danger Red** (`#d03238`): `--color-interactive-negative-hover`, error/destructive
-- **Warning Yellow** (`#ffd11a`): `--color-sentiment-warning-hover`, warnings
-- **Background Cyan** (`rgba(56,200,255,0.10)`): `--color-background-accent`, info tint
-- **Bright Orange** (`#ffc091`): `--color-bright-orange`, warm accent
-
-### Neutral
-- **Warm Dark** (`#454745`): Secondary text, borders
-- **Gray** (`#868685`): Muted text, tertiary
-- **Light Surface** (`#e8ebe6`): Subtle green-tinted light surface
-
-## 3. Typography Rules
-
-### Font Families
-- **Display**: `Wise Sans`, fallback: `Inter` — OpenType `"calt"` on all text
-- **Body / UI**: `Inter`, fallbacks: `Helvetica, Arial`
-
-### Hierarchy
-
-| Role | Font | Size | Weight | Line Height | Letter Spacing | Notes |
-|------|------|------|--------|-------------|----------------|-------|
-| Display Mega | Wise Sans | 126px (7.88rem) | 900 | 0.85 (ultra-tight) | normal | `"calt"` |
-| Display Hero | Wise Sans | 96px (6.00rem) | 900 | 0.85 | normal | `"calt"` |
-| Section Heading | Wise Sans | 64px (4.00rem) | 900 | 0.85 | normal | `"calt"` |
-| Sub-heading | Wise Sans | 40px (2.50rem) | 900 | 0.85 | normal | `"calt"` |
-| Alt Heading | Inter | 78px (4.88rem) | 600 | 1.10 (tight) | -2.34px | `"calt"` |
-| Card Title | Inter | 26px (1.62rem) | 600 | 1.23 (tight) | -0.39px | `"calt"` |
-| Feature Title | Inter | 22px (1.38rem) | 600 | 1.25 (tight) | -0.396px | `"calt"` |
-| Body | Inter | 18px (1.13rem) | 400 | 1.44 | 0.18px | `"calt"` |
-| Body Semibold | Inter | 18px (1.13rem) | 600 | 1.44 | -0.108px | `"calt"` |
-| Button | Inter | 18px–22px | 600 | 1.00–1.44 | -0.108px | `"calt"` |
-| Caption | Inter | 14px (0.88rem) | 400–600 | 1.50–1.86 | -0.084px to -0.108px | `"calt"` |
-| Small | Inter | 12px (0.75rem) | 400–600 | 1.00–2.17 | -0.084px to -0.108px | `"calt"` |
+The user is a volunteer coach on a sideline, outdoors, often one-handed and under mild stress. The emotional goal is **calm control**. Every decision below serves glanceability, mis-tap resistance and fairness.
 
 ### Principles
-- **Weight 900 as identity**: Wise Sans Black (900) is used exclusively for display — the heaviest weight in any analyzed system. It creates text that feels stamped, pressed, physical.
-- **0.85 line-height**: The tightest display line-height analyzed. Letters overlap vertically, creating dense, billboard-like text blocks.
-- **"calt" everywhere**: Contextual alternates enabled on ALL text — both Wise Sans and Inter.
-- **Weight 600 as body default**: Inter Semibold is the standard reading weight — confident, not light.
+1. **Readability first.** Outdoor light, arm's length, one hand. Text on the live screen is never under 13px, and names are never under 14px.
+2. **Lime means "your next action".** If it is lime, it is the thing to tap now. Nothing else is lime.
+3. **Club green is identity, not action.** It is used for the scoreboard, the fixture panel and shirt discs, and is never a button fill.
+4. **Calm through hierarchy.** Normal states are silent ("saved" has no indicator). Only exceptions speak.
+5. **Predictable placement.** Controls do not move, and the pitch and bench never shift when the strip changes.
+6. **Honest structure.** There is no decorative chrome, glow, gradient, glass or ambient motion.
 
-## 4. Component Stylings
+---
 
-### Buttons
+## 2. Colour
 
-**Primary Green Pill**
-- Background: `#9fe870` (Wise Green)
-- Text: `#163300` (Dark Green)
-- Padding: 5px 16px
-- Radius: 9999px
-- Hover: scale(1.05) — button physically grows
-- Active: scale(0.95) — button compresses
-- Focus: inset ring + outline
+Light is the default (daylight matches). Dark is "floodlight" mode. The scoreboard, grass, lime and club green are identical in both modes; only the surfaces change.
 
-**Secondary Subtle Pill**
-- Background: `rgba(22, 51, 0, 0.08)` (dark green at 8% opacity)
-- Text: `#0e0f0c`
-- Padding: 8px 12px 8px 16px
-- Radius: 9999px
-- Same scale hover/active behavior
+### 2.1 Surfaces and text
 
-### Cards & Containers
-- Radius: 16px (small), 30px (medium), 40px (large cards/tables)
-- Border: `1px solid rgba(14,15,12,0.12)` or `1px solid #9fe870` (green accent)
-- Shadow: `rgba(14,15,12,0.12) 0px 0px 0px 1px` (ring shadow)
+| Token (`--fp-*`) | Light | Dark | Role |
+|---|---|---|---|
+| `canvas` | `#F9FAF8` | `#121B16` | Page background (near-white, not beige) |
+| `surface` | `#FFFFFF` | `#1A2620` | Cards, list groups, bench tiles, strip, sheets |
+| `surface-2` | `#F1F3F0` | `#233229` | Pressed/quiet fills, disabled buttons |
+| `surface-3` | `#E7EAE6` | `#2A3A31` | Stronger quiet fill |
+| `rule` | `#E3E6E2` | `#2C3C34` | Hairlines, card borders, input borders |
+| `rule-strong` | `#C9CEC8` | `#43574C` | Outlines, secondary-button borders |
+| `ink` | `#111A15` | `#EEF1EA` | Text |
+| `ink-2` | `#4A564F` | `#A4B3A9` | Secondary text |
 
-### Navigation
-- Green-tinted navigation hover: `rgba(211,242,192,0.4)`
-- Clean header with Wise wordmark
-- Pill CTAs right-aligned
+**The light theme is near-white `#F9FAF8` with white surfaces and subtle neutral borders.** The earlier beige "chalk" canvas (`#F2EFE7`) is rejected as a page or surface colour. Chalk survives only as *text and lines on green* (`on-club`, `on-tag`, pitch lines), where it reads as paint on grass.
 
-## 5. Layout Principles
+### 2.2 Identity and action
 
-### Spacing System
-- Base unit: 8px
-- Scale: 1px, 2px, 3px, 4px, 5px, 8px, 10px, 11px, 12px, 16px, 18px, 19px, 20px, 22px, 24px
+| Token | Value (both modes unless noted) | Role |
+|---|---|---|
+| `club` | `#0E4D33` | Scoreboard, fixture panel. Never a button fill. |
+| `on-club` / `on-club-2` | `#F2EFE7` / `#B7CCBE` | Text on club green (primary / secondary; never grey) |
+| `club-disc` | `#0E4D33` · dark `#1D6345` | Shirt discs off the pitch |
+| `lime` / `on-lime` | `#9FE870` / `#0B2E1A` | Next action: primary button, selection, suggestion, undo countdown |
+| `focus` | `#0E4D33` · dark `#9FE870` | Focus ring |
 
-### Border Radius Scale
-- Minimal (2px): Links, inputs
-- Standard (10px): Comboboxes, inputs
-- Card (16px): Small cards, buttons, radio
-- Medium (20px): Links, medium cards
-- Large (30px): Feature cards
-- Section (40px): Tables, large cards
-- Mega (1000px): Presentation elements
-- Pill (9999px): All buttons, images
-- Circle (50%): Icons, badges
+### 2.3 Pitch
 
-## 6. Depth & Elevation
+| Token | Light | Dark |
+|---|---|---|
+| `grass` / `grass-stripe` | `#2E6A45` / `#2A6340` | `#1E4B31` / `#1B452D` |
+| `grass-line` | chalk at 42 % | chalk at 30 % |
+| `disc` / `on-disc` | `#FFFFFF` / `#0E4D33` | `#F2EFE7` / `#0E4D33` |
+| `tag` / `on-tag` | `#0B2A1C` / `#F2EFE7` | `#0A1C13` / `#F2EFE7` |
+| `keeper` / `on-keeper` | `#F3D36A` / `#2A2100` | same |
+| `ring-fresh` / `ring-watch` / `ring-act` | `#F2EFE7` / `#F2B54E` / `#FFA899` | same |
 
-| Level | Treatment | Use |
-|-------|-----------|-----|
-| Flat (Level 0) | No shadow | Default |
-| Ring (Level 1) | `rgba(14,15,12,0.12) 0px 0px 0px 1px` | Card borders |
-| Inset (Level 2) | `rgb(134,134,133) 0px 0px 0px 1px inset` | Input focus |
+### 2.4 Status text
 
-**Shadow Philosophy**: Wise uses minimal shadows — ring shadows only. Depth comes from the bold green accent against the neutral canvas.
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| `warn-text` | `#8A4A00` | `#F2B54E` | Below fair share (−6) |
+| `danger-text` | `#B3261E` | `#FF8A7A` | End match now, destructive copy |
+| `ok-text` | `#1E6B3F` | `#9FE870` | "Lineup ready" |
 
-## 7. Do's and Don'ts
+Destructive button fill: `#B3261E` with white text in light mode (6.5 : 1), and `#D03238` with white text in dark mode.
 
-### Do
-- Use Wise Sans weight 900 for display — the extreme boldness IS the brand
-- Apply line-height 0.85 on Wise Sans display — ultra-tight is intentional
-- Use Lime Green (#9fe870) for primary CTAs with Dark Green (#163300) text
-- Apply scale(1.05) hover and scale(0.95) active on buttons
-- Enable "calt" on all text
-- Use Inter weight 600 as the body default
+### 2.5 Rules
+- **Lime is never text on a light surface.** It is only a fill, a ring or an underline, always with `on-lime` ink on top.
+- **Never grey text on green.** Text on club green uses `on-club-2`.
+- **Status is never colour-only.** Fatigue uses arc length, selection uses scale and outline, and offline uses a glyph.
+- **No glow, gradients, blur or glass.** The legacy `.glow-*` utilities are deprecated; remove them as components are rebuilt.
 
-### Don't
-- Don't use light font weights for Wise Sans — only 900
-- Don't relax the 0.85 line-height on display — the density is the identity
-- Don't use the Wise Green as background for large surfaces — it's for buttons and accents
-- Don't skip the scale animation on buttons
-- Don't use traditional shadows — ring shadows only
+### 2.6 Measured contrast (WCAG 2.x)
 
-## 8. Responsive Behavior
+| Pair | Light | Dark |
+|---|---|---|
+| ink on canvas | 16.96 | 15.41 |
+| ink-2 on canvas | 7.33 | 8.04 |
+| ink-2 on surface-2 | 6.88 | 6.15 |
+| warn-text on surface | 6.86 | 8.57 |
+| danger-text on canvas | 6.24 | 7.68 |
+| on-lime on lime | 10.04 | 10.04 |
+| focus on canvas (non-text, ≥ 3) | 9.43 | 11.93 |
 
-### Breakpoints
-| Name | Width | Key Changes |
-|------|-------|-------------|
-| Mobile | <576px | Single column |
-| Tablet | 576–992px | 2-column |
-| Desktop | 992–1440px | Full layout |
-| Large | >1440px | Expanded |
+Non-text fatigue rings are at least 3.5 : 1 on grass.
 
-## 9. Agent Prompt Guide
+---
 
-### Quick Color Reference
-- Text: Near Black (`#0e0f0c`)
-- Background: White (`#ffffff` / off-white)
-- Accent: Wise Green (`#9fe870`)
-- Button text: Dark Green (`#163300`)
-- Secondary: Gray (`#868685`)
+## 3. Typography
 
-### Example Component Prompts
-- "Create hero: white background. Headline at 96px Wise Sans weight 900, line-height 0.85, 'calt' enabled, #0e0f0c text. Green pill CTA (#9fe870, 9999px radius, 5px 16px padding, #163300 text). Hover: scale(1.05)."
-- "Build a card: 30px radius, 1px solid rgba(14,15,12,0.12). Title at 22px Inter weight 600, body at 18px weight 400."
+**Inter** is used for every word in the UI, headings included. **Barlow Condensed 600** is used for **match numerals only**: score, clock and shirt numbers, never words. Urbanist, Geist and Wise Sans are not used.
 
-### Iteration Guide
-1. Wise Sans 900 at 0.85 line-height — the extreme weight IS the brand
-2. Lime Green for buttons only — dark green text on green background
-3. Scale animations (1.05 hover, 0.95 active) on all interactive elements
-4. "calt" on everything — contextual alternates are mandatory
-5. Inter 600 for body — confident reading weight
+| Role | Spec | Used for |
+|---|---|---|
+| Display | Inter 700 30/1.1, −2 % | Fixture opponent, sheet hero |
+| Title | Inter 600 20/1.2, −1 % | Screen and sheet titles |
+| Body strong / body | Inter 600 / 400, 16 | Lists, sheet copy, strip main line |
+| Name | Inter 600 15/1.15 | Names on pitch and bench, up to 7v7 |
+| Name, compact | Inter 600 **14**/1.15 | 9v9 / 11v11. **This is the floor for names.** |
+| Meta | Inter 500 14 | Secondary info |
+| Label | Inter 600 13, caps, +6 % | Section kickers, score team codes (the only 13px text) |
+| Minutes | Inter 700 15 (token) / 20 (bench), tabular | Total playing time |
+| Score | Barlow Condensed 600 50/0.9 (44 on short screens) | 2 – 1 |
+| Clock | Barlow Condensed 600 40/0.9 (34 on short screens) | 16:20 |
+| Shirt number | Barlow Condensed 600 22 (19 compact) | Discs |
+
+Implementation:
+- Inter is loaded via `next/font/google` (self-hosted at build, `latin` + `latin-ext`), exposed as `--font-inter`, and maps to `--font-sans`, `--font-heading` and `--font-display`.
+- Barlow Condensed 600 is **bundled locally** at `src/app/fonts/barlow-condensed-600-latin.woff2` (SIL OFL, licence alongside) and loaded with `next/font/local` as `--font-barlow-condensed`. Use it through `--font-num` or the `.font-num` utility (tabular figures). It has `display: block` and is not preloaded until the live scoreboard uses it.
+- Short viewports change spacing, never type size.
+
+---
+
+## 4. Space, shape and motion
+
+- **Spacing:** 4px base (4, 8, 12, 16, 20, 24, 32), with a 16px gutter. Live-screen gaps are 4 / 6 / 8 / 12.
+- **Radius:** 6px for tags, 10px for bench tiles and inputs, 14px for list groups and the setup pitch, 20px for the fixture panel, dugout and sheets. **Every button is a pill.**
+- **Targets:** at least 44px. Player tokens are at least 52 × 70, bench tiles are at least 60px tall, and goal keys are 48px.
+- **Elevation:** flat. Surfaces separate by `surface` on `canvas` plus a 1px `rule`. Sheets use a scrim, not a shadow stack.
+- **Motion** (all `cubic-bezier(0.22, 1, 0.36, 1)` unless noted):
+
+| Name | Duration | Use |
+|---|---|---|
+| press | 90ms | `scale(.97)` on any control (`.94` on discs) |
+| quick | 140ms | Fades, target halos |
+| base | 220ms | Strip message change (6px rise and fade) |
+| sheet | 260ms | Sheet slide-up |
+| land | 360ms, `cubic-bezier(0.16, 1, 0.3, 1)` | Swapped-in token lands; no bounce |
+| undo | 5000ms linear | Undo countdown bar |
+
+- There is no ambient motion: no pulsing, breathing or glow. Critical fatigue is a tinted ring track, not a pulse.
+- `prefers-reduced-motion`: all transforms and transitions go to 1ms. The undo countdown stays, because it carries information, and it also shows its seconds as a number.
+
+---
+
+## 5. Live screen
+
+Full screen, with no global header or bottom nav and no scrolling. It is portrait-first. Landscape is a two-column fallback (pitch left, board and dugout right), not a design target.
+
+```
+┌ Scoreboard (club green, runs under the status bar) ┐  ~140px (~120 short)
+│ (⏸) 16:20             2 – 1              ⋯          │
+│     ● 1. omgang · av 25:00   BK    LYN              │
+│ [ + Mål for oss ]  [ + Mål for Lyn ]                │
+├ Pitch (flex: 1, edge to edge) ──────────────────────┤  everything left over
+╭ Dugout (canvas, 20px radius, overlaps grass 18px) ─╮
+│ [ Action strip: the one place that says what next ] │  60px (54 short)
+│ [Frida][Ida][Selma][Vilde]   bench                  │  72px (60 short)
+└─────────────────────────────────────────────────────┘
+```
+
+### 5.1 Scoreboard
+- **Clock key** (left): a 44px play/pause disc plus the clock, as one button. When paused, the disc is lime, the digits are dimmed and the status dot is hollow. At half-time and full-time it shows a flag outline and is inert. When the half's time is up the digits turn lime. The clock keeps running, because **the referee ends the half, not the app**.
+- **Meta line:** phase and length ("1. omgang · av 25:00"). When offline, an amber wifi-off glyph replaces the status dot. "Saved" is silent.
+- **Score:** condensed numerals over 13px caps team codes. It is a display, not a control.
+- **Goal keys:** two equal 48px pills with words ("Mål for oss", "Mål for Lyn"). Ours is chalk-filled and theirs is outlined. They are **never lime**, because a goal is not a suggestion. They are real `disabled` buttons outside `first_half`/`second_half`.
+- **Menu ⋯:** a 44px icon button. It is the only route to the event history and goal correction, end half, leave, and end match.
+
+### 5.2 Player token (one spec in setup and live)
+- **Disc** with the shirt number: 44px, or 36px compact (≥ 9 on the field). It is `disc` on grass. The keeper uses `keeper` with a small "K" badge. **No shirt number → two initials.**
+- **Name tag** below: `tag` fill, display name plus **total match minutes** (Inter 700, tabular). On one line up to 7v7, stacked in compact. The tag width is capped by the gap to its neighbour.
+- **Stint ring (D1):** the arc shows **continuous playing time since the player last rested**, as a share of one half. It resets on coming off and **at half-time**. It is `ring-fresh` < 60 %, `ring-watch` from 60 %, `ring-act` from 75 %, with the track tinted from 85 %. The keeper's ring never escalates. The ring carries no number; the exact stint minutes appear in the strip on selection. **Total match minutes stay the prominent number.**
+- **States:** selected (lime disc and tag, scale 1.08), valid target (dashed chalk halo), suggested out (2px lime outline on the tag), just swapped in (360ms land).
+- **Display names:** first name; on a clash, first name + surname initial; then the shortest unique surname prefix ("Emma Han" / "Emma Hau"). The ladder is built from the match squad. Cut order: stack first, then cut the first name ("E… Hau"), never the distinguishing suffix.
+- **Placement:** formation lines are spread evenly over a token-safe box, and rows never collide.
+
+### 5.3 Bench tile
+- Display name, shirt number (≤ 7v7), **total minutes** (20/700), and the gap to fair share in `warn-text` when negative ("−6").
+- Fit order: one content-sized row → tight row (no number, 14px) → dense grid (max 2 rows on short phones, 3 on tall phones and in landscape). Names are never truncated in one-row mode.
+- **States:** selected (lime fill), valid target (2px ink outline), suggested in (2px lime outline), just swapped out (lime flash fading over 420ms).
+
+### 5.4 Action strip
+A single slot that shows exactly one message, in this priority order (copy is indicative; final strings live in `messages/*.json`):
+
+| # | State | Small line | Main line | Button |
+|---|---|---|---|---|
+| 1 | Undo (5 s) | "Bytte i 17. minutt" / "Mål i 17. minutt" | "Selma inn · Maja ut" / "Mål: Frida" | **Angre 5** (outline). The strip turns club green, with a lime countdown bar. |
+| 2 | Selection | "Maja · 16′ totalt · 9′ siden hvile" | "Velg hvem som skal inn / ut" | Avbryt |
+| 3 | Pre-kickoff | "Klar" | "Start kampen når dommeren blåser" | **Avspark** (lime) |
+| 4 | Half-time | "Pause · 2–1" | "Bytt nå, uten klokke" | **Start 2. omgang** (lime) |
+| 5 | Full-time | "Slutt · 2–1" | "Kampen er ferdig" | Ferdig |
+| 6 | Time up | "25:00 er spilt" | "Tiden er ute" | Avslutt omgang (outline → confirm) |
+| 7 | Suggestion | "Forslag · 4′ mot 16′ spilt" | "Selma inn for Maja" | **Bytt** (lime) |
+| 8 | Idle | "Tallet er total spilletid. Ringen er tid siden siste hvile." | "Trykk en spiller, så en på benken" | — |
+
+With an empty bench, the idle line reads "Ingen innbyttere".
+
+### 5.5 Sheets
+- They slide up with a `canvas` fill, a 20px top radius, a grab handle and a 20/600 title. They are `role="dialog"`, labelled, take focus, and return focus to the invoking control.
+- Menu rows are 54px in **three separated groups**: match actions; leaving; and the dangerous "end match now". Destructive actions never sit next to routine ones.
+- **Confirmation:** the primary action states the outcome ("Ja, avslutt omgangen"), and the secondary is always "Fortsett å spille".
+- **Scorer sheet:** the existing production rules apply (only when reports are enabled; scorer, then assist; auto-advance after 10 s, shown with the same drain bar as undo). Two columns of 52px pills, outfield first and the keeper last, plus "Hopp over". Tapping the scrim does not dismiss it.
+
+### 5.6 Buttons
+- Pills, 52px (or 44px small). **Primary:** lime fill with `on-lime`. **Secondary:** 1.5px `rule-strong` outline with ink text. **Destructive:** red fill with white text, only inside its confirmation.
+- **Disabled:** `surface-2` fill with `ink-2` text, and a real `disabled` attribute.
+- Pressed state: `scale(.97)` for 90ms. Hover applies only on pointer devices and is a fill shift, never a scale-up.
+
+---
+
+## 6. Interactions
+
+### 6.1 Substitution
+- Tap pitch → bench, **or** bench → pitch. Valid counterparts are marked. Tapping the same player again, or Avbryt, cancels. Tapping another player on the same side moves the selection.
+- **Drag-to-swap is preserved as a secondary path (D4).**
+- After a swap: the token lands, the bench tile flashes, both stint rings reset, and the strip shows the 5 s undo.
+- **Starting another selection during the undo window confirms the previous substitution and begins the new one (D3).**
+
+### 6.2 Fairness suggestion (D2)
+- **Out:** the outfield player with the most total time (the keeper is excluded). **In:** the bench player with the least total time.
+- It is shown **only when the fair-share gap is at least 4 minutes**. The threshold is a configurable parameter (`minGapSeconds`, default 240). Fair share = field slots × elapsed time ÷ available squad.
+- One tap on **Bytt** swaps, followed by undo.
+
+### 6.3 Goals and goal correction
+The scoreboard, goal attribution, stored match events and cloud sync must agree at all times. **The score is derived from goal events.** It is never edited as an independent counter.
+
+1. **Quick actions.** "Mål for oss" records a goal immediately (offline too), rolls the digit, and opens the scorer sheet when reports are enabled. "Mål for <motstander>" records the goal and goes straight to undo.
+2. **Undo last goal.** After any goal, the strip offers **Angre** for 5 s. Undo removes that specific goal event (by id) locally *and* on the server, along with its scorer and assist.
+3. **Correct older goals through the event history.** ⋯ → **Hendelser** lists goals (and substitutions) with minute, side, scorer and assist. Each goal can be **re-attributed** (scorer and assist) or **removed** after a confirmation that states the result ("Fjern målet i 17. minutt? Stillingen blir 1–1"). Corrections are always explicit and per event.
+4. **Rejected:** free score steppers ("Korriger resultat" ±). They let the score drift from the events and from the report.
+5. **Offline:** every correction applies locally at once and is queued for the server. Queued creates, patches and deletes are replayed in order and idempotently when connectivity returns.
+
+> Implementation status: today's `handleTeamScore(-1)` / `handleOpponentScore(-1)` remove only the *local* event and leave the server event row in place. Goal events created offline are never sent. Goal correction must not ship until server reconciliation exists; see the foundation report.
+
+### 6.4 Clock and halves
+- Pre-kickoff is a state: the clock waits, the goal keys are disabled, and the strip offers **Avspark**.
+- End half: ⋯ or the strip → confirmation → half-time. The clock freezes, the goal keys are disabled, substitutions still work, and the strip offers **Start 2. omgang**.
+- The second-half display clock starts at the half length (20:00 for 2 × 20). This is presentation only; accounting is unchanged.
+- One-period matches are supported.
+
+### 6.5 Offline
+The live screen behaves identically offline. The only visible change is the amber glyph in the scoreboard meta line, and the menu explains it in words.
+
+---
+
+## 7. Other screens
+- **Home:** quiet lists plus **one** club-green fixture panel (with a faint centre-circle arc at 14 % stroke, the only decorative geometry in the system) and a lime CTA. Season stats are inline numbers, not hero-metric cards.
+- **Setup:** an attendance grid of shirt discs (lime check = present; "Borte" = absent) and the setup pitch, which reuses the live token without minutes or ring and uses the same tap–tap model. A sticky footer shows squad count, readiness and **Start kamp**.
+- **Lists:** hairline-separated rows on `surface`, with no nested cards.
+- **Bottom nav:** four tabs with a lime pill on the active one. It is absent on Live.
+
+---
+
+## 8. Iconography
+A 24 grid with 1.75 stroke and round caps and joins (lucide-compatible). Icons only appear next to a word, except ⋯, play/pause and the offline glyph, which have `aria-label`s.
+
+---
+
+## 9. Accessibility and viewports
+- **Validated live viewport: 375 × 667 portrait (D6).** 390 × 844 is the reference design size. **360 × 640 Android is an explicit follow-up that must pass before broad release.** Below 360 wide is best-effort.
+- Hit areas are at least 44px, live text is at least 13px and names at least 14px, with no horizontal overflow at any supported size.
+- One persistent `aria-live="polite"` announcer gets one message per action. Token labels include name, keeper status, total minutes, stint minutes and a fatigue word. Bench tiles include the fair-share gap.
+- Not yet validated: real sunlight, VoiceOver order, Dynamic Type and Bold Text, real devices. This needs a device pass before the live UI flag flips.
+
+---
+
+## 10. Decisions log
+
+| ID | Decision |
+|---|---|
+| D1 | The ring is continuous playing time since last rest, reset at half-time. Total match minutes remain the prominent number. |
+| D2 | A suggestion is shown only when the fairness gap is ≥ 4 minutes. The threshold is configurable. |
+| D3 | Starting another selection during undo confirms the previous substitution and begins the new one. |
+| D4 | Drag-to-swap is preserved as a secondary interaction. |
+| D5 | Optional player nicknames are deferred. |
+| D6 | 375 × 667 is the validated initial live viewport. 360 × 640 Android is a follow-up before broad release. |
+| C1 | The light canvas is near-white `#F9FAF8` with white surfaces and neutral borders; beige `#F2EFE7` is no longer a surface colour. |
+| C2 | Goal correction: quick goal keys, undo last goal, correct older goals via event history; the score is derived from events and kept consistent with the server. |
+
+## 11. Implementation status
+
+| Area | State |
+|---|---|
+| Tokens (§2) | **In `globals.css`.** Light and dark surfaces are applied app-wide. Identity, pitch and status tokens are defined and exposed as Tailwind colours (`bg-fp-club`, `text-fp-warn-text`, …) but not yet used by components. |
+| Typography (§3) | **Done.** Inter everywhere (Urbanist removed); Barlow Condensed bundled and available via `.font-num`. |
+| Legacy tokens | `--fp-pitch-*`, `.glow-*` and `src/lib/tokens.ts` `colors` are legacy. Remove them as the live UI and setup are rebuilt. |
+| Live screen, setup, home (§5–7) | Not started. Follow `design-exploration/modern-sideline/IMPLEMENTATION-PLAN.md`, behind `NEXT_PUBLIC_LIVE_UI=sideline`. |
+| Goal correction (§6.3) | Blocked on server event reconciliation. |

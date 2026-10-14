@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run test)",
+      "Bash(npm run typecheck)",
+      "Bash(npm run lint)",
+      "Bash(npm run test:e2e)",
+      "Bash(npm run test:e2e *)",
+      "Bash(npm run verify)",
+      "Bash(npx vitest run *)",
+      "Bash(npx playwright test *)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)"
+    ],
+    "ask": [
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git push)",
+      "Bash(git tag *)",
+      "Bash(git reset --hard *)",
+      "Bash(git rebase *)",
+      "Bash(gh pr *)",
+      "Bash(vercel *)",
+      "Bash(npx vercel *)",
+      "Bash(npm run cap:sync)",
+      "Bash(npm run cap:sync:prod)",
+      "Bash(npm run cap:build)",
+      "Bash(npx cap sync *)",
+      "Bash(npx cap sync)"
+    ]
+  }
+}

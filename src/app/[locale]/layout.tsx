@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Urbanist } from "next/font/google";
+import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -15,17 +16,24 @@ import { NativeAppShell } from "@/components/layout/NativeAppShell";
 import { AppShellErrorBoundary } from "@/components/layout/AppShellErrorBoundary";
 import "../globals.css";
 
+// Inter is the only UI typeface (DESIGN.md §3). latin-ext covers player names
+// such as Łukasz or Şükrü; next/font self-hosts it at build time.
 const inter = Inter({
   variable: "--font-inter",
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext"],
   display: "swap",
 });
 
-const urbanist = Urbanist({
-  variable: "--font-urbanist",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
-  display: "swap",
+// Barlow Condensed 600 — match numerals only (score, clock, shirt numbers).
+// Bundled locally (OFL, see ./fonts) so the scoreboard never depends on the
+// network. Not preloaded until the live scoreboard uses it.
+const barlowCondensed = localFont({
+  src: "../fonts/barlow-condensed-600-latin.woff2",
+  weight: "600",
+  style: "normal",
+  variable: "--font-barlow-condensed",
+  display: "block",
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -55,8 +63,8 @@ export const viewport: Viewport = {
   // inside a Capacitor WKWebView and as a PWA on iOS.
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b0f1a" },
+    { media: "(prefers-color-scheme: light)", color: "#F9FAF8" },
+    { media: "(prefers-color-scheme: dark)", color: "#121B16" },
   ],
 };
 
@@ -78,7 +86,7 @@ export default async function LocaleLayout({ children, params }: Props) {
     <html
       lang={locale}
       suppressHydrationWarning
-      className={`${inter.variable} ${urbanist.variable} h-full`}
+      className={`${inter.variable} ${barlowCondensed.variable} h-full`}
     >
       <body className="h-full antialiased bg-background text-foreground">
         <NextIntlClientProvider messages={messages}>
