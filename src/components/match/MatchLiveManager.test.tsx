@@ -3,6 +3,7 @@ import { NextIntlClientProvider } from "next-intl";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MatchLiveManager } from "@/components/match/MatchLiveManager";
+import { getPlayerAccumulatedSeconds } from "@/domain/liveMatch";
 import type { MatchSetup } from "@/domain/match";
 import type { Player } from "@/domain/team";
 import { activateMatch } from "@/lib/storage/matchStorage";
@@ -764,6 +765,127 @@ describe("MatchLiveManager match completion", () => {
       const event = new Event("beforeunload", { cancelable: true });
       window.dispatchEvent(event);
       expect(event.defaultPrevented).toBe(true);
+    });
+  });
+
+  describe("half transitions in the live view", () => {
+    const actions = en.matchLive.actions;
+    const MIN = 60_000;
+    let now: number;
+
+    beforeEach(() => {
+      now = 1_000_000;
+      vi.spyOn(Date, "now").mockImplementation(() => now);
+    });
+
+    const click = (name: string) => fireEvent.click(screen.getByRole("button", { name }));
+    const advance = (minutes: number) => {
+      now += minutes * MIN;
+    };
+
+    it("plays first half → half-time → second half → full time offline and persists each step", async () => {
+      renderManager();
+      setOnline(false);
+
+      click(actions.start);
+      advance(15);
+      click(actions.endHalf);
+      expect(getStoredLiveMatch()).toMatchObject({ phase: "half_time", status: "paused" });
+      expect(screen.getByText(en.matchLive.phase.halfTime)).toBeTruthy();
+
+      advance(10); // the break does not count
+      click(actions.startSecondHalf);
+      expect(getStoredLiveMatch()).toMatchObject({ phase: "second_half", currentHalf: 2, status: "running" });
+      expect(screen.getByText(en.matchLive.phase.secondHalf)).toBeTruthy();
+
+      // Pause and resume within the second half.
+      advance(5);
+      click(actions.pause);
+      expect(getStoredLiveMatch()).toMatchObject({ phase: "second_half", status: "paused" });
+      advance(2);
+      click(actions.resume);
+      expect(getStoredLiveMatch()).toMatchObject({ phase: "second_half", status: "running" });
+
+      // The referee's final whistle, here in stoppage: ending the last half
+      // goes through the confirmed end flow and queues the completion.
+      advance(12);
+      click(actions.endHalf);
+      expect(window.confirm).toHaveBeenCalledWith(actions.confirmEnd);
+      expect(await screen.findByText(en.matchLive.pendingSync.title)).toBeTruthy();
+
+      const stored = getStoredLiveMatch();
+      expect(stored).toMatchObject({ status: "ended", phase: "full_time", currentHalf: 2 });
+      expect(getPlayerAccumulatedSeconds(stored!, "p1", now + 30 * MIN)).toBe(32 * 60);
+      expect(stored?.events.filter((event) => event.type === "match_ended")).toHaveLength(1);
+      expect(getPendingMatchCompletion("match-1")?.body.runtimeState).toMatchObject({ phase: "full_time" });
+      expect(screen.getByText(en.matchLive.pendingSync.descriptionOffline)).toBeTruthy();
+    });
+
+    it("keeps the match running when the final-whistle confirmation is declined", () => {
+      renderManager();
+      click(actions.start);
+      click(actions.endHalf);
+      click(actions.startSecondHalf);
+
+      vi.mocked(window.confirm).mockReturnValueOnce(false);
+      click(actions.endHalf);
+      expect(getStoredLiveMatch()).toMatchObject({ phase: "second_half", status: "running" });
+    });
+
+    it("pauses and resumes in the first half without leaving it", () => {
+      renderManager();
+      click(actions.start);
+      advance(4);
+      click(actions.pause);
+      expect(getStoredLiveMatch()).toMatchObject({ phase: "first_half", status: "paused" });
+      advance(3);
+      click(actions.resume);
+      advance(1);
+      expect(getStoredLiveMatch()).toMatchObject({ phase: "first_half", currentHalf: 1, status: "running" });
+      click(actions.endHalf);
+      expect(getStoredLiveMatch()?.phaseStartedAtElapsedMs).toBe(5 * MIN);
+    });
+
+    it("restores the second half after a reload while offline", () => {
+      renderManager();
+      setOnline(false);
+      click(actions.start);
+      advance(15);
+      click(actions.endHalf);
+      click(actions.startSecondHalf);
+      advance(3);
+
+      cleanup();
+      renderManager();
+
+      expect(getStoredLiveMatch()).toMatchObject({ phase: "second_half", currentHalf: 2, status: "running" });
+      expect(screen.getByText(en.matchLive.phase.secondHalf)).toBeTruthy();
+      expect(screen.getByRole("button", { name: actions.pause })).toBeTruthy();
+    });
+
+    it("runs a single-period match without half-time", async () => {
+      activateMatch(
+        {
+          ...SETUP,
+          duration: { mode: "custom", presetId: null, halves: 1, minutesPerHalf: 20, totalMinutes: 20 },
+        },
+        "match-1"
+      );
+      renderManager();
+      setOnline(false);
+
+      click(actions.start);
+      expect(screen.queryByRole("button", { name: actions.endHalf })).toBeNull();
+      advance(8);
+      click(actions.pause);
+      click(actions.resume);
+      expect(getStoredLiveMatch()).toMatchObject({ phase: "first_half", status: "running" });
+
+      advance(14);
+      click(actions.end);
+      expect(await screen.findByText(en.matchLive.pendingSync.title)).toBeTruthy();
+      expect(getStoredLiveMatch()).toMatchObject({ status: "ended", phase: "full_time", currentHalf: 1 });
+      expect(getPlayerAccumulatedSeconds(getStoredLiveMatch()!, "p1", now + 30 * MIN)).toBe(22 * 60);
     });
   });
 });

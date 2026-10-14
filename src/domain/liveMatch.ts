@@ -308,6 +308,12 @@ export function resumeLiveMatch(state: LiveMatchState, nowMs: number): LiveMatch
     return state;
   }
 
+  // The clock is paused over the break, so restarting it after half-time is
+  // the second-half kickoff, whichever control triggered it.
+  if (state.phase === "half_time") {
+    return startLiveMatch(state, nowMs);
+  }
+
   const nextState: LiveMatchState = {
     ...state,
     clock: startClock(state.clock, nowMs),
@@ -372,6 +378,31 @@ export function endCurrentHalf(state: LiveMatchState, nowMs: number): LiveMatchS
   };
 
   return withUpdatedStatus(nextState);
+}
+
+/**
+ * Repairs a match stored by builds that restarted the clock after half-time
+ * without leaving the `half_time` phase. Half-time pauses the clock at
+ * `phaseStartedAtElapsedMs`, so any clock time past that point was played in
+ * the second half, which started exactly there. Other states are returned
+ * unchanged.
+ */
+export function recoverSecondHalfPhase(state: LiveMatchState): LiveMatchState {
+  if (state.phase !== "half_time" || state.status === "ended" || state.halves !== 2) {
+    return state;
+  }
+
+  const clock = state.clock;
+  const hasPlayedSinceHalfTime =
+    clock.isRunning ||
+    (clock.pausedAtMs !== null &&
+      getElapsedMsFromClock(clock, clock.pausedAtMs) > state.phaseStartedAtElapsedMs);
+
+  if (!hasPlayedSinceHalfTime) {
+    return state;
+  }
+
+  return { ...state, phase: "second_half", currentHalf: 2 };
 }
 
 export function updateScore(

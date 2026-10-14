@@ -466,6 +466,13 @@ export function MatchLiveManager() {
   };
 
   const handleEndHalf = () => {
+    // Ending the last half is full time: use the confirmed end flow so the
+    // final state is saved and the completion is sent or queued.
+    if (liveMatch && (liveMatch.halves !== 2 || liveMatch.phase !== "first_half")) {
+      handleEnd();
+      return;
+    }
+
     setLiveMatch((previous) =>
       previous ? endCurrentHalf(previous, Date.now()) : previous
     );

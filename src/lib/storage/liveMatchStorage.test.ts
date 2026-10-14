@@ -1,8 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getElapsedSeconds } from "@/domain/liveMatch";
+import {
+  createLiveMatchFromSetup,
+  endCurrentHalf,
+  getElapsedSeconds,
+  resumeLiveMatch,
+  startLiveMatch,
+  type LiveMatchState,
+} from "@/domain/liveMatch";
+import type { MatchSetup } from "@/domain/match";
 import {
   getStoredLiveMatch,
   normalizeLiveMatchState,
+  saveStoredLiveMatch,
 } from "@/lib/storage/liveMatchStorage";
 
 const STORAGE_KEY = "fairplayr.liveMatch.v1";
@@ -155,5 +164,97 @@ describe("liveMatchStorage normalization", () => {
     expect(hydrated?.clock.isRunning).toBe(false);
     expect(hydrated?.clock.startedAtMs).not.toBeNull();
     expect(hydrated?.onFieldPlayerIds).toEqual(["p1"]);
+  });
+});
+
+describe("liveMatchStorage half-time phases", () => {
+  const MIN = 60_000;
+  const KICKOFF = 1_000_000;
+  const SETUP: MatchSetup = {
+    id: "setup-1",
+    teamId: "team-1",
+    format: "5v5",
+    reportEnabled: false,
+    formationId: "5v5-2-2",
+    duration: { mode: "preset", presetId: "2x15", halves: 2, minutesPerHalf: 15, totalMinutes: 30 },
+    selectedPlayerIds: ["p1", "p2", "p3", "p4", "p5", "p6"],
+    startingPlayerIds: ["p1", "p2", "p3", "p4", "p5"],
+    slotAssignments: { "5v5-1": "p1", "5v5-2": "p2", "5v5-3": "p3", "5v5-4": "p4", "5v5-5": "p5" },
+    createdAt: "2026-04-15T10:00:00.000Z",
+    updatedAt: "2026-04-15T10:00:00.000Z",
+  };
+
+  function halfTime(): LiveMatchState {
+    return endCurrentHalf(startLiveMatch(createLiveMatchFromSetup(SETUP), KICKOFF), KICKOFF + 15 * MIN);
+  }
+
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
+  it("keeps half-time and the second half across a reload", () => {
+    saveStoredLiveMatch(halfTime());
+    expect(getStoredLiveMatch()?.phase).toBe("half_time");
+
+    const secondHalf = resumeLiveMatch(halfTime(), KICKOFF + 25 * MIN);
+    saveStoredLiveMatch(secondHalf);
+    const restored = getStoredLiveMatch();
+    expect(restored?.phase).toBe("second_half");
+    expect(restored?.currentHalf).toBe(2);
+    expect(restored?.phaseStartedAtElapsedMs).toBe(15 * MIN);
+    expect(restored?.clock).toEqual(secondHalf.clock);
+  });
+
+  it("repairs a second half stored in the half-time phase by earlier builds", () => {
+    const base = halfTime();
+    const stuck: LiveMatchState = {
+      ...base,
+      status: "running",
+      clock: { ...base.clock, isRunning: true, pausedAtMs: null, accumulatedPausedMs: 10 * MIN },
+    };
+
+    saveStoredLiveMatch(stuck);
+    expect(getStoredLiveMatch()).toMatchObject({ phase: "second_half", currentHalf: 2, status: "running" });
+
+    // Server runtime state is normalized the same way.
+    expect(normalizeLiveMatchState(JSON.parse(JSON.stringify(stuck)))?.phase).toBe("second_half");
+  });
+
+  it("repairs a legacy (elapsedSeconds) record resumed without leaving half-time", () => {
+    // Legacy resumeLiveMatch set status "running" but kept phase "half_time";
+    // phaseElapsedSeconds was reset to 0 at half-time, so 120 s were played since.
+    const legacyStuck = {
+      id: "lm-legacy-ht",
+      setupId: "setup-1",
+      teamId: "team-1",
+      durationSeconds: 1800,
+      halves: 2,
+      regularSecondsPerHalf: 900,
+      phase: "half_time",
+      currentHalf: 1,
+      elapsedSeconds: 1020,
+      phaseElapsedSeconds: 120,
+      status: "running",
+      teamScore: 0,
+      opponentScore: 0,
+      onFieldPlayerIds: ["p1"],
+      benchPlayerIds: ["p2"],
+      playerAccumulatedSeconds: { p1: 1020, p2: 0 },
+      startedAt: null,
+      endedAt: null,
+      createdAt: "2026-04-11T12:00:00.000Z",
+      updatedAt: "2026-04-11T12:17:00.000Z",
+    };
+
+    expect(normalizeLiveMatchState(legacyStuck)).toMatchObject({
+      phase: "second_half",
+      currentHalf: 2,
+      status: "running",
+      phaseStartedAtElapsedMs: 900_000,
+    });
+
+    // A legacy record genuinely at half-time is left alone.
+    const legacyHalfTime = { ...legacyStuck, status: "paused", phaseElapsedSeconds: 0, elapsedSeconds: 900 };
+    expect(normalizeLiveMatchState(legacyHalfTime)?.phase).toBe("half_time");
   });
 });

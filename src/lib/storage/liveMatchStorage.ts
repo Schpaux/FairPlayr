@@ -1,4 +1,8 @@
-import type { LiveMatchState, MatchClockBasis } from "@/domain/liveMatch";
+import {
+  recoverSecondHalfPhase,
+  type LiveMatchState,
+  type MatchClockBasis,
+} from "@/domain/liveMatch";
 import type { MatchFormat } from "@/domain/match";
 import {
   migrateLegacyLiveEvents,
@@ -463,7 +467,7 @@ export function normalizeLiveMatchState(value: unknown): LiveMatchState | null {
   const valid = toValidLiveMatch(value);
 
   if (valid) {
-    return valid;
+    return recoverSecondHalfPhase(valid);
   }
 
   const legacy = toLegacyLiveMatch(value);
@@ -472,7 +476,8 @@ export function normalizeLiveMatchState(value: unknown): LiveMatchState | null {
     return null;
   }
 
-  return migrateLegacyLiveMatch(legacy);
+  // Legacy builds could also resume from half-time without leaving the phase.
+  return recoverSecondHalfPhase(migrateLegacyLiveMatch(legacy));
 }
 
 export function getStoredLiveMatch(): LiveMatchState | null {
