@@ -70,6 +70,7 @@ import { LiveBenchStrip } from "@/components/match/LiveBenchStrip";
 import { UndoToast } from "@/components/match/UndoToast";
 import { useLiveSubstitution } from "@/components/match/useLiveSubstitution";
 import { swapLivePositions, undoLivePositionSwap, type PositionSwapRecord } from "@/domain/positionSwap";
+import { applySubstitution, undoSubstitution, type SubstitutionRecord } from "@/domain/substitutionUndo";
 import { useMatchClock } from "@/components/match/useMatchClock";
 import { variants } from "@/lib/tokens";
 import { isSidelineLiveUiEnabled } from "@/lib/featureFlags";
@@ -737,36 +738,39 @@ export function MatchLiveManager() {
 
   // ─── Substitution handlers (used by useLiveSubstitution) ──────────────────
 
-  const handleSwap = (outgoingPlayerId: string, incomingPlayerId: string) => {
-    if (!liveMatch || liveMatch.status === "ended") return;
+  // Tap and drag substitutions both arrive here. Returns what changed so the
+  // undo can reverse exactly that (FP-MS2.1-B1-F1), or null if nothing did.
+  const handleSwap = (outgoingPlayerId: string, incomingPlayerId: string): SubstitutionRecord | null => {
+    if (!liveMatch || liveMatch.status === "ended") return null;
 
     const inPlayer = playersById.get(incomingPlayerId);
     const outPlayer = playersById.get(outgoingPlayerId);
-    const minute = Math.floor(elapsedSeconds / 60);
-    const timestampMs = elapsedSeconds * 1000;
-
-    setLiveMatch((prev) => {
-      if (!prev) return prev;
-      const next = substitutePlayers(prev, outgoingPlayerId, incomingPlayerId, Date.now());
-      return {
-        ...next,
-        events: [
-          ...next.events,
-          createSubstitutionEvent({
-            minute,
-            timestampMs,
-            inPlayerId: incomingPlayerId,
-            inPlayerName: inPlayer?.name ?? null,
-            outPlayerId: outgoingPlayerId,
-            outPlayerName: outPlayer?.name ?? null,
-          }),
-        ],
-      };
+    const nowMs = Date.now();
+    // One event and one time for both the record and the state update, so the
+    // updater is deterministic and matches the record it returns.
+    const event = createSubstitutionEvent({
+      minute: Math.floor(elapsedSeconds / 60),
+      timestampMs: elapsedSeconds * 1000,
+      inPlayerId: incomingPlayerId,
+      inPlayerName: inPlayer?.name ?? null,
+      outPlayerId: outgoingPlayerId,
+      outPlayerName: outPlayer?.name ?? null,
     });
+
+    const applied = applySubstitution(liveMatch, outgoingPlayerId, incomingPlayerId, nowMs, event);
+    if (!applied) return null;
+
+    setLiveMatch((prev) =>
+      prev ? (applySubstitution(prev, outgoingPlayerId, incomingPlayerId, nowMs, event)?.state ?? prev) : prev
+    );
+    return applied.record;
   };
 
-  const handleUndo = (snapshot: LiveMatchState) => {
-    setLiveMatch(snapshot);
+  // Targeted undo: reverses only this substitution on the current state, so a
+  // goal, pause or half-time made inside the window survives. The next
+  // runtime-state PATCH carries the removal to the server.
+  const handleUndo = (substitution: SubstitutionRecord) => {
+    setLiveMatch((prev) => (prev ? undoSubstitution(prev, substitution) : prev));
   };
 
   // Position swap (FP-MS2.1-B1): tap and drag both arrive here. Slots only —

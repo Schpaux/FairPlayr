@@ -39,14 +39,14 @@
  *   - At most ONE field player is ever selected at a time.
  *   - SWAP_COMMITTED / POSITION_SWAP_COMMITTED are dispatched by the hook (not
  *     the UI) after it has already applied the change.
- *   - The snapshot stored in pendingUndo is the complete LiveMatchState
- *     captured *before* the substitution was applied.
- *   - pendingPositionUndo stores only the swapped pair, so its undo is
- *     targeted and never restores unrelated match state.
+ *   - pendingUndo stores only what the substitution changed (the two
+ *     players, their minutes and the event id; FP-MS2.1-B1-F1), and
+ *     pendingPositionUndo only the swapped pair, so both undos are targeted
+ *     and never restore unrelated match state.
  */
 
-import type { LiveMatchState } from "@/domain/liveMatch";
 import type { PositionSwapRecord } from "@/domain/positionSwap";
+import type { SubstitutionRecord } from "@/domain/substitutionUndo";
 
 // ─── States ───────────────────────────────────────────────────────────────────
 
@@ -62,7 +62,7 @@ export type SubInteractionState =
     }
   | {
       readonly kind: "pendingUndo";
-      readonly snapshot: LiveMatchState;
+      readonly substitution: SubstitutionRecord;
       readonly expiresAtMs: number;
     }
   | {
@@ -80,7 +80,7 @@ export type SubInteractionAction =
   | { readonly type: "CANCEL_DRAG" }
   | {
       readonly type: "SWAP_COMMITTED";
-      readonly snapshot: LiveMatchState;
+      readonly substitution: SubstitutionRecord;
       readonly expiresAtMs: number;
     }
   | { readonly type: "START_POSITION_SWAP" }
@@ -169,7 +169,7 @@ export function subInteractionReducer(
     case "SWAP_COMMITTED": {
       return {
         kind: "pendingUndo",
-        snapshot: action.snapshot,
+        substitution: action.substitution,
         expiresAtMs: action.expiresAtMs,
       };
     }
@@ -225,11 +225,11 @@ export function hasPendingUndo(state: SubInteractionState): boolean {
   return state.kind === "pendingUndo" || state.kind === "pendingPositionUndo";
 }
 
-/** Returns the substitution undo snapshot, or null. */
-export function getUndoSnapshot(
+/** Returns the substitution inside its undo window, or null. */
+export function getPendingSubstitution(
   state: SubInteractionState
-): LiveMatchState | null {
-  return state.kind === "pendingUndo" ? state.snapshot : null;
+): SubstitutionRecord | null {
+  return state.kind === "pendingUndo" ? state.substitution : null;
 }
 
 /** Returns the position swap inside its undo window, or null. */

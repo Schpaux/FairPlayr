@@ -1094,6 +1094,190 @@ describe("MatchLiveManager match completion", () => {
       });
     });
 
+    // FP-MS2.1-B1-F1: substitution undo reverses only the substitution.
+    describe("substitution undo", () => {
+      const strip = () => screen.getByTestId("live-strip").getAttribute("data-strip");
+      const undoSubstitution = () => fireEvent.click(screen.getByRole("button", { name: /Undo substitution/ }));
+      let now: number;
+      const advanceMs = (ms: number) => {
+        now += ms;
+      };
+
+      beforeEach(() => {
+        now = 1_000_000;
+        vi.spyOn(Date, "now").mockImplementation(() => now);
+        if (typeof HTMLElement.prototype.setPointerCapture !== "function") {
+          Object.defineProperty(HTMLElement.prototype, "setPointerCapture", { value: () => {}, configurable: true });
+        }
+      });
+
+      function tapSubstitution(out: string, incoming: string) {
+        fireEvent.click(fieldToken(out));
+        fireEvent.click(benchTile(incoming));
+      }
+
+      function dragSubstitution(out: string, incoming: string) {
+        Object.defineProperty(document, "elementFromPoint", { value: () => fieldToken(out), configurable: true });
+        const surface = screen.getByTestId("live-sideline");
+        fireEvent.pointerDown(benchTile(incoming), { pointerId: 2, isPrimary: true, clientX: 50, clientY: 600 });
+        fireEvent.pointerMove(surface, { pointerId: 2, clientX: 80, clientY: 300 });
+        fireEvent.pointerUp(surface, { pointerId: 2, clientX: 80, clientY: 300 });
+      }
+
+      /** Kick off, play 6 minutes and substitute p2 → p6 by tap or drag. */
+      async function kickoffAndSubstitute(how: "tap" | "drag") {
+        renderManager();
+        fireEvent.click(screen.getByRole("button", { name: sideline.strip.kickoff }));
+        advanceMs(6 * 60_000);
+        const before = getStoredLiveMatch()!;
+        if (how === "tap") tapSubstitution("p2", "p6");
+        else dragSubstitution("p2", "p6");
+        await waitFor(() => expect(getStoredLiveMatch()?.onFieldPlayerIds).toContain("p6"));
+        expect(strip()).toBe("undo");
+        return before;
+      }
+
+      const lineupOf = (state: ReturnType<typeof getStoredLiveMatch>) => ({
+        onFieldPlayerIds: state!.onFieldPlayerIds,
+        benchPlayerIds: state!.benchPlayerIds,
+        liveSlotAssignments: state!.liveSlotAssignments,
+        playerAccumulatedMs: state!.playerAccumulatedMs,
+        onFieldStartedAtElapsedMs: state!.onFieldStartedAtElapsedMs,
+      });
+
+      it.each(["tap", "drag"] as const)("%s substitution then undo restores the lineup and minutes", async (how) => {
+        const before = await kickoffAndSubstitute(how);
+        advanceMs(3_000);
+        undoSubstitution();
+
+        await waitFor(() => expect(getStoredLiveMatch()?.onFieldPlayerIds).toContain("p2"));
+        const after = getStoredLiveMatch()!;
+        expect(lineupOf(after)).toEqual(lineupOf(before));
+        expect(after.events.some((event) => event.type === "substitution")).toBe(false);
+        // p2 played on through the window; p6 never came on.
+        expect(getPlayerAccumulatedSeconds(after, "p2", now)).toBe(6 * 60 + 3);
+        expect(getPlayerAccumulatedSeconds(after, "p6", now)).toBe(0);
+        expect(["idle", "suggestion"]).toContain(strip());
+      });
+
+      it("keeps a goal scored inside the window", async () => {
+        const before = await kickoffAndSubstitute("tap");
+        fireEvent.click(screen.getByRole("button", { name: sideline.goals.us }));
+        await waitFor(() => expect(getStoredLiveMatch()?.teamScore).toBe(1));
+        // A goal does not close the undo window.
+        expect(strip()).toBe("undo");
+
+        undoSubstitution();
+
+        await waitFor(() => expect(getStoredLiveMatch()?.onFieldPlayerIds).toEqual(before.onFieldPlayerIds));
+        const after = getStoredLiveMatch()!;
+        expect(after.benchPlayerIds).toEqual(before.benchPlayerIds);
+        expect(after.liveSlotAssignments).toEqual(before.liveSlotAssignments);
+        expect(after.teamScore).toBe(1);
+        expect(after.events.filter((event) => event.type === "goal")).toHaveLength(1);
+        expect(after.events.some((event) => event.type === "substitution")).toBe(false);
+        expect(screen.getByTestId("live-score").getAttribute("aria-label")).toBe("Score: us 1, them 0");
+      });
+
+      it("keeps a pause made inside the window", async () => {
+        const before = await kickoffAndSubstitute("tap");
+        advanceMs(2_000);
+        fireEvent.click(screen.getByTestId("live-clock"));
+        expect(getStoredLiveMatch()?.status).toBe("paused");
+        const pausedClock = getStoredLiveMatch()!.clock;
+
+        undoSubstitution();
+
+        await waitFor(() => expect(getStoredLiveMatch()?.onFieldPlayerIds).toEqual(before.onFieldPlayerIds));
+        const after = getStoredLiveMatch()!;
+        expect(after.status).toBe("paused");
+        expect(after.clock).toEqual(pausedClock);
+        advanceMs(10 * 60_000);
+        expect(getPlayerAccumulatedSeconds(after, "p2", now)).toBe(6 * 60 + 2);
+        expect(getPlayerAccumulatedSeconds(after, "p6", now)).toBe(0);
+      });
+
+      it("keeps half-time ended inside the window", async () => {
+        const before = await kickoffAndSubstitute("tap");
+        fireEvent.click(screen.getByRole("button", { name: sideline.menu.open }));
+        fireEvent.click(screen.getByRole("button", { name: sideline.menu.endHalf }));
+        fireEvent.click(screen.getByRole("button", { name: sideline.confirm.endHalfConfirm }));
+        expect(getStoredLiveMatch()?.phase).toBe("half_time");
+
+        undoSubstitution();
+
+        await waitFor(() => expect(getStoredLiveMatch()?.onFieldPlayerIds).toEqual(before.onFieldPlayerIds));
+        expect(getStoredLiveMatch()).toMatchObject({ phase: "half_time", status: "paused", currentHalf: 1 });
+      });
+
+      it("rejects undo once the five seconds have passed, even before the timer fires", async () => {
+        await kickoffAndSubstitute("tap");
+        const committed = getStoredLiveMatch()!;
+        advanceMs(5_000);
+
+        undoSubstitution();
+
+        expect(["idle", "suggestion"]).toContain(strip());
+        expect(lineupOf(getStoredLiveMatch())).toEqual(lineupOf(committed));
+        expect(getStoredLiveMatch()?.events.filter((event) => event.type === "substitution")).toHaveLength(1);
+      });
+
+      it("a new substitution after an undo works and can be undone", async () => {
+        const before = await kickoffAndSubstitute("tap");
+        undoSubstitution();
+        await waitFor(() => expect(getStoredLiveMatch()?.onFieldPlayerIds).toContain("p2"));
+
+        tapSubstitution("p3", "p7");
+        await waitFor(() => expect(getStoredLiveMatch()?.onFieldPlayerIds).toContain("p7"));
+        expect(strip()).toBe("undo");
+        expect(getStoredLiveMatch()?.events.filter((event) => event.type === "substitution")).toHaveLength(1);
+
+        undoSubstitution();
+        await waitFor(() => expect(lineupOf(getStoredLiveMatch())).toEqual(lineupOf(before)));
+      });
+
+      it("works offline and the runtime state sent afterwards has the goal but not the substitution", async () => {
+        renderManager();
+        fireEvent.click(screen.getByRole("button", { name: sideline.strip.kickoff }));
+        setOnline(false);
+        advanceMs(60_000);
+        tapSubstitution("p2", "p6");
+        fireEvent.click(screen.getByRole("button", { name: sideline.goals.us }));
+        undoSubstitution();
+
+        await waitFor(() => expect(getStoredLiveMatch()?.onFieldPlayerIds).toContain("p2"));
+        expect(getStoredLiveMatch()?.teamScore).toBe(1);
+        expect(getStoredLiveMatch()?.events.some((event) => event.type === "substitution")).toBe(false);
+
+        // Back online, the next change carries the whole state. No call ever
+        // created or targets a separate server row for the substitution.
+        setOnline(true);
+        fetchMock.mockClear();
+        fireEvent.click(screen.getByRole("button", { name: sideline.goals.them }));
+        await waitFor(
+          () => {
+            const patch = fetchMock.mock.calls.find(
+              ([url, init]) => String(url) === "/api/matches/match-1" && init?.method === "PATCH"
+            );
+            expect(patch).toBeTruthy();
+            const body = JSON.parse(patch![1]!.body as string) as {
+              runtimeState: { events: { type: string }[]; onFieldPlayerIds: string[] };
+              scoreFor: number;
+            };
+            expect(body.scoreFor).toBe(1);
+            expect(body.runtimeState.onFieldPlayerIds).toContain("p2");
+            expect(body.runtimeState.events.some((event) => event.type === "substitution")).toBe(false);
+            expect(body.runtimeState.events.filter((event) => event.type === "goal")).toHaveLength(2);
+          },
+          { timeout: 2_000 }
+        );
+        const eventPosts = fetchMock.mock.calls
+          .filter(([url]) => String(url).includes("/events"))
+          .map(([, init]) => JSON.parse(init!.body as string) as { type: string });
+        expect(eventPosts.every((event) => event.type === "goal_for" || event.type === "goal_against")).toBe(true);
+      });
+    });
+
     it("ends the half only after an explicit confirmation", () => {
       renderManager();
       fireEvent.click(screen.getByRole("button", { name: sideline.strip.kickoff }));

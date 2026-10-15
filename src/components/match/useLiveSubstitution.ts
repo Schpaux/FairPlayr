@@ -39,16 +39,20 @@
  *   The one click the browser fires on the dragged token after its release
  *   is swallowed, so releasing a drag never also selects or deselects it.
  *
- * ## Undo flow
- *   commitSwap() captures a snapshot of liveMatch BEFORE calling onSwap, then
- *   dispatches SWAP_COMMITTED. A 5-second timer dispatches UNDO_EXPIRED.
- *   triggerUndo() dispatches UNDO_TRIGGERED and calls onUndo(snapshot).
+ * ## Undo flow (FP-MS2.1-B1-F1: targeted, never a snapshot)
+ *   commitSwap() is the one place a substitution is applied, for both tap and
+ *   drag. onSwap returns the SubstitutionRecord of what changed; commitSwap
+ *   stores it with SWAP_COMMITTED. A 5-second timer dispatches UNDO_EXPIRED.
+ *   triggerUndo() dispatches UNDO_TRIGGERED and calls onUndo(record), which
+ *   reverses only that substitution on the current match state, so goals,
+ *   clock and half-time changes made inside the window survive.
  *   A position swap keeps only the swapped pair and undoes through
  *   onPositionSwapUndo(swap), which reverses those two slots and nothing else.
  */
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import type { LiveMatchState } from "@/domain/liveMatch";
+import type { SubstitutionRecord } from "@/domain/substitutionUndo";
 import {
   INITIAL_SUB_STATE,
   subInteractionReducer,
@@ -94,12 +98,15 @@ type DragOrigin =
   | { kind: "field"; playerId: string; slotId: string; startX: number; startY: number };
 
 export interface UseLiveSubstitutionOptions {
-  /** Current live match state — snapshotted on each swap for undo. */
+  /** Current live match state. */
   liveMatch: LiveMatchState;
-  /** Called immediately when a swap is executed. Parent updates match state. */
-  onSwap: (outgoingPlayerId: string, incomingPlayerId: string) => void;
-  /** Called when undo is triggered. Parent should restore this snapshot. */
-  onUndo: (snapshot: LiveMatchState) => void;
+  /**
+   * Called immediately when a swap is executed. Parent updates match state and
+   * returns what changed, or null when nothing was substituted (no undo then).
+   */
+  onSwap: (outgoingPlayerId: string, incomingPlayerId: string) => SubstitutionRecord | null;
+  /** Called when undo is triggered. Parent reverses only this substitution. */
+  onUndo: (substitution: SubstitutionRecord) => void;
   /**
    * Called when two field players exchange positions (tap or drag). Without
    * it, position swaps are not offered.
@@ -245,13 +252,11 @@ export function useLiveSubstitution({
 
   const commitSwap = useCallback(
     (outgoingPlayerId: string, incomingPlayerId: string) => {
-      // Capture snapshot BEFORE mutation so undo can restore it.
-      const snapshot = liveMatchRef.current;
-
-      onSwap(outgoingPlayerId, incomingPlayerId);
+      const substitution = onSwap(outgoingPlayerId, incomingPlayerId);
+      if (!substitution) return;
 
       const expiresAtMs = openUndoWindow();
-      dispatch({ type: "SWAP_COMMITTED", snapshot, expiresAtMs });
+      dispatch({ type: "SWAP_COMMITTED", substitution, expiresAtMs });
     },
     [onSwap, openUndoWindow]
   );
@@ -323,6 +328,17 @@ export function useLiveSubstitution({
   // ── Undo ──────────────────────────────────────────────────────────────────
 
   const triggerUndo = useCallback(() => {
+    // The window is closed at its deadline even if the expiry timer has not
+    // fired yet (a throttled background tab or a sleeping phone).
+    if (
+      (state.kind === "pendingUndo" || state.kind === "pendingPositionUndo") &&
+      Date.now() >= state.expiresAtMs
+    ) {
+      dispatch({ type: "UNDO_EXPIRED" });
+      clearUndoTimers();
+      return;
+    }
+
     if (state.kind === "pendingPositionUndo") {
       const swap = state.swap;
       dispatch({ type: "UNDO_TRIGGERED" });
@@ -334,10 +350,10 @@ export function useLiveSubstitution({
     if (!hasPendingUndo(state)) return;
     if (state.kind !== "pendingUndo") return;
 
-    const snapshot = state.snapshot;
+    const substitution = state.substitution;
     dispatch({ type: "UNDO_TRIGGERED" });
     clearUndoTimers();
-    onUndo(snapshot);
+    onUndo(substitution);
   }, [state, clearUndoTimers, onUndo, onPositionSwapUndo]);
 
   // ── Drag handling ─────────────────────────────────────────────────────────

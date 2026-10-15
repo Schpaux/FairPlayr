@@ -6,13 +6,13 @@ import {
   isDragging,
   getDraggingBenchPlayerId,
   hasPendingUndo,
-  getUndoSnapshot,
+  getPendingSubstitution,
   getPendingPositionSwap,
   getPositionSwapSourceId,
   getDraggingFieldPlayerId,
   type SubInteractionState,
 } from "@/domain/liveSubInteraction";
-import type { LiveMatchState } from "@/domain/liveMatch";
+import type { SubstitutionRecord } from "@/domain/substitutionUndo";
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -28,13 +28,13 @@ function dragging(benchPlayerId: string): SubInteractionState {
   return { kind: "draggingBenchPlayer", benchPlayerId };
 }
 
-function pendingUndo(snapshot: LiveMatchState, expiresAtMs = Date.now() + 5000): SubInteractionState {
-  return { kind: "pendingUndo", snapshot, expiresAtMs };
+function pendingUndo(substitution: SubstitutionRecord, expiresAtMs = Date.now() + 5000): SubInteractionState {
+  return { kind: "pendingUndo", substitution, expiresAtMs };
 }
 
-// Minimal snapshot stub — enough for type correctness.
-function makeSnapshot(id = "snap-1"): LiveMatchState {
-  return { id } as unknown as LiveMatchState;
+// Minimal substitution record stub — enough for type correctness.
+function makeRecord(eventId = "sub-1"): SubstitutionRecord {
+  return { eventId } as unknown as SubstitutionRecord;
 }
 
 const dispatch = subInteractionReducer;
@@ -97,10 +97,10 @@ describe("from fieldPlayerSelected", () => {
   });
 
   it("SWAP_COMMITTED → pendingUndo", () => {
-    const snapshot = makeSnapshot();
+    const substitution = makeRecord();
     const expiresAtMs = Date.now() + 5000;
-    const next = dispatch(selected("p1"), { type: "SWAP_COMMITTED", snapshot, expiresAtMs });
-    expect(next).toEqual({ kind: "pendingUndo", snapshot, expiresAtMs });
+    const next = dispatch(selected("p1"), { type: "SWAP_COMMITTED", substitution, expiresAtMs });
+    expect(next).toEqual({ kind: "pendingUndo", substitution, expiresAtMs });
   });
 
   it("CANCEL_DRAG → no state change (not dragging)", () => {
@@ -119,10 +119,10 @@ describe("from draggingBenchPlayer", () => {
   });
 
   it("SWAP_COMMITTED → pendingUndo", () => {
-    const snapshot = makeSnapshot();
+    const substitution = makeRecord();
     const expiresAtMs = Date.now() + 5000;
-    const next = dispatch(dragging("b1"), { type: "SWAP_COMMITTED", snapshot, expiresAtMs });
-    expect(next).toEqual({ kind: "pendingUndo", snapshot, expiresAtMs });
+    const next = dispatch(dragging("b1"), { type: "SWAP_COMMITTED", substitution, expiresAtMs });
+    expect(next).toEqual({ kind: "pendingUndo", substitution, expiresAtMs });
   });
 
   it("CANCEL → idle", () => {
@@ -140,31 +140,31 @@ describe("from draggingBenchPlayer", () => {
 
 describe("from pendingUndo", () => {
   it("UNDO_TRIGGERED → idle", () => {
-    const snap = makeSnapshot();
-    const next = dispatch(pendingUndo(snap), { type: "UNDO_TRIGGERED" });
+    const record = makeRecord();
+    const next = dispatch(pendingUndo(record), { type: "UNDO_TRIGGERED" });
     expect(next).toEqual(idle());
   });
 
   it("UNDO_EXPIRED → idle", () => {
-    const snap = makeSnapshot();
-    const next = dispatch(pendingUndo(snap), { type: "UNDO_EXPIRED" });
+    const record = makeRecord();
+    const next = dispatch(pendingUndo(record), { type: "UNDO_EXPIRED" });
     expect(next).toEqual(idle());
   });
 
   it("SELECT_FIELD_PLAYER is ignored — undo window takes priority", () => {
-    const state = pendingUndo(makeSnapshot());
+    const state = pendingUndo(makeRecord());
     const next = dispatch(state, { type: "SELECT_FIELD_PLAYER", playerId: "p1" });
     expect(next).toBe(state); // exact same reference
   });
 
   it("CANCEL is ignored — undo window takes priority", () => {
-    const state = pendingUndo(makeSnapshot());
+    const state = pendingUndo(makeRecord());
     const next = dispatch(state, { type: "CANCEL" });
     expect(next).toBe(state);
   });
 
   it("START_BENCH_DRAG is ignored — undo window takes priority", () => {
-    const state = pendingUndo(makeSnapshot());
+    const state = pendingUndo(makeRecord());
     const next = dispatch(state, { type: "START_BENCH_DRAG", benchPlayerId: "b1" });
     expect(next).toBe(state);
   });
@@ -172,15 +172,15 @@ describe("from pendingUndo", () => {
   it("CANCEL_DRAG returns to idle (drag-cancel is always allowed)", () => {
     // CANCEL_DRAG is only handled when state is draggingBenchPlayer.
     // From pendingUndo it is a no-op.
-    const state = pendingUndo(makeSnapshot());
+    const state = pendingUndo(makeRecord());
     const next = dispatch(state, { type: "CANCEL_DRAG" });
     expect(next).toBe(state);
   });
 
-  it("stores the snapshot verbatim", () => {
-    const snapshot = makeSnapshot("unique-id");
-    const state = pendingUndo(snapshot);
-    expect(getUndoSnapshot(state)).toBe(snapshot);
+  it("stores the substitution record verbatim", () => {
+    const substitution = makeRecord("unique-id");
+    const state = pendingUndo(substitution);
+    expect(getPendingSubstitution(state)).toBe(substitution);
   });
 });
 
@@ -200,14 +200,14 @@ describe("selectors", () => {
   });
 
   it("getSelectedFieldPlayerId returns null when pendingUndo", () => {
-    expect(getSelectedFieldPlayerId(pendingUndo(makeSnapshot()))).toBeNull();
+    expect(getSelectedFieldPlayerId(pendingUndo(makeRecord()))).toBeNull();
   });
 
   it("isDragging returns true only when draggingBenchPlayer", () => {
     expect(isDragging(idle())).toBe(false);
     expect(isDragging(selected("p1"))).toBe(false);
     expect(isDragging(dragging("b1"))).toBe(true);
-    expect(isDragging(pendingUndo(makeSnapshot()))).toBe(false);
+    expect(isDragging(pendingUndo(makeRecord()))).toBe(false);
   });
 
   it("getDraggingBenchPlayerId returns the bench player id", () => {
@@ -219,12 +219,12 @@ describe("selectors", () => {
     expect(hasPendingUndo(idle())).toBe(false);
     expect(hasPendingUndo(selected("p1"))).toBe(false);
     expect(hasPendingUndo(dragging("b1"))).toBe(false);
-    expect(hasPendingUndo(pendingUndo(makeSnapshot()))).toBe(true);
+    expect(hasPendingUndo(pendingUndo(makeRecord()))).toBe(true);
   });
 
-  it("getUndoSnapshot returns null when not pendingUndo", () => {
-    expect(getUndoSnapshot(idle())).toBeNull();
-    expect(getUndoSnapshot(selected("p1"))).toBeNull();
+  it("getPendingSubstitution returns null when not pendingUndo", () => {
+    expect(getPendingSubstitution(idle())).toBeNull();
+    expect(getPendingSubstitution(selected("p1"))).toBeNull();
   });
 });
 
@@ -270,7 +270,7 @@ describe("position swap", () => {
   });
 
   it("START_POSITION_SWAP needs a selected field player", () => {
-    for (const state of [idle(), dragging("b1"), pendingUndo(makeSnapshot()), pendingPosition()]) {
+    for (const state of [idle(), dragging("b1"), pendingUndo(makeRecord()), pendingPosition()]) {
       expect(dispatch(state, { type: "START_POSITION_SWAP" })).toBe(state);
     }
   });
@@ -293,7 +293,7 @@ describe("position swap", () => {
   });
 
   it("no drag starts while an undo window is open", () => {
-    for (const state of [pendingUndo(makeSnapshot()), pendingPosition()]) {
+    for (const state of [pendingUndo(makeRecord()), pendingPosition()]) {
       expect(dispatch(state, { type: "START_FIELD_DRAG", playerId: "p2", slotId: "7v7-2" })).toBe(state);
       expect(dispatch(state, { type: "START_BENCH_DRAG", benchPlayerId: "b1" })).toBe(state);
     }
@@ -320,9 +320,9 @@ describe("position swap", () => {
 
   it("selectors", () => {
     expect(hasPendingUndo(pendingPosition())).toBe(true);
-    expect(getUndoSnapshot(pendingPosition())).toBeNull();
+    expect(getPendingSubstitution(pendingPosition())).toBeNull();
     expect(getPendingPositionSwap(pendingPosition())).toEqual(swap);
-    expect(getPendingPositionSwap(pendingUndo(makeSnapshot()))).toBeNull();
+    expect(getPendingPositionSwap(pendingUndo(makeRecord()))).toBeNull();
     expect(getPositionSwapSourceId(swapSource("p2"))).toBe("p2");
     expect(getPositionSwapSourceId(selected("p2"))).toBeNull();
     expect(getDraggingFieldPlayerId(draggingField("p2", "7v7-2"))).toBe("p2");
