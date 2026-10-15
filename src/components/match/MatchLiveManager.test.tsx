@@ -967,6 +967,133 @@ describe("MatchLiveManager match completion", () => {
       expect(screen.getByTestId("live-strip").getAttribute("data-strip")).toBe("fullTime");
     });
 
+    // FP-MS2.1-B1: position swaps by tap and by drag share one domain path.
+    describe("position swap", () => {
+      const strip = () => screen.getByTestId("live-strip").getAttribute("data-strip");
+      const root = () => screen.getByTestId("live-sideline");
+      /** Nothing in progress: the strip rests on idle or (until A2's threshold) a suggestion. */
+      const expectResting = () => expect(["idle", "suggestion"]).toContain(strip());
+      let now: number;
+      const advance = (minutes: number) => {
+        now += minutes * 60_000;
+      };
+
+      beforeEach(() => {
+        now = 1_000_000;
+        vi.spyOn(Date, "now").mockImplementation(() => now);
+      });
+
+      /** What a position swap may change (slots) and must not change (everything else). */
+      const domainOf = () => ({ ...getStoredLiveMatch()!, updatedAt: null });
+
+      function tapSwap(from: string, to: string) {
+        fireEvent.click(fieldToken(from));
+        fireEvent.click(screen.getByRole("button", { name: sideline.strip.swapPosition }));
+        expect(strip()).toBe("positionSwap");
+        fireEvent.click(fieldToken(to));
+      }
+
+      function dragSwap(from: string, to: string | null) {
+        const target = to ? fieldToken(to) : null;
+        const elementFromPoint = vi.fn(() => target ?? root());
+        Object.defineProperty(document, "elementFromPoint", { value: elementFromPoint, configurable: true });
+        fireEvent.pointerDown(fieldToken(from), { pointerId: 1, isPrimary: true, clientX: 100, clientY: 100 });
+        fireEvent.pointerMove(root(), { pointerId: 1, clientX: 130, clientY: 150 });
+        expect(strip()).toBe("draggingPosition");
+        fireEvent.pointerUp(root(), { pointerId: 1, clientX: 130, clientY: 150 });
+        // The browser's click after the release lands on the dragged token.
+        fireEvent.click(fieldToken(from));
+      }
+
+      it("tap and drag produce identical state: slots exchanged, no substitution, minutes unchanged", async () => {
+        renderManager();
+        fireEvent.click(screen.getByRole("button", { name: sideline.strip.kickoff }));
+        advance(6);
+        const before = domainOf();
+
+        tapSwap("p2", "p4");
+        expect(strip()).toBe("positionUndo");
+        await waitFor(() => expect(getStoredLiveMatch()?.liveSlotAssignments["5v5-2"]).toBe("p4"));
+        const afterTap = domainOf();
+        expect(afterTap.liveSlotAssignments).toEqual({ ...before.liveSlotAssignments, "5v5-2": "p4", "5v5-4": "p2" });
+        expect({ ...afterTap, liveSlotAssignments: null }).toEqual({ ...before, liveSlotAssignments: null });
+
+        fireEvent.click(screen.getByRole("button", { name: /Undo position swap/ }));
+        await waitFor(() => expect(domainOf()).toEqual(before));
+
+        dragSwap("p2", "p4");
+        expect(strip()).toBe("positionUndo");
+        // The release did not also select the dragged player.
+        expect(fieldToken("p2").getAttribute("aria-pressed")).toBe("false");
+        await waitFor(() => expect(domainOf()).toEqual(afterTap));
+        expect(getStoredLiveMatch()?.events.some((event) => event.type === "substitution")).toBe(false);
+      });
+
+      it("a drag released off any player cancels without a change or a selection", () => {
+        renderManager();
+        fireEvent.click(screen.getByRole("button", { name: sideline.strip.kickoff }));
+        const before = domainOf();
+
+        dragSwap("p3", null);
+        expectResting();
+        expect(fieldToken("p3").getAttribute("aria-pressed")).toBe("false");
+        expect(domainOf()).toEqual(before);
+
+        // Released on a bench tile: not a substitution, not a swap.
+        Object.defineProperty(document, "elementFromPoint", { value: () => benchTile("p6"), configurable: true });
+        fireEvent.pointerDown(fieldToken("p3"), { pointerId: 1, isPrimary: true, clientX: 100, clientY: 100 });
+        fireEvent.pointerMove(root(), { pointerId: 1, clientX: 100, clientY: 300 });
+        fireEvent.pointerUp(root(), { pointerId: 1, clientX: 100, clientY: 300 });
+        expectResting();
+        expect(domainOf()).toEqual(before);
+      });
+
+      it("swaps into the keeper slot and undoes only the swap, keeping a goal scored meanwhile", async () => {
+        renderManager();
+        fireEvent.click(screen.getByRole("button", { name: sideline.strip.kickoff }));
+        expect(fieldToken("p1").getAttribute("aria-label")).toContain("keeper");
+
+        tapSwap("p5", "p1");
+        await waitFor(() => expect(getStoredLiveMatch()?.liveSlotAssignments["5v5-1"]).toBe("p5"));
+        expect(fieldToken("p5").getAttribute("aria-label")).toContain("keeper");
+        expect(fieldToken("p1").getAttribute("aria-label")).not.toContain("keeper");
+
+        fireEvent.click(screen.getByRole("button", { name: sideline.goals.us }));
+        fireEvent.click(screen.getByRole("button", { name: /Undo position swap/ }));
+        await waitFor(() => expect(getStoredLiveMatch()?.liveSlotAssignments["5v5-1"]).toBe("p1"));
+        expect(getStoredLiveMatch()?.teamScore).toBe(1);
+        expect(getStoredLiveMatch()?.events.filter((event) => event.type === "goal")).toHaveLength(1);
+      });
+
+      it("offers Bytt plass with a labelled ✕ that cancels the selection", () => {
+        renderManager();
+        fireEvent.click(screen.getByRole("button", { name: sideline.strip.kickoff }));
+        const before = domainOf();
+
+        fireEvent.click(fieldToken("p3"));
+        expect(strip()).toBe("selection");
+        expect(screen.getByRole("button", { name: sideline.strip.swapPosition })).toBeTruthy();
+        fireEvent.click(screen.getByRole("button", { name: /^Cancel selecting \S/ }));
+        expectResting();
+        expect(fieldToken("p3").getAttribute("aria-pressed")).toBe("false");
+        expect(domainOf()).toEqual(before);
+      });
+
+      it("keeps bench substitutions working by tap after a swap", async () => {
+        renderManager();
+        fireEvent.click(screen.getByRole("button", { name: sideline.strip.kickoff }));
+        tapSwap("p2", "p3");
+        fireEvent.click(screen.getByRole("button", { name: /Undo position swap/ }));
+        expectResting();
+
+        fireEvent.click(fieldToken("p2"));
+        fireEvent.click(benchTile("p6"));
+        await waitFor(() => expect(getStoredLiveMatch()?.onFieldPlayerIds).toContain("p6"));
+        expect(strip()).toBe("undo");
+        expect(getStoredLiveMatch()?.events.filter((event) => event.type === "substitution")).toHaveLength(1);
+      });
+    });
+
     it("ends the half only after an explicit confirmation", () => {
       renderManager();
       fireEvent.click(screen.getByRole("button", { name: sideline.strip.kickoff }));

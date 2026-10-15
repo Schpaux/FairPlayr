@@ -64,6 +64,36 @@ describe("resolveStripKind", () => {
   });
 });
 
+describe("resolveStripKind — position swap (FP-MS2.1-B1)", () => {
+  it("keeps today's output when the position-swap facts are left out", () => {
+    expect(resolveStripKind({ ...RUNNING, hasSelection: true })).toBe("selection");
+  });
+
+  it("slots the position-swap states into the approved order", () => {
+    const everything: StripInput = {
+      ...RUNNING,
+      inStoppage: true,
+      hasSuggestion: true,
+      hasPendingPositionUndo: true,
+      isDraggingPosition: true,
+      isChoosingSwapTarget: true,
+    };
+    expect(resolveStripKind(everything)).toBe("positionUndo");
+    expect(resolveStripKind({ ...everything, hasPendingPositionUndo: false })).toBe("draggingPosition");
+    expect(
+      resolveStripKind({ ...everything, hasPendingPositionUndo: false, isDraggingPosition: false })
+    ).toBe("positionSwap");
+    // A substitution's undo still outranks everything.
+    expect(resolveStripKind({ ...everything, hasPendingUndo: true, hasPendingPositionUndo: false })).toBe("undo");
+  });
+
+  it("works at half-time and before kickoff", () => {
+    const halfTime: StripInput = { ...RUNNING, status: "paused", phase: "half_time" };
+    expect(resolveStripKind({ ...halfTime, isChoosingSwapTarget: true })).toBe("positionSwap");
+    expect(resolveStripKind({ ...RUNNING, status: "not_started", hasPendingPositionUndo: true })).toBe("positionUndo");
+  });
+});
+
 describe("isInPlay", () => {
   it("is true while the clock runs or a half is paused", () => {
     expect(isInPlay({ status: "running", phase: "first_half" })).toBe(true);

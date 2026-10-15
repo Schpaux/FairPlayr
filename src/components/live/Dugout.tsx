@@ -7,7 +7,7 @@
  */
 
 import { useLayoutEffect, useRef } from "react";
-import { ArrowLeftRight, Play, Undo2 } from "lucide-react";
+import { ArrowLeftRight, Play, Undo2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { LiveScreenModel } from "@/components/live/liveScreenModel";
@@ -23,6 +23,7 @@ export interface StripActions {
   onRequestEndPhase: () => void;
   onSelectSuggestion: () => void;
   onCancelSelection: () => void;
+  onStartPositionSwap: () => void;
   onUndo: () => void;
 }
 
@@ -40,6 +41,32 @@ function ActionStrip({ model, undo, ...actions }: ActionStripProps) {
   const dragging = model.bench.find(
     (tile) => tile.playerId === model.draggingBenchPlayerId,
   );
+  const tokenName = (playerId: string | null) =>
+    model.tokens.find((token) => token.playerId === playerId)?.name ?? "";
+  const seconds = undo?.secondsRemaining ?? 0;
+  const undoButton = (label: string) => (
+    <button
+      type="button"
+      className={cn(styles.btn, styles.btnSm)}
+      aria-label={label}
+      onClick={actions.onUndo}
+    >
+      <Undo2 size={18} {...ICON} />
+      {t("undo")}
+      <span className={styles.undoSeconds} aria-hidden>
+        {seconds}
+      </span>
+    </button>
+  );
+  const cancelButton = (
+    <button
+      type="button"
+      className={cn(styles.btn, styles.btnSm, styles.btnSecondary)}
+      onClick={actions.onCancelSelection}
+    >
+      {t("cancel")}
+    </button>
+  );
 
   let small: string;
   let main: string;
@@ -51,7 +78,6 @@ function ActionStrip({ model, undo, ...actions }: ActionStripProps) {
   switch (model.strip) {
     case "undo": {
       const sub = model.lastSubstitution;
-      const seconds = undo?.secondsRemaining ?? 0;
       tone = "inverse";
       key = `undo-${undo?.expiresAtMs ?? 0}`;
       // One name per line, so neither is cut beside the undo key; the
@@ -63,25 +89,33 @@ function ActionStrip({ model, undo, ...actions }: ActionStripProps) {
           : t("undoOutSmallNoMinute", { out: sub.outName });
       main = sub ? t("undoIn", { in: sub.inName }) : "";
       announce = sub ? t("undoText", { in: sub.inName, out: sub.outName }) : "";
-      button = (
-        <button
-          type="button"
-          className={cn(styles.btn, styles.btnSm)}
-          aria-label={t("undoLabel", { seconds })}
-          onClick={actions.onUndo}
-        >
-          <Undo2 size={18} {...ICON} />
-          {t("undo")}
-          <span className={styles.undoSeconds} aria-hidden>
-            {seconds}
-          </span>
-        </button>
-      );
+      button = undoButton(t("undoLabel", { seconds }));
+      break;
+    }
+    case "positionUndo": {
+      // A position swap is not a substitution: both players stay on.
+      const [a, b] = model.positionSwap?.names ?? ["", ""];
+      tone = "inverse";
+      key = `positionUndo-${undo?.expiresAtMs ?? 0}`;
+      small = t("positionUndoSmall");
+      main = t("positionUndoText", { a, b });
+      announce = t("positionUndoAnnounce", { a, b });
+      button = undoButton(t("positionUndoLabel", { seconds }));
       break;
     }
     case "dragging":
       small = dragging?.name ?? "";
       main = t("draggingText");
+      break;
+    case "draggingPosition":
+      small = tokenName(model.draggingFieldPlayerId);
+      main = t("draggingPositionText");
+      break;
+    case "positionSwap":
+      key = `positionSwap-${model.positionSwapSourceId}`;
+      small = t("positionSwapSmall", { name: tokenName(model.positionSwapSourceId) });
+      main = t("positionSwapText");
+      button = cancelButton;
       break;
     case "selection":
       key = `selection-${model.selectedFieldPlayerId}`;
@@ -89,15 +123,31 @@ function ActionStrip({ model, undo, ...actions }: ActionStripProps) {
         ? t("selectedSmall", { name: selected.name, minutes: selected.minutes })
         : "";
       main = benchCount > 0 ? t("selectedText") : t("selectedNoBench");
-      button = (
-        <button
-          type="button"
-          className={cn(styles.btn, styles.btnSm, styles.btnSecondary)}
-          onClick={actions.onCancelSelection}
-        >
-          {t("cancel")}
-        </button>
-      );
+      // "Bytt plass" leads; a compact ✕ keeps an explicit cancel without
+      // taking width from the instruction (tapping the player again or the
+      // grass cancels too). With nobody to swap with, Avbryt alone.
+      button =
+        model.tokens.length > 1 ? (
+          <span className={styles.stripActions}>
+            <button
+              type="button"
+              className={cn(styles.btn, styles.btnSm, styles.btnSecondary)}
+              onClick={actions.onStartPositionSwap}
+            >
+              {t("swapPosition")}
+            </button>
+            <button
+              type="button"
+              className={cn(styles.iconButton, styles.stripCancel)}
+              aria-label={t("cancelSelectionLabel", { name: selected?.name ?? "" })}
+              onClick={actions.onCancelSelection}
+            >
+              <X size={20} {...ICON} />
+            </button>
+          </span>
+        ) : (
+          cancelButton
+        );
       break;
     case "kickoff":
       small = t("kickoffSmall", {
@@ -222,7 +272,7 @@ function ActionStrip({ model, undo, ...actions }: ActionStripProps) {
           <b className={styles.stripMain}>{main}</b>
         </span>
         {button}
-        {model.strip === "undo" && undo ? (
+        {(model.strip === "undo" || model.strip === "positionUndo") && undo ? (
           <span key={undo.expiresAtMs} className={styles.drain} aria-hidden />
         ) : null}
       </div>

@@ -7,6 +7,9 @@ import {
   getDraggingBenchPlayerId,
   hasPendingUndo,
   getUndoSnapshot,
+  getPendingPositionSwap,
+  getPositionSwapSourceId,
+  getDraggingFieldPlayerId,
   type SubInteractionState,
 } from "@/domain/liveSubInteraction";
 import type { LiveMatchState } from "@/domain/liveMatch";
@@ -243,5 +246,89 @@ describe("state immutability", () => {
     const state = idle();
     const next = dispatch(state, { type: "SELECT_FIELD_PLAYER", playerId: "p1" });
     expect(next).not.toBe(state);
+  });
+});
+
+// ─── Position swap (FP-MS2.1-B1) ──────────────────────────────────────────────
+
+describe("position swap", () => {
+  const swap = { fromSlotId: "7v7-2", toSlotId: "7v7-5", fromPlayerId: "p2", toPlayerId: "p5" };
+  const swapSource = (playerId: string): SubInteractionState => ({ kind: "positionSwapSource", fieldPlayerId: playerId });
+  const draggingField = (playerId: string, slotId: string): SubInteractionState => ({
+    kind: "draggingFieldPlayer",
+    fieldPlayerId: playerId,
+    slotId,
+  });
+  const pendingPosition = (expiresAtMs = Date.now() + 5000): SubInteractionState => ({
+    kind: "pendingPositionUndo",
+    swap,
+    expiresAtMs,
+  });
+
+  it("START_POSITION_SWAP turns the selection into a swap source", () => {
+    expect(dispatch(selected("p2"), { type: "START_POSITION_SWAP" })).toEqual(swapSource("p2"));
+  });
+
+  it("START_POSITION_SWAP needs a selected field player", () => {
+    for (const state of [idle(), dragging("b1"), pendingUndo(makeSnapshot()), pendingPosition()]) {
+      expect(dispatch(state, { type: "START_POSITION_SWAP" })).toBe(state);
+    }
+  });
+
+  it("tapping the source again or cancelling leaves the lineup mode without a swap", () => {
+    expect(dispatch(swapSource("p2"), { type: "SELECT_FIELD_PLAYER", playerId: "p2" })).toEqual(idle());
+    expect(dispatch(swapSource("p2"), { type: "CANCEL" })).toEqual(idle());
+  });
+
+  it("a tap on another field player is left to the hook, which commits the swap", () => {
+    const state = swapSource("p2");
+    expect(dispatch(state, { type: "SELECT_FIELD_PLAYER", playerId: "p5" })).toBe(state);
+  });
+
+  it("START_FIELD_DRAG starts a field drag from idle, a selection or a swap source", () => {
+    const action = { type: "START_FIELD_DRAG", playerId: "p2", slotId: "7v7-2" } as const;
+    expect(dispatch(idle(), action)).toEqual(draggingField("p2", "7v7-2"));
+    expect(dispatch(selected("p4"), action)).toEqual(draggingField("p2", "7v7-2"));
+    expect(dispatch(swapSource("p2"), action)).toEqual(draggingField("p2", "7v7-2"));
+  });
+
+  it("no drag starts while an undo window is open", () => {
+    for (const state of [pendingUndo(makeSnapshot()), pendingPosition()]) {
+      expect(dispatch(state, { type: "START_FIELD_DRAG", playerId: "p2", slotId: "7v7-2" })).toBe(state);
+      expect(dispatch(state, { type: "START_BENCH_DRAG", benchPlayerId: "b1" })).toBe(state);
+    }
+  });
+
+  it("CANCEL_DRAG ends a field drag without a swap", () => {
+    expect(dispatch(draggingField("p2", "7v7-2"), { type: "CANCEL_DRAG" })).toEqual(idle());
+  });
+
+  it("POSITION_SWAP_COMMITTED opens the position undo window from a swap source or a field drag", () => {
+    const expiresAtMs = Date.now() + 5000;
+    const action = { type: "POSITION_SWAP_COMMITTED", swap, expiresAtMs } as const;
+    expect(dispatch(swapSource("p2"), action)).toEqual(pendingPosition(expiresAtMs));
+    expect(dispatch(draggingField("p2", "7v7-2"), action)).toEqual(pendingPosition(expiresAtMs));
+  });
+
+  it("the position undo window ignores taps and cancel, and closes on undo or expiry", () => {
+    const state = pendingPosition();
+    expect(dispatch(state, { type: "SELECT_FIELD_PLAYER", playerId: "p3" })).toBe(state);
+    expect(dispatch(state, { type: "CANCEL" })).toBe(state);
+    expect(dispatch(state, { type: "UNDO_TRIGGERED" })).toEqual(idle());
+    expect(dispatch(state, { type: "UNDO_EXPIRED" })).toEqual(idle());
+  });
+
+  it("selectors", () => {
+    expect(hasPendingUndo(pendingPosition())).toBe(true);
+    expect(getUndoSnapshot(pendingPosition())).toBeNull();
+    expect(getPendingPositionSwap(pendingPosition())).toEqual(swap);
+    expect(getPendingPositionSwap(pendingUndo(makeSnapshot()))).toBeNull();
+    expect(getPositionSwapSourceId(swapSource("p2"))).toBe("p2");
+    expect(getPositionSwapSourceId(selected("p2"))).toBeNull();
+    expect(getDraggingFieldPlayerId(draggingField("p2", "7v7-2"))).toBe("p2");
+    expect(getDraggingFieldPlayerId(dragging("b1"))).toBeNull();
+    // A field drag is not a bench drag, and a swap source is not a selection.
+    expect(isDragging(draggingField("p2", "7v7-2"))).toBe(false);
+    expect(getSelectedFieldPlayerId(swapSource("p2"))).toBeNull();
   });
 });

@@ -2,8 +2,9 @@
 
 /**
  * Pitch (DESIGN.md §5.2): grass, markings and one token per field player.
- * Owns placement only. Taps and drop targets are forwarded to the existing
- * substitution hook; `data-slot-id` is what its drag hit-test looks for.
+ * Owns placement only. Taps, pointer-downs (drag to swap positions) and drop
+ * targets are forwarded to the existing substitution hook; `data-slot-id` is
+ * what its drag hit-test looks for.
  */
 
 import { useLayoutEffect, useRef, useState } from "react";
@@ -83,13 +84,29 @@ interface PlayerTokenProps {
   token: LiveTokenView;
   selected: boolean;
   target: boolean;
+  /** The valid slot under a dragged player: releasing here swaps. */
+  drop: boolean;
+  /** This player is being dragged (it follows the finger as the ghost). */
+  dragged: boolean;
   suggested: boolean;
   landed: boolean;
   disabled: boolean;
   onTap: (playerId: string) => void;
+  onPointerDown: (playerId: string, slotId: string, event: React.PointerEvent) => void;
 }
 
-function PlayerToken({ token, selected, target, suggested, landed, disabled, onTap }: PlayerTokenProps) {
+function PlayerToken({
+  token,
+  selected,
+  target,
+  drop,
+  dragged,
+  suggested,
+  landed,
+  disabled,
+  onTap,
+  onPointerDown,
+}: PlayerTokenProps) {
   const t = useTranslations("matchLive.sideline.token");
   const label = [
     token.name,
@@ -109,12 +126,16 @@ function PlayerToken({ token, selected, target, suggested, landed, disabled, onT
       type="button"
       data-slot-id={token.slotId}
       data-player-id={token.playerId}
+      data-target={target}
+      data-drop={drop}
       className={cn(
         styles.token,
         styles[token.fatigue],
         token.isKeeper && styles.keeper,
         selected && styles.selected,
         target && styles.target,
+        drop && styles.drop,
+        dragged && styles.dragged,
         suggested && styles.suggested,
         landed && styles.landed
       )}
@@ -126,6 +147,7 @@ function PlayerToken({ token, selected, target, suggested, landed, disabled, onT
       aria-label={label}
       aria-pressed={selected}
       disabled={disabled}
+      onPointerDown={(event) => onPointerDown(token.playerId, token.slotId, event)}
       onClick={(event) => {
         event.stopPropagation();
         onTap(token.playerId);
@@ -154,13 +176,26 @@ function PlayerToken({ token, selected, target, suggested, landed, disabled, onT
 interface PitchProps {
   model: LiveScreenModel;
   disabled: boolean;
-  landedPlayerId: string | null;
+  /** Players who just arrived in their slot (substitution or position swap). */
+  landedPlayerIds: readonly string[];
+  /** The valid slot under a dragged field player, or null. */
+  dropSlotId: string | null;
   onTapFieldPlayer: (playerId: string) => void;
+  onFieldPointerDown: (playerId: string, slotId: string, event: React.PointerEvent) => void;
   onBackgroundTap: () => void;
   children?: React.ReactNode;
 }
 
-export function Pitch({ model, disabled, landedPlayerId, onTapFieldPlayer, onBackgroundTap, children }: PitchProps) {
+export function Pitch({
+  model,
+  disabled,
+  landedPlayerIds,
+  dropSlotId,
+  onTapFieldPlayer,
+  onFieldPointerDown,
+  onBackgroundTap,
+  children,
+}: PitchProps) {
   const t = useTranslations("matchLive.sideline.pitch");
   const pitchRef = useRef<HTMLDivElement>(null);
   const tokenBoxRef = useRef<HTMLDivElement>(null);
@@ -249,20 +284,31 @@ export function Pitch({ model, disabled, landedPlayerId, onTapFieldPlayer, onBac
     >
       <PitchMarkings width={size.width} height={size.height} />
       <div ref={tokenBoxRef} className={styles.tokenBox}>
-        {model.tokens.map((token) => (
-          <PlayerToken
-            key={token.slotId}
-            token={token}
-            selected={token.playerId === model.selectedFieldPlayerId}
-            target={model.draggingBenchPlayerId !== null}
-            suggested={
-              model.strip === "suggestion" && token.playerId === model.suggestion?.outgoingPlayerId
-            }
-            landed={token.playerId === landedPlayerId}
-            disabled={disabled}
-            onTap={onTapFieldPlayer}
-          />
-        ))}
+        {model.tokens.map((token) => {
+          // A position swap pairs this player with any other pitch player.
+          const swapSource = model.positionSwapSourceId ?? model.draggingFieldPlayerId;
+          return (
+            <PlayerToken
+              key={token.slotId}
+              token={token}
+              selected={
+                token.playerId === model.selectedFieldPlayerId || token.playerId === model.positionSwapSourceId
+              }
+              target={
+                model.draggingBenchPlayerId !== null || (swapSource !== null && token.playerId !== swapSource)
+              }
+              drop={token.slotId === dropSlotId}
+              dragged={token.playerId === model.draggingFieldPlayerId}
+              suggested={
+                model.strip === "suggestion" && token.playerId === model.suggestion?.outgoingPlayerId
+              }
+              landed={landedPlayerIds.includes(token.playerId)}
+              disabled={disabled}
+              onTap={onTapFieldPlayer}
+              onPointerDown={onFieldPointerDown}
+            />
+          );
+        })}
       </div>
       {children}
     </div>

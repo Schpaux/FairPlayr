@@ -73,6 +73,15 @@ export interface LiveScreenModel {
   bench: LiveBenchView[];
   selectedFieldPlayerId: string | null;
   draggingBenchPlayerId: string | null;
+  /** "Bytt plass": the field player waiting for a position-swap partner. */
+  positionSwapSourceId: string | null;
+  /** The field player being dragged onto another position. */
+  draggingFieldPlayerId: string | null;
+  /** The position swap inside its undo window (two players, no substitution). */
+  positionSwap: {
+    playerIds: [string, string];
+    names: [string, string];
+  } | null;
   suggestion: LiveSuggestionView | null;
   lastSubstitution: {
     inPlayerId: string | null;
@@ -215,6 +224,20 @@ export function buildLiveScreenModel({
     interaction.kind === "fieldPlayerSelected" ? interaction.fieldPlayerId : null;
   const draggingBenchPlayerId =
     interaction.kind === "draggingBenchPlayer" ? interaction.benchPlayerId : null;
+  const positionSwapSourceId =
+    interaction.kind === "positionSwapSource" ? interaction.fieldPlayerId : null;
+  const draggingFieldPlayerId =
+    interaction.kind === "draggingFieldPlayer" ? interaction.fieldPlayerId : null;
+  const positionSwap =
+    interaction.kind === "pendingPositionUndo"
+      ? {
+          playerIds: [interaction.swap.fromPlayerId, interaction.swap.toPlayerId] as [string, string],
+          names: [getShortName(interaction.swap.fromPlayerId), getShortName(interaction.swap.toPlayerId)] as [
+            string,
+            string,
+          ],
+        }
+      : null;
 
   return {
     status: liveMatch.status,
@@ -230,6 +253,9 @@ export function buildLiveScreenModel({
     bench,
     selectedFieldPlayerId,
     draggingBenchPlayerId,
+    positionSwapSourceId,
+    draggingFieldPlayerId,
+    positionSwap,
     suggestion: suggestionView,
     lastSubstitution,
     events,
@@ -242,6 +268,9 @@ export function buildLiveScreenModel({
       hasSelection: selectedFieldPlayerId !== null,
       isDragging: draggingBenchPlayerId !== null,
       hasSuggestion: suggestionView !== null,
+      hasPendingPositionUndo: positionSwap !== null,
+      isDraggingPosition: draggingFieldPlayerId !== null,
+      isChoosingSwapTarget: positionSwapSourceId !== null,
     }),
   };
 }

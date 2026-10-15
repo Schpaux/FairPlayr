@@ -187,7 +187,10 @@ A single slot that shows exactly one message, in this priority order (copy is in
 | # | State | Small line | Main line | Button |
 |---|---|---|---|---|
 | 1 | Undo (5 s) | "Bytte i 17. minutt" / "Mål i 17. minutt" | "Selma inn · Maja ut" / "Mål: Frida" | **Angre 5** (outline). The strip turns club green, with a lime countdown bar. |
-| 2 | Selection | "Maja · 16′ totalt · 9′ siden hvile" | "Velg hvem som skal inn / ut" | Avbryt |
+| 1b | Undo, position swap (5 s) | "Byttet plass" | "Emma ↔ Ola" | **Angre 5**, as row 1 (§6.1.1) |
+| 1c | Dragging | the dragged player's name | "Slipp på spilleren som skal ut" (bench drag) / "Slipp på en spiller for å bytte plass" (pitch drag) | — |
+| 2 | Selection | "Maja · 16′ totalt" | "Velg innbytter" / "Ingen på benken" | **Bytt plass** (secondary) + a compact ✕ (44 px, label "Avbryt valget av Maja"). Tapping the player again or the grass also cancels. With no other pitch player: Avbryt. The instruction is short so that both controls fit at 360 px without truncation. |
+| 2b | Position swap | "Bytt plass med Maja" | "Trykk en spiller på banen" | Avbryt |
 | 3 | Pre-kickoff | "Klar" | "Start kampen når dommeren blåser" | **Avspark** (lime) |
 | 4 | Half-time | "Pause · 2–1" | "Bytt nå, uten klokke" | **Start 2. omgang** (lime) |
 | 5 | Full-time | "Slutt · 2–1" | "Kampen er ferdig" | Ferdig |
@@ -217,6 +220,17 @@ With an empty bench, the idle line reads "Ingen innbyttere".
 - **Drag-to-swap is preserved as a secondary path (D4).**
 - After a swap: the token lands, the bench tile flashes, both stint rings reset, and the strip shows the 5 s undo.
 - **Starting another selection during the undo window confirms the previous substitution and begins the new one (D3).**
+
+### 6.1.1 Position swap (B1)
+Two players on the pitch exchange positions. **It is not a substitution**: no event is logged, total minutes and the stint ring are unchanged, and nobody goes to or from the bench. Both methods below are approved and **neither is optional (D7)**.
+
+1. **Tap:** tap a pitch player → **Bytt plass** in the strip (the ✕ beside it cancels the selection) → every other pitch player gets the dashed target halo (the bench does not) → tap one of them. Tapping the source again, the grass or **Avbryt** cancels; a bench tap does nothing in this mode.
+2. **Drag:** press a pitch player and drag (touch or mouse; it starts after a 12px move, so ordinary taps are unaffected). The player follows the finger as the lime ghost, its own token dims, every other pitch player shows the dashed target halo, and the one under the finger gets a solid lime halo. Release on another pitch player to swap. Releasing on grass, the bench, the player's own slot, or anywhere else cancels with no change, and the release never also selects a player.
+
+- **One domain operation.** Both methods call the same `swapLivePositions` (`src/domain/positionSwap.ts`): both slots must be in the current formation and hold on-field players, otherwise nothing changes. It works in every format, and swapping into the first slot makes that player the keeper (the K badge moves with the slot).
+- **Undo.** The strip shows the 5 s undo (row 1b) and both tokens land. Undo is **targeted**: it reverses those two slots only, and only while they still hold the swapped pair. A goal or clock change made inside the window is kept.
+- **Persistence.** The swap is saved on the device like any live change, offline too. Slot assignments travel with the debounced runtime-state sync; there is no server event to reconcile.
+- **Routing a drag by what it is dropped on:** pitch player → occupied pitch slot = position swap; bench → pitch = substitution (unchanged); pitch → bench = no change (not a substitution path); pitch → empty or invalid area = no change.
 
 ### 6.2 Fairness suggestion (D2)
 - **Out:** the outfield player with the most total time (the keeper is excluded). **In:** the bench player with the least total time.
@@ -276,6 +290,7 @@ A 24 grid with 1.75 stroke and round caps and joins (lucide-compatible). Icons o
 | D4 | Drag-to-swap is preserved as a secondary interaction. |
 | D5 | Optional player nicknames are deferred. |
 | D6 | 375 × 667 is the validated initial live viewport. 360 × 640 Android is a follow-up before broad release. |
+| D7 | Position swaps on the pitch support **both** tap ("Bytt plass", then the other player) **and** drag-and-drop. Both use one domain operation and the same targeted 5 s undo, and never create a substitution (§6.1.1). |
 | C1 | The light canvas is near-white `#F9FAF8` with white surfaces and neutral borders; beige `#F2EFE7` is no longer a surface colour. |
 | C2 | Goal correction: quick goal keys, undo last goal, correct older goals via event history; the score is derived from events and kept consistent with the server. |
 
@@ -288,3 +303,4 @@ A 24 grid with 1.75 stroke and round caps and joins (lucide-compatible). Icons o
 | Legacy tokens | `--fp-pitch-*`, `.glow-*` and `src/lib/tokens.ts` `colors` are legacy. Remove them as the live UI and setup are rebuilt. |
 | Live screen, setup, home (§5–7) | Not started. Follow `design-exploration/modern-sideline/IMPLEMENTATION-PLAN.md`, behind `NEXT_PUBLIC_LIVE_UI=sideline`. |
 | Goal correction (§6.3) | Blocked on server event reconciliation. |
+| Position swap (§6.1.1) | **Done in the Modern Sideline view** (FP-MS2.1-B1). The legacy live view (flag off) does not offer it. |

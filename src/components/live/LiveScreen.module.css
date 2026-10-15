@@ -113,6 +113,7 @@
 
 @media (hover: hover) and (pointer: fine) {
   .btnSecondary:hover,
+  .stripCancel:hover,
   .menuRow:hover,
   .benchTile:hover:not(:disabled) {
     background-color: var(--fp-surface-2);
@@ -376,6 +377,10 @@
   min-width: 52px;
   max-width: 176px;
   z-index: 1;
+  /* Tokens can be dragged onto another position (FP-MS2.1-B1); the browser
+     must not claim the gesture or open a long-press callout. */
+  touch-action: none;
+  -webkit-touch-callout: none;
 }
 
 .disc {
@@ -541,6 +546,23 @@
   box-shadow: 0 0 0 2px var(--fp-lime);
 }
 
+/* The valid position under a dragged player: releasing here swaps. */
+.drop .disc::before {
+  border-style: solid;
+  border-color: var(--fp-lime);
+  opacity: 1;
+}
+
+.drop .disc {
+  transform: scale(1.08);
+}
+
+/* The dragged player stays faint in its slot while the ghost follows the finger. */
+.dragged .disc,
+.dragged .tag {
+  opacity: 0.35;
+}
+
 .landed .disc {
   animation: land var(--fp-d-land) var(--fp-ease-land);
 }
@@ -662,6 +684,23 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Selection: "Bytt plass" plus a compact ✕ cancel (FP-MS2.1-B1). */
+.stripActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+
+/* Slightly tighter pill, so the instruction keeps its width at 360px. */
+.stripActions .btnSm {
+  padding: 0 14px;
+}
+
+.stripCancel {
+  color: var(--fp-ink-2);
 }
 
 .stripIdle {

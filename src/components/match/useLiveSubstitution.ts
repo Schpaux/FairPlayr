@@ -27,10 +27,24 @@
  *      player → commitSwap() called, ghost cleared
  *   4. Pointer released elsewhere → CANCEL_DRAG dispatched, ghost cleared
  *
+ * ## Position swap (FP-MS2.1-B1): two field players exchange slots
+ *   Both paths end in commitPositionSwap(), the only caller of
+ *   onPositionSwap, so tap and drag produce the same domain change.
+ *   - Tap: field player selected → startPositionSwap() ("Bytt plass") →
+ *     tapFieldPlayer(other) commits.
+ *   - Drag: pointer down on a field token → past FIELD_DRAG_THRESHOLD_PX
+ *     START_FIELD_DRAG, positionDrag follows the finger and names the valid
+ *     slot underneath → release on another occupied slot commits; anywhere
+ *     else cancels without a change.
+ *   The one click the browser fires on the dragged token after its release
+ *   is swallowed, so releasing a drag never also selects or deselects it.
+ *
  * ## Undo flow
  *   commitSwap() captures a snapshot of liveMatch BEFORE calling onSwap, then
  *   dispatches SWAP_COMMITTED. A 5-second timer dispatches UNDO_EXPIRED.
  *   triggerUndo() dispatches UNDO_TRIGGERED and calls onUndo(snapshot).
+ *   A position swap keeps only the swapped pair and undoes through
+ *   onPositionSwapUndo(swap), which reverses those two slots and nothing else.
  */
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
@@ -42,10 +56,20 @@ import {
   hasPendingUndo,
   type SubInteractionState,
 } from "@/domain/liveSubInteraction";
+import {
+  canSwapLivePositions,
+  describeLivePositionSwap,
+  findLiveSlotOf,
+  type PositionSwapRecord,
+} from "@/domain/positionSwap";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const DRAG_THRESHOLD_PX = 8;
+/** Field tokens are tapped far more than dragged, so a drag needs a clearer move. */
+const FIELD_DRAG_THRESHOLD_PX = 12;
+/** How long after a field drag ends its trailing click on that token is ignored. */
+const DRAG_CLICK_GUARD_MS = 400;
 const UNDO_WINDOW_MS = 5000;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -56,11 +80,18 @@ export interface GhostChip {
   y: number;
 }
 
-interface DragOrigin {
-  benchPlayerId: string;
-  startX: number;
-  startY: number;
+/** A field player being dragged onto another position. */
+export interface PositionDrag {
+  fieldPlayerId: string;
+  x: number;
+  y: number;
+  /** The occupied slot under the finger that a release would swap with, or null. */
+  targetSlotId: string | null;
 }
+
+type DragOrigin =
+  | { kind: "bench"; benchPlayerId: string; startX: number; startY: number }
+  | { kind: "field"; playerId: string; slotId: string; startX: number; startY: number };
 
 export interface UseLiveSubstitutionOptions {
   /** Current live match state — snapshotted on each swap for undo. */
@@ -69,6 +100,13 @@ export interface UseLiveSubstitutionOptions {
   onSwap: (outgoingPlayerId: string, incomingPlayerId: string) => void;
   /** Called when undo is triggered. Parent should restore this snapshot. */
   onUndo: (snapshot: LiveMatchState) => void;
+  /**
+   * Called when two field players exchange positions (tap or drag). Without
+   * it, position swaps are not offered.
+   */
+  onPositionSwap?: (fromSlotId: string, toSlotId: string) => void;
+  /** Called when a position swap is undone. Parent reverses only that swap. */
+  onPositionSwapUndo?: (swap: PositionSwapRecord) => void;
   /** When true, all interaction is blocked (e.g. match ended). */
   disabled?: boolean;
 }
@@ -78,9 +116,14 @@ export interface UseLiveSubstitutionReturn {
   state: SubInteractionState;
   /** Drag ghost position, or null when not dragging. */
   ghostChip: GhostChip | null;
+  /** Field-player drag (position swap), or null. */
+  positionDrag: PositionDrag | null;
   /** Seconds remaining in the undo window, or null. */
   undoSecondsRemaining: number | null;
-  /** Tap a field player slot. Selects, deselects, or no-ops. */
+  /**
+   * Tap a field player slot. Selects, deselects, or — while a position swap
+   * is waiting for its partner — swaps positions.
+   */
   tapFieldPlayer: (playerId: string) => void;
   /**
    * Tap a bench player.
@@ -88,9 +131,11 @@ export interface UseLiveSubstitutionReturn {
    * Otherwise no-op (field player must be selected first in this model).
    */
   tapBenchPlayer: (benchPlayerId: string) => void;
+  /** "Bytt plass": the selected field player waits for another field player. */
+  startPositionSwap: () => void;
   /** Tap pitch background to cancel selection. */
   cancel: () => void;
-  /** Trigger undo (only valid during pendingUndo window). */
+  /** Trigger undo (only valid during an undo window). */
   triggerUndo: () => void;
   /**
    * Attach onPointerDown to each bench chip.
@@ -98,6 +143,11 @@ export interface UseLiveSubstitutionReturn {
    */
   getBenchPointerDownHandler: (
     benchPlayerId: string
+  ) => (e: React.PointerEvent) => void;
+  /** Attach onPointerDown to each field token for drag-to-swap positions. */
+  getFieldPointerDownHandler: (
+    playerId: string,
+    slotId: string
   ) => (e: React.PointerEvent) => void;
   /** Attach to the container that wraps pitch + bench. */
   pointerSurfaceHandlers: {
@@ -107,12 +157,21 @@ export interface UseLiveSubstitutionReturn {
   };
 }
 
+/** The `data-slot-id` of the element under a point, or null. */
+function slotIdAt(x: number, y: number): string | null {
+  if (typeof document.elementFromPoint !== "function") return null;
+  const el = document.elementFromPoint(x, y);
+  return el?.closest<HTMLElement>("[data-slot-id]")?.dataset.slotId ?? null;
+}
+
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useLiveSubstitution({
   liveMatch,
   onSwap,
   onUndo,
+  onPositionSwap,
+  onPositionSwapUndo,
   disabled = false,
 }: UseLiveSubstitutionOptions): UseLiveSubstitutionReturn {
   const [state, dispatch] = useReducer(
@@ -120,6 +179,7 @@ export function useLiveSubstitution({
     INITIAL_SUB_STATE
   );
   const [ghostChip, setGhostChip] = useState<GhostChip | null>(null);
+  const [positionDrag, setPositionDrag] = useState<PositionDrag | null>(null);
   const [undoSecondsRemaining, setUndoSecondsRemaining] = useState<
     number | null
   >(null);
@@ -127,6 +187,8 @@ export function useLiveSubstitution({
   // Refs for drag tracking (mutable, no re-renders).
   const dragOriginRef = useRef<DragOrigin | null>(null);
   const isDragActiveRef = useRef(false);
+  // The click a browser fires on the dragged token after its release.
+  const trailingClickRef = useRef<{ playerId: string; untilMs: number } | null>(null);
 
   // Refs for undo timers.
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -159,6 +221,26 @@ export function useLiveSubstitution({
     setUndoSecondsRemaining(null);
   }, []);
 
+  /** Start the 5 s countdown; returns when it ends. */
+  const openUndoWindow = useCallback((): number => {
+    const expiresAtMs = Date.now() + UNDO_WINDOW_MS;
+
+    clearUndoTimers();
+    setUndoSecondsRemaining(Math.ceil(UNDO_WINDOW_MS / 1000));
+
+    undoIntervalRef.current = setInterval(() => {
+      const remaining = Math.ceil((expiresAtMs - Date.now()) / 1000);
+      setUndoSecondsRemaining(Math.max(0, remaining));
+    }, 200);
+
+    undoTimerRef.current = setTimeout(() => {
+      dispatch({ type: "UNDO_EXPIRED" });
+      clearUndoTimers();
+    }, UNDO_WINDOW_MS);
+
+    return expiresAtMs;
+  }, [clearUndoTimers]);
+
   // ── Core swap commit ───────────────────────────────────────────────────────
 
   const commitSwap = useCallback(
@@ -168,23 +250,25 @@ export function useLiveSubstitution({
 
       onSwap(outgoingPlayerId, incomingPlayerId);
 
-      const expiresAtMs = Date.now() + UNDO_WINDOW_MS;
+      const expiresAtMs = openUndoWindow();
       dispatch({ type: "SWAP_COMMITTED", snapshot, expiresAtMs });
-
-      clearUndoTimers();
-      setUndoSecondsRemaining(Math.ceil(UNDO_WINDOW_MS / 1000));
-
-      undoIntervalRef.current = setInterval(() => {
-        const remaining = Math.ceil((expiresAtMs - Date.now()) / 1000);
-        setUndoSecondsRemaining(Math.max(0, remaining));
-      }, 200);
-
-      undoTimerRef.current = setTimeout(() => {
-        dispatch({ type: "UNDO_EXPIRED" });
-        clearUndoTimers();
-      }, UNDO_WINDOW_MS);
     },
-    [onSwap, clearUndoTimers]
+    [onSwap, openUndoWindow]
+  );
+
+  /** The one place a position swap is applied, for both tap and drag. */
+  const commitPositionSwap = useCallback(
+    (fromSlotId: string, toSlotId: string) => {
+      if (!onPositionSwap) return;
+      const swap = describeLivePositionSwap(liveMatchRef.current, fromSlotId, toSlotId);
+      if (!swap) return;
+
+      onPositionSwap(fromSlotId, toSlotId);
+
+      const expiresAtMs = openUndoWindow();
+      dispatch({ type: "POSITION_SWAP_COMMITTED", swap, expiresAtMs });
+    },
+    [onPositionSwap, openUndoWindow]
   );
 
   // ── Tap interactions ───────────────────────────────────────────────────────
@@ -192,9 +276,22 @@ export function useLiveSubstitution({
   const tapFieldPlayer = useCallback(
     (playerId: string) => {
       if (disabled) return;
+
+      // Releasing a drag must not also select or deselect the dragged player.
+      const trailing = trailingClickRef.current;
+      trailingClickRef.current = null;
+      if (trailing && trailing.playerId === playerId && Date.now() < trailing.untilMs) return;
+
+      if (state.kind === "positionSwapSource" && state.fieldPlayerId !== playerId) {
+        const fromSlotId = findLiveSlotOf(liveMatchRef.current, state.fieldPlayerId);
+        const toSlotId = findLiveSlotOf(liveMatchRef.current, playerId);
+        if (fromSlotId && toSlotId) commitPositionSwap(fromSlotId, toSlotId);
+        return;
+      }
+
       dispatch({ type: "SELECT_FIELD_PLAYER", playerId });
     },
-    [disabled]
+    [disabled, state, commitPositionSwap]
   );
 
   const tapBenchPlayer = useCallback(
@@ -213,6 +310,11 @@ export function useLiveSubstitution({
     [disabled, state, commitSwap]
   );
 
+  const startPositionSwap = useCallback(() => {
+    if (disabled || !onPositionSwap) return;
+    dispatch({ type: "START_POSITION_SWAP" });
+  }, [disabled, onPositionSwap]);
+
   const cancel = useCallback(() => {
     if (disabled) return;
     dispatch({ type: "CANCEL" });
@@ -221,6 +323,14 @@ export function useLiveSubstitution({
   // ── Undo ──────────────────────────────────────────────────────────────────
 
   const triggerUndo = useCallback(() => {
+    if (state.kind === "pendingPositionUndo") {
+      const swap = state.swap;
+      dispatch({ type: "UNDO_TRIGGERED" });
+      clearUndoTimers();
+      onPositionSwapUndo?.(swap);
+      return;
+    }
+
     if (!hasPendingUndo(state)) return;
     if (state.kind !== "pendingUndo") return;
 
@@ -228,7 +338,7 @@ export function useLiveSubstitution({
     dispatch({ type: "UNDO_TRIGGERED" });
     clearUndoTimers();
     onUndo(snapshot);
-  }, [state, clearUndoTimers, onUndo]);
+  }, [state, clearUndoTimers, onUndo, onPositionSwapUndo]);
 
   // ── Drag handling ─────────────────────────────────────────────────────────
 
@@ -242,6 +352,7 @@ export function useLiveSubstitution({
         (e.currentTarget as Element).setPointerCapture(e.pointerId);
 
         dragOriginRef.current = {
+          kind: "bench",
           benchPlayerId,
           startX: e.clientX,
           startY: e.clientY,
@@ -249,6 +360,32 @@ export function useLiveSubstitution({
         isDragActiveRef.current = false;
       },
     [disabled, state]
+  );
+
+  const getFieldPointerDownHandler = useCallback(
+    (playerId: string, slotId: string) =>
+      (e: React.PointerEvent) => {
+        if (disabled || !onPositionSwap) return;
+        if (hasPendingUndo(state)) return;
+        // One finger at a time; a second touch never starts another drag.
+        if (!e.isPrimary) return;
+
+        // Keep receiving moves when the finger leaves the token.
+        const target = e.currentTarget as Element;
+        if (typeof target.setPointerCapture === "function") {
+          target.setPointerCapture(e.pointerId);
+        }
+
+        dragOriginRef.current = {
+          kind: "field",
+          playerId,
+          slotId,
+          startX: e.clientX,
+          startY: e.clientY,
+        };
+        isDragActiveRef.current = false;
+      },
+    [disabled, onPositionSwap, state]
   );
 
   const handlePointerMove = useCallback(
@@ -259,6 +396,29 @@ export function useLiveSubstitution({
       const dx = e.clientX - origin.startX;
       const dy = e.clientY - origin.startY;
       const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (origin.kind === "field") {
+        if (!isDragActiveRef.current && dist <= FIELD_DRAG_THRESHOLD_PX) return;
+        if (!isDragActiveRef.current) {
+          isDragActiveRef.current = true;
+          dispatch({
+            type: "START_FIELD_DRAG",
+            playerId: origin.playerId,
+            slotId: origin.slotId,
+          });
+        }
+        const hovered = slotIdAt(e.clientX, e.clientY);
+        setPositionDrag({
+          fieldPlayerId: origin.playerId,
+          x: e.clientX,
+          y: e.clientY,
+          targetSlotId:
+            hovered && canSwapLivePositions(liveMatchRef.current, origin.slotId, hovered)
+              ? hovered
+              : null,
+        });
+        return;
+      }
 
       if (dist > DRAG_THRESHOLD_PX) {
         if (!isDragActiveRef.current) {
@@ -286,6 +446,7 @@ export function useLiveSubstitution({
       dragOriginRef.current = null;
       isDragActiveRef.current = false;
       setGhostChip(null);
+      setPositionDrag(null);
 
       if (!origin) return;
 
@@ -295,6 +456,18 @@ export function useLiveSubstitution({
       }
 
       dispatch({ type: "CANCEL_DRAG" });
+
+      if (origin.kind === "field") {
+        trailingClickRef.current = {
+          playerId: origin.playerId,
+          untilMs: Date.now() + DRAG_CLICK_GUARD_MS,
+        };
+        const targetSlotId = slotIdAt(e.clientX, e.clientY);
+        // Only another occupied pitch slot swaps; the bench, empty grass, the
+        // same slot or anything else cancels without a change.
+        if (targetSlotId) commitPositionSwap(origin.slotId, targetSlotId);
+        return;
+      }
 
       // Hit-test the drop target.
       const el = document.elementFromPoint(e.clientX, e.clientY);
@@ -314,25 +487,36 @@ export function useLiveSubstitution({
       // Drop on empty slot: no-op. A slot without a player doesn't make sense
       // as a swap target — the squad is already on the field.
     },
-    [commitSwap]
+    [commitSwap, commitPositionSwap]
   );
 
   const handlePointerCancel = useCallback(() => {
+    const origin = dragOriginRef.current;
+    if (origin?.kind === "field" && isDragActiveRef.current) {
+      trailingClickRef.current = {
+        playerId: origin.playerId,
+        untilMs: Date.now() + DRAG_CLICK_GUARD_MS,
+      };
+    }
     dragOriginRef.current = null;
     isDragActiveRef.current = false;
     setGhostChip(null);
+    setPositionDrag(null);
     dispatch({ type: "CANCEL_DRAG" });
   }, []);
 
   return {
     state,
     ghostChip,
+    positionDrag,
     undoSecondsRemaining,
     tapFieldPlayer,
     tapBenchPlayer,
+    startPositionSwap,
     cancel,
     triggerUndo,
     getBenchPointerDownHandler,
+    getFieldPointerDownHandler,
     pointerSurfaceHandlers: {
       onPointerMove: handlePointerMove,
       onPointerUp: handlePointerUp,

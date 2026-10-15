@@ -69,6 +69,7 @@ import { LivePitchView } from "@/components/match/LivePitchView";
 import { LiveBenchStrip } from "@/components/match/LiveBenchStrip";
 import { UndoToast } from "@/components/match/UndoToast";
 import { useLiveSubstitution } from "@/components/match/useLiveSubstitution";
+import { swapLivePositions, undoLivePositionSwap, type PositionSwapRecord } from "@/domain/positionSwap";
 import { useMatchClock } from "@/components/match/useMatchClock";
 import { variants } from "@/lib/tokens";
 import { isSidelineLiveUiEnabled } from "@/lib/featureFlags";
@@ -768,6 +769,18 @@ export function MatchLiveManager() {
     setLiveMatch(snapshot);
   };
 
+  // Position swap (FP-MS2.1-B1): tap and drag both arrive here. Slots only —
+  // no substitution event, minutes and stints unchanged; persisted by the
+  // effect above like every other change, offline too.
+  const handlePositionSwap = (fromSlotId: string, toSlotId: string) => {
+    setLiveMatch((prev) => (prev && prev.status !== "ended" ? swapLivePositions(prev, fromSlotId, toSlotId) : prev));
+  };
+
+  // Targeted undo: reverses only this swap, never a goal or clock change made since.
+  const handlePositionSwapUndo = (swap: PositionSwapRecord) => {
+    setLiveMatch((prev) => (prev ? undoLivePositionSwap(prev, swap) : prev));
+  };
+
   // ─── useLiveSubstitution ───────────────────────────────────────────────────
 
   const subInteraction = useLiveSubstitution({
@@ -778,6 +791,9 @@ export function MatchLiveManager() {
     } as unknown as LiveMatchState,
     onSwap: handleSwap,
     onUndo: handleUndo,
+    // Offered by the Modern Sideline view only ("Bytt plass" and field drag).
+    onPositionSwap: isSidelineLiveUiEnabled() ? handlePositionSwap : undefined,
+    onPositionSwapUndo: handlePositionSwapUndo,
     disabled: !liveMatch || liveMatch.status === "ended",
   });
 
@@ -1193,7 +1209,8 @@ export function MatchLiveManager() {
         })}
         isOnline={isOnline}
         undo={
-          subInteraction.state.kind === "pendingUndo" && subInteraction.undoSecondsRemaining !== null
+          (subInteraction.state.kind === "pendingUndo" || subInteraction.state.kind === "pendingPositionUndo") &&
+          subInteraction.undoSecondsRemaining !== null
             ? {
                 secondsRemaining: subInteraction.undoSecondsRemaining,
                 expiresAtMs: subInteraction.state.expiresAtMs,
@@ -1207,7 +1224,14 @@ export function MatchLiveManager() {
                 x: subInteraction.ghostChip.x,
                 y: subInteraction.ghostChip.y,
               }
-            : null
+            : subInteraction.positionDrag
+              ? {
+                  name: getShortName(subInteraction.positionDrag.fieldPlayerId),
+                  x: subInteraction.positionDrag.x,
+                  y: subInteraction.positionDrag.y,
+                  dropSlotId: subInteraction.positionDrag.targetSlotId,
+                }
+              : null
         }
         goalPrompt={
           prompt
@@ -1260,9 +1284,12 @@ export function MatchLiveManager() {
           onTapFieldPlayer: subInteraction.tapFieldPlayer,
           onTapBenchPlayer: subInteraction.tapBenchPlayer,
           onCancelSelection: subInteraction.cancel,
+          onStartPositionSwap: subInteraction.startPositionSwap,
           onUndo: subInteraction.triggerUndo,
           onBenchPointerDown: (benchPlayerId, event) =>
             subInteraction.getBenchPointerDownHandler(benchPlayerId)(event),
+          onFieldPointerDown: (playerId, slotId, event) =>
+            subInteraction.getFieldPointerDownHandler(playerId, slotId)(event),
           pointerSurfaceHandlers: subInteraction.pointerSurfaceHandlers,
           onSetupNext: handleResetView,
           onPickGoalContributor: (playerId) => {

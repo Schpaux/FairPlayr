@@ -22,12 +22,21 @@ export interface StripInput {
   isDragging: boolean;
   /** The existing suggestion engine returned a pair. */
   hasSuggestion: boolean;
+  /** A position swap is inside its undo window (FP-MS2.1-B1). Default false. */
+  hasPendingPositionUndo?: boolean;
+  /** A field player is being dragged onto another position. Default false. */
+  isDraggingPosition?: boolean;
+  /** "Bytt plass" was tapped; waiting for the other field player. Default false. */
+  isChoosingSwapTarget?: boolean;
 }
 
 export type StripKind =
   | "undo"
+  | "positionUndo"
   | "selection"
+  | "positionSwap"
   | "dragging"
+  | "draggingPosition"
   | "kickoff"
   | "halfTime"
   | "fullTime"
@@ -37,8 +46,11 @@ export type StripKind =
 
 export function resolveStripKind(input: StripInput): StripKind {
   if (input.hasPendingUndo) return "undo";
+  if (input.hasPendingPositionUndo) return "positionUndo";
   if (input.isDragging) return "dragging";
+  if (input.isDraggingPosition) return "draggingPosition";
   if (input.hasSelection) return "selection";
+  if (input.isChoosingSwapTarget) return "positionSwap";
   if (input.status === "ended") return "fullTime";
   if (input.status === "not_started") return "kickoff";
   if (input.phase === "half_time") return "halfTime";

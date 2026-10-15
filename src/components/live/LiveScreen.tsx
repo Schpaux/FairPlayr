@@ -44,8 +44,12 @@ export interface LiveScreenHandlers {
   onTapFieldPlayer: (playerId: string) => void;
   onTapBenchPlayer: (playerId: string) => void;
   onCancelSelection: () => void;
+  /** "Bytt plass": the selected player waits for another pitch player. */
+  onStartPositionSwap: () => void;
   onUndo: () => void;
   onBenchPointerDown: (playerId: string, event: React.PointerEvent) => void;
+  /** Starts a possible drag of a pitch player onto another position. */
+  onFieldPointerDown: (playerId: string, slotId: string, event: React.PointerEvent) => void;
   pointerSurfaceHandlers: {
     onPointerMove: (event: React.PointerEvent) => void;
     onPointerUp: (event: React.PointerEvent) => void;
@@ -60,7 +64,8 @@ export interface LiveScreenProps {
   handlers: LiveScreenHandlers;
   isOnline: boolean;
   undo: { secondsRemaining: number; expiresAtMs: number } | null;
-  ghost: { name: string; x: number; y: number } | null;
+  /** The dragged player following the finger; `dropSlotId` is the valid slot under it. */
+  ghost: { name: string; x: number; y: number; dropSlotId?: string | null } | null;
   goalPrompt: GoalPromptView | null;
   notices: LiveNoticesProps;
   ending: { done: boolean } | null;
@@ -114,6 +119,12 @@ export function LiveScreen({ model, handlers, isOnline, undo, ghost, goalPrompt,
   };
 
   const landed = model.strip === "undo" ? model.lastSubstitution : null;
+  const landedPlayerIds =
+    model.strip === "positionUndo" && model.positionSwap
+      ? model.positionSwap.playerIds
+      : landed?.inPlayerId
+        ? [landed.inPlayerId]
+        : [];
   const scoreAfterRemoval = (side: "us" | "them") =>
     t("sideline.confirm.removeGoalBody", {
       us: side === "us" ? Math.max(0, model.teamScore - 1) : model.teamScore,
@@ -141,8 +152,10 @@ export function LiveScreen({ model, handlers, isOnline, undo, ghost, goalPrompt,
       <Pitch
         model={model}
         disabled={isEnded}
-        landedPlayerId={landed?.inPlayerId ?? null}
+        landedPlayerIds={landedPlayerIds}
+        dropSlotId={ghost?.dropSlotId ?? null}
         onTapFieldPlayer={handlers.onTapFieldPlayer}
+        onFieldPointerDown={handlers.onFieldPointerDown}
         onBackgroundTap={handlers.onCancelSelection}
       >
         <LiveNotices {...notices} />
@@ -163,11 +176,12 @@ export function LiveScreen({ model, handlers, isOnline, undo, ghost, goalPrompt,
           if (model.suggestion) handlers.onTapFieldPlayer(model.suggestion.outgoingPlayerId);
         }}
         onCancelSelection={handlers.onCancelSelection}
+        onStartPositionSwap={handlers.onStartPositionSwap}
         onUndo={handlers.onUndo}
       />
 
       {ghost ? (
-        <div className={styles.ghost} style={{ left: ghost.x, top: ghost.y }} aria-hidden>
+        <div className={styles.ghost} style={{ left: ghost.x, top: ghost.y }} data-testid="live-ghost" aria-hidden>
           {ghost.name}
         </div>
       ) : null}
