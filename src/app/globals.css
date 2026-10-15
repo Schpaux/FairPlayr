@@ -159,6 +159,22 @@
   --fp-scrim: rgba(6, 20, 13, 0.52);
   --fp-focus: #0E4D33;
 
+  /* On club green (scoreboard): pressed fill and outline-button line. Same in both modes. */
+  --fp-club-tint: rgba(242, 239, 231, 0.12);
+  --fp-on-club-line: rgba(242, 239, 231, 0.45);
+  --fp-danger: #B3261E;
+  --fp-on-danger: #FFFFFF;
+
+  /* ── Motion (DESIGN.md §4). Reduced motion collapses these in the live view. */
+  --fp-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --fp-ease-land: cubic-bezier(0.16, 1, 0.3, 1);
+  --fp-d-press: 90ms;
+  --fp-d-quick: 140ms;
+  --fp-d-base: 220ms;
+  --fp-d-sheet: 260ms;
+  --fp-d-land: 360ms;
+  --fp-d-undo: 5000ms;
+
   /* ── Shadcn semantic tokens */
   --background: var(--fp-canvas);
   --foreground: var(--fp-ink);
@@ -262,6 +278,7 @@
   --fp-ok-text: #9FE870;
   --fp-scrim: rgba(0, 0, 0, 0.6);
   --fp-focus: #9FE870;
+  --fp-danger: #D03238;
 
   /* ── Shadcn semantic tokens */
   --background: var(--fp-canvas);

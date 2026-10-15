@@ -42,6 +42,13 @@ vi.mock("@/components/providers/AuthProvider", () => ({
   useAuth: () => AUTH,
 }));
 
+// The Modern Sideline view is off by default; one describe block turns it on.
+const FLAGS = vi.hoisted(() => ({ sidelineLiveUi: false }));
+
+vi.mock("@/lib/featureFlags", () => ({
+  isSidelineLiveUiEnabled: () => FLAGS.sidelineLiveUi,
+}));
+
 const PLAYERS: Player[] = ["p1", "p2", "p3", "p4", "p5", "p6", "p7"].map((id, index) => ({
   id,
   name: `Player ${index + 1}`,
@@ -886,6 +893,151 @@ describe("MatchLiveManager match completion", () => {
       expect(await screen.findByText(en.matchLive.pendingSync.title)).toBeTruthy();
       expect(getStoredLiveMatch()).toMatchObject({ status: "ended", phase: "full_time", currentHalf: 1 });
       expect(getPlayerAccumulatedSeconds(getStoredLiveMatch()!, "p1", now + 30 * MIN)).toBe(22 * 60);
+    });
+  });
+
+  describe("Modern Sideline view (NEXT_PUBLIC_LIVE_UI=sideline)", () => {
+    const sideline = en.matchLive.sideline;
+
+    beforeEach(() => {
+      FLAGS.sidelineLiveUi = true;
+    });
+
+    afterEach(() => {
+      FLAGS.sidelineLiveUi = false;
+    });
+
+    const fieldToken = (playerId: string) =>
+      document.querySelector<HTMLElement>(`[data-player-id="${playerId}"]`)!;
+    const benchTile = (playerId: string) =>
+      document.querySelector<HTMLElement>(`[data-bench-player-id="${playerId}"]`)!;
+
+
+    it("is not rendered while the flag is off", () => {
+      FLAGS.sidelineLiveUi = false;
+      renderManager();
+      expect(screen.queryByTestId("live-sideline")).toBeNull();
+      expect(screen.getByRole("button", { name: en.matchLive.actions.start })).toBeTruthy();
+    });
+
+    it("drives kickoff, goals, a substitution with undo and the end flow through the existing handlers", async () => {
+      renderManager();
+      setOnline(false);
+      expect(screen.getByTestId("live-sideline")).toBeTruthy();
+
+      // Goal keys are real disabled buttons before kickoff.
+      expect(screen.getByRole<HTMLButtonElement>("button", { name: sideline.goals.us }).disabled).toBe(true);
+
+      fireEvent.click(screen.getByRole("button", { name: sideline.strip.kickoff }));
+      expect(getStoredLiveMatch()?.status).toBe("running");
+
+      fireEvent.click(screen.getByRole("button", { name: sideline.goals.us }));
+      fireEvent.click(screen.getByRole("button", { name: sideline.goals.them }));
+      expect(screen.getByTestId("live-score").getAttribute("aria-label")).toBe("Score: us 1, them 1");
+
+      // Field → bench tap swaps, exactly as in the existing view.
+      fireEvent.click(fieldToken("p2"));
+      expect(screen.getByTestId("live-strip").getAttribute("data-strip")).toBe("selection");
+      fireEvent.click(benchTile("p6"));
+      await waitFor(() => {
+        expect(getStoredLiveMatch()?.onFieldPlayerIds).toContain("p6");
+      });
+      expect(getStoredLiveMatch()?.onFieldPlayerIds).not.toContain("p2");
+      expect(screen.getByTestId("live-strip").getAttribute("data-strip")).toBe("undo");
+
+      fireEvent.click(screen.getByRole("button", { name: /Undo substitution/ }));
+      await waitFor(() => {
+        expect(getStoredLiveMatch()?.onFieldPlayerIds).toContain("p2");
+      });
+      expect(getStoredLiveMatch()?.onFieldPlayerIds).not.toContain("p6");
+      expect(getStoredLiveMatch()?.events.filter((event) => event.type === "substitution")).toHaveLength(0);
+
+      // End match from the menu uses the existing confirmed end flow.
+      fireEvent.click(screen.getByRole("button", { name: sideline.menu.open }));
+      fireEvent.click(screen.getByRole("button", { name: sideline.menu.endMatch }));
+      expect(window.confirm).toHaveBeenCalledWith(en.matchLive.actions.confirmEnd);
+
+      expect(await screen.findByText(en.matchLive.pendingSync.title)).toBeTruthy();
+      const stored = getStoredLiveMatch();
+      expect(stored?.status).toBe("ended");
+      expect(stored?.teamScore).toBe(1);
+      expect(stored?.opponentScore).toBe(1);
+      expect(stored?.events.filter((event) => event.type === "goal")).toHaveLength(2);
+      expect(getPendingMatchCompletion("match-1")?.body).toMatchObject({ scoreFor: 1, scoreAgainst: 1 });
+      expect(screen.getByTestId("live-strip").getAttribute("data-strip")).toBe("fullTime");
+    });
+
+    it("ends the half only after an explicit confirmation", () => {
+      renderManager();
+      fireEvent.click(screen.getByRole("button", { name: sideline.strip.kickoff }));
+
+      fireEvent.click(screen.getByRole("button", { name: sideline.menu.open }));
+      fireEvent.click(screen.getByRole("button", { name: sideline.menu.endHalf }));
+      expect(screen.getByRole("dialog", { name: sideline.confirm.endHalfTitle })).toBeTruthy();
+
+      fireEvent.click(screen.getByRole("button", { name: sideline.confirm.keepPlaying }));
+      expect(getStoredLiveMatch()?.phase).toBe("first_half");
+
+      fireEvent.click(screen.getByRole("button", { name: sideline.menu.open }));
+      fireEvent.click(screen.getByRole("button", { name: sideline.menu.endHalf }));
+      fireEvent.click(screen.getByRole("button", { name: sideline.confirm.endHalfConfirm }));
+      expect(getStoredLiveMatch()?.phase).toBe("half_time");
+      expect(screen.getByRole<HTMLButtonElement>("button", { name: sideline.goals.us }).disabled).toBe(true);
+
+      fireEvent.click(screen.getByRole("button", { name: sideline.strip.startSecondHalf }));
+      expect(getStoredLiveMatch()?.status).toBe("running");
+      // Goals stay available once play resumes, as in the existing view.
+      expect(screen.getByRole<HTMLButtonElement>("button", { name: sideline.goals.us }).disabled).toBe(false);
+    });
+
+    // FP-MATCH-001: restarting the clock after half-time starts the second half.
+    it("enters the second-half phase after half-time", () => {
+      renderManager();
+      fireEvent.click(screen.getByRole("button", { name: sideline.strip.kickoff }));
+      fireEvent.click(screen.getByRole("button", { name: sideline.menu.open }));
+      fireEvent.click(screen.getByRole("button", { name: sideline.menu.endHalf }));
+      fireEvent.click(screen.getByRole("button", { name: sideline.confirm.endHalfConfirm }));
+      fireEvent.click(screen.getByRole("button", { name: sideline.strip.startSecondHalf }));
+      expect(getStoredLiveMatch()).toMatchObject({ phase: "second_half", currentHalf: 2, status: "running" });
+
+      // The view reads the second half from the phase: it is labelled, goals
+      // are live again and the strip no longer offers the second half.
+      expect(screen.getByTestId("live-clock").textContent).toContain(sideline.phase.secondHalf);
+      expect(screen.getByRole<HTMLButtonElement>("button", { name: sideline.goals.us }).disabled).toBe(false);
+      expect(screen.getByTestId("live-strip").getAttribute("data-strip")).not.toBe("halfTime");
+
+      // Pausing and resuming from the clock key stays in the second half.
+      fireEvent.click(screen.getByTestId("live-clock"));
+      expect(getStoredLiveMatch()).toMatchObject({ phase: "second_half", status: "paused" });
+      expect(screen.getByTestId("live-clock").textContent).toContain(sideline.phase.secondHalf);
+      expect(screen.getByRole<HTMLButtonElement>("button", { name: sideline.goals.us }).disabled).toBe(false);
+      fireEvent.click(screen.getByTestId("live-clock"));
+      expect(getStoredLiveMatch()).toMatchObject({ phase: "second_half", status: "running" });
+    });
+
+    it("removes the last goal through the existing correction after a confirmation", () => {
+      renderManager();
+      fireEvent.click(screen.getByRole("button", { name: sideline.strip.kickoff }));
+      fireEvent.click(screen.getByRole("button", { name: sideline.goals.us }));
+      expect(getStoredLiveMatch()?.teamScore).toBe(1);
+
+      fireEvent.click(screen.getByRole("button", { name: sideline.menu.open }));
+      fireEvent.click(screen.getByRole("button", { name: sideline.menu.removeGoalUs }));
+      expect(screen.getByText("The score becomes 0–0.")).toBeTruthy();
+      fireEvent.click(screen.getByRole("button", { name: sideline.confirm.removeGoalConfirm }));
+
+      const stored = getStoredLiveMatch();
+      expect(stored?.teamScore).toBe(0);
+      expect(stored?.events.filter((event) => event.type === "goal")).toHaveLength(0);
+    });
+
+    it("pauses and resumes from the clock key", () => {
+      renderManager();
+      fireEvent.click(screen.getByRole("button", { name: sideline.strip.kickoff }));
+      fireEvent.click(screen.getByTestId("live-clock"));
+      expect(getStoredLiveMatch()?.status).toBe("paused");
+      fireEvent.click(screen.getByTestId("live-clock"));
+      expect(getStoredLiveMatch()?.status).toBe("running");
     });
   });
 });

@@ -594,6 +594,119 @@
       "saved": "Score, events and playing time are saved on this device.",
       "notSaved": "Device storage is full, so the result could not be saved on this device. Keep this screen open to keep the result.",
       "historyCta": "Go to match history"
+    },
+    "sideline": {
+      "phase": {
+        "firstHalf": "1st half",
+        "secondHalf": "2nd half",
+        "halfTime": "Half-time",
+        "match": "Match",
+        "fullTime": "Full time"
+      },
+      "meta": {
+        "duration": "{halves}×{minutes} min",
+        "ready": "Ready · {duration}",
+        "running": "{phase} · {minutes} min",
+        "paused": "Stopped · {phase}",
+        "offline": "Offline, saved on this phone"
+      },
+      "clock": {
+        "kickoff": "Start the clock at kick-off",
+        "pause": "Stop the clock, {clock}",
+        "resume": "Start the clock, {clock}",
+        "done": "{phase}, {clock}"
+      },
+      "score": {
+        "label": "Score: us {us}, them {them}",
+        "us": "Us",
+        "them": "Them"
+      },
+      "goals": {
+        "us": "Goal for us",
+        "them": "Goal for them"
+      },
+      "menu": {
+        "open": "Match menu",
+        "title": "Match menu",
+        "events": "Events",
+        "endHalf": "End half",
+        "removeGoalUs": "Remove our last goal",
+        "removeGoalThem": "Remove their last goal",
+        "backToSetup": "Back to match setup",
+        "endMatch": "End the match now",
+        "offline": "You are offline. Everything is saved on this phone and sent when you are back online.",
+        "close": "Close"
+      },
+      "confirm": {
+        "endHalfTitle": "End the 1st half?",
+        "endHalfBody": "The clock stops, and you can make substitutions during the break.",
+        "endHalfConfirm": "Yes, end the half",
+        "removeGoalUsTitle": "Remove our last goal?",
+        "removeGoalThemTitle": "Remove their last goal?",
+        "removeGoalBody": "The score becomes {us}–{them}.",
+        "removeGoalConfirm": "Yes, remove the goal",
+        "keepPlaying": "Keep playing"
+      },
+      "events": {
+        "title": "Events",
+        "empty": "No goals or substitutions yet.",
+        "goalUs": "Goal for us",
+        "goalThem": "Goal for them",
+        "substitution": "Substitution",
+        "assist": "assist {name}",
+        "swap": "{in} on · {out} off",
+        "minute": "{minute}′"
+      },
+      "strip": {
+        "undoOutSmall": "{out} off · {minute}′",
+        "undoOutSmallNoMinute": "{out} off",
+        "undoIn": "{in} on",
+        "undoText": "{in} on · {out} off",
+        "undo": "Undo",
+        "undoLabel": "Undo substitution, {seconds} seconds left",
+        "selectedSmall": "{name} · {minutes}′ total",
+        "selectedText": "Choose who comes on",
+        "selectedNoBench": "Nobody on the bench",
+        "draggingText": "Drop on the player who comes off",
+        "cancel": "Cancel",
+        "kickoffSmall": "{field} on the pitch · {bench} on the bench",
+        "kickoffText": "Start at kick-off",
+        "kickoff": "Kick off",
+        "halfTimeSmall": "Half-time · {us}–{them}",
+        "halfTimeText": "Sub during the break",
+        "halfTimeNoBench": "No substitutes",
+        "startSecondHalf": "Start 2nd half",
+        "fullTimeSmall": "Full time · {us}–{them}",
+        "fullTimeText": "The match is over",
+        "nextMatch": "New match",
+        "timeUpSmall": "{minutes} min played",
+        "timeUpText": "Time is up",
+        "endHalf": "End half",
+        "endMatch": "End match",
+        "suggestionSmall": "Suggestion · {inMinutes}′ vs {outMinutes}′ played",
+        "suggestionText": "{in} on for {out}",
+        "suggestionAction": "Select",
+        "suggestionLabel": "Select {out} to substitute",
+        "idleSmall": "The number is total playing time. The ring is time since the last rest.",
+        "idleText": "Tap a player, then one on the bench",
+        "idleNoBench": "No substitutes in this match"
+      },
+      "token": {
+        "number": ", number {number}",
+        "keeper": ", goalkeeper",
+        "minutes": ", {minutes} minutes in total",
+        "watch": ", keep an eye on",
+        "act": ", should rest",
+        "critical": ", needs rest"
+      },
+      "bench": {
+        "label": "Bench",
+        "number": ", number {number}",
+        "minutes": ", {minutes} minutes in total"
+      },
+      "pitch": {
+        "label": "Pitch"
+      }
     }
   },
   "matchPlanner": {

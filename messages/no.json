@@ -594,6 +594,119 @@
       "saved": "Resultat, hendelser og spilletid er lagret på enheten.",
       "notSaved": "Lagringsplassen på enheten er full, så resultatet kunne ikke lagres på enheten. La denne skjermen være åpen for å beholde resultatet.",
       "historyCta": "Gå til kamphistorikk"
+    },
+    "sideline": {
+      "phase": {
+        "firstHalf": "1. omgang",
+        "secondHalf": "2. omgang",
+        "halfTime": "Pause",
+        "match": "Kamp",
+        "fullTime": "Slutt"
+      },
+      "meta": {
+        "duration": "{halves}×{minutes} min",
+        "ready": "Klar · {duration}",
+        "running": "{phase} · {minutes} min",
+        "paused": "Stoppet · {phase}",
+        "offline": "Frakoblet, lagres på telefonen"
+      },
+      "clock": {
+        "kickoff": "Start klokka ved avspark",
+        "pause": "Stopp klokka, {clock}",
+        "resume": "Start klokka, {clock}",
+        "done": "{phase}, {clock}"
+      },
+      "score": {
+        "label": "Stilling: oss {us}, dem {them}",
+        "us": "Oss",
+        "them": "Dem"
+      },
+      "goals": {
+        "us": "Mål for oss",
+        "them": "Mål for dem"
+      },
+      "menu": {
+        "open": "Kampmeny",
+        "title": "Kampmeny",
+        "events": "Hendelser",
+        "endHalf": "Avslutt omgang",
+        "removeGoalUs": "Fjern siste mål for oss",
+        "removeGoalThem": "Fjern siste mål for dem",
+        "backToSetup": "Tilbake til kampoppsett",
+        "endMatch": "Avslutt kampen nå",
+        "offline": "Du er frakoblet. Alt lagres på telefonen og sendes når du er på nett igjen.",
+        "close": "Lukk"
+      },
+      "confirm": {
+        "endHalfTitle": "Avslutte 1. omgang?",
+        "endHalfBody": "Klokka stopper, og du kan bytte i pausen.",
+        "endHalfConfirm": "Ja, avslutt omgangen",
+        "removeGoalUsTitle": "Fjerne siste mål for oss?",
+        "removeGoalThemTitle": "Fjerne siste mål for dem?",
+        "removeGoalBody": "Stillingen blir {us}–{them}.",
+        "removeGoalConfirm": "Ja, fjern målet",
+        "keepPlaying": "Fortsett å spille"
+      },
+      "events": {
+        "title": "Hendelser",
+        "empty": "Ingen mål eller bytter ennå.",
+        "goalUs": "Mål for oss",
+        "goalThem": "Mål for dem",
+        "substitution": "Bytte",
+        "assist": "assist {name}",
+        "swap": "{in} inn · {out} ut",
+        "minute": "{minute}′"
+      },
+      "strip": {
+        "undoOutSmall": "{out} ut · {minute}′",
+        "undoOutSmallNoMinute": "{out} ut",
+        "undoIn": "{in} inn",
+        "undoText": "{in} inn · {out} ut",
+        "undo": "Angre",
+        "undoLabel": "Angre bytte, {seconds} sekunder igjen",
+        "selectedSmall": "{name} · {minutes}′ totalt",
+        "selectedText": "Velg hvem som skal inn",
+        "selectedNoBench": "Ingen på benken",
+        "draggingText": "Slipp på spilleren som skal ut",
+        "cancel": "Avbryt",
+        "kickoffSmall": "{field} på banen · {bench} på benken",
+        "kickoffText": "Start ved avspark",
+        "kickoff": "Avspark",
+        "halfTimeSmall": "Pause · {us}–{them}",
+        "halfTimeText": "Bytt i pausen",
+        "halfTimeNoBench": "Ingen innbyttere",
+        "startSecondHalf": "Start 2. omgang",
+        "fullTimeSmall": "Slutt · {us}–{them}",
+        "fullTimeText": "Kampen er ferdig",
+        "nextMatch": "Ny kamp",
+        "timeUpSmall": "{minutes} min er spilt",
+        "timeUpText": "Tiden er ute",
+        "endHalf": "Avslutt omgang",
+        "endMatch": "Avslutt kampen",
+        "suggestionSmall": "Forslag · {inMinutes}′ mot {outMinutes}′ spilt",
+        "suggestionText": "{in} inn for {out}",
+        "suggestionAction": "Velg",
+        "suggestionLabel": "Velg {out} for bytte",
+        "idleSmall": "Tallet er total spilletid. Ringen er tid siden siste hvile.",
+        "idleText": "Trykk en spiller, så en på benken",
+        "idleNoBench": "Ingen innbyttere i denne kampen"
+      },
+      "token": {
+        "number": ", nummer {number}",
+        "keeper": ", keeper",
+        "minutes": ", {minutes} minutter totalt",
+        "watch": ", følg med",
+        "act": ", bør hvile",
+        "critical": ", trenger hvile"
+      },
+      "bench": {
+        "label": "Benk",
+        "number": ", nummer {number}",
+        "minutes": ", {minutes} minutter totalt"
+      },
+      "pitch": {
+        "label": "Banen"
+      }
     }
   },
   "matchPlanner": {

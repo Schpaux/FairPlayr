@@ -1,0 +1,1293 @@
+/*
+ * Modern Sideline live screen (DESIGN.md §5). Ported from the approved
+ * prototype (design-exploration/modern-sideline/prototype.css) onto the
+ * production tokens in src/app/globals.css. No hard-coded colours: every
+ * colour is a --fp-* token, so light and dark come from the theme class.
+ *
+ * Breakpoints: "short" phones are under 700px tall (iPhone SE 375×667) and
+ * change spacing only, never type size. "Tall" phones are 780px and up.
+ */
+
+/* ── Shell ─────────────────────────────────────────────────────────────── */
+.live {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--fp-grass);
+  color: var(--fp-ink);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+:where(.live) button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+:where(.live) button:disabled {
+  cursor: default;
+}
+
+.live :focus-visible {
+  outline: 2px solid var(--fp-focus);
+  outline-offset: 2px;
+}
+
+.board :focus-visible {
+  outline-color: var(--fp-lime);
+}
+
+/* ── Buttons (every button is a pill) ─────────────────────────────────── */
+.btn {
+  height: 52px;
+  padding: 0 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 17px;
+  line-height: 1;
+  white-space: nowrap;
+  flex: none;
+  transition:
+    transform var(--fp-d-press) var(--fp-ease-out),
+    background-color var(--fp-d-quick);
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btnSm {
+  height: 44px;
+  padding: 0 18px;
+  font-size: 16px;
+}
+
+.btnPrimary {
+  background: var(--fp-lime);
+  color: var(--fp-on-lime);
+}
+
+.btnSecondary {
+  box-shadow: inset 0 0 0 1.5px var(--fp-rule-strong);
+  color: var(--fp-ink);
+}
+
+.btnDanger {
+  background: var(--fp-danger);
+  color: var(--fp-on-danger);
+}
+
+.btnBlock {
+  width: 100%;
+}
+
+.iconButton {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  transition:
+    transform var(--fp-d-press),
+    background-color var(--fp-d-quick);
+}
+
+.iconButton:active {
+  transform: scale(0.94);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btnSecondary:hover,
+  .menuRow:hover,
+  .benchTile:hover:not(:disabled) {
+    background-color: var(--fp-surface-2);
+  }
+
+  .board .iconButton:hover,
+  .goalThem:hover:not(:disabled) {
+    background: var(--fp-club-tint);
+  }
+}
+
+/* ── Scoreboard ───────────────────────────────────────────────────────── */
+.board {
+  flex: none;
+  position: relative;
+  z-index: 2;
+  background: var(--fp-club);
+  color: var(--fp-on-club);
+  padding: calc(env(safe-area-inset-top) + 6px) calc(env(safe-area-inset-right) + 8px) 12px
+    calc(env(safe-area-inset-left) + 8px);
+}
+
+.boardRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 64px;
+}
+
+.clockKey {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 56px;
+  padding-right: 8px;
+  border-radius: 28px;
+  text-align: left;
+}
+
+.clockDisc {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--fp-club-tint);
+  display: grid;
+  place-items: center;
+  flex: none;
+  transition:
+    background-color var(--fp-d-quick),
+    transform var(--fp-d-press);
+}
+
+.clockKey:active:not([aria-disabled="true"]) .clockDisc {
+  transform: scale(0.92);
+}
+
+.clockText {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.clockDigits {
+  font-family: var(--font-num);
+  font-weight: 600;
+  font-size: 40px;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.clockMeta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1.1;
+  color: var(--fp-on-club-2);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--fp-lime);
+  flex: none;
+}
+
+.offline {
+  display: inline-flex;
+  align-items: center;
+  color: var(--fp-ring-watch);
+  flex: none;
+}
+
+.clockPaused .clockDigits {
+  color: var(--fp-on-club-2);
+}
+
+.clockPaused .clockDisc {
+  background: var(--fp-lime);
+  color: var(--fp-on-lime);
+}
+
+.clockPaused .statusDot {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--fp-on-club-2);
+}
+
+.clockOver .clockDigits {
+  color: var(--fp-lime);
+}
+
+.clockDone {
+  cursor: default;
+}
+
+.clockDone .clockDisc {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--fp-club-tint);
+  color: var(--fp-on-club-2);
+}
+
+.clockDone .statusDot {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--fp-on-club-2);
+}
+
+.clockDone .clockDigits {
+  color: var(--fp-on-club-2);
+}
+
+.score {
+  justify-self: end;
+  display: grid;
+  grid-template-columns: auto auto auto;
+  column-gap: 8px;
+  row-gap: 4px;
+  align-items: center;
+  justify-items: center;
+  padding-right: 2px;
+}
+
+.scoreDigit {
+  font-family: var(--font-num);
+  font-weight: 600;
+  font-size: 50px;
+  line-height: 45px;
+  height: 45px;
+  min-width: 26px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.scoreSep {
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--fp-on-club-2);
+}
+
+.scoreLabel {
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fp-on-club-2);
+}
+
+.board .iconButton {
+  color: var(--fp-on-club);
+}
+
+.board .iconButton:active {
+  background: var(--fp-club-tint);
+}
+
+.goals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.goals .btn {
+  height: 48px;
+  padding: 0 12px;
+  font-size: 16px;
+}
+
+.goalUs {
+  background: var(--fp-on-club);
+  color: var(--fp-club);
+}
+
+.goalThem {
+  box-shadow: inset 0 0 0 1.5px var(--fp-on-club-line);
+  color: var(--fp-on-club);
+}
+
+.goals .btn:disabled {
+  opacity: 0.38;
+  transform: none;
+}
+
+/* ── Pitch ────────────────────────────────────────────────────────────── */
+.pitch {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin-bottom: -18px;
+  background: var(--fp-grass);
+  overflow: hidden;
+  touch-action: none;
+}
+
+.pitchLines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  stroke: var(--fp-grass-line);
+  stroke-width: 1.5;
+  fill: none;
+  pointer-events: none;
+}
+
+.pitchStripe {
+  fill: var(--fp-grass-stripe);
+  stroke: none;
+}
+
+.pitchSpot {
+  fill: var(--fp-grass-line);
+  stroke: none;
+}
+
+.tokenBox {
+  position: absolute;
+  inset: 30px 12px 74px;
+}
+
+.compact .tokenBox {
+  inset: 30px 10px 84px;
+}
+
+/* ── Player token ─────────────────────────────────────────────────────── */
+.token {
+  position: absolute;
+  transform: translate(-50%, -24px);
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 2px 0;
+  min-width: 52px;
+  max-width: 176px;
+  z-index: 1;
+}
+
+.disc {
+  --sz: 44px;
+  position: relative;
+  width: var(--sz);
+  height: var(--sz);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--fp-disc);
+  color: var(--fp-on-disc);
+  font-family: var(--font-num);
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  transition:
+    transform var(--fp-d-quick) var(--fp-ease-out),
+    background-color var(--fp-d-quick),
+    color var(--fp-d-quick);
+}
+
+.discInitials {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+}
+
+.ring {
+  position: absolute;
+  inset: -6px;
+  width: calc(100% + 12px);
+  height: calc(100% + 12px);
+  transform: rotate(-90deg);
+  overflow: visible;
+  pointer-events: none;
+}
+
+.ring circle {
+  fill: none;
+  stroke-width: 3.5;
+}
+
+.ringTrack {
+  stroke: var(--fp-ring-track);
+}
+
+.ringValue {
+  stroke: var(--fp-ring-fresh);
+  stroke-linecap: round;
+  transition:
+    stroke-dasharray 600ms linear,
+    stroke var(--fp-d-base);
+}
+
+.watch .ringValue {
+  stroke: var(--fp-ring-watch);
+}
+
+.act .ringValue,
+.critical .ringValue {
+  stroke: var(--fp-ring-act);
+}
+
+/* Critical is a tinted track, never a pulse. */
+.critical .ringTrack {
+  stroke: var(--fp-ring-act);
+  stroke-opacity: 0.45;
+}
+
+.tag {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  max-width: min(128px, 100%);
+  padding: 4px 8px 5px;
+  border-radius: 6px;
+  background: var(--fp-tag);
+  color: var(--fp-on-tag);
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1.15;
+  white-space: nowrap;
+  transition:
+    background-color var(--fp-d-quick),
+    color var(--fp-d-quick),
+    box-shadow var(--fp-d-quick);
+}
+
+/* Only the first name shrinks; the suffix that tells players apart stays whole. */
+.tagName {
+  display: flex;
+  min-width: 0;
+}
+
+.tagFirst {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.tagSuffix {
+  flex: none;
+  margin-left: 0.25em;
+}
+
+.tagMinutes {
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+.keeper .disc {
+  background: var(--fp-keeper);
+  color: var(--fp-on-keeper);
+}
+
+.keeperBadge {
+  position: absolute;
+  right: -8px;
+  top: -8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--fp-tag);
+  color: var(--fp-on-tag);
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 20px;
+  text-align: center;
+  z-index: 1;
+}
+
+.selected .disc {
+  background: var(--fp-lime);
+  color: var(--fp-on-lime);
+  transform: scale(1.08);
+}
+
+.selected .tag {
+  background: var(--fp-lime);
+  color: var(--fp-on-lime);
+}
+
+/* Valid drop target while a bench player is dragged: dashed chalk halo. */
+.target .disc::before {
+  content: "";
+  position: absolute;
+  inset: -11px;
+  border-radius: 50%;
+  border: 2px dashed var(--fp-on-tag);
+  opacity: 0.85;
+  animation: fadeIn var(--fp-d-base) var(--fp-ease-out);
+}
+
+.suggested .tag {
+  box-shadow: 0 0 0 2px var(--fp-lime);
+}
+
+.landed .disc {
+  animation: land var(--fp-d-land) var(--fp-ease-land);
+}
+
+.token:active:not(:disabled) .disc {
+  transform: scale(0.94);
+}
+
+/* A regular or roomy tag that cannot fit name + minutes on one line stacks (set by Pitch). */
+.token[data-stack="true"] .tag {
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 3px 6px 4px;
+}
+
+/* Compact token: 9v9 / 11v11. The disc shrinks and the tag stacks; names stay ≥ 14px. */
+.compact .token {
+  transform: translate(-50%, -20px);
+}
+
+.compact .disc {
+  --sz: 36px;
+  font-size: 19px;
+}
+
+.compact .discInitials {
+  font-size: 14px;
+}
+
+.compact .ring {
+  inset: -5px;
+  width: calc(100% + 10px);
+  height: calc(100% + 10px);
+}
+
+.compact .ring circle {
+  stroke-width: 3;
+}
+
+.compact .tag {
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 3px 5px 4px;
+  /* Capped by the gap to the neighbour (the token's width), not a fixed size. */
+  max-width: 100%;
+  font-size: 14px;
+}
+
+.compact .tagName {
+  max-width: 100%;
+}
+
+.compact .keeperBadge {
+  right: -9px;
+  top: -9px;
+}
+
+.compact .target .disc::before {
+  inset: -9px;
+}
+
+.roomy .tag {
+  max-width: min(168px, 100%);
+}
+
+/* ── Dugout ───────────────────────────────────────────────────────────── */
+.dugout {
+  flex: none;
+  position: relative;
+  z-index: 2;
+  background: var(--fp-canvas);
+  border-radius: 20px 20px 0 0;
+  padding: 8px calc(env(safe-area-inset-right) + 12px) calc(env(safe-area-inset-bottom) + 10px)
+    calc(env(safe-area-inset-left) + 12px);
+}
+
+/* The strip: one fixed slot that says what happens next. */
+.strip {
+  position: relative;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 6px 6px 14px;
+  margin: 0 0 8px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--fp-surface);
+  box-shadow: inset 0 0 0 1px var(--fp-rule);
+}
+
+.stripEnter {
+  animation: stripIn var(--fp-d-base) var(--fp-ease-out);
+}
+
+.stripText {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.stripSmall {
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1.2;
+  color: var(--fp-ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stripMain {
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stripIdle {
+  background: transparent;
+  box-shadow: none;
+  padding-left: 4px;
+}
+
+.stripIdle .stripSmall {
+  white-space: normal;
+}
+
+.stripInverse {
+  background: var(--fp-club);
+  color: var(--fp-on-club);
+  box-shadow: none;
+}
+
+.stripInverse .stripSmall {
+  color: var(--fp-on-club-2);
+}
+
+.stripInverse .btn {
+  color: var(--fp-on-club);
+  box-shadow: inset 0 0 0 1.5px var(--fp-on-club-line);
+}
+
+.undoSeconds {
+  min-width: 1ch;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Undo countdown bar. It carries information, so it survives reduced motion. */
+.drain {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 100%;
+  background: var(--fp-lime);
+  transform-origin: left;
+  animation: drain var(--fp-d-undo) linear forwards;
+}
+
+/* ── Bench ────────────────────────────────────────────────────────────── */
+.bench {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.benchWrap {
+  position: relative;
+}
+
+/* Hidden measuring rows for the bench fit (see Bench in Dugout.tsx). */
+.benchMeasure {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: max-content;
+  flex-wrap: nowrap;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.bench .benchTile {
+  flex: 1 1 0;
+  min-width: max-content;
+}
+
+.benchTile {
+  position: relative;
+  min-height: 72px;
+  border-radius: 10px;
+  background: var(--fp-surface);
+  box-shadow: inset 0 0 0 1px var(--fp-rule);
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  text-align: left;
+  touch-action: none;
+  transition:
+    transform var(--fp-d-press),
+    background-color var(--fp-d-quick),
+    box-shadow var(--fp-d-quick),
+    opacity var(--fp-d-quick);
+}
+
+.benchTile:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.benchName {
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1.15;
+  white-space: nowrap;
+  padding-right: 22px;
+}
+
+.benchNumber {
+  position: absolute;
+  right: 9px;
+  top: 9px;
+  font-family: var(--font-num);
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--fp-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.benchMinutes {
+  font-weight: 700;
+  font-size: 20px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.benchTarget {
+  box-shadow: inset 0 0 0 2px var(--fp-ink);
+}
+
+.benchSuggested {
+  box-shadow: inset 0 0 0 2px var(--fp-lime);
+}
+
+.benchLanded {
+  animation: tileLand 420ms var(--fp-ease-out);
+}
+
+.benchDragging {
+  opacity: 0.35;
+}
+
+.compact .bench,
+.bench[data-fit="tight"] {
+  gap: 5px;
+}
+
+.compact .benchTile,
+.bench[data-fit="tight"] .benchTile {
+  min-height: 68px;
+  padding: 8px;
+  gap: 5px;
+}
+
+.compact .benchName,
+.bench[data-fit="tight"] .benchName {
+  font-size: 14px;
+  padding-right: 0;
+}
+
+.compact .benchNumber,
+.bench[data-fit="tight"] .benchNumber {
+  display: none;
+}
+
+.compact .benchMinutes,
+.bench[data-fit="tight"] .benchMinutes {
+  font-size: 18px;
+}
+
+/* Dense bench: 6+ subs, or names too long for one row. Max 2 rows on short
+ * phones, 3 on tall phones. Names may be cut; the full name is in the label. */
+.bench:is(.benchDense, [data-fit="dense"]) {
+  display: grid;
+  grid-template-columns: repeat(var(--cols-2), minmax(0, 1fr));
+  gap: 5px;
+}
+
+.bench:is(.benchDense, [data-fit="dense"]) .benchTile {
+  min-width: 0;
+  min-height: 52px;
+  padding: 6px 8px;
+  gap: 3px;
+}
+
+.bench:is(.benchDense, [data-fit="dense"]) .benchName {
+  font-size: 14px;
+  padding-right: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bench:is(.benchDense, [data-fit="dense"]) .benchNumber {
+  display: none;
+}
+
+.bench:is(.benchDense, [data-fit="dense"]) .benchMinutes {
+  font-size: 17px;
+}
+
+@media (min-height: 780px) {
+  .bench:is(.benchDense, [data-fit="dense"]) {
+    grid-template-columns: repeat(var(--cols-3), minmax(0, 1fr));
+  }
+}
+
+/* ── Drag ghost ───────────────────────────────────────────────────────── */
+.ghost {
+  position: fixed;
+  z-index: 70;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  min-width: 52px;
+  height: 52px;
+  padding: 0 14px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--fp-lime);
+  color: var(--fp-on-lime);
+  font-weight: 600;
+  font-size: 15px;
+}
+
+/* ── Notices (after the match ends) ───────────────────────────────────── */
+.notices {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 12px;
+  z-index: 3;
+  display: grid;
+  gap: 8px;
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+}
+
+.notice {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--fp-surface);
+  box-shadow: inset 0 0 0 1px var(--fp-rule);
+  user-select: text;
+}
+
+.noticeTitle {
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.noticeTitleDanger {
+  color: var(--fp-danger-text);
+}
+
+.noticeBody {
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--fp-ink-2);
+}
+
+/* ── Sheets ───────────────────────────────────────────────────────────── */
+.scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: var(--fp-scrim);
+  display: flex;
+  align-items: flex-end;
+  animation: fadeIn var(--fp-d-base) var(--fp-ease-out);
+}
+
+.sheet {
+  position: relative;
+  width: 100%;
+  max-height: 92%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--fp-canvas);
+  color: var(--fp-ink);
+  border-radius: 20px 20px 0 0;
+  padding: 8px calc(env(safe-area-inset-right) + 16px) calc(env(safe-area-inset-bottom) + 16px)
+    calc(env(safe-area-inset-left) + 16px);
+  animation: sheetIn var(--fp-d-sheet) var(--fp-ease-out);
+  user-select: text;
+}
+
+.grab {
+  width: 36px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--fp-rule-strong);
+  margin: 0 auto 12px;
+}
+
+.sheetTitle {
+  margin: 0 0 4px;
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  outline: none;
+}
+
+.sheetLede {
+  margin: 0 0 16px;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--fp-ink-2);
+}
+
+.menuGroup {
+  border-radius: 14px;
+  background: var(--fp-surface);
+  box-shadow: inset 0 0 0 1px var(--fp-rule);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.menuRow {
+  width: 100%;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 1.2;
+  text-align: left;
+}
+
+.menuRow + .menuRow {
+  box-shadow: inset 0 1px 0 var(--fp-rule);
+}
+
+.menuRow:active:not(:disabled) {
+  background: var(--fp-surface-2);
+}
+
+.menuRow:disabled {
+  color: var(--fp-ink-2);
+}
+
+.menuRowDanger {
+  color: var(--fp-danger-text);
+  font-weight: 600;
+}
+
+.menuGrow {
+  flex: 1;
+}
+
+.menuNote {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 0 0 12px;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--fp-ink-2);
+}
+
+.eventList {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+.eventRow {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 10px;
+  align-items: baseline;
+  min-height: 48px;
+  padding: 12px 14px;
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.eventRow + .eventRow {
+  box-shadow: inset 0 1px 0 var(--fp-rule);
+}
+
+.eventMinute {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.eventDetail {
+  display: block;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--fp-ink-2);
+}
+
+.buttonStack {
+  display: grid;
+  gap: 8px;
+}
+
+.scorerGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.scorerOption {
+  min-height: 52px;
+  border-radius: 999px;
+  background: var(--fp-surface);
+  box-shadow: inset 0 0 0 1px var(--fp-rule);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px 0 6px;
+  font-weight: 600;
+  font-size: 15px;
+  text-align: left;
+  min-width: 0;
+  transition: transform var(--fp-d-press);
+}
+
+.scorerOption:active {
+  transform: scale(0.97);
+  background: var(--fp-lime);
+  color: var(--fp-on-lime);
+}
+
+.scorerDisc {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: var(--fp-club-disc);
+  color: var(--fp-on-club);
+  font-family: var(--font-num);
+  font-weight: 600;
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.scorerDiscInitials {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.scorerName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Scorer auto-advance (10 s) shown as the same drain bar as undo. */
+.sheetDrain {
+  position: relative;
+  height: 3px;
+  margin: -4px 0 14px;
+  border-radius: 2px;
+  background: var(--fp-rule);
+  overflow: hidden;
+}
+
+.sheetDrain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--fp-lime);
+  transform-origin: left;
+  animation: drain 10000ms linear forwards;
+}
+
+/* ── Ending overlay ───────────────────────────────────────────────────── */
+.ending {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+  background: var(--fp-canvas);
+  animation: fadeIn var(--fp-d-base) var(--fp-ease-out);
+}
+
+.endingTitle {
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+/* ── Short phones (< 700px tall, e.g. iPhone SE): spacing only ───────── */
+@media (max-height: 699px) {
+  .board {
+    padding-top: calc(env(safe-area-inset-top) + 2px);
+    padding-bottom: 10px;
+  }
+
+  .boardRow {
+    min-height: 56px;
+  }
+
+  .clockDigits {
+    font-size: 34px;
+  }
+
+  .scoreDigit {
+    font-size: 44px;
+    height: 40px;
+    line-height: 40px;
+  }
+
+  .goals {
+    margin-top: 4px;
+  }
+
+  .goals .btn {
+    height: 44px;
+  }
+
+  .strip {
+    min-height: 54px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+
+  .benchTile {
+    min-height: 60px;
+    gap: 4px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  .dugout {
+    padding-top: 6px;
+  }
+
+  .compact .tokenBox {
+    inset: 28px 10px 80px;
+  }
+
+  .bench:is(.benchDense, [data-fit="dense"]) {
+    gap: 4px;
+  }
+
+  .bench:is(.benchDense, [data-fit="dense"]) .benchTile {
+    min-height: 46px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    gap: 2px;
+  }
+
+  .scorerOption {
+    min-height: 48px;
+  }
+
+  .sheetLede {
+    margin-bottom: 10px;
+  }
+}
+
+/* ── Motion ───────────────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes land {
+  0% {
+    transform: scale(0.82);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes tileLand {
+  0% {
+    background: var(--fp-lime);
+    color: var(--fp-on-lime);
+  }
+}
+
+@keyframes drain {
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes stripIn {
+  from {
+    transform: translateY(6px);
+    opacity: 0;
+  }
+}
+
+@keyframes sheetIn {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live *,
+  .live *::before,
+  .live *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+
+  /* The undo and scorer countdowns carry information, so they keep running. */
+  .live .drain {
+    animation-duration: var(--fp-d-undo) !important;
+  }
+
+  .live .sheetDrain::after {
+    animation-duration: 10000ms !important;
+  }
+}

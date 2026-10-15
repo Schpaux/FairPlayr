@@ -71,6 +71,9 @@ import { UndoToast } from "@/components/match/UndoToast";
 import { useLiveSubstitution } from "@/components/match/useLiveSubstitution";
 import { useMatchClock } from "@/components/match/useMatchClock";
 import { variants } from "@/lib/tokens";
+import { isSidelineLiveUiEnabled } from "@/lib/featureFlags";
+import { LiveScreen } from "@/components/live/LiveScreen";
+import { buildLiveScreenModel, discLabel } from "@/components/live/liveScreenModel";
 
 interface PromptPlayerOption {
   id: string;
@@ -1168,6 +1171,109 @@ export function MatchLiveManager() {
           />
         )}
       </PageShell>
+    );
+  }
+
+  // Modern Sideline view (flag, off by default). Presentation only: it reuses
+  // the state and handlers above and adds no mutation path of its own.
+  if (isSidelineLiveUiEnabled()) {
+    const prompt = promptQueue[0] ?? null;
+
+    return (
+      <LiveScreen
+        model={buildLiveScreenModel({
+          liveMatch,
+          nowMs: matchClock.nowMs,
+          clock: elapsedClock,
+          inStoppage,
+          playersById,
+          getShortName,
+          suggestion,
+          interaction: subInteraction.state,
+        })}
+        isOnline={isOnline}
+        undo={
+          subInteraction.state.kind === "pendingUndo" && subInteraction.undoSecondsRemaining !== null
+            ? {
+                secondsRemaining: subInteraction.undoSecondsRemaining,
+                expiresAtMs: subInteraction.state.expiresAtMs,
+              }
+            : null
+        }
+        ghost={
+          subInteraction.ghostChip
+            ? {
+                name: getShortName(subInteraction.ghostChip.benchPlayerId),
+                x: subInteraction.ghostChip.x,
+                y: subInteraction.ghostChip.y,
+              }
+            : null
+        }
+        goalPrompt={
+          prompt
+            ? {
+                key: `${prompt.localEventId}-${prompt.step}`,
+                step: prompt.step,
+                options: (prompt.step === "assist"
+                  ? prompt.options.filter((option) => option.id !== prompt.scorerId)
+                  : prompt.options
+                ).map((option) => {
+                  const player = playersById.get(option.id);
+                  return {
+                    id: option.id,
+                    name: getShortName(option.id),
+                    discLabel: discLabel(player ?? { name: option.name }),
+                    hasNumber: player?.number !== undefined && player?.number !== null,
+                  };
+                }),
+              }
+            : null
+        }
+        notices={{
+          error,
+          pendingCompletion: pendingCompletion ? { persisted: pendingCompletion.persisted } : null,
+          isOnline,
+          isSyncingCompletion,
+          onRetryCompletion: () => {
+            if (pendingCompletion) void syncPendingCompletion(pendingCompletion.record);
+          },
+          syncedMatchId,
+          onOpenReport: () => {
+            if (syncedMatchId) router.push(`/match/${encodeURIComponent(syncedMatchId)}`);
+          },
+          endedLocally:
+            liveMatch.status === "ended" && !activeMatchId && !pendingCompletion && !syncedMatchId
+              ? { unsaved: localEndUnsaved }
+              : null,
+        }}
+        ending={isEndingMatch ? { done: endMatchDone } : null}
+        handlers={{
+          onStart: handleStart,
+          onPause: handlePause,
+          onResume: handleResume,
+          onEndHalf: handleEndHalf,
+          onEndMatch: handleEnd,
+          onGoalUs: () => handleTeamScore(1),
+          onGoalThem: () => handleOpponentScore(1),
+          onRemoveGoalUs: () => handleTeamScore(-1),
+          onRemoveGoalThem: () => handleOpponentScore(-1),
+          onTapFieldPlayer: subInteraction.tapFieldPlayer,
+          onTapBenchPlayer: subInteraction.tapBenchPlayer,
+          onCancelSelection: subInteraction.cancel,
+          onUndo: subInteraction.triggerUndo,
+          onBenchPointerDown: (benchPlayerId, event) =>
+            subInteraction.getBenchPointerDownHandler(benchPlayerId)(event),
+          pointerSurfaceHandlers: subInteraction.pointerSurfaceHandlers,
+          onSetupNext: handleResetView,
+          onPickGoalContributor: (playerId) => {
+            if (prompt?.step === "scorer") {
+              handlePromptScorer(playerId);
+            } else {
+              handlePromptAssist(playerId);
+            }
+          },
+        }}
+      />
     );
   }
 
