@@ -1,5 +1,16 @@
-import { clearStoredMatchSetup, getStoredMatchSetup } from "@/lib/storage/matchStorage";
-import { clearStoredLiveMatch, getStoredLiveMatch } from "@/lib/storage/liveMatchStorage";
+import { createLiveMatchFromSetup, type LiveMatchState } from "@/domain/liveMatch";
+import type { MatchConfig } from "@/domain/match";
+import {
+  activateMatch,
+  clearStoredMatchSetup,
+  getStoredMatchSetup,
+  hasActiveStoredMatch,
+} from "@/lib/storage/matchStorage";
+import {
+  clearStoredLiveMatch,
+  getStoredLiveMatch,
+  saveStoredLiveMatch,
+} from "@/lib/storage/liveMatchStorage";
 
 export type CanonicalMatchStatus = "planned" | "live" | "completed" | "cancelled" | "abandoned";
 
@@ -138,6 +149,42 @@ export function resolveLocalActiveMatch(): ActiveMatchLike | null {
 export function clearLocalActiveState(): void {
   clearStoredLiveMatch();
   clearStoredMatchSetup();
+}
+
+/** Live screen route for this device's active match (server-backed or local). */
+export function liveHrefFor(serverMatchId: string | null | undefined): string {
+  return serverMatchId
+    ? `/match/live?matchId=${encodeURIComponent(serverMatchId)}`
+    : "/match/live";
+}
+
+export type StartLocalMatchResult =
+  | { ok: true; liveMatch: LiveMatchState }
+  | { ok: false; reason: "active_match" };
+
+/**
+ * Starts a match on this device: a fresh live state plus an `active` setup.
+ *
+ * Refused while another match is active, because starting would wipe its
+ * minutes and events. That match must first be ended or discarded through the
+ * match lifecycle (live screen, recovery card or start guard).
+ */
+export function startLocalMatch(
+  setup: MatchConfig,
+  serverMatchId: string | null
+): StartLocalMatchResult {
+  if (hasActiveStoredMatch()) {
+    return { ok: false, reason: "active_match" };
+  }
+
+  clearStoredLiveMatch();
+  const liveMatch = createLiveMatchFromSetup(setup);
+  saveStoredLiveMatch(liveMatch);
+  // Keep the server record with the local setup so the live screen can still
+  // sync the completion when it is reopened without ?matchId (e.g. offline).
+  activateMatch(setup, serverMatchId);
+
+  return { ok: true, liveMatch };
 }
 
 export interface PersistedActionArgs {

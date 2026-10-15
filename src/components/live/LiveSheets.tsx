@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useId, useRef } from "react";
-import { ChevronLeft, Flag, History, Minus, WifiOff } from "lucide-react";
+import { Flag, History, House, Minus, WifiOff } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
@@ -128,9 +128,10 @@ export function MenuSheet({
       </div>
 
       <div className={styles.menuGroup}>
-        <Link href="/match/setup" className={styles.menuRow}>
-          <ChevronLeft size={20} {...ICON} />
-          <span className={styles.menuGrow}>{t("backToSetup")}</span>
+        {/* Leaves Live without touching the match; Home's banner leads back. */}
+        <Link href="/" className={styles.menuRow}>
+          <House size={20} {...ICON} />
+          <span className={styles.menuGrow}>{t("leaveToHome")}</span>
         </Link>
       </div>
 

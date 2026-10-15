@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, ShieldAlert, Users, X } from "lucide-react";
+import { CheckCircle2, PlayCircle, ShieldAlert, Users, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { PageShell } from "@/components/ui/PageShell";
@@ -19,6 +19,7 @@ import {
   saveMatchSetupDraft,
   updateMatchConfig,
 } from "@/lib/storage/matchStorage";
+import { liveHrefFor } from "@/lib/match/activeMatchRecovery";
 import {
   assignStarterToSlot,
   autoFillLineup,
@@ -65,6 +66,9 @@ export function LineupBuilderManager() {
 
   const [config, setConfig] = useState<MatchConfig | null>(null);
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
+  // Set while a started match owns the stored setup: storage refuses lineup
+  // writes then, so the editor is replaced by a route back to the match.
+  const [activeLiveHref, setActiveLiveHref] = useState<string | null>(null);
 
   const team = workspace.activeTeam;
 
@@ -73,6 +77,15 @@ export function LineupBuilderManager() {
     if (!isHydrated || workspace.isLoading) {
       return;
     }
+
+    const stored = getStoredMatchSetup();
+
+    if (stored?.status === "active") {
+      setActiveLiveHref(liveHrefFor(stored.serverMatchId));
+      setConfig(null);
+      return;
+    }
+    setActiveLiveHref(null);
 
     if (!team) {
       setConfig(null);
@@ -87,7 +100,16 @@ export function LineupBuilderManager() {
       return;
     }
 
-    saveMatchSetupDraft(config);
+    if (!saveMatchSetupDraft(config)) {
+      // A match became active after this page opened (e.g. in another tab):
+      // never keep showing edits that were not saved.
+      /* eslint-disable react-hooks/set-state-in-effect */
+      setActiveLiveHref(liveHrefFor(getStoredMatchSetup()?.serverMatchId));
+      setConfig(null);
+      setActiveSlotId(null);
+      /* eslint-enable react-hooks/set-state-in-effect */
+      return;
+    }
     updateMatchConfig(config);
   }, [config, isHydrated]);
 
@@ -161,6 +183,26 @@ export function LineupBuilderManager() {
     return (
       <PageShell>
         <AppCard className="p-3 text-xs text-danger">{workspace.error}</AppCard>
+      </PageShell>
+    );
+  }
+
+  if (activeLiveHref) {
+    return (
+      <PageShell>
+        <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
+        <EmptyState
+          icon={PlayCircle}
+          title={t("activeMatch.title")}
+          description={t("activeMatch.description")}
+          action={
+            <Link href={activeLiveHref}>
+              <FpButton variant="primary" size="md">
+                {t("activeMatch.continue")}
+              </FpButton>
+            </Link>
+          }
+        />
       </PageShell>
     );
   }

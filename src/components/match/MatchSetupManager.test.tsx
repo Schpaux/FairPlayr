@@ -5,7 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MatchSetupManager } from "@/components/match/MatchSetupManager";
 import type { MatchSetup } from "@/domain/match";
 import type { Player } from "@/domain/team";
-import { getStoredMatchSetup, saveMatchSetupDraft } from "@/lib/storage/matchStorage";
+import { createLiveMatchFromSetup, startLiveMatch, updateScore } from "@/domain/liveMatch";
+import { activateMatch, endMatch, getStoredMatchSetup, saveMatchSetupDraft } from "@/lib/storage/matchStorage";
+import { getStoredLiveMatch, saveStoredLiveMatch } from "@/lib/storage/liveMatchStorage";
 import en from "../../../messages/en.json";
 
 const routerPush = vi.fn();
@@ -114,5 +116,112 @@ describe("MatchSetupManager start match", () => {
 
     await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/match/live?matchId=match-1"));
     expect(getStoredMatchSetup()).toMatchObject({ status: "active", serverMatchId: "match-1" });
+  });
+});
+
+// FP-MS2.1-A1 (MS-10): opening setup or pressing "Start match" must never
+// demote, replace or reset a match that is already running on this device.
+describe("MatchSetupManager with an active match", () => {
+  const KICKOFF_MS = Date.parse("2026-04-15T10:00:00.000Z");
+
+  function storeRunningMatch(config: MatchSetup = SETUP) {
+    activateMatch(config, null);
+    let live = startLiveMatch(createLiveMatchFromSetup(config), KICKOFF_MS);
+    live = updateScore(live, "team", 1);
+    saveStoredLiveMatch(live);
+    return {
+      setup: window.localStorage.getItem("fairplayr.matchSetup.v1"),
+      live: window.localStorage.getItem("fairplayr.liveMatch.v1"),
+    };
+  }
+
+  beforeEach(() => {
+    window.localStorage.clear();
+    searchParams = new URLSearchParams();
+    routerPush.mockReset();
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response(null, { status: 204 }))));
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it("shows the way back to the match instead of the editor and leaves storage untouched", async () => {
+    const before = storeRunningMatch();
+
+    renderManager();
+
+    expect(await screen.findByText(en.matchSetup.activeMatch.title)).toBeTruthy();
+    expect(screen.getByRole("link", { name: en.matchSetup.activeMatch.continue }).getAttribute("href")).toBe(
+      "/match/live"
+    );
+    expect(screen.queryByRole("button", { name: en.matchSetup.startMatch })).toBeNull();
+    expect(window.localStorage.getItem("fairplayr.matchSetup.v1")).toBe(before.setup);
+    expect(window.localStorage.getItem("fairplayr.liveMatch.v1")).toBe(before.live);
+  });
+
+  it("links back to the server match when the active match has one", async () => {
+    activateMatch(SETUP, "match-9");
+    saveStoredLiveMatch(startLiveMatch(createLiveMatchFromSetup(SETUP), KICKOFF_MS));
+
+    renderManager();
+
+    expect(
+      (await screen.findByRole("link", { name: en.matchSetup.activeMatch.continue })).getAttribute("href")
+    ).toBe("/match/live?matchId=match-9");
+    expect(getStoredMatchSetup()).toMatchObject({ status: "active", serverMatchId: "match-9" });
+  });
+
+  it("rejects a start when a match became active after setup opened, keeping that match", async () => {
+    saveMatchSetupDraft(SETUP);
+    renderManager();
+    const startButton = await screen.findByRole("button", { name: en.matchSetup.startMatch });
+
+    // Another tab starts a different match while this setup is open.
+    const other = { ...SETUP, id: "setup-other" };
+    const before = storeRunningMatch(other);
+
+    fireEvent.click(startButton);
+
+    expect(await screen.findByText(en.matchSetup.activeMatch.title)).toBeTruthy();
+    expect(routerPush).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem("fairplayr.matchSetup.v1")).toBe(before.setup);
+    expect(window.localStorage.getItem("fairplayr.liveMatch.v1")).toBe(before.live);
+    expect(getStoredLiveMatch()).toMatchObject({ setupId: "setup-other", teamScore: 1, status: "running" });
+  });
+
+  it("swaps the editor for the way back when an edit is rejected because a match became active", async () => {
+    saveMatchSetupDraft(SETUP);
+    renderManager();
+    const playerToggle = (await screen.findAllByRole("button", { name: /Player 6/ })).find((button) =>
+      button.hasAttribute("aria-pressed")
+    )!;
+
+    // Another tab starts a match; this tab's next edit must not look saved.
+    const other = { ...SETUP, id: "setup-other" };
+    const before = storeRunningMatch(other);
+
+    fireEvent.click(playerToggle);
+
+    expect(await screen.findByText(en.matchSetup.activeMatch.title)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: en.matchSetup.startMatch })).toBeNull();
+    expect(window.localStorage.getItem("fairplayr.matchSetup.v1")).toBe(before.setup);
+    expect(window.localStorage.getItem("fairplayr.liveMatch.v1")).toBe(before.live);
+  });
+
+  it("starts normally again once the previous match has ended", async () => {
+    storeRunningMatch();
+    // The match lifecycle ends it (live screen → end match).
+    endMatch(SETUP);
+    saveMatchSetupDraft({ ...SETUP, id: "setup-next" });
+
+    renderManager();
+    fireEvent.click(await screen.findByRole("button", { name: en.matchSetup.startMatch }));
+
+    await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/match/live"));
+    expect(getStoredMatchSetup()).toMatchObject({ status: "active", config: { id: "setup-next" } });
+    expect(getStoredLiveMatch()).toMatchObject({ setupId: "setup-next", status: "not_started", teamScore: 0 });
   });
 });

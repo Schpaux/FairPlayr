@@ -458,6 +458,11 @@
     "errors": {
       "startFailed": "Could not start the match. Please try again."
     },
+    "activeMatch": {
+      "title": "Match in progress",
+      "description": "A match is running. Match setup stays locked until it has ended, so no playing time is lost.",
+      "continue": "Go to the match"
+    },
     "startGuard": {
       "title": "Another live match is already active",
       "description": "{title} is still active. Choose what to do before starting a new match.",
@@ -632,7 +637,7 @@
         "endHalf": "End half",
         "removeGoalUs": "Remove our last goal",
         "removeGoalThem": "Remove their last goal",
-        "backToSetup": "Back to match setup",
+        "leaveToHome": "Go to home – the match continues",
         "endMatch": "End the match now",
         "offline": "You are offline. Everything is saved on this phone and sent when you are back online.",
         "close": "Close"
@@ -912,6 +917,11 @@
     "title": "Lineup",
     "subtitle": "Pick your squad, place your starting lineup, and keep the bench ready.",
     "activeTeam": "Active team: {name}",
+    "activeMatch": {
+      "title": "Match in progress",
+      "description": "A match is running. The lineup stays locked until it has ended. Make substitutions from the match screen.",
+      "continue": "Go to the match"
+    },
     "noTeam": {
       "title": "No team found",
       "description": "Create your team before building a lineup.",

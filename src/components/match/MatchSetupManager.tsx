@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
-import { ShieldAlert, Users, ArrowRight, CheckCircle2, Pencil } from "lucide-react";
+import { ShieldAlert, Users, ArrowRight, CheckCircle2, Pencil, PlayCircle } from "lucide-react";
 import {
   createMatchSetupWithPrefs,
   setMatchFormat,
@@ -28,10 +28,8 @@ import type { MatchConfig } from "@/domain/match";
 import {
   getStoredMatchSetup,
   saveMatchSetupDraft,
-  activateMatch,
 } from "@/lib/storage/matchStorage";
-import { createLiveMatchFromSetup } from "@/domain/liveMatch";
-import { clearStoredLiveMatch, saveStoredLiveMatch } from "@/lib/storage/liveMatchStorage";
+import { liveHrefFor, startLocalMatch } from "@/lib/match/activeMatchRecovery";
 import { getTeamMatchPrefs, saveTeamMatchPrefs } from "@/lib/storage/teamPrefsStorage";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -96,18 +94,30 @@ export function MatchSetupManager() {
   // ── State ──────────────────────────────────────────────────────────────────
   const [setup, setSetup] = useState<MatchConfig | null>(null);
   const [isCompact, setIsCompact] = useState(false);
+  // Set while a started match owns the stored setup: the editor is replaced by
+  // a route back to that match, so setup can never demote or overwrite it.
+  const [activeLiveHref, setActiveLiveHref] = useState<string | null>(null);
 
   const team = workspace.activeTeam;
 
   useEffect(() => {
     if (!isHydrated || workspace.isLoading) return;
+
+    const stored = getStoredMatchSetup();
+
+    if (stored?.status === "active") {
+      setActiveLiveHref(liveHrefFor(stored.serverMatchId));
+      setSetup(null);
+      return;
+    }
+    setActiveLiveHref(null);
+
     if (!team) {
       setSetup(null);
       return;
     }
 
     const teamPlayerIds = team.players.map((p) => p.id);
-    const stored = getStoredMatchSetup();
 
     const prefs = getTeamMatchPrefs(team.id);
     const hasDefaults = Boolean(prefs.format ?? prefs.formationId ?? prefs.durationPresetId);
@@ -128,7 +138,12 @@ export function MatchSetupManager() {
   // ── Persist draft on every change ─────────────────────────────────────────
   useEffect(() => {
     if (!isHydrated || !setup) return;
-    saveMatchSetupDraft(setup);
+    if (!saveMatchSetupDraft(setup)) {
+      // A match became active (e.g. in another tab) and owns the stored setup:
+      // show the way to it rather than an editor whose changes are not saved.
+      setActiveLiveHref(liveHrefFor(getStoredMatchSetup()?.serverMatchId));
+      setSetup(null);
+    }
   }, [setup, isHydrated]);
 
   // ── Persist team preferences when coach changes format/formation/duration ──
@@ -210,12 +225,14 @@ export function MatchSetupManager() {
     setStartError(null);
     setIsStarting(true);
 
-    clearStoredLiveMatch();
-    const liveState = createLiveMatchFromSetup(setup);
-    saveStoredLiveMatch(liveState);
-    // Keep the server record with the local setup so the live screen can still
-    // sync the completion when it is reopened without ?matchId (e.g. offline).
-    activateMatch(setup, matchId);
+    const started = startLocalMatch(setup, matchId);
+    if (!started.ok) {
+      // Another match became active (e.g. in another tab): keep it, show the
+      // way back to it instead of starting over it.
+      setActiveLiveHref(liveHrefFor(getStoredMatchSetup()?.serverMatchId));
+      setIsStarting(false);
+      return;
+    }
 
     try {
       if (matchId) {
@@ -274,6 +291,24 @@ export function MatchSetupManager() {
     return (
       <PageShell>
         <AppCard className="p-3 text-xs text-danger">{workspace.error}</AppCard>
+      </PageShell>
+    );
+  }
+
+  if (activeLiveHref) {
+    return (
+      <PageShell>
+        <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
+        <EmptyState
+          icon={PlayCircle}
+          title={t("activeMatch.title")}
+          description={t("activeMatch.description")}
+          action={
+            <Link href={activeLiveHref}>
+              <FpButton variant="primary" size="md">{t("activeMatch.continue")}</FpButton>
+            </Link>
+          }
+        />
       </PageShell>
     );
   }

@@ -458,6 +458,11 @@
     "errors": {
       "startFailed": "Kunne ikke starte kampen. Prøv igjen."
     },
+    "activeMatch": {
+      "title": "Kamp pågår",
+      "description": "Det er en kamp i gang. Kampoppsettet er låst til kampen er avsluttet, slik at ingen spilletid går tapt.",
+      "continue": "Gå til kampen"
+    },
     "startGuard": {
       "title": "Du har allerede en pågående kamp",
       "description": "{title} er fortsatt aktiv. Velg hva du vil gjøre før du starter en ny kamp.",
@@ -632,7 +637,7 @@
         "endHalf": "Avslutt omgang",
         "removeGoalUs": "Fjern siste mål for oss",
         "removeGoalThem": "Fjern siste mål for dem",
-        "backToSetup": "Tilbake til kampoppsett",
+        "leaveToHome": "Til forsiden – kampen fortsetter",
         "endMatch": "Avslutt kampen nå",
         "offline": "Du er frakoblet. Alt lagres på telefonen og sendes når du er på nett igjen.",
         "close": "Lukk"
@@ -912,6 +917,11 @@
     "title": "Lagoppstilling",
     "subtitle": "Velg tropp, plasser startoppstillingen og få benken klar for kamp.",
     "activeTeam": "Aktivt lag: {name}",
+    "activeMatch": {
+      "title": "Kamp pågår",
+      "description": "Det er en kamp i gang. Lagoppstillingen er låst til kampen er avsluttet. Bytter gjør du fra kampskjermen.",
+      "continue": "Gå til kampen"
+    },
     "noTeam": {
       "title": "Ingen lag funnet",
       "description": "Opprett laget ditt før du bygger lagoppstilling.",

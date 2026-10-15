@@ -254,9 +254,25 @@ export function getStoredMatchSetup(): StoredMatchConfig | null {
   }
 }
 
-/** Save the current setup as a draft (coach is still configuring). */
-export function saveMatchSetupDraft(config: MatchConfig): void {
+/**
+ * True while a started match owns the stored setup. Only the match lifecycle
+ * (`endMatch`, or clearing it through an explicit end/discard) may replace it;
+ * navigation and setup editors must leave it alone.
+ */
+export function hasActiveStoredMatch(): boolean {
+  return getStoredMatchSetup()?.status === "active";
+}
+
+/**
+ * Save the current setup as a draft (coach is still configuring).
+ *
+ * Refused (returns false) while a match is active: writing a draft over it
+ * would demote the running match and hide it from the live screen.
+ */
+export function saveMatchSetupDraft(config: MatchConfig): boolean {
+  if (hasActiveStoredMatch()) return false;
   writeEnvelope(config, "draft");
+  return true;
 }
 
 /**
@@ -276,15 +292,19 @@ export function endMatch(config: MatchConfig): void {
   writeEnvelope(config, "ended");
 }
 
-export function updateMatchConfig(config: MatchConfig): void {
+/** Refused (returns false) while a match is active, like `saveMatchSetupDraft`. */
+export function updateMatchConfig(config: MatchConfig): boolean {
   const stored = getStoredMatchSetup();
+
+  if (stored?.status === "active") return false;
 
   if (stored) {
     writeEnvelope(config, stored.status);
-    return;
+    return true;
   }
 
   writeEnvelope(config, "draft");
+  return true;
 }
 
 export function clearStoredMatchSetup(): void {

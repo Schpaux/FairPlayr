@@ -1279,13 +1279,13 @@ export function MatchLiveManager() {
 
   return (
     <PageShell className="space-y-3 pb-6">
-      {/* ── Minimal back nav ─────────────────────────────────── */}
+      {/* ── Minimal back nav: Home, never setup, so the match keeps running ── */}
       <Link
-        href="/match/setup"
+        href="/"
         className="tap-target -ml-1 inline-flex items-center gap-0.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         <ChevronLeft size={14} />
-        {common("back")}
+        {liveMatch.status === "ended" ? common("back") : t("sideline.menu.leaveToHome")}
       </Link>
 
       <motion.div

@@ -63,12 +63,56 @@ describe("matchStorage server match id", () => {
     activateMatch(first);
     expect(getStoredMatchSetup()?.serverMatchId).toBeNull();
 
-    // A different setup never inherits the previous one's id.
+    // A different setup never inherits the previous one's id (drafts are
+    // only written once the previous match has ended).
     activateMatch(first, "match-1");
+    endMatch(first);
     const second = { ...createMatchSetup("team-1"), id: "setup-other" };
     saveMatchSetupDraft(second);
     expect(getStoredMatchSetup()?.serverMatchId).toBeNull();
     endMatch(second);
     expect(getStoredMatchSetup()?.serverMatchId).toBeNull();
+  });
+});
+
+// FP-MS2.1-A1 (MS-10): a started match owns the stored setup until the match
+// lifecycle ends it. Setup editors must not demote it to a draft.
+describe("matchStorage active match protection", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  it("refuses to save a draft over an active match", () => {
+    const running = createMatchSetup("team-1");
+    activateMatch(running, "match-1");
+    const before = window.localStorage.getItem(MATCH_SETUP_KEY);
+
+    expect(saveMatchSetupDraft(running)).toBe(false);
+    expect(saveMatchSetupDraft(createMatchSetup("team-2"))).toBe(false);
+
+    expect(window.localStorage.getItem(MATCH_SETUP_KEY)).toBe(before);
+    expect(getStoredMatchSetup()).toMatchObject({ status: "active", serverMatchId: "match-1" });
+  });
+
+  it("refuses config edits while the match is active", () => {
+    const running = createMatchSetup("team-1");
+    activateMatch(running);
+    const before = window.localStorage.getItem(MATCH_SETUP_KEY);
+
+    expect(updateMatchConfig({ ...running, selectedPlayerIds: [] })).toBe(false);
+    expect(window.localStorage.getItem(MATCH_SETUP_KEY)).toBe(before);
+  });
+
+  it("saves drafts normally with no match or after the match ended", () => {
+    const first = createMatchSetup("team-1");
+    expect(saveMatchSetupDraft(first)).toBe(true);
+    expect(getStoredMatchSetup()?.status).toBe("draft");
+
+    activateMatch(first);
+    endMatch(first);
+
+    const next = createMatchSetup("team-1");
+    expect(saveMatchSetupDraft(next)).toBe(true);
+    expect(getStoredMatchSetup()).toMatchObject({ status: "draft", config: { id: next.id } });
   });
 });

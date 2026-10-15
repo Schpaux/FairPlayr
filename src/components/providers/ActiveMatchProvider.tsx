@@ -1,8 +1,9 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
+import { usePathname } from "@/i18n/navigation";
 import {
   clearLocalActiveState,
   hasActiveConflict,
@@ -159,6 +160,31 @@ export function ActiveMatchProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, [activeTeamId, auth.status, resolveServerActiveMatch]);
+
+  // Re-read this device's match on every route change, without a request, so
+  // a match started or left in this session (also offline) shows in the
+  // banner. Signed in, the server resolution wins; local only fills a gap.
+  const pathname = usePathname();
+  const hasActiveMatchRef = useRef(false);
+  useEffect(() => {
+    hasActiveMatchRef.current = Boolean(activeMatch);
+  }, [activeMatch]);
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    const localActive = resolveLocalActiveMatch();
+
+    if (auth.status === "authenticated" && (hasActiveMatchRef.current || !localActive)) {
+      return;
+    }
+
+    const resolution = resolveActiveMatch(null, null, localActive);
+    setActiveMatch(resolution.activeMatch as ActiveMatchItem | null);
+    setActiveStatus(resolution.canonicalStatus);
+    setNeedsRecovery(resolution.needsRecovery);
+    setActiveMatchHref(resolution.href);
+  }, [auth.status, pathname]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const resolvedActiveMatch = activeMatch;
   const resolvedStatus = resolvedActiveMatch ? toCanonicalStatus(resolvedActiveMatch.status) : activeStatus;
