@@ -56,7 +56,11 @@ npm run test:e2e    # Playwright smoke tests: 375×667, 390×844, 360×640 × li
 npm run verify      # all four, in that order
 ```
 
-- Playwright uses the locally installed Google Chrome (`channel: "chrome"`) and starts `next dev` on port 3100 (override with `FP_E2E_PORT`).
+- Playwright uses its bundled Chromium (one-time setup: `npx playwright install chromium`) and starts `next dev` on port 3100 (override with `FP_E2E_PORT`). To run the same suite in the installed Google Chrome, set `FP_E2E_CHANNEL=chrome`. Branded Chrome is not the default because its updater holds the browser's stdio open and can stall the run for minutes (see `FP-DEV01-playwright-diagnosis.md`).
+- Pick the test level that fits the change. The theme matrix lives inside the specs, so a single project still covers light and dark.
+  1. **Development loop**: the relevant Vitest file (`npx vitest run <file>`), `npm run typecheck`, and `npm run test:e2e:quick` (all specs, 375×667 only) or `npm run test:e2e:live` (live-match specs, 375×667 only).
+  2. **Feature verification**: `npm run test`, `npm run typecheck`, `npm run lint`, and the touched specs on all three projects (`npx playwright test e2e/<spec>.spec.ts`).
+  3. **Release verification / hand-back**: `npm run verify` (full suite on all three viewports).
 - Report results faithfully. **Separate pre-existing failures from new regressions**: record the baseline on `main` before changing code, and list any failure that was already there.
 - Known baseline (2026-10-14): `npm run lint` reports 4 pre-existing errors (`useLiveSubstitution.ts` react-hooks/refs, `ActiveMatchProvider.tsx` and `useSpondStatus.ts` set-state-in-effect, `liveMatchStorage.ts` prefer-const) and 7 warnings in `src/`. Do not add to them.
 - Any styling change needs before/after screenshots in both themes at 375×667 minimum.

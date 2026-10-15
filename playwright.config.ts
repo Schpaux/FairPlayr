@@ -1,18 +1,21 @@
 import { defineConfig, devices } from "@playwright/test";
 
 // Browser smoke tests (e2e/). Run with `npm run test:e2e`.
-// Uses the locally installed Google Chrome (channel "chrome"), so no browser
-// download is needed. Starts its own dev server on a dedicated port unless one
-// is already running there.
+// Uses Playwright's bundled Chromium by default (one-time setup:
+// `npx playwright install chromium`). Branded Google Chrome is opt-in with
+// FP_E2E_CHANNEL=chrome: its updater (GoogleUpdater) inherits Chrome's stdio
+// and can stall worker shutdown for minutes (see FP-DEV01).
+// Starts its own dev server on a dedicated port unless one is already running there.
 const PORT = Number(process.env.FP_E2E_PORT ?? 3100);
 const baseURL = `http://localhost:${PORT}`;
+const channel = process.env.FP_E2E_CHANNEL;
 
 const mobile = {
   ...devices["iPhone SE"],
   // Chrome engine with iPhone-like metrics; WebKit is not installed locally.
   browserName: "chromium" as const,
-  channel: "chrome",
   defaultBrowserType: "chromium" as const,
+  ...(channel ? { channel } : {}),
 };
 
 export default defineConfig({
