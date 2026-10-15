@@ -3,11 +3,17 @@ import { NextIntlClientProvider } from "next-intl";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MatchSetupManager } from "@/components/match/MatchSetupManager";
-import type { MatchSetup } from "@/domain/match";
+import {
+  autoFillLineup,
+  createMatchSetupWithPrefs,
+  selectAllSquad,
+  type MatchSetup,
+} from "@/domain/match";
 import type { Player } from "@/domain/team";
 import { createLiveMatchFromSetup, startLiveMatch, updateScore } from "@/domain/liveMatch";
 import { activateMatch, endMatch, getStoredMatchSetup, saveMatchSetupDraft } from "@/lib/storage/matchStorage";
 import { getStoredLiveMatch, saveStoredLiveMatch } from "@/lib/storage/liveMatchStorage";
+import { getTeamMatchPrefs, saveTeamMatchPrefs } from "@/lib/storage/teamPrefsStorage";
 import en from "../../../messages/en.json";
 
 const routerPush = vi.fn();
@@ -27,7 +33,7 @@ vi.mock("@/i18n/navigation", () => ({
   useRouter: () => ROUTER,
 }));
 
-const PLAYERS: Player[] = ["p1", "p2", "p3", "p4", "p5", "p6"].map((id, index) => ({
+const PLAYERS: Player[] = ["p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8"].map((id, index) => ({
   id,
   name: `Player ${index + 1}`,
   source: "manual",
@@ -223,5 +229,146 @@ describe("MatchSetupManager with an active match", () => {
     await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/match/live"));
     expect(getStoredMatchSetup()).toMatchObject({ status: "active", config: { id: "setup-next" } });
     expect(getStoredLiveMatch()).toMatchObject({ setupId: "setup-next", status: "not_started", teamScore: 0 });
+  });
+});
+
+// FP-MS2.1-A3 (MS-03): team defaults own the formation of a new match. Opening
+// setup never writes them, and a match's own formation never changes them.
+describe("MatchSetupManager team defaults and drafts", () => {
+  const PREFS_KEY = "fairplayr.teamPrefs.v1";
+  const SETUP_KEY = "fairplayr.matchSetup.v1";
+  const DEFAULTS = { format: "7v7", formationId: "7v7-2-3-1", durationPresetId: "2x20" } as const;
+
+  function sevenASide(formationId: string): MatchSetup {
+    const config = createMatchSetupWithPrefs("team-1", { format: "7v7", formationId });
+    return autoFillLineup(selectAllSquad(config, PLAYERS.map((player) => player.id)));
+  }
+
+  /** The compact settings card shows the formation as its shape, e.g. "2-3-1". */
+  async function shownFormation() {
+    await screen.findByText(en.matchSetup.compact.title);
+    return ["2-3-1", "3-2-1", "2-2-2"].filter((shape) => screen.queryByText(shape));
+  }
+
+  beforeEach(() => {
+    window.localStorage.clear();
+    searchParams = new URLSearchParams();
+    routerPush.mockReset();
+    vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))));
+    saveTeamMatchPrefs("team-1", DEFAULTS);
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it("opens with the team default 2-3-1 after a previous match ended in 3-2-1", async () => {
+    const previous = sevenASide("7v7-3-2-1");
+    activateMatch(previous, null);
+    endMatch(previous);
+
+    renderManager();
+
+    expect(await shownFormation()).toEqual(["2-3-1"]);
+    expect(screen.queryByText(en.matchSetup.draft.resumed)).toBeNull();
+    expect(getTeamMatchPrefs("team-1")).toEqual(DEFAULTS);
+  });
+
+  it("leaves team defaults and the stored setup byte-for-byte unchanged when nothing is changed", async () => {
+    const previous = sevenASide("7v7-3-2-1");
+    endMatch(previous);
+    const before = {
+      prefs: window.localStorage.getItem(PREFS_KEY),
+      setup: window.localStorage.getItem(SETUP_KEY),
+    };
+
+    renderManager();
+    await shownFormation();
+    cleanup();
+
+    expect(window.localStorage.getItem(PREFS_KEY)).toBe(before.prefs);
+    expect(window.localStorage.getItem(SETUP_KEY)).toBe(before.setup);
+  });
+
+  it("starts a fresh guest match offline in the default formation, which Live receives", async () => {
+    const previous = sevenASide("7v7-3-2-1");
+    activateMatch(previous, null);
+    endMatch(previous);
+
+    renderManager();
+    fireEvent.click(await screen.findByRole("button", { name: en.matchSetup.squad.selectAll }));
+    fireEvent.click(await screen.findByRole("button", { name: "Fyll automatisk" }));
+    fireEvent.click(await screen.findByRole("button", { name: en.matchSetup.startMatch }));
+
+    await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/match/live"));
+    expect(fetch).not.toHaveBeenCalled();
+    expect(getStoredMatchSetup()).toMatchObject({
+      status: "active",
+      serverMatchId: null,
+      config: { formationId: "7v7-2-3-1" },
+    });
+    expect(getStoredMatchSetup()?.config.id).not.toBe(previous.id);
+    expect(getStoredLiveMatch()).toMatchObject({ formationId: "7v7-2-3-1", status: "not_started" });
+    expect(getTeamMatchPrefs("team-1")).toEqual(DEFAULTS);
+  });
+
+  it("resumes an unfinished draft, labelled, and can start over from the team defaults", async () => {
+    const draft = sevenASide("7v7-3-2-1");
+    saveMatchSetupDraft(draft);
+
+    renderManager();
+
+    expect(await screen.findByText(en.matchSetup.draft.resumed)).toBeTruthy();
+    expect(screen.getByText(en.matchSetup.draft.replaceHint)).toBeTruthy();
+    expect(await shownFormation()).toEqual(["3-2-1"]);
+    expect(getStoredMatchSetup()?.config).toEqual(draft);
+
+    fireEvent.click(screen.getByRole("button", { name: en.matchSetup.draft.startFromDefaults }));
+
+    await waitFor(() => expect(screen.queryByText(en.matchSetup.draft.resumed)).toBeNull());
+    expect(await shownFormation()).toEqual(["2-3-1"]);
+    expect(getStoredMatchSetup()).toBeNull();
+    expect(getTeamMatchPrefs("team-1")).toEqual(DEFAULTS);
+  });
+
+  it("changes one match's formation without changing team defaults, and keeps it after a reload", async () => {
+    const prefsBefore = window.localStorage.getItem(PREFS_KEY);
+
+    renderManager();
+    fireEvent.click(await screen.findByRole("button", { name: en.matchSetup.compact.edit }));
+    fireEvent.click(await screen.findByRole("button", { name: "3-2-1" }));
+
+    await waitFor(() =>
+      expect(getStoredMatchSetup()).toMatchObject({ status: "draft", config: { formationId: "7v7-3-2-1" } })
+    );
+    expect(window.localStorage.getItem(PREFS_KEY)).toBe(prefsBefore);
+
+    // Reload / navigate back: the unfinished draft is resumed, not the default.
+    cleanup();
+    renderManager();
+
+    expect(await screen.findByText(en.matchSetup.draft.resumed)).toBeTruthy();
+    expect(await shownFormation()).toEqual(["3-2-1"]);
+    expect(window.localStorage.getItem(PREFS_KEY)).toBe(prefsBefore);
+  });
+
+  it("leaves an active match and the team defaults untouched", async () => {
+    const running = sevenASide("7v7-3-2-1");
+    activateMatch(running, null);
+    saveStoredLiveMatch(startLiveMatch(createLiveMatchFromSetup(running), Date.parse("2026-04-15T10:00:00.000Z")));
+    const before = {
+      prefs: window.localStorage.getItem(PREFS_KEY),
+      setup: window.localStorage.getItem(SETUP_KEY),
+      live: window.localStorage.getItem("fairplayr.liveMatch.v1"),
+    };
+
+    renderManager();
+
+    expect(await screen.findByText(en.matchSetup.activeMatch.title)).toBeTruthy();
+    expect(screen.queryByText(en.matchSetup.draft.resumed)).toBeNull();
+    expect(window.localStorage.getItem(PREFS_KEY)).toBe(before.prefs);
+    expect(window.localStorage.getItem(SETUP_KEY)).toBe(before.setup);
+    expect(window.localStorage.getItem("fairplayr.liveMatch.v1")).toBe(before.live);
   });
 });

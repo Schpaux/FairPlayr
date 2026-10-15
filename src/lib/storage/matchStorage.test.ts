@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createMatchSetup } from "@/domain/match";
 import {
   activateMatch,
+  discardMatchSetupDraft,
   endMatch,
   getStoredMatchSetup,
   saveMatchSetupDraft,
@@ -114,5 +115,37 @@ describe("matchStorage active match protection", () => {
     const next = createMatchSetup("team-1");
     expect(saveMatchSetupDraft(next)).toBe(true);
     expect(getStoredMatchSetup()).toMatchObject({ status: "draft", config: { id: next.id } });
+  });
+});
+
+// FP-MS2.1-A3: "Start new from team defaults" discards only an unfinished draft.
+describe("matchStorage discardMatchSetupDraft", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  it("removes a draft", () => {
+    saveMatchSetupDraft(createMatchSetup("team-1"));
+
+    expect(discardMatchSetupDraft()).toBe(true);
+    expect(getStoredMatchSetup()).toBeNull();
+  });
+
+  it("refuses while a match is active and leaves it untouched", () => {
+    activateMatch(createMatchSetup("team-1"), "match-1");
+    const before = window.localStorage.getItem(MATCH_SETUP_KEY);
+
+    expect(discardMatchSetupDraft()).toBe(false);
+    expect(window.localStorage.getItem(MATCH_SETUP_KEY)).toBe(before);
+  });
+
+  it("leaves an ended match as it is", () => {
+    const ended = createMatchSetup("team-1");
+    activateMatch(ended, "match-1");
+    endMatch(ended);
+    const before = window.localStorage.getItem(MATCH_SETUP_KEY);
+
+    expect(discardMatchSetupDraft()).toBe(true);
+    expect(window.localStorage.getItem(MATCH_SETUP_KEY)).toBe(before);
   });
 });

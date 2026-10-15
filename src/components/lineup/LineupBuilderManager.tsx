@@ -44,7 +44,9 @@ function buildInitialConfig(team: { id: string; players: Player[] }): MatchConfi
   const storedSetup = getStoredMatchSetup();
   const teamPlayerIds = team.players.map((player) => player.id);
 
-  if (storedSetup && storedSetup.config.teamId === team.id) {
+  // Only an unfinished draft is resumed. An ended match is history: reusing it
+  // here would revive it as a draft (FP-MS2.1-A3).
+  if (storedSetup?.status === "draft" && storedSetup.config.teamId === team.id) {
     return reconcileWithTeam(storedSetup.config, teamPlayerIds);
   }
 
@@ -66,6 +68,9 @@ export function LineupBuilderManager() {
 
   const [config, setConfig] = useState<MatchConfig | null>(null);
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
+  // True once the coach changes something here. Only then is the draft saved,
+  // so opening the lineup never writes anything.
+  const [hasEdits, setHasEdits] = useState(false);
   // Set while a started match owns the stored setup: storage refuses lineup
   // writes then, so the editor is replaced by a route back to the match.
   const [activeLiveHref, setActiveLiveHref] = useState<string | null>(null);
@@ -92,11 +97,12 @@ export function LineupBuilderManager() {
       return;
     }
     setConfig(buildInitialConfig(team));
+    setHasEdits(false);
   }, [isHydrated, team, workspace.isLoading]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
-    if (!isHydrated || !config) {
+    if (!isHydrated || !config || !hasEdits) {
       return;
     }
 
@@ -111,7 +117,12 @@ export function LineupBuilderManager() {
       return;
     }
     updateMatchConfig(config);
-  }, [config, isHydrated]);
+  }, [config, isHydrated, hasEdits]);
+
+  const editConfig = (update: (previous: MatchConfig) => MatchConfig) => {
+    setHasEdits(true);
+    setConfig((previous) => (previous ? update(previous) : previous));
+  };
 
   const playersById = useMemo(
     () => new Map((team?.players ?? []).map((player) => [player.id, player])),
@@ -159,7 +170,7 @@ export function LineupBuilderManager() {
       return;
     }
 
-    setConfig(assignStarterToSlot(config, activeSlotId, playerId));
+    editConfig(() => assignStarterToSlot(config, activeSlotId, playerId));
     setActiveSlotId(null);
   };
 
@@ -274,7 +285,7 @@ export function LineupBuilderManager() {
               value={config.format}
                 i18nNamespace="lineup.format"
               onChange={(format) => {
-                setConfig((previous) =>
+                editConfig((previous) =>
                   previous ? setMatchFormat(previous, format) : previous
                 );
                 setActiveSlotId(null);
@@ -285,7 +296,7 @@ export function LineupBuilderManager() {
               formations={getFormationPresets(config.format)}
               value={config.formationId}
               onChange={(formationId) => {
-                setConfig((previous) =>
+                editConfig((previous) =>
                   previous ? setMatchFormation(previous, formationId) : previous
                 );
                 setActiveSlotId(null);
@@ -325,7 +336,7 @@ export function LineupBuilderManager() {
                 size="md"
                 fullWidth
                 onClick={() =>
-                  setConfig((previous) =>
+                  editConfig((previous) =>
                     previous ? clearStarterSlot(previous, activeSlotId) : previous
                   )
                 }
@@ -339,7 +350,7 @@ export function LineupBuilderManager() {
               size="md"
               fullWidth
               onClick={() =>
-                setConfig((previous) => (previous ? autoFillLineup(previous) : previous))
+                editConfig((previous) => (previous ? autoFillLineup(previous) : previous))
               }
             >
               {t("actions.autoFill")}
@@ -363,7 +374,7 @@ export function LineupBuilderManager() {
               <button
                 type="button"
                 onClick={() =>
-                  setConfig((previous) =>
+                  editConfig((previous) =>
                     previous
                       ? selectAllSquad(
                           previous,
@@ -379,7 +390,7 @@ export function LineupBuilderManager() {
               <button
                 type="button"
                 onClick={() =>
-                  setConfig((previous) =>
+                  editConfig((previous) =>
                     previous ? setSelectedSquad(previous, []) : previous
                   )
                 }
@@ -399,7 +410,7 @@ export function LineupBuilderManager() {
                     key={player.id}
                     type="button"
                     onClick={() =>
-                      setConfig((previous) =>
+                      editConfig((previous) =>
                         previous ? toggleSquadPlayer(previous, player.id) : previous
                       )
                     }

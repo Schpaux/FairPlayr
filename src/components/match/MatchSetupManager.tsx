@@ -21,16 +21,17 @@ import {
   setMatchFormation,
   getStarterDeficit,
   canStartMatch,
-  reconcileWithTeam,
   MATCH_DURATION_PRESETS,
 } from "@/domain/match";
 import type { MatchConfig } from "@/domain/match";
+import { chooseInitialSetup } from "@/domain/matchSetupInit";
 import {
+  discardMatchSetupDraft,
   getStoredMatchSetup,
   saveMatchSetupDraft,
 } from "@/lib/storage/matchStorage";
 import { liveHrefFor, startLocalMatch } from "@/lib/match/activeMatchRecovery";
-import { getTeamMatchPrefs, saveTeamMatchPrefs } from "@/lib/storage/teamPrefsStorage";
+import { getTeamMatchPrefs } from "@/lib/storage/teamPrefsStorage";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -94,6 +95,11 @@ export function MatchSetupManager() {
   // ── State ──────────────────────────────────────────────────────────────────
   const [setup, setSetup] = useState<MatchConfig | null>(null);
   const [isCompact, setIsCompact] = useState(false);
+  // True once the coach changes something here. Only then is the draft saved,
+  // so opening setup never writes anything.
+  const [hasEdits, setHasEdits] = useState(false);
+  // True while showing an unfinished draft instead of the team defaults.
+  const [isResumedDraft, setIsResumedDraft] = useState(false);
   // Set while a started match owns the stored setup: the editor is replaced by
   // a route back to that match, so setup can never demote or overwrite it.
   const [activeLiveHref, setActiveLiveHref] = useState<string | null>(null);
@@ -117,95 +123,102 @@ export function MatchSetupManager() {
       return;
     }
 
-    const teamPlayerIds = team.players.map((p) => p.id);
-
     const prefs = getTeamMatchPrefs(team.id);
     const hasDefaults = Boolean(prefs.format ?? prefs.formationId ?? prefs.durationPresetId);
+    const initial = chooseInitialSetup(
+      stored,
+      prefs,
+      team.id,
+      team.players.map((p) => p.id)
+    );
+    if (initial.kind === "active") return;
 
-    if (stored && stored.config.teamId === team.id) {
-      // Existing draft — reconcile with current team roster, keep selected squad
-      const reconciled = reconcileWithTeam(stored.config, teamPlayerIds);
-      setSetup(reconciled);
-      setIsCompact(hasDefaults);
-      return;
-    }
-
-    // New setup — pre-fill with team preferences, squad starts empty
-    setSetup(createMatchSetupWithPrefs(team.id, prefs));
+    // Resume an unfinished draft (labelled as such), otherwise start from the
+    // team defaults. Nothing is stored until the coach changes something.
+    setSetup(initial.setup);
+    setIsResumedDraft(initial.kind === "resume");
+    setHasEdits(false);
     setIsCompact(hasDefaults);
   }, [isHydrated, team, workspace.isLoading]);
 
-  // ── Persist draft on every change ─────────────────────────────────────────
+  // ── Persist draft on every edit (never on open) ────────────────────────────
   useEffect(() => {
-    if (!isHydrated || !setup) return;
+    if (!isHydrated || !setup || !hasEdits) return;
     if (!saveMatchSetupDraft(setup)) {
       // A match became active (e.g. in another tab) and owns the stored setup:
       // show the way to it rather than an editor whose changes are not saved.
       setActiveLiveHref(liveHrefFor(getStoredMatchSetup()?.serverMatchId));
       setSetup(null);
     }
-  }, [setup, isHydrated]);
+  }, [setup, isHydrated, hasEdits]);
 
-  // ── Persist team preferences when coach changes format/formation/duration ──
-  useEffect(() => {
-    if (!setup || !team) return;
-    saveTeamMatchPrefs(team.id, {
-      format: setup.format,
-      formationId: setup.formationId,
-      durationPresetId: setup.duration.mode === "preset" && setup.duration.presetId
-        ? setup.duration.presetId
-        : undefined,
-    });
-  }, [setup?.format, setup?.formationId, setup?.duration.presetId, team?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Changes here belong to this match only; team defaults are edited in team
+  // settings and are never written from setup.
+  const editSetup = (update: (prev: MatchConfig) => MatchConfig) => {
+    setHasEdits(true);
+    setSetup((prev) => (prev ? update(prev) : prev));
+  };
 
   // ── Handlers ───────────────────────────────────────────────────────────────
+  const handleStartFromDefaults = () => {
+    if (!team) return;
+    if (!discardMatchSetupDraft()) {
+      setActiveLiveHref(liveHrefFor(getStoredMatchSetup()?.serverMatchId));
+      setSetup(null);
+      return;
+    }
+    const prefs = getTeamMatchPrefs(team.id);
+    setSetup(createMatchSetupWithPrefs(team.id, prefs));
+    setIsResumedDraft(false);
+    setHasEdits(false);
+    setIsCompact(Boolean(prefs.format ?? prefs.formationId ?? prefs.durationPresetId));
+  };
+
   const handleFormatChange: React.ComponentProps<
     typeof FormatSelector
   >["onChange"] = (format) => {
-    setSetup((prev) => (prev ? setMatchFormat(prev, format) : prev));
+    editSetup((prev) => setMatchFormat(prev, format));
   };
 
   const handleDurationChange: React.ComponentProps<
     typeof DurationPicker
   >["onCustomChange"] = (minutes) => {
-    setSetup((prev) => (prev ? setMatchDuration(prev, minutes) : prev));
+    editSetup((prev) => setMatchDuration(prev, minutes));
   };
 
   const handleDurationPresetChange: React.ComponentProps<
     typeof DurationPicker
   >["onPresetChange"] = (presetId) => {
-    setSetup((prev) => (prev ? setMatchDurationPreset(prev, presetId) : prev));
+    editSetup((prev) => setMatchDurationPreset(prev, presetId));
   };
 
   const handleHalvesChange: React.ComponentProps<
     typeof DurationPicker
   >["onHalvesChange"] = (halves) => {
-    setSetup((prev) => (prev ? setMatchHalves(prev, halves) : prev));
+    editSetup((prev) => setMatchHalves(prev, halves));
   };
 
   const handleFormationChange: React.ComponentProps<
     typeof FormationSelector
   >["onChange"] = (formationId) => {
-    setSetup((prev) => (prev ? setMatchFormation(prev, formationId) : prev));
+    editSetup((prev) => setMatchFormation(prev, formationId));
   };
 
   const handleReportToggle = (enabled: boolean) => {
-    setSetup((prev) => (prev ? setReportEnabled(prev, enabled) : prev));
+    editSetup((prev) => setReportEnabled(prev, enabled));
   };
 
   const handleToggleSquadPlayer = (playerId: string) => {
-    setSetup((prev) => (prev ? toggleSquadPlayer(prev, playerId) : prev));
+    editSetup((prev) => toggleSquadPlayer(prev, playerId));
   };
 
   const handleSelectAllSquad = () => {
     if (!team) return;
-    setSetup((prev) =>
-      prev ? selectAllSquad(prev, team.players.map((p) => p.id)) : prev
-    );
+    editSetup((prev) => selectAllSquad(prev, team.players.map((p) => p.id)));
   };
 
   const handleClearSquad = () => {
-    setSetup((prev) => (prev ? setSelectedSquad(prev, []) : prev));
+    editSetup((prev) => setSelectedSquad(prev, []));
   };
 
   // ── Start match ────────────────────────────────────────────────────────────
@@ -367,6 +380,24 @@ export function MatchSetupManager() {
           </AppCard>
         </motion.div>
 
+        {isResumedDraft ? (
+          <motion.div variants={variants.fadeInUp}>
+            <AppCard className="flex flex-wrap items-center justify-between gap-2 p-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground">{t("draft.resumed")}</p>
+                <p className="text-xs text-muted-foreground">{t("draft.replaceHint")}</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleStartFromDefaults}
+                className="tap-target text-sm font-semibold text-fp-cta"
+              >
+                {t("draft.startFromDefaults")}
+              </button>
+            </AppCard>
+          </motion.div>
+        ) : null}
+
         {/* Compact defaults summary */}
         {isCompact ? (
           <motion.div variants={variants.fadeInUp}>
@@ -447,8 +478,8 @@ export function MatchSetupManager() {
               players={team.players.filter((p) =>
                 setup.selectedPlayerIds.includes(p.id)
               )}
-              onSetupChange={setSetup}
-              onAutoFill={() => setSetup((prev) => (prev ? autoFillLineup(prev) : prev))}
+              onSetupChange={(next) => editSetup(() => next)}
+              onAutoFill={() => editSetup(autoFillLineup)}
             />
           </SetupSection>
         )}

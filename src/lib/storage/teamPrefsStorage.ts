@@ -2,8 +2,8 @@
  * Persists per-team match setup preferences in localStorage.
  *
  * These are the "team defaults" that pre-fill a new match: format, formation,
- * and duration preset. They are updated whenever the coach changes those
- * values during setup, so the next match starts with the same defaults.
+ * and duration preset. Only the team settings (Kampstandard) write them:
+ * changing a value in Match Setup changes that match, never the defaults.
  *
  * Works for both guest-local and cloud users (no server state required).
  */

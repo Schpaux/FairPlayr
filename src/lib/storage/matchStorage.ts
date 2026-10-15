@@ -307,6 +307,17 @@ export function updateMatchConfig(config: MatchConfig): boolean {
   return true;
 }
 
+/**
+ * Discard an unfinished draft so the next setup starts from team defaults.
+ * Refused (returns false) while a match is active; an ended setup is left as is.
+ */
+export function discardMatchSetupDraft(): boolean {
+  const stored = getStoredMatchSetup();
+  if (stored?.status === "active") return false;
+  if (stored?.status === "draft") clearStoredMatchSetup();
+  return true;
+}
+
 export function clearStoredMatchSetup(): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(MATCH_SETUP_KEY);

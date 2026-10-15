@@ -378,6 +378,11 @@
       "title": "Match settings",
       "edit": "Change settings"
     },
+    "draft": {
+      "resumed": "Continuing an unfinished match setup",
+      "replaceHint": "Starting new discards this setup.",
+      "startFromDefaults": "Discard and start new from team defaults"
+    },
     "noTeam": {
       "title": "No team found",
       "description": "You need a team before setting up a match.",

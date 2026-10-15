@@ -6,7 +6,7 @@ import { LineupBuilderManager } from "@/components/lineup/LineupBuilderManager";
 import type { MatchSetup } from "@/domain/match";
 import type { Player } from "@/domain/team";
 import { createLiveMatchFromSetup, startLiveMatch, updateScore } from "@/domain/liveMatch";
-import { activateMatch, getStoredMatchSetup, saveMatchSetupDraft } from "@/lib/storage/matchStorage";
+import { activateMatch, endMatch, getStoredMatchSetup, saveMatchSetupDraft } from "@/lib/storage/matchStorage";
 import { saveStoredLiveMatch } from "@/lib/storage/liveMatchStorage";
 import en from "../../../messages/en.json";
 
@@ -135,5 +135,60 @@ describe("LineupBuilderManager with an active match", () => {
 
     expect(screen.queryByText(en.lineup.activeMatch.title)).toBeNull();
     expect(getStoredMatchSetup()).toMatchObject({ status: "draft", config: { selectedPlayerIds: [] } });
+  });
+});
+
+// FP-MS2.1-A3: opening the lineup never writes, and an ended match is never
+// revived as a draft (which Match Setup would then resume).
+describe("LineupBuilderManager with an ended match or no edits", () => {
+  const SETUP_KEY = "fairplayr.matchSetup.v1";
+
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("leaves an ended match ended when the lineup is only opened", async () => {
+    activateMatch(SETUP, null);
+    endMatch(SETUP);
+    const before = window.localStorage.getItem(SETUP_KEY);
+
+    renderManager();
+    await screen.findByRole("button", { name: en.lineup.actions.autoFill });
+
+    expect(window.localStorage.getItem(SETUP_KEY)).toBe(before);
+    expect(getStoredMatchSetup()).toMatchObject({ status: "ended", config: { id: SETUP.id } });
+  });
+
+  it("starts a new draft, not the ended match, once the coach edits", async () => {
+    activateMatch(SETUP, null);
+    endMatch(SETUP);
+
+    renderManager();
+    fireEvent.click(await screen.findByRole("button", { name: en.lineup.players.clear }));
+
+    const stored = getStoredMatchSetup();
+    expect(stored).toMatchObject({ status: "draft", config: { selectedPlayerIds: [] } });
+    expect(stored?.config.id).not.toBe(SETUP.id);
+  });
+
+  it("writes nothing when opened with no stored setup", async () => {
+    renderManager();
+    await screen.findByRole("button", { name: en.lineup.actions.autoFill });
+
+    expect(window.localStorage.getItem(SETUP_KEY)).toBeNull();
+  });
+
+  it("leaves an unfinished draft byte-for-byte unchanged when nothing is edited", async () => {
+    saveMatchSetupDraft(SETUP);
+    const before = window.localStorage.getItem(SETUP_KEY);
+
+    renderManager();
+    await screen.findByRole("button", { name: en.lineup.actions.autoFill });
+
+    expect(window.localStorage.getItem(SETUP_KEY)).toBe(before);
   });
 });

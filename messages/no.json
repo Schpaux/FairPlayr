@@ -378,6 +378,11 @@
       "title": "Kampinnstillinger",
       "edit": "Endre innstillinger"
     },
+    "draft": {
+      "resumed": "Fortsetter påbegynt kampoppsett",
+      "replaceHint": "Starter du nytt, forkastes dette oppsettet.",
+      "startFromDefaults": "Forkast og start nytt fra lagstandard"
+    },
     "noTeam": {
       "title": "Ingen lag funnet",
       "description": "Du trenger et lag før du kan sette opp en kamp.",
