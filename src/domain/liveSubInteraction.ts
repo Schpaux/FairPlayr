@@ -31,8 +31,22 @@
  *
  *   pendingUndo / pendingPositionUndo
  *     ├─ UNDO_TRIGGERED ───────────────────→ idle
- *     └─ UNDO_EXPIRED ─────────────────────→ idle
- *     (all other actions are ignored while an undo window is open)
+ *     ├─ UNDO_EXPIRED ─────────────────────→ idle
+ *     ├─ SELECT_FIELD_PLAYER ──────────────→ fieldPlayerSelected
+ *     ├─ START_BENCH_DRAG ─────────────────→ draggingBenchPlayer
+ *     └─ START_FIELD_DRAG ─────────────────→ draggingFieldPlayer
+ *     (CANCEL and START_POSITION_SWAP are ignored while a window is open)
+ *
+ * ## Consecutive changes (D3, FP-MS2.1-B3)
+ *
+ *   Starting a genuinely new player interaction inside an undo window — a tap
+ *   on a pitch player, or a bench or field drag that has passed its threshold
+ *   — confirms the pending change and begins the new one in the same step.
+ *   The record is dropped, so only the most recent change is ever undoable;
+ *   the confirmed change stays in the match exactly as it was applied. A tap
+ *   on the pitch background is not a new interaction and leaves the window
+ *   open. Deciding what counts as genuine (a swipe or a stray click after a
+ *   drag does not) is the hook's job; the reducer only sees real starts.
  *
  * ## Invariants
  *
@@ -109,8 +123,10 @@ export function subInteractionReducer(
 ): SubInteractionState {
   switch (action.type) {
     case "SELECT_FIELD_PLAYER": {
-      // An active undo window is not interrupted by incidental taps.
-      if (hasPendingUndo(state)) return state;
+      // A new selection confirms a pending change (D3) and begins the new one.
+      if (hasPendingUndo(state)) {
+        return { kind: "fieldPlayerSelected", fieldPlayerId: action.playerId };
+      }
 
       if (state.kind === "positionSwapSource") {
         // Tapping the source again leaves the swap; any other field player is
@@ -136,7 +152,7 @@ export function subInteractionReducer(
     }
 
     case "START_BENCH_DRAG": {
-      if (hasPendingUndo(state)) return state;
+      // From any state, a pending undo included (D3): the drag is past its threshold.
       return { kind: "draggingBenchPlayer", benchPlayerId: action.benchPlayerId };
     }
 
@@ -146,7 +162,7 @@ export function subInteractionReducer(
     }
 
     case "START_FIELD_DRAG": {
-      if (hasPendingUndo(state)) return state;
+      // From any state, a pending undo included (D3): the drag is past its threshold.
       return {
         kind: "draggingFieldPlayer",
         fieldPlayerId: action.playerId,
@@ -155,8 +171,8 @@ export function subInteractionReducer(
     }
 
     case "CANCEL_DRAG": {
-      // CANCEL_DRAG always returns to idle — even during a pending undo.
-      // The undo window persists independently via the timer.
+      // Only a drag is cancelled. A drag never coexists with an undo window:
+      // starting one confirmed the pending change (D3).
       if (
         state.kind !== "draggingBenchPlayer" &&
         state.kind !== "draggingFieldPlayer"

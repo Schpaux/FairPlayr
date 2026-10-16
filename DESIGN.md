@@ -248,7 +248,11 @@ With an empty bench, the idle line reads "Ingen innbyttere".
 - Tap pitch → bench, **or** bench → pitch. Valid counterparts are marked. Tapping the same player again, or Avbryt, cancels. Tapping another player on the same side moves the selection.
 - **Drag-to-swap is preserved as a secondary path (D4).** From a bench rail, start the drag upwards: a sideways start scrolls the rail instead (§5.3, direction lock).
 - After a swap: the token lands, the bench tile flashes, both stint rings reset, and the strip shows the 5 s undo.
-- **Starting another selection during the undo window confirms the previous substitution and begins the new one (D3).**
+- **Starting another selection during the undo window confirms the previous substitution and begins the new one (D3).** The coach never waits for the countdown, dismisses it, or confirms anything extra:
+  - What starts a new interaction: a tap on a pitch player (that same tap selects it), or a bench or pitch drag once it has passed its drag threshold. The same holds in a position-swap undo window (row 1b).
+  - What does not: pressing without moving, a sideways rail swipe, a tap on the grass, and the click a browser fires after a drag or swipe ends. These leave the window and its countdown untouched.
+  - The new change opens its own 5 s window. Only the most recent change can be undone; every confirmed substitution stays in the event history and keeps its minutes. Undo stays targeted (it never restores a snapshot) and the 5 s deadline is hard.
+  - The bench order stays held from the first change to the end of the last window, then re-sorts once (§5.3).
 
 ### 6.1.1 Position swap (B1)
 Two players on the pitch exchange positions. **It is not a substitution**: no event is logged, total minutes and the stint ring are unchanged, and nobody goes to or from the bench. Both methods below are approved and **neither is optional (D7)**.

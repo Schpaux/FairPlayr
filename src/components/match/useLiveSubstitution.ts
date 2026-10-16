@@ -60,6 +60,18 @@
  *   clock and half-time changes made inside the window survive.
  *   A position swap keeps only the swapped pair and undoes through
  *   onPositionSwapUndo(swap), which reverses those two slots and nothing else.
+ *
+ * ## Consecutive changes (D3, FP-MS2.1-B3)
+ *   The coach never waits for a window to run out. A genuinely new player
+ *   interaction confirms the pending change and starts at once, without
+ *   losing the input that started it:
+ *   - a tap on a pitch player selects it (the same click, not a second one);
+ *   - a bench or field drag past its threshold starts the drag.
+ *   The countdown stops there and the next change opens its own 5 s window,
+ *   so only the most recent change is undoable. Pointer down alone does not
+ *   confirm anything: a rail swipe, a short press, a tap on the pitch
+ *   background and the trailing click after a drag or swipe all leave the
+ *   window open.
  */
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
@@ -86,7 +98,7 @@ const DRAG_THRESHOLD_PX = 8;
 const DIRECTION_LOCK_PX = 6;
 /** Field tokens are tapped far more than dragged, so a drag needs a clearer move. */
 const FIELD_DRAG_THRESHOLD_PX = 12;
-/** How long after a drag (or a locked rail swipe) its trailing click on that player is ignored. */
+/** How long after a drag (or a locked rail swipe) its trailing click is ignored. */
 const DRAG_CLICK_GUARD_MS = 400;
 const UNDO_WINDOW_MS = 5000;
 
@@ -196,6 +208,16 @@ export interface UseLiveSubstitutionReturn {
   };
 }
 
+/** A click to ignore after a drag or rail swipe: on one player, or on any (null, mouse drags). */
+interface TrailingClickGuard {
+  playerId: string | null;
+  untilMs: number;
+}
+
+function isTrailingClick(guard: TrailingClickGuard | null, playerId: string): boolean {
+  return guard !== null && (guard.playerId === null || guard.playerId === playerId) && Date.now() < guard.untilMs;
+}
+
 /** The `data-slot-id` of the element under a point, or null. */
 function slotIdAt(x: number, y: number): string | null {
   if (typeof document.elementFromPoint !== "function") return null;
@@ -226,8 +248,8 @@ export function useLiveSubstitution({
   // Refs for drag tracking (mutable, no re-renders).
   const dragOriginRef = useRef<DragOrigin | null>(null);
   const isDragActiveRef = useRef(false);
-  // The click a browser fires on the dragged token after its release.
-  const trailingClickRef = useRef<{ playerId: string; untilMs: number } | null>(null);
+  // The click a browser fires after a drag or rail swipe.
+  const trailingClickRef = useRef<TrailingClickGuard | null>(null);
 
   // Refs for undo timers.
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -314,10 +336,13 @@ export function useLiveSubstitution({
     (playerId: string) => {
       if (disabled) return;
 
-      // Releasing a drag must not also select or deselect the dragged player.
-      const trailing = trailingClickRef.current;
+      // Releasing a drag must not also select or deselect a player.
+      const trailing = isTrailingClick(trailingClickRef.current, playerId);
       trailingClickRef.current = null;
-      if (trailing && trailing.playerId === playerId && Date.now() < trailing.untilMs) return;
+      if (trailing) return;
+
+      // A new selection confirms the pending change (D3); the reducer selects.
+      if (hasPendingUndo(state)) clearUndoTimers();
 
       if (state.kind === "positionSwapSource" && state.fieldPlayerId !== playerId) {
         const fromSlotId = findLiveSlotOf(liveMatchRef.current, state.fieldPlayerId);
@@ -328,7 +353,7 @@ export function useLiveSubstitution({
 
       dispatch({ type: "SELECT_FIELD_PLAYER", playerId });
     },
-    [disabled, state, commitPositionSwap]
+    [disabled, state, commitPositionSwap, clearUndoTimers]
   );
 
   const tapBenchPlayer = useCallback(
@@ -336,10 +361,9 @@ export function useLiveSubstitution({
       if (disabled) return;
 
       // Releasing a rail swipe must never also substitute.
-      const trailing = trailingClickRef.current;
-      if (trailing && trailing.playerId === benchPlayerId) {
+      if (isTrailingClick(trailingClickRef.current, benchPlayerId)) {
         trailingClickRef.current = null;
-        if (Date.now() < trailing.untilMs) return;
+        return;
       }
 
       // Read state synchronously — safe because this is called from onClick
@@ -400,8 +424,9 @@ export function useLiveSubstitution({
   const getBenchPointerDownHandler = useCallback(
     (benchPlayerId: string, options?: BenchPointerDownOptions) =>
       (e: React.PointerEvent) => {
+        // Allowed inside an undo window: only a drag past its threshold
+        // confirms the pending change, never the press itself (D3).
         if (disabled) return;
-        if (hasPendingUndo(state)) return;
 
         // Capture the element before preventDefault changes things.
         const target = e.currentTarget as Element;
@@ -418,14 +443,14 @@ export function useLiveSubstitution({
         };
         isDragActiveRef.current = false;
       },
-    [disabled, state]
+    [disabled]
   );
 
   const getFieldPointerDownHandler = useCallback(
     (playerId: string, slotId: string) =>
       (e: React.PointerEvent) => {
+        // Allowed inside an undo window, as on the bench (D3).
         if (disabled || !onPositionSwap) return;
-        if (hasPendingUndo(state)) return;
         // One finger at a time; a second touch never starts another drag.
         if (!e.isPrimary) return;
 
@@ -444,7 +469,7 @@ export function useLiveSubstitution({
         };
         isDragActiveRef.current = false;
       },
-    [disabled, onPositionSwap, state]
+    [disabled, onPositionSwap]
   );
 
   const handlePointerMove = useCallback(
@@ -460,6 +485,8 @@ export function useLiveSubstitution({
         if (!isDragActiveRef.current && dist <= FIELD_DRAG_THRESHOLD_PX) return;
         if (!isDragActiveRef.current) {
           isDragActiveRef.current = true;
+          // A real drag confirms any pending change (D3).
+          clearUndoTimers();
           dispatch({
             type: "START_FIELD_DRAG",
             playerId: origin.playerId,
@@ -502,6 +529,7 @@ export function useLiveSubstitution({
       if (dist > DRAG_THRESHOLD_PX) {
         if (!isDragActiveRef.current) {
           isDragActiveRef.current = true;
+          clearUndoTimers();
           dispatch({
             type: "START_BENCH_DRAG",
             benchPlayerId: origin.benchPlayerId,
@@ -514,7 +542,7 @@ export function useLiveSubstitution({
         });
       }
     },
-    []
+    [clearUndoTimers]
   );
 
   const handlePointerUp = useCallback(
@@ -536,11 +564,18 @@ export function useLiveSubstitution({
 
       dispatch({ type: "CANCEL_DRAG" });
 
+      // The click a browser may fire after the release must not count as a
+      // new selection, which would confirm the undo the drag just opened.
+      // A mouse release sends it to the player dropped on, so it is ignored
+      // on any player; touch and pen send none after a drag, so only the
+      // dragged player is guarded and a quick next tap is never lost.
+      trailingClickRef.current = {
+        playerId:
+          e.pointerType === "mouse" ? null : origin.kind === "field" ? origin.playerId : origin.benchPlayerId,
+        untilMs: Date.now() + DRAG_CLICK_GUARD_MS,
+      };
+
       if (origin.kind === "field") {
-        trailingClickRef.current = {
-          playerId: origin.playerId,
-          untilMs: Date.now() + DRAG_CLICK_GUARD_MS,
-        };
         const targetSlotId = slotIdAt(e.clientX, e.clientY);
         // Only another occupied pitch slot swaps; the bench, empty grass, the
         // same slot or anything else cancels without a change.
@@ -571,9 +606,9 @@ export function useLiveSubstitution({
 
   const handlePointerCancel = useCallback(() => {
     const origin = dragOriginRef.current;
-    if (origin?.kind === "field" && isDragActiveRef.current) {
+    if (origin && isDragActiveRef.current) {
       trailingClickRef.current = {
-        playerId: origin.playerId,
+        playerId: origin.kind === "field" ? origin.playerId : origin.benchPlayerId,
         untilMs: Date.now() + DRAG_CLICK_GUARD_MS,
       };
     }

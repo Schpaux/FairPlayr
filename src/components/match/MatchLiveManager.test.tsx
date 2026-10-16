@@ -3,7 +3,7 @@ import { NextIntlClientProvider } from "next-intl";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MatchLiveManager } from "@/components/match/MatchLiveManager";
-import { getPlayerAccumulatedSeconds } from "@/domain/liveMatch";
+import { getElapsedMs, getPlayerAccumulatedSeconds } from "@/domain/liveMatch";
 import type { MatchSetup } from "@/domain/match";
 import type { Player } from "@/domain/team";
 import { activateMatch } from "@/lib/storage/matchStorage";
@@ -1275,6 +1275,123 @@ describe("MatchLiveManager match completion", () => {
           .filter(([url]) => String(url).includes("/events"))
           .map(([, init]) => JSON.parse(init!.body as string) as { type: string });
         expect(eventPosts.every((event) => event.type === "goal_for" || event.type === "goal_against")).toBe(true);
+      });
+
+      // FP-MS2.1-B3 (D3): consecutive substitutions without waiting.
+      describe("consecutive substitutions inside the undo window", () => {
+        const substitutionEvents = () =>
+          getStoredLiveMatch()!.events.filter((event) => event.type === "substitution") as Array<{
+            type: "substitution";
+            inPlayerId: string;
+            outPlayerId: string;
+          }>;
+        const pairs = () => substitutionEvents().map((event) => `${event.outPlayerId}>${event.inPlayerId}`);
+
+        function substitute(how: "tap" | "drag", out: string, incoming: string) {
+          if (how === "tap") tapSubstitution(out, incoming);
+          else dragSubstitution(out, incoming);
+        }
+
+        it.each([
+          ["tap", "tap"],
+          ["drag", "drag"],
+          ["tap", "drag"],
+          ["drag", "tap"],
+        ] as const)("%s then immediate %s: both recorded, the second has its own undo", async (first, second) => {
+          const before = await kickoffAndSubstitute(first);
+          advanceMs(1_000);
+          substitute(second, "p3", "p7");
+
+          await waitFor(() => expect(getStoredLiveMatch()?.onFieldPlayerIds).toContain("p7"));
+          const after = getStoredLiveMatch()!;
+          expect(after.onFieldPlayerIds).toEqual(["p1", "p6", "p7", "p4", "p5"]);
+          expect(after.benchPlayerIds).toEqual(expect.arrayContaining(["p2", "p3"]));
+          expect(after.liveSlotAssignments).toMatchObject({ "5v5-2": "p6", "5v5-3": "p7" });
+          expect(pairs()).toEqual(["p2>p6", "p3>p7"]);
+          expect(strip()).toBe("undo");
+          expect(before.events.some((event) => event.type === "substitution")).toBe(false);
+        });
+
+        it("a new selection immediately leaves the old undo state", async () => {
+          await kickoffAndSubstitute("tap");
+          fireEvent.click(fieldToken("p3"));
+          expect(strip()).toBe("selection");
+          expect(screen.queryByRole("button", { name: /Undo substitution/ })).toBeNull();
+          // The first substitution is kept.
+          expect(pairs()).toEqual(["p2>p6"]);
+        });
+
+        it("undo after two substitutions reverses only the second and keeps the first event", async () => {
+          await kickoffAndSubstitute("tap");
+          const afterFirst = getStoredLiveMatch()!;
+          advanceMs(2_000);
+          tapSubstitution("p3", "p7");
+          await waitFor(() => expect(getStoredLiveMatch()?.onFieldPlayerIds).toContain("p7"));
+          advanceMs(1_000);
+
+          undoSubstitution();
+
+          await waitFor(() => expect(getStoredLiveMatch()?.onFieldPlayerIds).toContain("p3"));
+          const after = getStoredLiveMatch()!;
+          expect(lineupOf(after)).toEqual(lineupOf(afterFirst));
+          expect(pairs()).toEqual(["p2>p6"]);
+          expect(["idle", "suggestion"]).toContain(strip());
+          // There is nothing older to undo.
+          expect(screen.queryByRole("button", { name: /Undo substitution/ })).toBeNull();
+        });
+
+        it("a goal registered between the substitutions survives undoing the second", async () => {
+          await kickoffAndSubstitute("tap");
+          fireEvent.click(screen.getByRole("button", { name: sideline.goals.us }));
+          await waitFor(() => expect(getStoredLiveMatch()?.teamScore).toBe(1));
+          tapSubstitution("p3", "p7");
+          await waitFor(() => expect(getStoredLiveMatch()?.onFieldPlayerIds).toContain("p7"));
+          fireEvent.click(screen.getByRole("button", { name: sideline.goals.them }));
+          await waitFor(() => expect(getStoredLiveMatch()?.opponentScore).toBe(1));
+
+          undoSubstitution();
+
+          await waitFor(() => expect(getStoredLiveMatch()?.onFieldPlayerIds).toContain("p3"));
+          const after = getStoredLiveMatch()!;
+          expect(after.teamScore).toBe(1);
+          expect(after.opponentScore).toBe(1);
+          expect(after.events.filter((event) => event.type === "goal")).toHaveLength(2);
+          expect(pairs()).toEqual(["p2>p6"]);
+          expect(screen.getByTestId("live-score").getAttribute("aria-label")).toBe("Score: us 1, them 1");
+        });
+
+        it("keeps clock and playing minutes exact across two quick substitutions", async () => {
+          await kickoffAndSubstitute("tap"); // p2 → p6 at 6:00
+          advanceMs(2_000);
+          tapSubstitution("p3", "p7"); // p3 → p7 at 6:02
+          await waitFor(() => expect(getStoredLiveMatch()?.onFieldPlayerIds).toContain("p7"));
+          advanceMs(65_000); // well past the window's deadline
+
+          const match = getStoredLiveMatch()!;
+          const at = 6 * 60 + 2 + 65; // match seconds
+          expect(getElapsedMs(match, now)).toBe(at * 1000);
+          expect(getPlayerAccumulatedSeconds(match, "p2", now)).toBe(6 * 60);
+          expect(getPlayerAccumulatedSeconds(match, "p3", now)).toBe(6 * 60 + 2);
+          expect(getPlayerAccumulatedSeconds(match, "p6", now)).toBe(at - 6 * 60);
+          expect(getPlayerAccumulatedSeconds(match, "p7", now)).toBe(at - (6 * 60 + 2));
+          expect(getPlayerAccumulatedSeconds(match, "p1", now)).toBe(at);
+          expect(pairs()).toEqual(["p2>p6", "p3>p7"]);
+        });
+
+        it("works offline", async () => {
+          renderManager();
+          setOnline(false);
+          fireEvent.click(screen.getByRole("button", { name: sideline.strip.kickoff }));
+          advanceMs(60_000);
+          tapSubstitution("p2", "p6");
+          dragSubstitution("p3", "p7");
+          await waitFor(() => expect(getStoredLiveMatch()?.onFieldPlayerIds).toContain("p7"));
+          expect(pairs()).toEqual(["p2>p6", "p3>p7"]);
+          undoSubstitution();
+          await waitFor(() => expect(getStoredLiveMatch()?.onFieldPlayerIds).toContain("p3"));
+          expect(pairs()).toEqual(["p2>p6"]);
+          expect(getStoredLiveMatch()?.onFieldPlayerIds).toContain("p6");
+        });
       });
     });
 

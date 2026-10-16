@@ -151,22 +151,54 @@ describe("from pendingUndo", () => {
     expect(next).toEqual(idle());
   });
 
-  it("SELECT_FIELD_PLAYER is ignored — undo window takes priority", () => {
-    const state = pendingUndo(makeRecord());
-    const next = dispatch(state, { type: "SELECT_FIELD_PLAYER", playerId: "p1" });
-    expect(next).toBe(state); // exact same reference
+  // D3 (FP-MS2.1-B3): a new interaction confirms the substitution and starts at once.
+  it("SELECT_FIELD_PLAYER confirms the substitution and selects in the same step", () => {
+    const next = dispatch(pendingUndo(makeRecord()), { type: "SELECT_FIELD_PLAYER", playerId: "p1" });
+    expect(next).toEqual(selected("p1"));
+    expect(hasPendingUndo(next)).toBe(false);
+    expect(getPendingSubstitution(next)).toBeNull();
   });
 
-  it("CANCEL is ignored — undo window takes priority", () => {
+  it("SELECT_FIELD_PLAYER on the player who just came on selects them too", () => {
+    expect(dispatch(pendingUndo(makeRecord()), { type: "SELECT_FIELD_PLAYER", playerId: "b1" })).toEqual(
+      selected("b1")
+    );
+  });
+
+  it("a pitch-background tap (CANCEL) is not a new interaction — the window stays", () => {
     const state = pendingUndo(makeRecord());
     const next = dispatch(state, { type: "CANCEL" });
     expect(next).toBe(state);
   });
 
-  it("START_BENCH_DRAG is ignored — undo window takes priority", () => {
-    const state = pendingUndo(makeRecord());
-    const next = dispatch(state, { type: "START_BENCH_DRAG", benchPlayerId: "b1" });
-    expect(next).toBe(state);
+  it("START_BENCH_DRAG confirms the substitution and starts the drag", () => {
+    const next = dispatch(pendingUndo(makeRecord()), { type: "START_BENCH_DRAG", benchPlayerId: "b2" });
+    expect(next).toEqual(dragging("b2"));
+    expect(getPendingSubstitution(next)).toBeNull();
+  });
+
+  it("START_FIELD_DRAG confirms the substitution and starts the field drag", () => {
+    const next = dispatch(pendingUndo(makeRecord()), { type: "START_FIELD_DRAG", playerId: "p3", slotId: "7v7-3" });
+    expect(next).toEqual({ kind: "draggingFieldPlayer", fieldPlayerId: "p3", slotId: "7v7-3" });
+  });
+
+  it("only the most recent substitution is ever pending", () => {
+    // Sub 1 → new selection → sub 2: the second record replaces the first.
+    let state = dispatch(selected("p1"), { type: "SWAP_COMMITTED", substitution: makeRecord("sub-1"), expiresAtMs: 5000 });
+    state = dispatch(state, { type: "SELECT_FIELD_PLAYER", playerId: "p2" });
+    state = dispatch(state, { type: "SWAP_COMMITTED", substitution: makeRecord("sub-2"), expiresAtMs: 7000 });
+    expect(getPendingSubstitution(state)?.eventId).toBe("sub-2");
+    expect(state).toMatchObject({ kind: "pendingUndo", expiresAtMs: 7000 });
+    // Undoing closes the window; there is nothing older left to undo.
+    state = dispatch(state, { type: "UNDO_TRIGGERED" });
+    expect(state).toEqual(idle());
+    expect(dispatch(state, { type: "UNDO_TRIGGERED" })).toBe(state);
+  });
+
+  it("a drag that starts in the window and is cancelled does not reopen it", () => {
+    let state = dispatch(pendingUndo(makeRecord()), { type: "START_BENCH_DRAG", benchPlayerId: "b2" });
+    state = dispatch(state, { type: "CANCEL_DRAG" });
+    expect(state).toEqual(idle());
   });
 
   it("CANCEL_DRAG returns to idle (drag-cancel is always allowed)", () => {
@@ -292,10 +324,12 @@ describe("position swap", () => {
     expect(dispatch(swapSource("p2"), action)).toEqual(draggingField("p2", "7v7-2"));
   });
 
-  it("no drag starts while an undo window is open", () => {
+  it("a drag inside either undo window confirms the pending change and starts (D3)", () => {
     for (const state of [pendingUndo(makeRecord()), pendingPosition()]) {
-      expect(dispatch(state, { type: "START_FIELD_DRAG", playerId: "p2", slotId: "7v7-2" })).toBe(state);
-      expect(dispatch(state, { type: "START_BENCH_DRAG", benchPlayerId: "b1" })).toBe(state);
+      expect(dispatch(state, { type: "START_FIELD_DRAG", playerId: "p2", slotId: "7v7-2" })).toEqual(
+        draggingField("p2", "7v7-2")
+      );
+      expect(dispatch(state, { type: "START_BENCH_DRAG", benchPlayerId: "b1" })).toEqual(dragging("b1"));
     }
   });
 
@@ -310,9 +344,9 @@ describe("position swap", () => {
     expect(dispatch(draggingField("p2", "7v7-2"), action)).toEqual(pendingPosition(expiresAtMs));
   });
 
-  it("the position undo window ignores taps and cancel, and closes on undo or expiry", () => {
+  it("the position undo window: a tap selects (D3), cancel is ignored, undo or expiry close it", () => {
     const state = pendingPosition();
-    expect(dispatch(state, { type: "SELECT_FIELD_PLAYER", playerId: "p3" })).toBe(state);
+    expect(dispatch(state, { type: "SELECT_FIELD_PLAYER", playerId: "p3" })).toEqual(selected("p3"));
     expect(dispatch(state, { type: "CANCEL" })).toBe(state);
     expect(dispatch(state, { type: "UNDO_TRIGGERED" })).toEqual(idle());
     expect(dispatch(state, { type: "UNDO_EXPIRED" })).toEqual(idle());
