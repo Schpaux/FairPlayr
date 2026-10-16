@@ -721,7 +721,10 @@
       "bench": {
         "label": "Benk",
         "number": ", nummer {number}",
-        "minutes": ", {minutes} minutter totalt"
+        "minutes": ", {minutes} minutter totalt",
+        "jumpEndShort": "+{count}",
+        "jumpEndLabel": "{count, plural, one {Vis # innbytter til, med flest minutter} other {Vis # innbyttere til, med flest minutter}}",
+        "jumpStartLabel": "Tilbake til de med minst spilletid"
       },
       "pitch": {
         "label": "Banen"

@@ -27,6 +27,7 @@ import {
 } from "@/components/live/LiveSheets";
 import { LiveNotices, type LiveNoticesProps } from "@/components/live/LiveNotices";
 import { isLastPhase } from "@/components/live/stripModel";
+import type { BenchPointerDownOptions } from "@/components/match/useLiveSubstitution";
 import { cn } from "@/lib/utils";
 import styles from "@/components/live/LiveScreen.module.css";
 
@@ -47,7 +48,7 @@ export interface LiveScreenHandlers {
   /** "Bytt plass": the selected player waits for another pitch player. */
   onStartPositionSwap: () => void;
   onUndo: () => void;
-  onBenchPointerDown: (playerId: string, event: React.PointerEvent) => void;
+  onBenchPointerDown: (playerId: string, event: React.PointerEvent, options?: BenchPointerDownOptions) => void;
   /** Starts a possible drag of a pitch player onto another position. */
   onFieldPointerDown: (playerId: string, slotId: string, event: React.PointerEvent) => void;
   pointerSurfaceHandlers: {

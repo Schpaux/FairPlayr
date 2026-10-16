@@ -746,44 +746,83 @@
   animation: drain var(--fp-d-undo) linear forwards;
 }
 
-/* ── Bench ────────────────────────────────────────────────────────────── */
-.bench {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
+/* ── Bench (FP-MS2.1-B2: Alternative C, the fairness rail) ──────────────
+ * Least-played first, laid out column by column: one row when everyone
+ * fits, else two (three from 780px tall), else a horizontal rail. Rows,
+ * padding and the rail are chosen in Bench.tsx (benchLayout.ts) and written
+ * as --bench-rows, data-pad and data-rail. Names are never cut. */
 .benchWrap {
   position: relative;
+  --bench-h: 44px;
+  --rail-fade: 40px;
 }
 
-/* Hidden measuring rows for the bench fit (see Bench in Dugout.tsx). */
+.bench {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(var(--bench-rows, 1), auto);
+  grid-auto-columns: max-content;
+  gap: 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+
+.bench::-webkit-scrollbar {
+  display: none;
+}
+
+/* The rail bleeds to the dugout edge, so it reads as continuing off-screen. */
+.bench[data-rail] {
+  margin-right: calc(-12px - env(safe-area-inset-right));
+  padding-right: 12px;
+  scroll-padding-inline: 0 12px;
+}
+
+.bench[data-pad="tight"] {
+  --bench-pad: 7px;
+}
+
+/* Last step before a rail (8 subs at 360 × 640); tiles stay ≥ 44px wide. */
+.bench[data-pad="snug"] {
+  --bench-pad: 5px;
+}
+
+/* Hidden measuring row: each tile's content width (see Bench.tsx). */
 .benchMeasure {
   position: absolute;
   left: 0;
   top: 0;
+  display: flex;
   width: max-content;
-  flex-wrap: nowrap;
+  height: 0;
+  overflow: hidden;
   visibility: hidden;
   pointer-events: none;
 }
 
-.bench .benchTile {
-  flex: 1 1 0;
-  min-width: max-content;
+.benchMeasureTile {
+  display: grid;
+  width: max-content;
 }
 
 .benchTile {
   position: relative;
-  min-height: 72px;
+  min-height: var(--bench-h);
   border-radius: 10px;
   background: var(--fp-surface);
   box-shadow: inset 0 0 0 1px var(--fp-rule);
   display: grid;
   align-content: center;
-  gap: 6px;
-  padding: 8px 10px;
+  gap: 1px;
+  padding: 3px var(--bench-pad, 10px);
   text-align: left;
+  scroll-snap-align: start;
+  /* No panning: a move on a tile is a drag. A rail pans sideways instead,
+   * and the substitution hook locks the direction (useLiveSubstitution). */
   touch-action: none;
   transition:
     transform var(--fp-d-press),
@@ -792,34 +831,34 @@
     opacity var(--fp-d-quick);
 }
 
+.bench[data-rail] .benchTile {
+  touch-action: pan-x;
+}
+
+/* The rail clips overflow, so the focus ring sits inside the tile. */
+.live .benchTile:focus-visible {
+  outline-offset: -2px;
+}
+
 .benchTile:active:not(:disabled) {
   transform: scale(0.96);
 }
 
-.benchName {
-  font-weight: 600;
-  font-size: 15px;
-  line-height: 1.15;
+.benchName,
+.benchMinutes {
+  font-size: 14px;
+  line-height: 17px;
   white-space: nowrap;
-  padding-right: 22px;
 }
 
-.benchNumber {
-  position: absolute;
-  right: 9px;
-  top: 9px;
-  font-family: var(--font-num);
+.benchName {
   font-weight: 600;
-  font-size: 15px;
-  line-height: 1;
-  color: var(--fp-ink-2);
-  font-variant-numeric: tabular-nums;
+  /* With the 5px "snug" sides, every tile stays at least 44px wide. */
+  min-width: 34px;
 }
 
 .benchMinutes {
   font-weight: 700;
-  font-size: 20px;
-  line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
@@ -839,67 +878,73 @@
   opacity: 0.35;
 }
 
-.compact .bench,
-.bench[data-fit="tight"] {
-  gap: 5px;
+/* Overflow cues: a fade on whichever edge hides players, and a jump pill. */
+.benchWrap[data-rail-more]::before,
+.benchWrap[data-rail-less]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--rail-fade);
+  pointer-events: none;
+  z-index: 1;
 }
 
-.compact .benchTile,
-.bench[data-fit="tight"] .benchTile {
-  min-height: 68px;
-  padding: 8px;
-  gap: 5px;
+.benchWrap[data-rail-more]::before {
+  right: calc(-12px - env(safe-area-inset-right));
+  background: linear-gradient(to right, transparent, var(--fp-canvas) 75%);
 }
 
-.compact .benchName,
-.bench[data-fit="tight"] .benchName {
+.benchWrap[data-rail-less]::after {
+  left: -12px;
+  background: linear-gradient(to left, transparent, var(--fp-canvas) 75%);
+}
+
+.railJump {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  height: 32px;
+  min-width: 40px;
+  padding: 0 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: var(--fp-ink);
+  color: var(--fp-canvas);
+  font-weight: 700;
   font-size: 14px;
-  padding-right: 0;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  transform: translateY(-50%);
+  box-shadow: 0 0 0 3px var(--fp-canvas);
+  transition: transform var(--fp-d-press) var(--fp-ease-out);
 }
 
-.compact .benchNumber,
-.bench[data-fit="tight"] .benchNumber {
-  display: none;
+/* 44px hit area around the 32px pill. */
+.railJump::before {
+  content: "";
+  position: absolute;
+  inset: -6px -2px;
 }
 
-.compact .benchMinutes,
-.bench[data-fit="tight"] .benchMinutes {
-  font-size: 18px;
+.railJump:active {
+  transform: translateY(-50%) scale(0.94);
 }
 
-/* Dense bench: 6+ subs, or names too long for one row. Max 2 rows on short
- * phones, 3 on tall phones. Names may be cut; the full name is in the label. */
-.bench:is(.benchDense, [data-fit="dense"]) {
-  display: grid;
-  grid-template-columns: repeat(var(--cols-2), minmax(0, 1fr));
-  gap: 5px;
+.railJump[data-side="end"] {
+  right: -6px;
 }
 
-.bench:is(.benchDense, [data-fit="dense"]) .benchTile {
-  min-width: 0;
-  min-height: 52px;
-  padding: 6px 8px;
-  gap: 3px;
-}
-
-.bench:is(.benchDense, [data-fit="dense"]) .benchName {
-  font-size: 14px;
-  padding-right: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.bench:is(.benchDense, [data-fit="dense"]) .benchNumber {
-  display: none;
-}
-
-.bench:is(.benchDense, [data-fit="dense"]) .benchMinutes {
-  font-size: 17px;
+.railJump[data-side="start"] {
+  left: -6px;
 }
 
 @media (min-height: 780px) {
-  .bench:is(.benchDense, [data-fit="dense"]) {
-    grid-template-columns: repeat(var(--cols-3), minmax(0, 1fr));
+  .benchWrap {
+    --bench-h: 50px;
   }
 }
 
@@ -1234,30 +1279,12 @@
     padding-bottom: 4px;
   }
 
-  .benchTile {
-    min-height: 60px;
-    gap: 4px;
-    padding-top: 6px;
-    padding-bottom: 6px;
-  }
-
   .dugout {
     padding-top: 6px;
   }
 
   .compact .tokenBox {
     inset: 28px 10px 80px;
-  }
-
-  .bench:is(.benchDense, [data-fit="dense"]) {
-    gap: 4px;
-  }
-
-  .bench:is(.benchDense, [data-fit="dense"]) .benchTile {
-    min-height: 46px;
-    padding-top: 3px;
-    padding-bottom: 3px;
-    gap: 2px;
   }
 
   .scorerOption {

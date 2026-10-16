@@ -1290,8 +1290,8 @@ export function MatchLiveManager() {
           onCancelSelection: subInteraction.cancel,
           onStartPositionSwap: subInteraction.startPositionSwap,
           onUndo: subInteraction.triggerUndo,
-          onBenchPointerDown: (benchPlayerId, event) =>
-            subInteraction.getBenchPointerDownHandler(benchPlayerId)(event),
+          onBenchPointerDown: (benchPlayerId, event, options) =>
+            subInteraction.getBenchPointerDownHandler(benchPlayerId, options)(event),
           onFieldPointerDown: (playerId, slotId, event) =>
             subInteraction.getFieldPointerDownHandler(playerId, slotId)(event),
           pointerSurfaceHandlers: subInteraction.pointerSurfaceHandlers,

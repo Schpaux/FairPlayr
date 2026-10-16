@@ -1,6 +1,6 @@
 # FairPlayr design system: Modern Sideline
 
-**Status:** approved visual direction, authoritative. **Version:** 1.2 (2026-10-14).
+**Status:** approved visual direction, authoritative. **Version:** 1.3 (2026-10-16).
 This document is the single source of truth for FairPlayr's visual and interaction design. Where it conflicts with older notes, prototypes, skills or generic design advice, this document wins. Tokens live in [`src/app/globals.css`](src/app/globals.css); design context for agents lives in [`.impeccable.md`](.impeccable.md).
 
 Background and evidence: `design-exploration/modern-sideline/` (prototype v1.1, `FINAL-VALIDATION.md`, `IMPLEMENTATION-PLAN.md`). The prototype is reference material, not spec: where it differs from this document (for example its chalk canvas), this document is correct.
@@ -80,7 +80,7 @@ Destructive button fill: `#B3261E` with white text in light mode (6.5 : 1), and 
 - **Lime is never text on a light surface.** It is only a fill, a ring or an underline, always with `on-lime` ink on top.
 - **Never grey text on green.** Text on club green uses `on-club-2`.
 - **Status is never colour-only.** Fatigue uses arc length, selection uses scale and outline, and offline uses a glyph.
-- **No glow, gradients, blur or glass.** The legacy `.glow-*` utilities are deprecated; remove them as components are rebuilt.
+- **No glow, gradients, blur or glass.** The legacy `.glow-*` utilities are deprecated; remove them as components are rebuilt. The one exception is functional: the bench rail's edge fade (`transparent` → `canvas`), which shows that players continue off-screen (§5.3).
 
 ### 2.6 Measured contrast (WCAG 2.x)
 
@@ -111,7 +111,7 @@ Non-text fatigue rings are at least 3.5 : 1 on grass.
 | Name, compact | Inter 600 **14**/1.15 | 9v9 / 11v11. **This is the floor for names.** |
 | Meta | Inter 500 14 | Secondary info |
 | Label | Inter 600 13, caps, +6 % | Section kickers, score team codes (the only 13px text) |
-| Minutes | Inter 700 15 (token) / 20 (bench), tabular | Total playing time |
+| Minutes | Inter 700 15 (token) / 14 (bench), tabular | Total playing time |
 | Score | Barlow Condensed 600 50/0.9 (44 on short screens) | 2 – 1 |
 | Clock | Barlow Condensed 600 40/0.9 (34 on short screens) | 16:20 |
 | Shirt number | Barlow Condensed 600 22 (19 compact) | Discs |
@@ -127,7 +127,7 @@ Implementation:
 
 - **Spacing:** 4px base (4, 8, 12, 16, 20, 24, 32), with a 16px gutter. Live-screen gaps are 4 / 6 / 8 / 12.
 - **Radius:** 6px for tags, 10px for bench tiles and inputs, 14px for list groups and the setup pitch, 20px for the fixture panel, dugout and sheets. **Every button is a pill.**
-- **Targets:** at least 44px. Player tokens are at least 52 × 70, bench tiles are at least 60px tall, and goal keys are 48px.
+- **Targets:** at least 44px. Player tokens are at least 52 × 70, bench tiles are at least 44 × 44 (50px tall on tall phones), and goal keys are 48px.
 - **Elevation:** flat. Surfaces separate by `surface` on `canvas` plus a 1px `rule`. Sheets use a scrim, not a shadow stack.
 - **Motion** (all `cubic-bezier(0.22, 1, 0.36, 1)` unless noted):
 
@@ -157,7 +157,7 @@ Full screen, with no global header or bottom nav and no scrolling. It is portrai
 ├ Pitch (flex: 1, edge to edge) ──────────────────────┤  everything left over
 ╭ Dugout (canvas, 20px radius, overlaps grass 18px) ─╮
 │ [ Action strip: the one place that says what next ] │  60px (54 short)
-│ [Frida][Ida][Selma][Vilde]   bench                  │  72px (60 short)
+│ [Frida][Ida][Selma][Vilde]   bench, least-played 1st│  1 row 44px · 2 rows 92px (3 rows 158px tall)
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -176,10 +176,39 @@ Full screen, with no global header or bottom nav and no scrolling. It is portrai
 - **Display names:** first name; on a clash, first name + surname initial; then the shortest unique surname prefix ("Emma Han" / "Emma Hau"). The ladder is built from the match squad. Cut order: stack first, then cut the first name ("E… Hau"), never the distinguishing suffix.
 - **Placement:** formation lines are spread evenly over a token-safe box, and rows never collide.
 
-### 5.3 Bench tile
-- Display name, shirt number (≤ 7v7), **total minutes** (20/700), and the gap to fair share in `warn-text` when negative ("−6").
-- Fit order: one content-sized row → tight row (no number, 14px) → dense grid (max 2 rows on short phones, 3 on tall phones and in landscape). Names are never truncated in one-row mode.
-- **States:** selected (lime fill), valid target (2px ink outline), suggested in (2px lime outline), just swapped out (lime flash fading over 420ms).
+### 5.3 Bench (FP-MS2.1-B2: Alternative C, the "fairness rail")
+Implementation: `src/components/live/Bench.tsx`, `benchLayout.ts` and `src/domain/benchOrder.ts`. Evidence: `design-exploration/modern-sideline/bench-review/final-c/`.
+
+**Order.** Substitutes are shown **least-played first**, at every squad size (1 or 15 alike).
+- The key is **total match minutes as displayed** on the tile (whole minutes). Hidden seconds and the stint ring are never used, so the order is explainable from what is on screen.
+- Equal minutes keep **squad order** (`setup.selectedPlayerIds`), so at kick-off the bench looks as it always has. The sort is stable and deterministic and never mutates the squad.
+- The guarantee for a rail: a player off-screen never has fewer minutes than a visible one (ties may straddle the edge, in squad order).
+
+**Holding the order.** The bench never moves under the coach's finger. The order is **held** while a pitch player is selected, a bench or position drag is active, "Bytt plass" waits for its partner, an undo window (substitution or position swap) is open, or a finger is on, or the rail is still scrolling, the bench.
+- While held, a player who comes off takes **the exact slot** of the player who went on; nobody else moves.
+- When the hold ends, the bench re-sorts **once**, as a `base` (220ms) slide (none with reduced motion). If somebody joined or left the bench meanwhile, the rail returns to its start, where the least-played now are. It never jumps while a finger is down or the rail is moving.
+- Every tap, drag and drop resolves through the player id, never a position in the list.
+
+**Layout.** Column by column, so the least-played fill the first column from the top. In order of preference:
+1. **One row** when everyone fits (5 subs on every tested phone);
+2. **two rows** (three from 780px tall) when that fits, with tile sides stepping 10 → 7 → 5px before giving up (8 subs at 360 × 640 need 5px);
+3. otherwise a **horizontal rail** with the most rows allowed.
+
+The bench is never more than two rows on phones under 780px tall, so the pitch keeps or gains height against the previous bench (measured: +4 to +62px). Rows are 44px (50px on tall phones) with a 4px gap. Names are **never cut** and never ellipsised.
+
+**Tile.** Display name (Inter 600 14, no truncation) over **total minutes** (Inter 700 14, tabular). The shirt number is in the accessible label, not on the tile. At least 44 × 44. Duplicate names use the existing ladder ("Thea S2"). The fair-share gap ("−6") is not shown yet.
+- **States:** selected (lime fill), valid target (2px ink outline), suggested in (2px lime outline), dragging (35 % opacity), just swapped out (lime flash fading over 420ms).
+
+**Rail.** When not everyone fits:
+- The rail bleeds to the dugout edge, snaps to whole columns, and fades (40px, to `canvas`) on whichever edge hides players.
+- **"+N ›"** (right) jumps to the end; **"‹ N"** (left) jumps back to the start. N is the number of substitutes that are not one tap away on that side (off-screen or under the fade). They are 32px `ink` pills with 44px hit areas, real buttons (mouse, touch, keyboard), labelled from `messages/*.json`, and shown only when N > 0. They carry no minute range.
+- Measured, 7v7 on short phones: 6 substitutes stay one tap away with 9–15 subs. The last is one swipe away (9–11 subs) or three swipes (15), and always two taps with "+N".
+
+**Touch direction lock.** On a rail, tiles allow horizontal panning (`touch-action: pan-x`, otherwise `none`). For touch and pen, the first 6px of movement decide, before the 8px drag threshold:
+- mostly sideways → the gesture scrolls the rail. It never starts a drag, never drops a pitch selection, and its release never substitutes;
+- mostly vertical → the existing bench-to-pitch drag.
+
+A mouse is never locked. A bench that fits keeps today's behaviour (any move past 8px is a drag).
 
 ### 5.4 Action strip
 A single slot that shows exactly one message, in this priority order (copy is indicative; final strings live in `messages/*.json`):
@@ -217,7 +246,7 @@ With an empty bench, the idle line reads "Ingen innbyttere".
 
 ### 6.1 Substitution
 - Tap pitch → bench, **or** bench → pitch. Valid counterparts are marked. Tapping the same player again, or Avbryt, cancels. Tapping another player on the same side moves the selection.
-- **Drag-to-swap is preserved as a secondary path (D4).**
+- **Drag-to-swap is preserved as a secondary path (D4).** From a bench rail, start the drag upwards: a sideways start scrolls the rail instead (§5.3, direction lock).
 - After a swap: the token lands, the bench tile flashes, both stint rings reset, and the strip shows the 5 s undo.
 - **Starting another selection during the undo window confirms the previous substitution and begins the new one (D3).**
 
@@ -293,6 +322,7 @@ A 24 grid with 1.75 stroke and round caps and joins (lucide-compatible). Icons o
 | D7 | Position swaps on the pitch support **both** tap ("Bytt plass", then the other player) **and** drag-and-drop. Both use one domain operation and the same targeted 5 s undo, and never create a substitution (§6.1.1). |
 | C1 | The light canvas is near-white `#F9FAF8` with white surfaces and neutral borders; beige `#F2EFE7` is no longer a surface colour. |
 | C2 | Goal correction: quick goal keys, undo last goal, correct older goals via event history; the score is derived from events and kept consistent with the server. |
+| B2 | Adaptive bench, Alternative C (FP-MS2.1-B2, §5.3): sorted least-played first by displayed whole minutes, ties in squad order, at every squad size; order held during interactions and re-sorted once after, with the rail back at its start; one row → two (three tall) → horizontal rail; "+N ›" / "‹ N" jump buttons with counts only; touch direction lock on the rail; tiles 44px tall (amends "≥ 60px"). |
 
 ## 11. Implementation status
 
@@ -304,3 +334,4 @@ A 24 grid with 1.75 stroke and round caps and joins (lucide-compatible). Icons o
 | Live screen, setup, home (§5–7) | Not started. Follow `design-exploration/modern-sideline/IMPLEMENTATION-PLAN.md`, behind `NEXT_PUBLIC_LIVE_UI=sideline`. |
 | Goal correction (§6.3) | Blocked on server event reconciliation. |
 | Position swap (§6.1.1) | **Done in the Modern Sideline view** (FP-MS2.1-B1). The legacy live view (flag off) does not offer it. |
+| Adaptive bench (§5.3) | **Done in the Modern Sideline view** (FP-MS2.1-B2). Verified in Chromium (Playwright, real CDP touch). **Not yet verified on iOS Safari or in the Capacitor shell.** |

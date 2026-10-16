@@ -721,7 +721,10 @@
       "bench": {
         "label": "Bench",
         "number": ", number {number}",
-        "minutes": ", {minutes} minutes in total"
+        "minutes": ", {minutes} minutes in total",
+        "jumpEndShort": "+{count}",
+        "jumpEndLabel": "{count, plural, one {Show # more substitute, most minutes played} other {Show # more substitutes, most minutes played}}",
+        "jumpStartLabel": "Back to the least-played"
       },
       "pitch": {
         "label": "Pitch"

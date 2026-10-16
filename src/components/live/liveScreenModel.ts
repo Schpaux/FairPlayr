@@ -40,6 +40,8 @@ export interface LiveBenchView {
   name: string;
   number: string | null;
   minutes: number;
+  /** Position in the match squad (setup order): the tie-break for bench order. */
+  squadIndex: number;
 }
 
 export interface LiveEventView {
@@ -92,6 +94,11 @@ export interface LiveScreenModel {
   } | null;
   events: LiveEventView[];
   strip: StripKind;
+  /**
+   * The coach is mid-interaction: a pitch player selected, a drag, "Bytt
+   * plass" or an undo window. The bench holds its order meanwhile (FP-MS2.1-B2).
+   */
+  interactionActive: boolean;
 }
 
 export interface BuildLiveScreenModelInput {
@@ -162,6 +169,10 @@ export function buildLiveScreenModel({
     });
   }
 
+  // Squad order: createLiveMatchFromSetup and reconcileLiveMatchWithSquad
+  // (run on every load) write playerAccumulatedMs in setup.selectedPlayerIds
+  // order, and every later update spreads it, which keeps that key order.
+  const squadOrder = new Map(Object.keys(liveMatch.playerAccumulatedMs).map((playerId, index) => [playerId, index]));
   const bench: LiveBenchView[] = liveMatch.benchPlayerIds.map((playerId) => {
     const player = playersById.get(playerId);
     return {
@@ -169,6 +180,7 @@ export function buildLiveScreenModel({
       name: getShortName(playerId),
       number: player?.number !== undefined && player?.number !== null ? String(player.number) : null,
       minutes: wholeMinutes(secondsOf(playerId)),
+      squadIndex: squadOrder.get(playerId) ?? Number.POSITIVE_INFINITY,
     };
   });
 
@@ -259,6 +271,7 @@ export function buildLiveScreenModel({
     suggestion: suggestionView,
     lastSubstitution,
     events,
+    interactionActive: interaction.kind !== "idle",
     strip: resolveStripKind({
       status: liveMatch.status,
       phase: liveMatch.phase,

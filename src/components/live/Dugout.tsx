@@ -1,17 +1,18 @@
 "use client";
 
 /**
- * Dugout (DESIGN.md §5.3–5.4): the action strip, then the bench.
+ * Dugout (DESIGN.md §5.3–5.4): the action strip, then the bench (Bench.tsx).
  * The strip shows exactly one message, chosen by `resolveStripKind`; every
  * button calls a handler that already exists on the controller.
  */
 
-import { useLayoutEffect, useRef } from "react";
 import { ArrowLeftRight, Play, Undo2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { LiveScreenModel } from "@/components/live/liveScreenModel";
 import { isLastPhase } from "@/components/live/stripModel";
+import { Bench } from "@/components/live/Bench";
+import type { BenchPointerDownOptions } from "@/components/match/useLiveSubstitution";
 import styles from "@/components/live/LiveScreen.module.css";
 
 const ICON = { strokeWidth: 1.75, "aria-hidden": true } as const;
@@ -280,150 +281,13 @@ function ActionStrip({ model, undo, ...actions }: ActionStripProps) {
   );
 }
 
-interface BenchProps {
-  model: LiveScreenModel;
-  disabled: boolean;
-  flashedPlayerId: string | null;
-  onTapBenchPlayer: (playerId: string) => void;
-  onBenchPointerDown: (playerId: string, event: React.PointerEvent) => void;
-}
-
-function Bench({
-  model,
-  disabled,
-  flashedPlayerId,
-  onTapBenchPlayer,
-  onBenchPointerDown,
-}: BenchProps) {
-  const t = useTranslations("matchLive.sideline.bench");
-  const benchRef = useRef<HTMLDivElement>(null);
-  const count = model.bench.length;
-  const dense = count >= 6;
-  const fieldSelected = model.selectedFieldPlayerId !== null;
-  const suggestedId =
-    model.strip === "suggestion" ? model.suggestion?.incomingPlayerId : null;
-
-  // Fit order: one content-sized row → tight row → dense grid; one-row mode
-  // never wraps (prototype fitBench). Two hidden rows that never change mode
-  // measure the one-row and tight widths, because re-measuring the live bench
-  // after switching it out of the grid reads stale max-content widths. The
-  // result is written to the DOM only when it changes, so React does not own
-  // the attribute and nothing oscillates.
-  const regularRef = useRef<HTMLDivElement>(null);
-  const tightRef = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    const bench = benchRef.current;
-    const regular = regularRef.current;
-    const tight = tightRef.current;
-    if (!bench || !regular || !tight) return;
-
-    const available = bench.clientWidth + 0.5;
-    const fit = dense
-      ? null
-      : regular.scrollWidth <= available
-        ? null
-        : tight.scrollWidth <= available
-          ? "tight"
-          : "dense";
-
-    if (bench.getAttribute("data-fit") === fit) return;
-    if (fit) bench.setAttribute("data-fit", fit);
-    else bench.removeAttribute("data-fit");
-  });
-
-  if (count === 0) return null;
-
-  const measureTiles = model.bench.map((tile) => (
-    <span key={tile.playerId} className={styles.benchTile}>
-      <span className={styles.benchName}>{tile.name}</span>
-      {tile.number ? (
-        <span className={styles.benchNumber}>{tile.number}</span>
-      ) : null}
-      <span className={styles.benchMinutes}>{tile.minutes}′</span>
-    </span>
-  ));
-
-  return (
-    <div className={styles.benchWrap}>
-      <div
-        ref={regularRef}
-        className={cn(styles.bench, styles.benchMeasure)}
-        aria-hidden
-      >
-        {measureTiles}
-      </div>
-      <div
-        ref={tightRef}
-        className={cn(styles.bench, styles.benchMeasure)}
-        data-fit="tight"
-        aria-hidden
-      >
-        {measureTiles}
-      </div>
-      <div
-        ref={benchRef}
-        className={cn(styles.bench, dense && styles.benchDense)}
-        role="group"
-        aria-label={t("label")}
-        style={
-          {
-            "--cols-2": Math.max(1, Math.ceil(count / 2)),
-            "--cols-3":
-              count >= 7
-                ? Math.ceil(count / 3)
-                : Math.max(1, Math.ceil(count / 2)),
-          } as React.CSSProperties
-        }
-      >
-        {model.bench.map((tile) => {
-          const label = [
-            tile.name,
-            tile.number ? t("number", { number: tile.number }) : "",
-            t("minutes", { minutes: tile.minutes }),
-          ].join("");
-
-          return (
-            <button
-              key={tile.playerId}
-              type="button"
-              data-bench-player-id={tile.playerId}
-              className={cn(
-                styles.benchTile,
-                fieldSelected && styles.benchTarget,
-                !fieldSelected &&
-                  tile.playerId === suggestedId &&
-                  styles.benchSuggested,
-                tile.playerId === model.draggingBenchPlayerId &&
-                  styles.benchDragging,
-                tile.playerId === flashedPlayerId && styles.benchLanded,
-              )}
-              aria-label={label}
-              disabled={disabled}
-              onPointerDown={(event) =>
-                onBenchPointerDown(tile.playerId, event)
-              }
-              onClick={() => onTapBenchPlayer(tile.playerId)}
-            >
-              <span className={styles.benchName}>{tile.name}</span>
-              {tile.number ? (
-                <span className={styles.benchNumber}>{tile.number}</span>
-              ) : null}
-              <span className={styles.benchMinutes}>{tile.minutes}′</span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 interface DugoutProps extends StripActions {
   model: LiveScreenModel;
   undo: { secondsRemaining: number; expiresAtMs: number } | null;
   disabled: boolean;
   flashedPlayerId: string | null;
   onTapBenchPlayer: (playerId: string) => void;
-  onBenchPointerDown: (playerId: string, event: React.PointerEvent) => void;
+  onBenchPointerDown: (playerId: string, event: React.PointerEvent, options?: BenchPointerDownOptions) => void;
 }
 
 export function Dugout({

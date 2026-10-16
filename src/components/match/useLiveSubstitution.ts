@@ -27,6 +27,18 @@
  *      player → commitSwap() called, ghost cleared
  *   4. Pointer released elsewhere → CANCEL_DRAG dispatched, ghost cleared
  *
+ * ## Direction lock (FP-MS2.1-B2): bench rail swipe vs drag
+ *   When the bench is a horizontal rail, the Bench asks for a direction lock
+ *   on touch and pen pointers (`{ directionLock: true }`; mouse never). The
+ *   first DIRECTION_LOCK_PX of movement decide, before DRAG_THRESHOLD_PX:
+ *   - mostly horizontal → the gesture is a scroll. The drag origin is
+ *     dropped, so no START_BENCH_DRAG (and no lost pitch selection), and the
+ *     click a browser may fire after it is swallowed, so releasing a swipe
+ *     never substitutes. The browser scrolls the rail (`touch-action: pan-x`).
+ *   - mostly vertical → the existing bench drag, unchanged.
+ *   Without the option (mouse, a bench that fits, the legacy view) nothing
+ *   changes: any move past DRAG_THRESHOLD_PX starts a drag.
+ *
  * ## Position swap (FP-MS2.1-B1): two field players exchange slots
  *   Both paths end in commitPositionSwap(), the only caller of
  *   onPositionSwap, so tap and drag produce the same domain change.
@@ -70,9 +82,11 @@ import {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const DRAG_THRESHOLD_PX = 8;
+/** Movement after which a direction-locked bench gesture is a scroll or a drag. */
+const DIRECTION_LOCK_PX = 6;
 /** Field tokens are tapped far more than dragged, so a drag needs a clearer move. */
 const FIELD_DRAG_THRESHOLD_PX = 12;
-/** How long after a field drag ends its trailing click on that token is ignored. */
+/** How long after a drag (or a locked rail swipe) its trailing click on that player is ignored. */
 const DRAG_CLICK_GUARD_MS = 400;
 const UNDO_WINDOW_MS = 5000;
 
@@ -94,8 +108,25 @@ export interface PositionDrag {
 }
 
 type DragOrigin =
-  | { kind: "bench"; benchPlayerId: string; startX: number; startY: number }
+  | {
+      kind: "bench";
+      benchPlayerId: string;
+      startX: number;
+      startY: number;
+      /** Undecided direction lock (FP-MS2.1-B2); false when no lock was asked for. */
+      lockPending: boolean;
+      pointerId: number;
+      target: Element;
+    }
   | { kind: "field"; playerId: string; slotId: string; startX: number; startY: number };
+
+export interface BenchPointerDownOptions {
+  /**
+   * Decide between a horizontal scroll and a drag before the drag starts
+   * (bench rail, touch and pen only). Default false: today's behaviour.
+   */
+  directionLock?: boolean;
+}
 
 export interface UseLiveSubstitutionOptions {
   /** Current live match state. */
@@ -149,7 +180,8 @@ export interface UseLiveSubstitutionReturn {
    * Tracks drag origin; does NOT prevent tap from firing.
    */
   getBenchPointerDownHandler: (
-    benchPlayerId: string
+    benchPlayerId: string,
+    options?: BenchPointerDownOptions
   ) => (e: React.PointerEvent) => void;
   /** Attach onPointerDown to each field token for drag-to-swap positions. */
   getFieldPointerDownHandler: (
@@ -303,6 +335,13 @@ export function useLiveSubstitution({
     (benchPlayerId: string) => {
       if (disabled) return;
 
+      // Releasing a rail swipe must never also substitute.
+      const trailing = trailingClickRef.current;
+      if (trailing && trailing.playerId === benchPlayerId) {
+        trailingClickRef.current = null;
+        if (Date.now() < trailing.untilMs) return;
+      }
+
       // Read state synchronously — safe because this is called from onClick
       // which fires after the render cycle that produced `state`.
       const selectedId = getSelectedFieldPlayerId(state);
@@ -359,19 +398,23 @@ export function useLiveSubstitution({
   // ── Drag handling ─────────────────────────────────────────────────────────
 
   const getBenchPointerDownHandler = useCallback(
-    (benchPlayerId: string) =>
+    (benchPlayerId: string, options?: BenchPointerDownOptions) =>
       (e: React.PointerEvent) => {
         if (disabled) return;
         if (hasPendingUndo(state)) return;
 
         // Capture the element before preventDefault changes things.
-        (e.currentTarget as Element).setPointerCapture(e.pointerId);
+        const target = e.currentTarget as Element;
+        target.setPointerCapture(e.pointerId);
 
         dragOriginRef.current = {
           kind: "bench",
           benchPlayerId,
           startX: e.clientX,
           startY: e.clientY,
+          lockPending: options?.directionLock === true && e.pointerType !== "mouse",
+          pointerId: e.pointerId,
+          target,
         };
         isDragActiveRef.current = false;
       },
@@ -434,6 +477,26 @@ export function useLiveSubstitution({
               : null,
         });
         return;
+      }
+
+      if (origin.lockPending) {
+        if (dist < DIRECTION_LOCK_PX) return;
+        if (Math.abs(dx) > Math.abs(dy)) {
+          // A rail swipe: never a drag, and its release is never a tap.
+          dragOriginRef.current = null;
+          trailingClickRef.current = {
+            playerId: origin.benchPlayerId,
+            untilMs: Date.now() + DRAG_CLICK_GUARD_MS,
+          };
+          if (
+            typeof origin.target.hasPointerCapture === "function" &&
+            origin.target.hasPointerCapture(origin.pointerId)
+          ) {
+            origin.target.releasePointerCapture(origin.pointerId);
+          }
+          return;
+        }
+        dragOriginRef.current = { ...origin, lockPending: false };
       }
 
       if (dist > DRAG_THRESHOLD_PX) {
