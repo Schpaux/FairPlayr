@@ -41,6 +41,40 @@ describe("placeTokens", () => {
   });
 });
 
+// FP-PITCH-01: setup and live both place tokens with placeTokens, so this is
+// the one coordinate contract: y = 0 is the opponent's goal (top), y = 100 our
+// own (bottom); x is never mirrored.
+describe("pitch orientation", () => {
+  it("puts the keeper at our own goal and keeps every player's side, in every preset", () => {
+    for (const format of ALL_FORMATS) {
+      for (const preset of getFormationPresets(format)) {
+        const placed = placeTokens(preset.slots);
+        const keeper = preset.slots[0];
+
+        expect(placed[keeper.id].y, preset.id).toBe(100);
+        for (const slot of preset.slots) {
+          expect(placed[slot.id].x, `${preset.id} ${slot.id}`).toBe(slot.x);
+          if (slot.id !== keeper.id) expect(placed[slot.id].y).toBeLessThan(100);
+        }
+      }
+    }
+  });
+
+  it("keeps the formation's front-to-back order", () => {
+    for (const format of ALL_FORMATS) {
+      for (const preset of getFormationPresets(format)) {
+        const placed = placeTokens(preset.slots);
+
+        for (const a of preset.slots) {
+          for (const b of preset.slots) {
+            if (a.y < b.y) expect(placed[a.id].y, `${preset.id} ${a.id} above ${b.id}`).toBeLessThan(placed[b.id].y);
+          }
+        }
+      }
+    }
+  });
+});
+
 describe("tokenDensity", () => {
   it("is roomy up to 5, regular for 7 and compact from 9 on the field", () => {
     expect(tokenDensity(3)).toBe("roomy");

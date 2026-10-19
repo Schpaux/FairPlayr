@@ -14,9 +14,19 @@
  *  2. Drag a field player onto another slot → swap
  *  3. Tap bench player → select; tap slot → place/swap (fallback)
  *  4. Tap selected player again → deselect
+ *
+ * Taps are handled by `click` only (mouse, touch and keyboard alike). A
+ * pointer release that was not a drag does nothing itself, so a tap is never
+ * applied twice, and the click a browser fires after a drag is swallowed.
+ *
+ * The pitch itself is the live pitch (FP-PITCH-01, DESIGN.md §7): the same
+ * markings, orientation (own goal at the bottom), token placement
+ * (`placeTokens`) and token, without minutes or ring, so every player stands
+ * in the same spot in setup and in Live.
  */
 
 import { useCallback, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Users } from "lucide-react";
 import type { Player } from "@/domain/team";
 import type { MatchSetup } from "@/domain/match";
@@ -31,6 +41,10 @@ import {
 } from "@/domain/match";
 import { buildShortNameMap } from "@/lib/utils/playerName";
 import { cn } from "@/lib/utils";
+import { discLabel, hasShirtNumber } from "@/components/live/liveScreenModel";
+import { isKeeperSlot, placeTokens, tokenDensity } from "@/components/live/placeTokens";
+import { PitchMarkings, useElementSize, type PitchLineInset } from "@/components/live/PitchMarkings";
+import styles from "@/components/live/LiveScreen.module.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -59,6 +73,18 @@ interface PitchLineupEditorProps {
 
 /** Pixels pointer must move before drag is "active" (shows ghost, skips tap) */
 const DRAG_THRESHOLD = 8;
+/** How long after a drag its trailing click is ignored (as in useLiveSubstitution). */
+const DRAG_CLICK_GUARD_MS = 400;
+
+/** True (once) for the click a browser fires right after a drag ends. */
+function consumeTrailingClick(untilRef: { current: number }): boolean {
+  const trailing = Date.now() < untilRef.current;
+  untilRef.current = 0;
+  return trailing;
+}
+
+/** No dugout overlaps the setup pitch, so its lines sit evenly inside the card. */
+const SETUP_LINE_INSET: PitchLineInset = { top: 10, right: 10, bottom: 10, left: 10 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -68,7 +94,11 @@ export function PitchLineupEditor({
   onSetupChange,
   onAutoFill,
 }: PitchLineupEditorProps) {
+  const t = useTranslations("matchSetup.pitch");
+  const tToken = useTranslations("matchLive.sideline.token");
   const slots = getFormationSlots(setup.format, setup.formationId);
+  const placements = useMemo(() => placeTokens(slots), [slots]);
+  const density = tokenDensity(slots.length);
   const benchIds = getBenchPlayerIds(setup);
   const required = getRequiredStarters(setup);
   const current = setup.startingPlayerIds.length;
@@ -91,10 +121,18 @@ export function PitchLineupEditor({
     startX: number;
     startY: number;
     pointerId: number;
+    /**
+     * Past the threshold. Kept here as well as in `drag`, because the last
+     * pointermove may not have rendered yet when pointerup arrives.
+     */
+    active: boolean;
   } | null>(null);
+  /** Until when (ms) the click that follows a finished drag is ignored. */
+  const trailingClickUntilRef = useRef(0);
 
-  // ── Pitch container ref (for hit-testing) ────────────────────────────────────
+  // ── Pitch container ref (sizes the markings) ─────────────────────────────────
   const pitchRef = useRef<HTMLDivElement>(null);
+  const pitchSize = useElementSize(pitchRef);
 
   // ─── Domain helpers ──────────────────────────────────────────────────────────
 
@@ -171,12 +209,15 @@ export function PitchLineupEditor({
       source: DragSource
     ) => {
       e.preventDefault();
+      // A new press is never the trailing click of the previous drag.
+      trailingClickUntilRef.current = 0;
       (e.currentTarget as Element).setPointerCapture(e.pointerId);
       dragOriginRef.current = {
         source,
         startX: e.clientX,
         startY: e.clientY,
         pointerId: e.pointerId,
+        active: false,
       };
       setDrag({
         source,
@@ -190,18 +231,20 @@ export function PitchLineupEditor({
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
-      if (!dragOriginRef.current) return;
-      const { startX, startY } = dragOriginRef.current;
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
+      const origin = dragOriginRef.current;
+      if (!origin) return;
+      const dx = e.clientX - origin.startX;
+      const dy = e.clientY - origin.startY;
       const moved = Math.sqrt(dx * dx + dy * dy);
+      origin.active = origin.active || moved > DRAG_THRESHOLD;
+      const active = origin.active;
       setDrag((prev) =>
         prev
           ? {
               ...prev,
               currentX: e.clientX,
               currentY: e.clientY,
-              active: prev.active || moved > DRAG_THRESHOLD,
+              active,
             }
           : null
       );
@@ -212,21 +255,13 @@ export function PitchLineupEditor({
   const handlePointerUp = useCallback(
     (e: React.PointerEvent) => {
       const origin = dragOriginRef.current;
-      const currentDrag = drag;
       dragOriginRef.current = null;
       setDrag(null);
 
-      if (!origin || !currentDrag) return;
+      // Not a drag: the click that follows is the tap.
+      if (!origin?.active) return;
 
-      if (!currentDrag.active) {
-        // Treat as tap
-        if (origin.source.kind === "bench") {
-          handleBenchTap(origin.source.playerId);
-        } else {
-          handleSlotTap(origin.source.slotId);
-        }
-        return;
-      }
+      trailingClickUntilRef.current = Date.now() + DRAG_CLICK_GUARD_MS;
 
       // Find drop target by hit-testing
       const el = document.elementFromPoint(e.clientX, e.clientY);
@@ -238,7 +273,7 @@ export function PitchLineupEditor({
         setTapSelected(null);
       }
     },
-    [drag, handleBenchTap, handleSlotTap, applyDrop]
+    [applyDrop]
   );
 
   const handlePointerCancel = useCallback(() => {
@@ -292,102 +327,102 @@ export function PitchLineupEditor({
       {/* ── Pitch ──────────────────────────────────────────────────────────── */}
       <div
         ref={pitchRef}
-        className="relative w-full overflow-hidden rounded-[22px]"
-        style={{
-          aspectRatio: "340 / 260",
-          background: "linear-gradient(180deg, var(--fp-pitch-a) 0%, var(--fp-pitch-b) 100%)",
-          boxShadow: "inset 0 0 0 1px var(--fp-border)",
-          touchAction: "none",
-        }}
+        data-testid="setup-pitch"
+        role="group"
+        aria-label={t("label")}
+        className={cn(styles.setupPitch, density !== "regular" && styles[density])}
       >
-        {/* Grass stripes */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-50"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(90deg, var(--fp-pitch-stripe-a) 0, var(--fp-pitch-stripe-a) 12.5%, var(--fp-pitch-stripe-b) 12.5%, var(--fp-pitch-stripe-b) 25%)",
-          }}
-        />
-        {/* Half-pitch markings */}
-        <svg
-          aria-hidden
-          viewBox="0 0 100 80"
-          preserveAspectRatio="none"
-          className="pointer-events-none absolute inset-0 h-full w-full"
-        >
-          <g stroke="var(--fp-pitch-line)" strokeWidth="0.4" fill="none">
-            <rect x="1.5" y="1.5" width="97" height="77" rx="1" />
-            <line x1="1.5" y1="77" x2="98.5" y2="77" strokeWidth="0.5" />
-            <path d="M 40 77 A 10 10 0 0 1 60 77" />
-            <circle cx="50" cy="77" r="0.8" fill="var(--fp-pitch-line)" stroke="none" />
-            <rect x="22" y="1.5" width="56" height="18" />
-            <rect x="34" y="1.5" width="32" height="7" />
-            <circle cx="50" cy="13" r="0.6" fill="var(--fp-pitch-line)" stroke="none" />
-            <path d="M 42 19.5 A 8 8 0 0 0 58 19.5" />
-            <path d="M 1.5 4 A 2.5 2.5 0 0 0 4 1.5" />
-            <path d="M 96 1.5 A 2.5 2.5 0 0 0 98.5 4" />
-          </g>
-        </svg>
+        <PitchMarkings width={pitchSize.width} height={pitchSize.height} inset={SETUP_LINE_INSET} />
 
-        {/* Slots */}
-        {slots.map((slot) => {
-          const occupantId = setup.slotAssignments[slot.id] ?? null;
-          const isOccupied = Boolean(occupantId);
-          const isBeingDragged = occupantId ? isDragSource(occupantId) : false;
-          const isSelected =
-            occupantId
-              ? isTapSelected({ kind: "slot", playerId: occupantId, slotId: slot.id })
-              : false;
-          const isDropTarget =
-            drag?.active &&
-            (drag.source.kind === "bench" || drag.source.slotId !== slot.id);
-          const isTapTarget = tapSelected && !isSelected;
+        <div className={styles.tokenBox} data-token-box>
+          {slots.map((slot) => {
+            const occupantId = setup.slotAssignments[slot.id] ?? null;
+            const placement = placements[slot.id];
+            const isBeingDragged = occupantId ? isDragSource(occupantId) : false;
+            const isSelected =
+              occupantId
+                ? isTapSelected({ kind: "slot", playerId: occupantId, slotId: slot.id })
+                : false;
+            const isDropTarget =
+              drag?.active &&
+              (drag.source.kind === "bench" || drag.source.slotId !== slot.id);
+            const isTapTarget = tapSelected && !isSelected;
+            const isKeeper = isKeeperSlot(setup.format, slots, slot.id);
+            const player = occupantId ? playerMap.get(occupantId) : undefined;
+            const hasNumber = hasShirtNumber(player);
+            const name = occupantId ? getShort(occupantId) : "";
+            // The last word tells clashing players apart, so a cut keeps it (DESIGN.md §5.2).
+            const split = name.lastIndexOf(" ");
+            const nameHead = split > 0 ? name.slice(0, split) : name;
+            const nameSuffix = split > 0 ? name.slice(split + 1) : "";
+            const label = occupantId
+              ? [
+                  name,
+                  hasNumber ? tToken("number", { number: discLabel(player) }) : "",
+                  isKeeper ? tToken("keeper") : "",
+                ].join("")
+              : t("emptySlot", { label: slot.label });
 
-          return (
-            <button
-              key={slot.id}
-              type="button"
-              data-slot-id={slot.id}
-              className={cn(
-                "tap-target absolute -translate-x-1/2 -translate-y-1/2 rounded-xl border px-2.5 py-1.5 text-center transition-all duration-150",
-                "min-w-[56px]",
-                isBeingDragged && "opacity-20",
-                isSelected
-                  ? "border-fp-cta bg-fp-cta text-fp-cta-foreground shadow-[var(--glow-cta-sm)] scale-110"
-                  : isDropTarget || isTapTarget
-                    ? isOccupied
-                      ? "border-amber-300/90 bg-amber-50/90 text-amber-900"
-                      : "border-fp-cta/60 bg-fp-cta/20 text-fp-cta"
-                    : isOccupied
-                      ? "border-white/20 bg-white/90 text-fp-cta-foreground shadow-sm"
-                      : "border-dashed border-white/25 bg-white/6 text-white/40"
-              )}
-              style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
-              onPointerDown={
-                occupantId
-                  ? (e) =>
-                      startDrag(e, {
-                        kind: "slot",
-                        playerId: occupantId,
-                        slotId: slot.id,
-                      })
-                  : undefined
-              }
-              onClick={() => handleSlotTap(slot.id)}
-            >
-              {occupantId ? (
-                <span className="block max-w-[80px] truncate text-xs font-semibold leading-tight">
-                  {getShort(occupantId)}
+            return (
+              <button
+                key={slot.id}
+                type="button"
+                data-slot-id={slot.id}
+                data-player-id={occupantId ?? undefined}
+                aria-label={label}
+                aria-pressed={occupantId ? isSelected : undefined}
+                className={cn(
+                  styles.token,
+                  occupantId ? isKeeper && styles.keeper : styles.slotEmpty,
+                  isSelected && styles.selected,
+                  !isSelected && (isDropTarget || isTapTarget) && styles.target,
+                  isBeingDragged && styles.dragged
+                )}
+                style={{
+                  left: `${placement.x}%`,
+                  top: `${placement.y}%`,
+                  width: `calc(${placement.room}% - 4px)`,
+                }}
+                onPointerDown={
+                  occupantId
+                    ? (e) =>
+                        startDrag(e, {
+                          kind: "slot",
+                          playerId: occupantId,
+                          slotId: slot.id,
+                        })
+                    : undefined
+                }
+                onClick={() => {
+                  if (!consumeTrailingClick(trailingClickUntilRef)) handleSlotTap(slot.id);
+                }}
+              >
+                <span className={styles.disc}>
+                  {occupantId ? (
+                    <span className={hasNumber ? undefined : styles.discInitials}>
+                      {discLabel(player)}
+                    </span>
+                  ) : (
+                    slot.label
+                  )}
+                  {occupantId && isKeeper ? (
+                    <span className={styles.keeperBadge} aria-hidden>
+                      K
+                    </span>
+                  ) : null}
                 </span>
-              ) : (
-                <span className="block text-[10px] font-semibold uppercase tracking-wide">
-                  {slot.label}
-                </span>
-              )}
-            </button>
-          );
-        })}
+                {occupantId ? (
+                  <span className={styles.tag}>
+                    <span className={styles.tagName}>
+                      <span className={styles.tagFirst}>{nameHead}</span>
+                      {nameSuffix ? <span className={styles.tagSuffix}>{nameSuffix}</span> : null}
+                    </span>
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* ── Bench ──────────────────────────────────────────────────────────── */}
@@ -427,7 +462,9 @@ export function PitchLineupEditor({
                   onPointerDown={(e) =>
                     startDrag(e, { kind: "bench", playerId })
                   }
-                  onClick={() => handleBenchTap(playerId)}
+                  onClick={() => {
+                    if (!consumeTrailingClick(trailingClickUntilRef)) handleBenchTap(playerId);
+                  }}
                 >
                   {getShort(playerId)}
                 </button>
@@ -447,10 +484,7 @@ export function PitchLineupEditor({
 
       {/* ── Drag ghost ────────────────────────────────────────────────────── */}
       {drag?.active && (
-        <div
-          className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-white/20 bg-white/95 px-3 py-1.5 text-xs font-semibold text-fp-cta-foreground shadow-xl"
-          style={{ left: drag.currentX, top: drag.currentY }}
-        >
+        <div className={styles.ghost} style={{ left: drag.currentX, top: drag.currentY }}>
           {getShort(drag.source.playerId)}
         </div>
       )}

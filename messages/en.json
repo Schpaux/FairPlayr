@@ -477,7 +477,11 @@
       "discard": "Discard live match"
     },
     "startMatch": "Start Match",
-    "startMatchHint": "Select players and fill the starting lineup"
+    "startMatchHint": "Select players and fill the starting lineup",
+    "pitch": {
+      "label": "Starting lineup",
+      "emptySlot": "Open position {label}"
+    }
   },
   "matchLive": {
     "title": "Live Match",

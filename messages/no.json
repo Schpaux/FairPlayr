@@ -477,7 +477,11 @@
       "discard": "Forkast pågående kamp"
     },
     "startMatch": "Start kamp",
-    "startMatchHint": "Velg spillere og fyll startoppstillingen"
+    "startMatchHint": "Velg spillere og fyll startoppstillingen",
+    "pitch": {
+      "label": "Startoppstilling",
+      "emptySlot": "Ledig plass {label}"
+    }
   },
   "matchLive": {
     "title": "Live kamp",

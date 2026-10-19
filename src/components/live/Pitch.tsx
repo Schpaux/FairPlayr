@@ -7,60 +7,15 @@
  * what its drag hit-test looks for.
  */
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { LiveScreenModel, LiveTokenView } from "@/components/live/liveScreenModel";
 import styles from "@/components/live/LiveScreen.module.css";
+import { PitchMarkings, useElementSize } from "@/components/live/PitchMarkings";
 
-const LINE_INSET = { top: 10, right: 10, bottom: 28, left: 10 };
-const STRIPES = 14;
 /** Space between the first name and its suffix, in px (`.tagSuffix` margin, 0.25em). */
 const NAME_GAP = 4;
-
-function PitchMarkings({ width, height }: { width: number; height: number }) {
-  if (!width || !height) return null;
-
-  const x0 = LINE_INSET.left;
-  const y0 = LINE_INSET.top;
-  const x1 = width - LINE_INSET.right;
-  const y1 = height - LINE_INSET.bottom;
-  const pw = x1 - x0;
-  const ph = y1 - y0;
-  const cx = x0 + pw / 2;
-  const cy = y0 + ph / 2;
-  const boxW = pw * 0.58;
-  const boxH = Math.min(ph * 0.15, pw * 0.3);
-  const sixW = pw * 0.28;
-  const sixH = boxH * 0.38;
-  const cr = Math.min(pw, ph) * 0.14;
-  const arc = cr * 0.75;
-
-  return (
-    <svg className={styles.pitchLines} viewBox={`0 0 ${width} ${height}`} aria-hidden>
-      {Array.from({ length: STRIPES / 2 }, (_, i) => (
-        <rect
-          key={i}
-          className={styles.pitchStripe}
-          x={0}
-          y={(i * 2 * height) / STRIPES}
-          width={width}
-          height={height / STRIPES}
-        />
-      ))}
-      <rect x={x0} y={y0} width={pw} height={ph} rx={2} />
-      <path d={`M${x0} ${cy}H${x1}`} />
-      <circle cx={cx} cy={cy} r={cr} />
-      <circle className={styles.pitchSpot} cx={cx} cy={cy} r={2.2} />
-      <rect x={cx - boxW / 2} y={y0} width={boxW} height={boxH} />
-      <rect x={cx - sixW / 2} y={y0} width={sixW} height={sixH} />
-      <rect x={cx - boxW / 2} y={y1 - boxH} width={boxW} height={boxH} />
-      <rect x={cx - sixW / 2} y={y1 - sixH} width={sixW} height={sixH} />
-      <path d={`M${cx - arc * 0.62} ${y0 + boxH} A${arc} ${arc} 0 0 0 ${cx + arc * 0.62} ${y0 + boxH}`} />
-      <path d={`M${cx - arc * 0.62} ${y1 - boxH} A${arc} ${arc} 0 0 1 ${cx + arc * 0.62} ${y1 - boxH}`} />
-    </svg>
-  );
-}
 
 function Ring({ ratio }: { ratio: number }) {
   return (
@@ -199,27 +154,7 @@ export function Pitch({
   const t = useTranslations("matchLive.sideline.pitch");
   const pitchRef = useRef<HTMLDivElement>(null);
   const tokenBoxRef = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState({ width: 0, height: 0 });
-
-  useLayoutEffect(() => {
-    const element = pitchRef.current;
-    if (!element) return;
-
-    const measure = () => {
-      const box = element.getBoundingClientRect();
-      setSize((previous) =>
-        previous.width === Math.round(box.width) && previous.height === Math.round(box.height)
-          ? previous
-          : { width: Math.round(box.width), height: Math.round(box.height) }
-      );
-    };
-
-    measure();
-    if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(measure);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
+  const size = useElementSize(pitchRef);
 
   // A regular or roomy tag that cannot fit name and minutes on one line stacks
   // them, but only if the taller tag stays clear of every other token
@@ -283,7 +218,7 @@ export function Pitch({
       onClick={onBackgroundTap}
     >
       <PitchMarkings width={size.width} height={size.height} />
-      <div ref={tokenBoxRef} className={styles.tokenBox}>
+      <div ref={tokenBoxRef} className={styles.tokenBox} data-token-box>
         {model.tokens.map((token) => {
           // A position swap pairs this player with any other pitch player.
           const swapSource = model.positionSwapSourceId ?? model.draggingFieldPlayerId;

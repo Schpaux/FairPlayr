@@ -630,6 +630,62 @@
   max-width: min(168px, 100%);
 }
 
+/* ── Setup pitch (DESIGN.md §7, FP-PITCH-01) ──────────────────────────── */
+/* The live pitch and token, framed as a card on the setup page: same grass,
+   markings, orientation and token placement, without minutes or ring. There
+   is no dugout over the grass, so the bottom insets drop by its 18px overlap
+   and the pitch keeps the live proportions (about 4 : 5 on a phone). */
+.setupPitch {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  border-radius: 14px;
+  background: var(--fp-grass);
+  color: var(--fp-ink);
+  overflow: hidden;
+  /* The setup page scrolls: a swipe on the grass scrolls it, while the
+     tokens (touch-action: none) keep their drag. */
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+:where(.setupPitch) button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* Chalk, not --fp-focus: club green would vanish on grass (≥ 3 : 1 in both themes). */
+.setupPitch :focus-visible {
+  outline: 2px solid var(--fp-on-tag);
+  outline-offset: 2px;
+}
+
+.setupPitch .tokenBox {
+  inset: 30px 12px 56px;
+}
+
+.setupPitch.compact .tokenBox {
+  inset: 30px 10px 66px;
+}
+
+/* An open position: a dashed chalk disc with the position number. */
+.slotEmpty .disc {
+  background: none;
+  color: var(--fp-on-tag);
+  border: 2px dashed var(--fp-on-tag);
+  font-size: 17px;
+}
+
+.compact .slotEmpty .disc {
+  font-size: 15px;
+}
+
 /* ── Dugout ───────────────────────────────────────────────────────────── */
 .dugout {
   flex: none;
@@ -1343,7 +1399,10 @@
 @media (prefers-reduced-motion: reduce) {
   .live *,
   .live *::before,
-  .live *::after {
+  .live *::after,
+  .setupPitch *,
+  .setupPitch *::before,
+  .setupPitch *::after {
     animation-duration: 1ms !important;
     transition-duration: 1ms !important;
   }

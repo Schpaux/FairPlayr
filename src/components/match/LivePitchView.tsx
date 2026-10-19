@@ -108,14 +108,14 @@ export function LivePitchView({
         }}
       />
 
-      {/* ── Half-pitch markings ──────────────────────────────────────────── */}
+      {/* ── Half-pitch markings, mirrored: our goal at the bottom (FP-PITCH-01) */}
       <svg
         aria-hidden
         viewBox="0 0 100 80"
         preserveAspectRatio="none"
         className="pointer-events-none absolute inset-0 h-full w-full"
       >
-        <g stroke="var(--fp-pitch-line)" strokeWidth="0.4" fill="none">
+        <g stroke="var(--fp-pitch-line)" strokeWidth="0.4" fill="none" transform="matrix(1 0 0 -1 0 80)">
           <rect x="1.5" y="1.5" width="97" height="77" rx="1" />
           <line x1="1.5" y1="77" x2="98.5" y2="77" strokeWidth="0.5" />
           <path d="M 40 77 A 10 10 0 0 1 60 77" />

@@ -112,8 +112,14 @@ export interface BuildLiveScreenModelInput {
   interaction: SubInteractionState;
 }
 
+export function hasShirtNumber<P extends Pick<Player, "number">>(
+  player: P | undefined
+): player is P & { number: number } {
+  return player?.number !== undefined && player.number !== null;
+}
+
 export function discLabel(player: Pick<Player, "name" | "number"> | undefined): string {
-  if (player?.number !== undefined && player.number !== null) {
+  if (hasShirtNumber(player)) {
     return String(player.number);
   }
 
@@ -159,7 +165,7 @@ export function buildLiveScreenModel({
       slotId: slot.id,
       name: getShortName(playerId),
       discLabel: discLabel(player),
-      hasNumber: player?.number !== undefined && player?.number !== null,
+      hasNumber: hasShirtNumber(player),
       minutes: wholeMinutes(seconds),
       isKeeper,
       // The keeper is not rotated on fatigue, so its ring never escalates.
