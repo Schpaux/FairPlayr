@@ -895,7 +895,15 @@
       "matchNotSpond": "This match is not linked to Spond.",
       "activeMatchExists": "Another match is already live for this team.",
       "generic": "Something went wrong while planning matches."
-    }
+    },
+    "confirmFinish": "Finish the match now? The clock stops and the match is saved as finished.",
+    "confirmFinishServerOnly": "Finish this match? It is not running on this device, and nothing on this device changes.",
+    "completedOfflineNotice": "Match finished on this device. It will be saved to the cloud when you are back online.",
+    "otherMatchOnDevice": "Another match is running on this device. Finishing this one does not affect it.",
+    "ongoingResolve": "Open",
+    "deviceMatchTitle": "Match on this device",
+    "closedOnDevice": "This match was finished on this device but is not saved to the cloud yet.",
+    "syncFinishCta": "Save the finish now"
   },
   "matchHistory": {
     "title": "History",
@@ -1027,7 +1035,10 @@
   },
   "activeMatchBanner": {
     "label": "Match in progress",
-    "open": "Open"
+    "open": "Open",
+    "deviceMatch": "Match on this device",
+    "recoveryLabel": "Match not finished",
+    "recoveryOpen": "Finish"
   },
   "native": {
     "offline": {

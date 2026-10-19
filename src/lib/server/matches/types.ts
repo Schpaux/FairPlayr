@@ -99,6 +99,8 @@ export interface UpdateMatchStatusInput {
   reportStatus?: MatchReportStatus;
   reportText?: string | null;
   reportGeneratedAt?: string | null;
+  /** ISO time the coach ended the match on the device (completion only). */
+  endedAt?: string;
 }
 
 export interface MatchEventRow {

@@ -12,9 +12,9 @@ import type {
   MatchListItem,
   MatchReportStatus,
   MatchRow,
-  MatchStatus,
   UpdateMatchStatusInput,
 } from "@/lib/server/matches/types";
+import { isCompletionReplay, planMatchUpdate, resolveCompletionEndedAt } from "@/domain/matchLifecycle";
 
 const MATCH_SELECT_LEGACY = "id, team_id, title, opponent_name, starts_at, location, status, runtime_state, created_by, created_at, updated_at";
 const MATCH_SELECT_ENHANCED = `${MATCH_SELECT_LEGACY}, started_at, ended_at, format, report_enabled, report_status, report_text, report_generated_at, score_for, score_against`;
@@ -387,24 +387,40 @@ export async function getActiveMatchForUser(
   };
 }
 
-function resolveStatusTimestamps(status: MatchStatus) {
-  if (status === "live") {
+function resolveStatusTimestamps(
+  mode: "start" | "complete" | "reset" | "keep",
+  completedAt: () => string
+) {
+  if (mode === "start") {
     return {
       started_at: new Date().toISOString(),
       ended_at: null,
     };
   }
 
-  if (status === "completed") {
+  if (mode === "complete") {
     return {
-      ended_at: new Date().toISOString(),
+      ended_at: completedAt(),
     };
   }
 
-  return {
-    started_at: null,
-    ended_at: null,
-  };
+  if (mode === "reset") {
+    return {
+      started_at: null,
+      ended_at: null,
+    };
+  }
+
+  return {};
+}
+
+function matchCompletedError(): IntegrationError {
+  return new IntegrationError("MATCH_COMPLETED", "Kampen er allerede avsluttet.", 409);
+}
+
+/** Raised by the matches_completed_is_terminal trigger, where it is installed. */
+function isCompletedTriggerError(error: { code?: string; message?: string } | null): boolean {
+  return Boolean(error && error.code === "P0001" && /MATCH_COMPLETED/.test(error.message ?? ""));
 }
 
 export async function updateMatchStatus(
@@ -414,6 +430,17 @@ export async function updateMatchStatus(
 ): Promise<MatchListItem> {
   const existing = await getMatchById(supabase, userId, input.matchId);
 
+  // Completed is terminal (FP-P0-F2). See src/domain/matchLifecycle.ts.
+  const plan = planMatchUpdate(existing.status, {
+    status: input.status,
+    runtimeState: input.runtimeState,
+    hasScore: input.scoreFor !== undefined || input.scoreAgainst !== undefined,
+  });
+
+  if (!plan.allowed) {
+    throw matchCompletedError();
+  }
+
   if (input.status === "live") {
     const active = await getActiveMatchForTeam(supabase, userId, existing.teamId);
 
@@ -422,23 +449,41 @@ export async function updateMatchStatus(
     }
   }
 
-  const timestamps = input.status ? resolveStatusTimestamps(input.status) : {};
+  // The coach's end time on the device, not the time the request arrived
+  // (a match ended offline may sync hours later).
+  const timestamps = resolveStatusTimestamps(plan.timestamps, () =>
+    resolveCompletionEndedAt({
+      requestedEndedAt: input.endedAt,
+      runtimeState: input.runtimeState,
+      startedAt: existing.startedAt,
+      nowMs: Date.now(),
+    })
+  );
   const nextStatus = input.status ?? existing.status;
+
+  // A replayed completion (offline retry, lost response, second tab) leaves
+  // the report exactly as it is: no regeneration, no reset, no clear.
+  const replay = isCompletionReplay(existing, {
+    status: input.status,
+    runtimeState: input.runtimeState,
+    hasScore: input.scoreFor !== undefined || input.scoreAgainst !== undefined,
+    reportStatus: input.reportStatus,
+  });
 
   const updatePayload: Record<string, unknown> = {
     status: nextStatus,
     ...timestamps,
   };
 
-  if (input.scoreFor !== undefined) {
+  if (plan.writeScore && input.scoreFor !== undefined) {
     updatePayload.score_for = Math.max(0, Math.floor(input.scoreFor));
   }
 
-  if (input.scoreAgainst !== undefined) {
+  if (plan.writeScore && input.scoreAgainst !== undefined) {
     updatePayload.score_against = Math.max(0, Math.floor(input.scoreAgainst));
   }
 
-  if (input.reportEnabled !== undefined) {
+  if (input.reportEnabled !== undefined && !replay) {
     updatePayload.report_enabled = input.reportEnabled;
     if (!input.reportEnabled) {
       updatePayload.report_status = "not_requested";
@@ -459,8 +504,11 @@ export async function updateMatchStatus(
     updatePayload.report_generated_at = input.reportGeneratedAt;
   }
 
-  const nextReportEnabled = input.reportEnabled ?? existing.reportEnabled;
+  const nextReportEnabled = replay
+    ? existing.reportEnabled
+    : input.reportEnabled ?? existing.reportEnabled;
   const shouldGenerateReport =
+    !replay &&
     nextStatus === "completed" &&
     nextReportEnabled === true &&
     (
@@ -474,31 +522,42 @@ export async function updateMatchStatus(
     updatePayload.report_generated_at = null;
   }
 
-  if (input.runtimeState !== undefined) {
+  if (plan.writeRuntimeState && input.runtimeState !== undefined) {
     updatePayload.runtime_state = input.runtimeState;
   }
 
-  const primary = await supabase
-    .from("matches")
-    .update(updatePayload)
-    .eq("id", input.matchId)
-    .select(MATCH_SELECT_ENHANCED)
-    .single<MatchRow>();
+  // A write that is not itself a completion only applies while the row is
+  // still open, so a completion that lands after our read is never undone.
+  // The transition to completed is conditional too: when two completions race
+  // (a retry and the live screen, two tabs), exactly one performs it, stamps
+  // the end time and requests the report; the other is re-planned below as
+  // the repeat it now is.
+  const completesNow = plan.timestamps === "complete";
+  const onlyWhileOpen = plan.requireNotCompleted || completesNow;
+
+  let primaryQuery = supabase.from("matches").update(updatePayload).eq("id", input.matchId);
+  if (onlyWhileOpen) {
+    primaryQuery = primaryQuery.neq("status", "completed");
+  }
+
+  const primary = await primaryQuery.select(MATCH_SELECT_ENHANCED).maybeSingle<MatchRow>();
 
   let { data: row, error } = primary;
 
   if (isMissingMatchTimestampColumnError(error)) {
-    const fallback = await supabase
-      .from("matches")
-      .update({
-        status: nextStatus,
-      })
-      .eq("id", input.matchId)
-      .select(MATCH_SELECT_LEGACY)
-      .single<MatchRow>();
+    let fallbackQuery = supabase.from("matches").update({ status: nextStatus }).eq("id", input.matchId);
+    if (onlyWhileOpen) {
+      fallbackQuery = fallbackQuery.neq("status", "completed");
+    }
+
+    const fallback = await fallbackQuery.select(MATCH_SELECT_LEGACY).maybeSingle<MatchRow>();
 
     row = fallback.data;
     error = fallback.error;
+  }
+
+  if (isCompletedTriggerError(error)) {
+    throw matchCompletedError();
   }
 
   if (error) {
@@ -506,6 +565,18 @@ export async function updateMatchStatus(
   }
 
   if (!row) {
+    // The row exists (read above), so the guard filtered it out: it was
+    // completed in the meantime.
+    if (completesNow) {
+      // Another completion won. Re-read: the row is now completed, so this
+      // request is planned as a repeat (keeps that end time and report).
+      return updateMatchStatus(supabase, userId, input);
+    }
+
+    if (plan.requireNotCompleted) {
+      throw matchCompletedError();
+    }
+
     throw new IntegrationError("MATCH_NOT_FOUND", "Fant ikke kampen.", 404);
   }
 

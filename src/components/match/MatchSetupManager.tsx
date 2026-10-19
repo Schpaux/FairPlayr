@@ -79,10 +79,16 @@ export function MatchSetupManager() {
   const {
     activeMatch,
     activeMatchHref,
+    recoveryMatch,
+    recoveryMatchHref,
     hasActiveConflict,
     forceCloseActiveMatch,
     discardActiveMatch,
   } = useActiveMatch();
+  // What the start guard is about: this device's match, or (when the device
+  // runs none) a server match that is still live.
+  const conflictMatch = activeMatch ?? recoveryMatch;
+  const conflictHref = activeMatch ? activeMatchHref : recoveryMatchHref ?? activeMatchHref;
   const matchId = searchParams.get("matchId");
 
   // ── Hydration guard ────────────────────────────────────────────────────────
@@ -533,11 +539,11 @@ export function MatchSetupManager() {
               </p>
               <p className="text-xs text-muted-foreground">
                 {t("startGuard.description", {
-                  title: activeMatch?.title ?? t("startGuard.unknownMatch"),
+                  title: conflictMatch?.title || t("startGuard.unknownMatch"),
                 })}
               </p>
               <div className="grid gap-2">
-                <Link href={activeMatchHref}>
+                <Link href={conflictHref}>
                   <FpButton variant="primary" size="md" fullWidth>
                     {t("startGuard.continue")}
                   </FpButton>

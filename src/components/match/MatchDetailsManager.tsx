@@ -21,6 +21,10 @@ import {
   normalizeMatchEvents,
   type MatchEvent,
 } from "@/domain/matchEvent";
+import { endLocalActiveMatch, liveHrefFor } from "@/lib/match/activeMatchRecovery";
+import { retryPendingMatchCompletion, submitMatchCompletion } from "@/lib/match/matchCompletion";
+import { getStoredMatchSetup } from "@/lib/storage/matchStorage";
+import { getPendingMatchCompletion } from "@/lib/storage/pendingMatchCompletionStorage";
 
 interface MatchRuntimeState {
   initialOnFieldPlayerIds?: string[];
@@ -94,6 +98,26 @@ function parseApiError(payload: unknown): { message: string } {
   };
 }
 
+/**
+ * How this device relates to a match: running it, running another, free, or
+ * "closed" — ended here with its completion still waiting for the server.
+ */
+type DeviceRelation = "this" | "other" | "none" | "closed";
+
+function readDeviceRelation(matchId: string): DeviceRelation {
+  const stored = getStoredMatchSetup();
+
+  if (getPendingMatchCompletion(matchId) && !(stored?.status === "active" && stored.serverMatchId === matchId)) {
+    return "closed";
+  }
+
+  if (stored?.status !== "active") {
+    return "none";
+  }
+
+  return stored.serverMatchId === matchId ? "this" : "other";
+}
+
 function payloadName(payload: Record<string, unknown> | null, key: string): string | null {
   if (!payload || typeof payload !== "object") {
     return null;
@@ -126,6 +150,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isRegeneratingReport, setIsRegeneratingReport] = useState(false);
   const [autoReportTriggeredFor, setAutoReportTriggeredFor] = useState<string | null>(null);
+  const [deviceRelation, setDeviceRelation] = useState<DeviceRelation>("none");
 
   const playerOptions = useMemo(() => {
     if (!match) {
@@ -321,6 +346,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
 
         setMatch(matchData.match);
         setEvents(eventData.events ?? []);
+        setDeviceRelation(readDeviceRelation(matchId));
       } catch (cause) {
         const message = cause instanceof Error ? cause.message : t("errors.generic");
         setError(message);
@@ -330,8 +356,56 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
     })();
   }, [auth.status, matchId, t]);
 
-  const handleStatusChange = async (status: "live" | "completed") => {
+  // FP-P0-F2: starting goes through setup, which marks the match live only
+  // after this device has actually started it (and refuses while it runs
+  // another one). Nothing is written to the server here.
+  const handleStart = () => {
     if (!match) {
+      return;
+    }
+
+    router.push(`/match/setup?matchId=${encodeURIComponent(match.id)}`);
+  };
+
+  const handleFinish = async () => {
+    if (!match) {
+      return;
+    }
+
+    const relation = readDeviceRelation(match.id);
+    setDeviceRelation(relation);
+
+    if (relation === "closed") {
+      // Already ended (and confirmed) on this device: send that result now.
+      setError(null);
+      setNotice(null);
+      setIsUpdatingStatus(true);
+      const pending = getPendingMatchCompletion(match.id);
+      const result = await retryPendingMatchCompletion(match.id);
+
+      if (result?.status === "completed" && pending) {
+        setMatch({
+          ...match,
+          status: "completed",
+          scoreFor: pending.body.scoreFor,
+          scoreAgainst: pending.body.scoreAgainst,
+          endedAt: pending.endedAt,
+          runtimeState: (pending.body.runtimeState as MatchRuntimeState | null | undefined) ?? match.runtimeState,
+        });
+        setDeviceRelation("none");
+        setNotice(t("completedNotice"));
+        await refreshActiveMatch();
+      } else if (result?.status === "failed") {
+        setError(result.message ?? t("errors.generic"));
+      } else {
+        setNotice(t("completedOfflineNotice"));
+      }
+
+      setIsUpdatingStatus(false);
+      return;
+    }
+
+    if (!window.confirm(relation === "this" ? t("confirmFinish") : t("confirmFinishServerOnly"))) {
       return;
     }
 
@@ -340,12 +414,52 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
     setIsUpdatingStatus(true);
 
     try {
+      if (relation === "this") {
+        // This device runs the match: end it here first, exactly like the
+        // live screen's End, so the clock stops whatever the network does.
+        const ended = endLocalActiveMatch({
+          reportEnabled: match.reportEnabled,
+          onlyServerMatchId: match.id,
+        });
+        setDeviceRelation("none");
+
+        if (ended?.completion) {
+          setMatch({
+            ...match,
+            status: "completed",
+            scoreFor: ended.completion.body.scoreFor,
+            scoreAgainst: ended.completion.body.scoreAgainst,
+            endedAt: ended.completion.endedAt,
+            runtimeState: (ended.endedLiveMatch as MatchRuntimeState | null) ?? match.runtimeState,
+          });
+
+          const result = await submitMatchCompletion(
+            ended.completion.matchId,
+            ended.completion.body,
+            ended.completion.endedAt
+          );
+
+          if (result.status === "completed") {
+            setNotice(t("completedNotice"));
+          } else if (result.status === "offline") {
+            setNotice(t("completedOfflineNotice"));
+          } else {
+            setError(result.message ?? t("errors.generic"));
+          }
+        }
+
+        await refreshActiveMatch();
+        return;
+      }
+
+      // Not this device's match: complete the server record only. Nothing
+      // stored on this device is read or changed.
       const response = await fetch(`/api/matches/${encodeURIComponent(match.id)}`, {
         method: "PATCH",
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status: "completed" }),
       });
 
       const payload = (await response.json()) as { message?: string; match?: MatchDetails };
@@ -354,20 +468,12 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
         throw new Error(payload.message ?? t("errors.generic"));
       }
 
-      const nextMatch = payload.match ?? null;
-      const resolvedMatch = nextMatch ?? match;
-
-      if (nextMatch) {
-        setMatch(nextMatch);
+      if (payload.match) {
+        setMatch(payload.match);
       }
 
       await refreshActiveMatch();
-
-      if (status === "live") {
-        router.push(`/match/setup?matchId=${encodeURIComponent(resolvedMatch.id)}`);
-      } else {
-        setNotice(t("completedNotice"));
-      }
+      setNotice(t("completedNotice"));
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : t("errors.generic");
       setError(message);
@@ -656,35 +762,58 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
         </div>
 
         {(match.status === "upcoming" || match.status === "draft" || match.status === "live") && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {(match.status === "upcoming" || match.status === "draft") && (
-              <FpButton
-                type="button"
-                variant="primary"
-                size="md"
-                fullWidth
-                disabled={isUpdatingStatus}
-                onClick={() => { void handleStatusChange("live"); }}
-              >
-                {isUpdatingStatus ? t("statusUpdating") : t("startMatchCta")}
-              </FpButton>
-            )}
-            {match.status === "live" && (
-              <>
-                <Link href={`/match/live?matchId=${encodeURIComponent(match.id)}`} className="flex-1">
-                  <FpButton variant="primary" size="md" fullWidth>{t("continueMatchCta")}</FpButton>
-                </Link>
+          <div className="mt-4 space-y-2">
+            {match.status === "live" && deviceRelation === "other" ? (
+              <p className="text-xs text-muted-foreground">{t("otherMatchOnDevice")}</p>
+            ) : null}
+            {match.status === "live" && deviceRelation === "closed" ? (
+              <p className="text-xs text-muted-foreground">{t("closedOnDevice")}</p>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
+              {(match.status === "upcoming" || match.status === "draft") && (
                 <FpButton
                   type="button"
-                  variant="danger"
+                  variant="primary"
                   size="md"
-                  disabled={isUpdatingStatus}
-                  onClick={() => { void handleStatusChange("completed"); }}
+                  fullWidth
+                  onClick={handleStart}
                 >
-                  {isUpdatingStatus ? t("statusUpdating") : t("finishMatchCta")}
+                  {t("startMatchCta")}
                 </FpButton>
-              </>
-            )}
+              )}
+              {match.status === "live" && (
+                <>
+                  {/* Only a link that opens this very match: the live screen
+                      always shows the match running on this device. */}
+                  {deviceRelation === "this" || (deviceRelation === "none" && match.runtimeState) ? (
+                    <Link
+                      href={deviceRelation === "this" ? liveHrefFor(match.id) : `/match/live?matchId=${encodeURIComponent(match.id)}`}
+                      className="flex-1"
+                    >
+                      <FpButton variant="primary" size="md" fullWidth>{t("continueMatchCta")}</FpButton>
+                    </Link>
+                  ) : deviceRelation === "none" ? (
+                    <FpButton type="button" variant="primary" size="md" className="flex-1" onClick={handleStart}>
+                      {t("startMatchCta")}
+                    </FpButton>
+                  ) : null}
+                  <FpButton
+                    type="button"
+                    variant="danger"
+                    size="md"
+                    className={deviceRelation === "other" || deviceRelation === "closed" ? "flex-1" : undefined}
+                    disabled={isUpdatingStatus}
+                    onClick={() => { void handleFinish(); }}
+                  >
+                    {isUpdatingStatus
+                      ? t("statusUpdating")
+                      : deviceRelation === "closed"
+                        ? t("syncFinishCta")
+                        : t("finishMatchCta")}
+                  </FpButton>
+                </>
+              )}
+            </div>
           </div>
         )}
       </AppCard>

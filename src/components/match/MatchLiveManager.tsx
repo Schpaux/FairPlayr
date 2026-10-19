@@ -49,6 +49,7 @@ import {
 } from "@/lib/storage/liveMatchStorage";
 import { buildShortNameMap } from "@/lib/utils/playerName";
 import { fetchOrNull, readJsonOrNull } from "@/lib/utils/fetchOrNull";
+import { resolveClosedOnDevice } from "@/lib/match/activeMatchRecovery";
 import {
   getPendingMatchCompletion,
   type PendingMatchCompletion,
@@ -139,6 +140,8 @@ export function MatchLiveManager() {
     activeMatch,
     activeMatchHref,
     needsRecovery,
+    recoveryMatch,
+    canContinueRecovery,
     forceCloseActiveMatch,
     discardActiveMatch,
     refreshActiveMatch,
@@ -278,7 +281,9 @@ export function MatchLiveManager() {
   }, [liveMatch, isHydrated]);
 
   useEffect(() => {
-    if (!isHydrated || auth.status !== "authenticated" || !activeMatchId || !liveMatch) {
+    // An ended match is sent once, by the completion (FP-P0-F2); a runtime
+    // sync after that could only race it.
+    if (!isHydrated || auth.status !== "authenticated" || !activeMatchId || !liveMatch || liveMatch.status === "ended") {
       return;
     }
 
@@ -359,20 +364,35 @@ export function MatchLiveManager() {
       return;
     }
 
+    // Ended on this device: the server row may still say live until the
+    // completion syncs. The device is authoritative (FP-P0-F2).
+    if (resolveClosedOnDevice().has(activeMatchId)) {
+      return;
+    }
+
+    let cancelled = false;
+
     void (async () => {
       const response = await fetchOrNull(`/api/matches/${encodeURIComponent(activeMatchId)}`, {
         method: "GET",
       });
 
-      if (!response?.ok) {
+      if (cancelled || !response?.ok) {
         return;
       }
 
       const payload = await readJsonOrNull<{
-        match?: { runtimeState?: LiveMatchState | null };
+        match?: { status?: string; runtimeState?: LiveMatchState | null };
       }>(response);
 
-      const runtimeState = payload?.match?.runtimeState;
+      // Only a match still live on the server is resumed from its snapshot;
+      // a completed one is never revived (FP-P0-F2). Checked again on
+      // arrival: the match may have been ended here while the read was out.
+      if (cancelled || payload?.match?.status !== "live" || resolveClosedOnDevice().has(activeMatchId)) {
+        return;
+      }
+
+      const runtimeState = payload.match.runtimeState;
 
       if (!runtimeState || typeof runtimeState !== "object") {
         return;
@@ -387,6 +407,10 @@ export function MatchLiveManager() {
       setLiveMatch(normalized);
       setSetupStatus("active");
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [activeMatchId, auth.status, isHydrated, liveMatch]);
 
   useEffect(() => {
@@ -1119,6 +1143,13 @@ export function MatchLiveManager() {
 
   if (!liveMatch || (setupStatus !== "active" && liveMatch.status !== "ended")) {
     const showRecovery = needsRecovery || Boolean(activeMatch);
+    // Continue only where it opens that match: this device's own, or a live
+    // server snapshot when the device runs none.
+    const recoveryContinueHref = activeMatch
+      ? activeMatchHref
+      : canContinueRecovery && recoveryMatch
+        ? `/match/live?matchId=${encodeURIComponent(recoveryMatch.id)}`
+        : null;
 
     return (
       <PageShell>
@@ -1127,11 +1158,13 @@ export function MatchLiveManager() {
             <p className="text-base font-semibold text-foreground">{t("recovery.title")}</p>
             <p className="text-xs text-muted-foreground">{t("recovery.description")}</p>
             <div className="grid gap-2">
-              <Link href={activeMatchHref}>
-                <FpButton variant="primary" size="md" fullWidth>
-                  {t("recovery.continue")}
-                </FpButton>
-              </Link>
+              {recoveryContinueHref ? (
+                <Link href={recoveryContinueHref}>
+                  <FpButton variant="primary" size="md" fullWidth>
+                    {t("recovery.continue")}
+                  </FpButton>
+                </Link>
+              ) : null}
               <FpButton
                 variant="danger"
                 size="md"

@@ -721,7 +721,7 @@ export function MatchPlannerManager() {
             <span className="inline-block rounded-full bg-fp-cta px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-fp-cta-foreground">
               {t("status.live")}
             </span>
-            <p className="text-base font-bold text-foreground leading-tight">{activeMatch.title}</p>
+            <p className="text-base font-bold text-foreground leading-tight">{activeMatch.title || t("deviceMatchTitle")}</p>
             <div className="grid grid-cols-2 gap-2">
               <Link href={activeMatchHref}>
                 <FpButton variant="primary" size="sm" fullWidth>{t("activeActions.continue")}</FpButton>
@@ -772,9 +772,17 @@ export function MatchPlannerManager() {
                     <p className="text-sm font-bold text-foreground truncate">{match.title}</p>
                     <p className="text-xs text-muted-foreground">{formatDate(match.startsAt)}</p>
                   </div>
-                  <Link href={`/match/live?matchId=${encodeURIComponent(match.id)}`}>
-                    <FpButton variant="primary" size="sm">{t("activeActions.continue")}</FpButton>
-                  </Link>
+                  {/* The live screen always shows this device's match, so only
+                      that one continues there; any other opens its own page. */}
+                  {activeMatch?.serverMatchId === match.id ? (
+                    <Link href={activeMatchHref}>
+                      <FpButton variant="primary" size="sm">{t("activeActions.continue")}</FpButton>
+                    </Link>
+                  ) : (
+                    <Link href={`/match/${encodeURIComponent(match.id)}`}>
+                      <FpButton variant="secondary" size="sm">{t("ongoingResolve")}</FpButton>
+                    </Link>
+                  )}
                 </div>
               </li>
             ))}

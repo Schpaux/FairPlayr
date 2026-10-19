@@ -58,14 +58,20 @@ async function sendMatchCompletion(
   body: MatchCompletionBody,
   endedAt: string
 ): Promise<MatchCompletionResult> {
-  const persisted = savePendingMatchCompletion({ matchId, body, endedAt });
+  // The first stored end time wins: a retry (reconnect, reload, the details
+  // page's "save now") must never move the end of the match to the time it
+  // was retried.
+  const originalEndedAt = getPendingMatchCompletion(matchId)?.endedAt ?? endedAt;
+  const persisted = savePendingMatchCompletion({ matchId, body, endedAt: originalEndedAt });
 
   const response = await fetchOrNull(`/api/matches/${encodeURIComponent(matchId)}`, {
     method: "PATCH",
     headers: {
       "content-type": "application/json",
     },
-    body: JSON.stringify(body),
+    // The server stores this as the match's end time, so a match ended
+    // offline keeps the time the coach ended it, not the time it synced.
+    body: JSON.stringify({ ...body, endedAt: originalEndedAt }),
   });
 
   if (!response) {

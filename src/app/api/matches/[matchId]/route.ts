@@ -40,6 +40,7 @@ function parsePatchPayload(value: unknown): {
   reportEnabled?: boolean;
   reportStatus?: MatchReportStatus;
   reportText?: string | null;
+  endedAt?: string;
 } {
   if (typeof value !== "object" || value === null) {
     throw new Error("INVALID_PAYLOAD");
@@ -84,6 +85,14 @@ function parsePatchPayload(value: unknown): {
     throw new Error("INVALID_PAYLOAD");
   }
 
+  // The device's end time; only read with a status. An unparseable value is
+  // not rejected (the completion must still sync); the service falls back.
+  const hasEndedAt = "endedAt" in payload;
+
+  if (hasEndedAt && (typeof payload.endedAt !== "string" || payload.endedAt.length > 64)) {
+    throw new Error("INVALID_PAYLOAD");
+  }
+
   if (hasStatus) {
     return {
       status,
@@ -98,6 +107,7 @@ function parsePatchPayload(value: unknown): {
       reportEnabled: hasReportEnabled ? (payload.reportEnabled as boolean) : undefined,
       reportStatus: hasReportStatus ? (payload.reportStatus as MatchReportStatus) : undefined,
       reportText: hasReportText ? (payload.reportText as string | null) : undefined,
+      endedAt: hasEndedAt ? (payload.endedAt as string) : undefined,
     };
   }
 
@@ -143,6 +153,7 @@ export async function PATCH(
       reportEnabled: payload.reportEnabled,
       reportStatus: payload.reportStatus,
       reportText: payload.reportText,
+      endedAt: payload.endedAt,
     });
 
     return NextResponse.json({ match });

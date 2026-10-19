@@ -36,7 +36,7 @@ describe("submitMatchCompletion", () => {
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("/api/matches/m1");
     expect(init.method).toBe("PATCH");
-    expect(JSON.parse(init.body as string)).toEqual(BODY);
+    expect(JSON.parse(init.body as string)).toEqual({ ...BODY, endedAt: expect.any(String) });
   });
 
   it("keeps the completion pending when the network request rejects", async () => {
@@ -145,7 +145,10 @@ describe("submitMatchCompletion when device storage cannot be written", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(submitMatchCompletion("m1", BODY)).resolves.toEqual({ status: "completed" });
-    expect(JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string)).toEqual(BODY);
+    expect(JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string)).toEqual({
+      ...BODY,
+      endedAt: expect.any(String),
+    });
   });
 
   it("keeps other matches' pending completions intact when a new write fails", async () => {
@@ -258,7 +261,10 @@ describe("retryPendingMatchCompletion", () => {
 
     await expect(retryPendingMatchCompletion("m1")).resolves.toEqual({ status: "completed" });
     expect(getPendingMatchCompletion("m1")).toBeNull();
-    expect(JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string)).toEqual(BODY);
+    expect(JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string)).toEqual({
+      ...BODY,
+      endedAt: "2026-04-15T10:30:00.000Z",
+    });
   });
 
   it("only touches the requested match", async () => {
@@ -276,5 +282,89 @@ describe("retryPendingMatchCompletion", () => {
     window.localStorage.setItem("fairplayr.pendingMatchCompletions.v1", "{not json");
 
     await expect(retryPendingMatchCompletion("m1")).resolves.toBeNull();
+  });
+});
+
+describe("offline completion keeps the coach's end time", () => {
+  // Ended at 18:30 local time (Oslo, summer time); synced the next morning.
+  const ENDED_AT = "2026-10-15T16:30:00.000Z";
+  const NEXT_MORNING = "2026-10-16T06:05:00.000Z";
+
+  function sentEndedAt(fetchMock: ReturnType<typeof vi.fn>, call: number): unknown {
+    return JSON.parse((fetchMock.mock.calls[call] as [string, RequestInit])[1].body as string).endedAt;
+  }
+
+  beforeEach(() => {
+    window.localStorage.clear();
+    vi.useFakeTimers({ toFake: ["Date"] });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("sends the end time with the completion", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await submitMatchCompletion("m1", BODY, ENDED_AT);
+
+    expect(sentEndedAt(fetchMock, 0)).toBe(ENDED_AT);
+  });
+
+  it("delayed sync the next morning still sends 18:30, not the sync time", async () => {
+    vi.setSystemTime(new Date(ENDED_AT));
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    await submitMatchCompletion("m1", BODY, ENDED_AT);
+
+    vi.setSystemTime(new Date(NEXT_MORNING));
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(retryPendingMatchCompletion("m1")).resolves.toEqual({ status: "completed" });
+    expect(sentEndedAt(fetchMock, 0)).toBe(ENDED_AT);
+  });
+
+  it("repeated retries never replace the stored end time, even when given a newer one", async () => {
+    vi.setSystemTime(new Date(ENDED_AT));
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+    vi.stubGlobal("fetch", fetchMock);
+    await submitMatchCompletion("m1", BODY, ENDED_AT);
+
+    // Reconnect events, the details page's "save now" and a caller that
+    // falls back to the default (now) all retry later.
+    vi.setSystemTime(new Date("2026-10-15T20:00:00.000Z"));
+    await retryPendingMatchCompletion("m1");
+    await submitMatchCompletion("m1", BODY);
+    vi.setSystemTime(new Date(NEXT_MORNING));
+    await submitMatchCompletion("m1", BODY, NEXT_MORNING);
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect([0, 1, 2, 3].map((call) => sentEndedAt(fetchMock, call))).toEqual([
+      ENDED_AT,
+      ENDED_AT,
+      ENDED_AT,
+      ENDED_AT,
+    ]);
+    expect(getPendingMatchCompletion("m1")?.endedAt).toBe(ENDED_AT);
+  });
+
+  it("refresh before reconnecting keeps the end time (fresh module, same device storage)", async () => {
+    vi.setSystemTime(new Date(ENDED_AT));
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    await submitMatchCompletion("m1", BODY, ENDED_AT);
+
+    // A page reload: module state (the in-flight map) is gone, storage stays.
+    vi.resetModules();
+    const reloaded = await import("@/lib/match/matchCompletion");
+
+    vi.setSystemTime(new Date(NEXT_MORNING));
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(reloaded.retryPendingMatchCompletion("m1")).resolves.toEqual({ status: "completed" });
+    expect(sentEndedAt(fetchMock, 0)).toBe(ENDED_AT);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

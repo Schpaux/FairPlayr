@@ -528,6 +528,24 @@ describe("MatchLiveManager match completion", () => {
     ).toHaveLength(2);
   });
 
+  // FP-P0-F2: the completion carries the final state; a runtime-only sync
+  // after the end could only race it into the completed row.
+  it("sends no runtime-only sync once the match has ended", async () => {
+    renderManager();
+    startAndScoreAndEnd();
+    await screen.findByText(en.matchLive.endingSequence.done);
+    const endedAtCall = fetchMock.mock.calls.length;
+
+    await waitForTimerWindow();
+
+    const runtimeOnlyAfterEnd = fetchMock.mock.calls.slice(endedAtCall).filter(([, init]) => {
+      if ((init as RequestInit | undefined)?.method !== "PATCH" || !init?.body) return false;
+      return (JSON.parse(init.body as string) as { status?: string }).status === undefined;
+    });
+    expect(runtimeOnlyAfterEnd).toEqual([]);
+    expect(completionCalls()).toHaveLength(1);
+  });
+
   it("opens the report automatically after an online end the server confirmed", async () => {
     renderManager();
     startAndScoreAndEnd();

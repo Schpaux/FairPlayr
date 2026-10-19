@@ -17,7 +17,8 @@ export interface MatchCompletionBody {
   scoreFor: number;
   scoreAgainst: number;
   reportEnabled: boolean;
-  runtimeState: LiveMatchState | null;
+  /** Omitted when the device had no live state: the server keeps its own. */
+  runtimeState?: LiveMatchState | null;
 }
 
 export interface PendingMatchCompletion {
@@ -105,6 +106,13 @@ export function savePendingMatchCompletion(pending: PendingMatchCompletion): boo
 
 export function getPendingMatchCompletion(matchId: string): PendingMatchCompletion | null {
   return readAll()[matchId] ?? null;
+}
+
+/** Matches with a completion still waiting for the server, oldest first. */
+export function listPendingMatchCompletionIds(): string[] {
+  return Object.values(readAll())
+    .sort((a, b) => a.endedAt.localeCompare(b.endedAt))
+    .map((pending) => pending.matchId);
 }
 
 export function clearPendingMatchCompletion(matchId: string): void {

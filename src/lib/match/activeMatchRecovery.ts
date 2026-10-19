@@ -1,8 +1,9 @@
-import { createLiveMatchFromSetup, type LiveMatchState } from "@/domain/liveMatch";
+import { createLiveMatchFromSetup, endLiveMatch, type LiveMatchState } from "@/domain/liveMatch";
 import type { MatchConfig } from "@/domain/match";
 import {
   activateMatch,
   clearStoredMatchSetup,
+  endMatch,
   getStoredMatchSetup,
   hasActiveStoredMatch,
 } from "@/lib/storage/matchStorage";
@@ -11,6 +12,11 @@ import {
   getStoredLiveMatch,
   saveStoredLiveMatch,
 } from "@/lib/storage/liveMatchStorage";
+import {
+  listPendingMatchCompletionIds,
+  type MatchCompletionBody,
+  type PendingMatchCompletion,
+} from "@/lib/storage/pendingMatchCompletionStorage";
 
 export type CanonicalMatchStatus = "planned" | "live" | "completed" | "cancelled" | "abandoned";
 
@@ -20,16 +26,34 @@ export interface ActiveMatchLike {
   teamId: string;
   status: string;
   runtimeState?: Record<string, unknown> | null;
+  /**
+   * Only on this device's own match: the server record it was started for
+   * (null = local-only, undefined = stored before the field existed) and the
+   * local setup id.
+   */
+  serverMatchId?: string | null;
+  setupId?: string;
 }
 
+/**
+ * FP-P0-F2: the device is authoritative for the match it is running. A server
+ * row marked live is only a recovery candidate here; it never becomes this
+ * device's active match and the banner never links to it as one.
+ */
 export interface ActiveMatchResolution {
+  /** The match genuinely active on this device, or null. */
   activeMatch: ActiveMatchLike | null;
   canonicalStatus: CanonicalMatchStatus | null;
-  source: "server" | "server_recovery" | "local" | "none";
+  source: "device" | "server_recovery" | "none";
+  /** True when there is something to resolve but nothing running here. */
   needsRecovery: boolean;
+  /** A server match left open that this device is not running. */
+  recoveryMatch: ActiveMatchLike | null;
+  /** Where the coach resolves `recoveryMatch`: its own details page. */
+  recoveryHref: string | null;
+  /** `recoveryMatch` has a live server snapshot this device could resume. */
   canContinue: boolean;
-  canForceClose: boolean;
-  canDiscard: boolean;
+  /** Live screen route for `activeMatch`. */
   href: string;
 }
 
@@ -57,64 +81,74 @@ function hasRuntimeState(match: ActiveMatchLike | null): boolean {
   return Boolean(match && match.runtimeState && typeof match.runtimeState === "object");
 }
 
+/** True when a server row is the record of this device's own match. */
+export function isDeviceMatch(server: ActiveMatchLike, local: ActiveMatchLike): boolean {
+  if (local.serverMatchId) {
+    return server.id === local.serverMatchId;
+  }
+
+  // A setup stored before its server id was recorded only pairs with a row
+  // whose runtime state names this setup; never guessed otherwise.
+  return (
+    local.serverMatchId === undefined &&
+    Boolean(local.setupId) &&
+    server.runtimeState?.setupId === local.setupId
+  );
+}
+
+export function recoveryHrefFor(matchId: string): string {
+  return `/match/${encodeURIComponent(matchId)}`;
+}
+
+/**
+ * @param closedOnDevice server match ids this device has already ended (a
+ *   completion is pending or its stored setup is ended). A stale server row
+ *   for one of them is neither active nor a recovery candidate.
+ */
 export function resolveActiveMatch(
   serverActive: ActiveMatchLike | null,
   serverRecoverable: ActiveMatchLike | null,
-  localActive: ActiveMatchLike | null
+  localActive: ActiveMatchLike | null,
+  closedOnDevice: ReadonlySet<string> = new Set()
 ): ActiveMatchResolution {
-  if (serverActive) {
-    const canonicalStatus = toCanonicalStatus(serverActive.status);
-    const needsRecovery = canonicalStatus !== "live" || !hasRuntimeState(serverActive);
+  const serverCandidates = [serverActive, serverRecoverable].filter(
+    (match): match is ActiveMatchLike =>
+      Boolean(match) && match!.status !== "completed" && !closedOnDevice.has(match!.id)
+  );
 
-    return {
-      activeMatch: serverActive,
-      canonicalStatus,
-      source: needsRecovery ? "server_recovery" : "server",
-      needsRecovery,
-      canContinue: true,
-      canForceClose: true,
-      canDiscard: true,
-      href: `/match/live?matchId=${encodeURIComponent(serverActive.id)}`,
-    };
-  }
+  const ownServerRow = localActive
+    ? serverCandidates.find((match) => isDeviceMatch(match, localActive)) ?? null
+    : null;
 
-  if (serverRecoverable) {
-    return {
-      activeMatch: serverRecoverable,
-      canonicalStatus: toCanonicalStatus(serverRecoverable.status),
-      source: "server_recovery",
-      needsRecovery: true,
-      canContinue: true,
-      canForceClose: true,
-      canDiscard: true,
-      href: `/match/live?matchId=${encodeURIComponent(serverRecoverable.id)}`,
-    };
-  }
+  const activeMatch = localActive
+    ? {
+        ...localActive,
+        id: ownServerRow?.id ?? localActive.id,
+        serverMatchId: localActive.serverMatchId ?? ownServerRow?.id ?? localActive.serverMatchId,
+        title: ownServerRow?.title ?? localActive.title,
+      }
+    : null;
 
-  if (localActive) {
-    return {
-      activeMatch: localActive,
-      canonicalStatus: "live",
-      source: "local",
-      needsRecovery: true,
-      canContinue: true,
-      canForceClose: true,
-      canDiscard: true,
-      href: localActive.id
-        ? `/match/live?matchId=${encodeURIComponent(localActive.id)}`
-        : "/match/live?recovery=1",
-    };
-  }
+  const recoveryMatch = serverCandidates.find((match) => match !== ownServerRow) ?? null;
+  const canContinue = Boolean(
+    !activeMatch && recoveryMatch && recoveryMatch.status === "live" && hasRuntimeState(recoveryMatch)
+  );
 
   return {
-    activeMatch: null,
-    canonicalStatus: null,
-    source: "none",
-    needsRecovery: false,
-    canContinue: false,
-    canForceClose: false,
-    canDiscard: false,
-    href: "/match/live?recovery=1",
+    activeMatch,
+    canonicalStatus: activeMatch
+      ? toCanonicalStatus(activeMatch.status)
+      : recoveryMatch
+        ? toCanonicalStatus(recoveryMatch.status)
+        : null,
+    source: activeMatch ? "device" : recoveryMatch ? "server_recovery" : "none",
+    needsRecovery: activeMatch ? activeMatch.status !== "live" : Boolean(recoveryMatch),
+    recoveryMatch,
+    recoveryHref: recoveryMatch ? recoveryHrefFor(recoveryMatch.id) : null,
+    canContinue,
+    href: activeMatch
+      ? liveHrefFor(activeMatch.serverMatchId)
+      : "/match/live?recovery=1",
   };
 }
 
@@ -126,29 +160,118 @@ export function resolveLocalActiveMatch(): ActiveMatchLike | null {
   }
 
   const liveState = getStoredLiveMatch();
-
-  if (!liveState) {
-    return {
-      id: setup.config.id,
-      title: "Live match",
-      teamId: setup.config.teamId,
-      status: "abandoned",
-      runtimeState: null,
-    };
-  }
+  const ownLiveState = liveState && liveState.setupId === setup.config.id ? liveState : null;
 
   return {
-    id: setup.config.id,
-    title: "Live match",
+    id: setup.serverMatchId || setup.config.id,
+    // Filled from the server row when known; the UI shows a generic name.
+    title: "",
     teamId: setup.config.teamId,
-    status: "live",
-    runtimeState: liveState as unknown as Record<string, unknown>,
+    status: ownLiveState ? "live" : "abandoned",
+    runtimeState: ownLiveState as unknown as Record<string, unknown> | null,
+    serverMatchId: setup.serverMatchId,
+    setupId: setup.config.id,
   };
+}
+
+/** Server match ids this device has ended but whose server row may be stale. */
+export function resolveClosedOnDevice(): Set<string> {
+  const closed = new Set(listPendingMatchCompletionIds());
+  const setup = getStoredMatchSetup();
+
+  if (setup?.status === "ended" && setup.serverMatchId) {
+    closed.add(setup.serverMatchId);
+  }
+
+  return closed;
 }
 
 export function clearLocalActiveState(): void {
   clearStoredLiveMatch();
   clearStoredMatchSetup();
+}
+
+/**
+ * Clears this device's match only when it is the given match (by server id,
+ * or by local setup id for a local-only match). Returns whether it did.
+ * Recovery actions for another match must never touch the device's own.
+ */
+export function clearLocalActiveStateFor(matchId: string): boolean {
+  const setup = getStoredMatchSetup();
+
+  if (!setup) {
+    return false;
+  }
+
+  const isSame = setup.serverMatchId ? setup.serverMatchId === matchId : setup.config.id === matchId;
+
+  if (!isSame) {
+    return false;
+  }
+
+  clearLocalActiveState();
+  return true;
+}
+
+export interface LocalMatchEnd {
+  serverMatchId: string | null;
+  endedLiveMatch: LiveMatchState | null;
+  /** The completion to send, when the match has a server record. */
+  completion: PendingMatchCompletion | null;
+}
+
+/**
+ * Ends this device's active match now, the way the live screen's End does:
+ * the clock stops and the ended state is stored before anything is sent.
+ *
+ * With `onlyServerMatchId`, it does nothing unless the device's match is that
+ * server match. Returns null when nothing was ended.
+ */
+export function endLocalActiveMatch(options: {
+  nowMs?: number;
+  reportEnabled?: boolean;
+  onlyServerMatchId?: string;
+} = {}): LocalMatchEnd | null {
+  const setup = getStoredMatchSetup();
+
+  if (!setup || setup.status !== "active") {
+    return null;
+  }
+
+  if (options.onlyServerMatchId !== undefined && setup.serverMatchId !== options.onlyServerMatchId) {
+    return null;
+  }
+
+  const nowMs = options.nowMs ?? Date.now();
+  const stored = getStoredLiveMatch();
+  const endedLiveMatch =
+    stored && stored.setupId === setup.config.id ? endLiveMatch(stored, nowMs) : null;
+
+  if (endedLiveMatch) {
+    saveStoredLiveMatch(endedLiveMatch);
+  }
+  endMatch(setup.config);
+
+  const serverMatchId = setup.serverMatchId ?? null;
+
+  if (!serverMatchId) {
+    return { serverMatchId: null, endedLiveMatch, completion: null };
+  }
+
+  const body: MatchCompletionBody = {
+    status: "completed",
+    scoreFor: endedLiveMatch?.teamScore ?? 0,
+    scoreAgainst: endedLiveMatch?.opponentScore ?? 0,
+    reportEnabled: options.reportEnabled ?? setup.config.reportEnabled,
+    // Without a local live state the server keeps its last snapshot.
+    ...(endedLiveMatch ? { runtimeState: endedLiveMatch } : {}),
+  };
+
+  return {
+    serverMatchId,
+    endedLiveMatch,
+    completion: { matchId: serverMatchId, body, endedAt: new Date(nowMs).toISOString() },
+  };
 }
 
 /** Live screen route for this device's active match (server-backed or local). */
@@ -207,11 +330,13 @@ export async function persistActiveMatchCloseAction({
     headers: {
       "content-type": "application/json",
     },
-    body: JSON.stringify({
-      status: "completed",
-      runtimeState: null,
-      reportStatus: mode === "discard" ? "failed" : undefined,
-    }),
+    // Finishing keeps the last runtime snapshot (events, minutes) for the
+    // history; only an explicit discard clears it.
+    body: JSON.stringify(
+      mode === "discard"
+        ? { status: "completed", runtimeState: null, reportStatus: "failed" }
+        : { status: "completed" }
+    ),
   });
 
   if (!response.ok) {
@@ -220,13 +345,12 @@ export async function persistActiveMatchCloseAction({
 }
 
 export function hasActiveConflict(currentMatchId: string | null, resolution: ActiveMatchResolution): boolean {
-  if (!resolution.activeMatch) {
-    return false;
+  // This device already runs a match: only that same match may be (re)started.
+  if (resolution.activeMatch) {
+    return !currentMatchId || resolution.activeMatch.serverMatchId !== currentMatchId;
   }
 
-  if (!currentMatchId) {
-    return true;
-  }
-
-  return resolution.activeMatch.id !== currentMatchId;
+  // Another match is live on the server: the server would refuse a second one.
+  const recovery = resolution.recoveryMatch;
+  return Boolean(recovery && recovery.status === "live" && recovery.id !== currentMatchId);
 }

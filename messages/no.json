@@ -895,7 +895,15 @@
       "matchNotSpond": "Denne kampen er ikke koblet til Spond.",
       "activeMatchExists": "En annen kamp pågår allerede for dette laget.",
       "generic": "Noe gikk galt under kampplanlegging."
-    }
+    },
+    "confirmFinish": "Avslutte kampen nå? Klokken stoppes og kampen lagres som ferdig.",
+    "confirmFinishServerOnly": "Avslutte denne kampen? Den kjører ikke på denne enheten, og ingenting på enheten endres.",
+    "completedOfflineNotice": "Kampen er avsluttet på enheten. Den lagres i skyen når du er på nett igjen.",
+    "otherMatchOnDevice": "En annen kamp pågår på denne enheten. Å avslutte denne påvirker ikke den.",
+    "ongoingResolve": "Åpne",
+    "deviceMatchTitle": "Kamp på denne enheten",
+    "closedOnDevice": "Kampen er avsluttet på denne enheten, men er ikke lagret i skyen ennå.",
+    "syncFinishCta": "Lagre avslutningen nå"
   },
   "matchHistory": {
     "title": "Historikk",
@@ -1027,7 +1035,10 @@
   },
   "activeMatchBanner": {
     "label": "Kamp pågår",
-    "open": "Åpne"
+    "open": "Åpne",
+    "deviceMatch": "Kamp på denne enheten",
+    "recoveryLabel": "Kamp ikke avsluttet",
+    "recoveryOpen": "Avslutt"
   },
   "native": {
     "offline": {

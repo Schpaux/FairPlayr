@@ -72,6 +72,59 @@ const jumpEnd = (page: Page) => page.getByTestId("bench-jump-end");
 const jumpStart = (page: Page) => page.getByTestId("bench-jump-start");
 
 /**
+ * Fast-forwards the fake clock and makes sure page time stays there.
+ *
+ * A fastForward while the clock flows can overlap one of Playwright's own
+ * real-time runs; when that run finishes after the jump it writes its older
+ * time back, so page time moves backwards by the jumped amount and every timer
+ * and animation frame scheduled since sits that far in the future. Seen in two
+ * failed runs (the match clock froze and the rail's "+N ›" cue was never
+ * re-measured although the rail was at its end) and in an isolated probe:
+ * 54 of 300 two-minute jumps rewound, 0 of 300 with this repair. A rewind
+ * comes only from a run already in flight at the jump, which finishes within
+ * the short wait; any shortfall is then jumped again, relative to page time.
+ *
+ * The jump counts only once two consecutive readings are at or past the target
+ * and the second is not below the first. Every repair is recorded as a
+ * `clock-rewind` annotation on the test, and after MAX_CLOCK_REPAIRS the test
+ * fails with every reading taken, so a broken clock is reported, not hidden.
+ */
+const MAX_CLOCK_REPAIRS = 5;
+
+async function advanceClock(page: Page, by: number | string) {
+  const ms = typeof by === "number" ? by : by.split(":").reduce((total, part) => total * 60 + Number(part), 0) * 1000;
+  const pageNow = () => page.evaluate(() => Date.now());
+  const start = await pageNow();
+  const target = start + ms;
+  const readings: number[] = [];
+  await page.clock.fastForward(ms);
+  for (let repairs = 0; ; repairs += 1) {
+    await page.waitForTimeout(50);
+    const first = await pageNow();
+    await page.waitForTimeout(50);
+    const second = await pageNow();
+    readings.push(first, second);
+    if (first >= target && second >= first) {
+      if (repairs > 0) {
+        test.info().annotations.push({
+          type: "clock-rewind",
+          description: `fastForward(${ms}) needed ${repairs} repair(s); page time after start (ms): ${readings.map((r) => r - start).join(", ")}`,
+        });
+      }
+      return;
+    }
+    if (repairs === MAX_CLOCK_REPAIRS) {
+      throw new Error(
+        `fake clock did not hold fastForward(${ms}) after ${MAX_CLOCK_REPAIRS} repairs; ` +
+          `page time after start (ms): ${readings.map((r) => r - start).join(", ")}`,
+      );
+    }
+    const latest = Math.min(first, second);
+    if (latest < target) await page.clock.fastForward(target - latest);
+  }
+}
+
+/**
  * Kick off; with two or more subs, p1 comes off at 4′ and p2 at 8′, so the
  * bench has 0′ ties, a 4′ and an 8′ player. Ends idle at 10:00.
  */
@@ -101,15 +154,15 @@ async function openLive(page: Page, subs: number, theme: Theme) {
       ["p1", "p8"],
       ["p2", "p9"],
     ]) {
-      await page.clock.fastForward("04:00");
+      await advanceClock(page, "04:00");
       await token(page, out).click();
       await tile(page, incoming).click();
       await expect(strip(page)).toHaveAttribute("data-strip", "undo");
-      await page.clock.fastForward(6000);
+      await advanceClock(page, 6000);
       await expect(strip(page)).not.toHaveAttribute("data-strip", "undo");
     }
   }
-  await page.clock.fastForward("02:00");
+  await advanceClock(page, "02:00");
   return errors;
 }
 
@@ -136,6 +189,12 @@ function shownOrder(page: Page) {
   );
 }
 
+/**
+ * The rail's cues ("+N ›" / "‹ N") are re-measured in a requestAnimationFrame
+ * after a scroll, and this spec's fake clock fakes requestAnimationFrame too.
+ * Run the frame explicitly instead of waiting for the clock's real-time flow.
+ */
+const runFrames = (page: Page) => page.clock.runFor(100);
 const scrollLeft = (page: Page) => bench(page).evaluate((el) => el.scrollLeft);
 const maxScroll = (page: Page) => bench(page).evaluate((el) => el.scrollWidth - el.clientWidth);
 
@@ -291,6 +350,7 @@ function layoutTests(viewportNote = "") {
           await jumpEnd(page).click();
           await expect.poll(() => scrollLeft(page)).toBeGreaterThanOrEqual((await maxScroll(page)) - 1);
           expect(await fullyVisible(page, last)).toBe(true);
+          await runFrames(page);
           await expect(jumpEnd(page)).toHaveCount(0);
           await expect(jumpStart(page)).toBeVisible();
           await expect(jumpStart(page)).toHaveAccessibleName("Tilbake til de med minst spilletid");
@@ -298,6 +358,7 @@ function layoutTests(viewportNote = "") {
           await jumpStart(page).click();
           await expect.poll(() => scrollLeft(page)).toBe(0);
           expect(await fullyVisible(page, first)).toBe(true);
+          await runFrames(page);
           await expect(jumpEnd(page)).toHaveAccessibleName(/^Vis \d+ innbyttere? til, med flest minutter$/);
         }
         expect(errors).toEqual([]);
@@ -339,7 +400,7 @@ function flowTests(viewportNote = "") {
       expect(await shownOrder(page)).toEqual([...initial.slice(0, -1), "p3"]);
 
       // 4. Undo window over: one re-sort (p3 has 10′, the most), back to the start.
-      await page.clock.fastForward(6000);
+      await advanceClock(page, 6000);
       await expect(strip(page)).not.toHaveAttribute("data-strip", "undo");
       await expect.poll(() => scrollLeft(page)).toBe(0);
       const resorted = await shownOrder(page);
@@ -358,7 +419,7 @@ function flowTests(viewportNote = "") {
       // 6. Undo restores the exact order.
       await strip(page).getByRole("button", { name: /Angre bytte/ }).click();
       await expect(strip(page)).not.toHaveAttribute("data-strip", "undo");
-      await page.clock.fastForward(1000);
+      await advanceClock(page, 1000);
       await expect.poll(() => shownOrder(page)).toEqual(resorted);
       expect((await stored(page)).onFieldPlayerIds).toContain("p4");
       await cdp.detach();
@@ -381,7 +442,7 @@ function flowTests(viewportNote = "") {
         expect((await stored(page)).onFieldPlayerIds).toContain(pick);
         await strip(page).getByRole("button", { name: /Angre bytte/ }).click();
         await expect(strip(page)).not.toHaveAttribute("data-strip", "undo");
-        await page.clock.fastForward(1000);
+        await advanceClock(page, 1000);
         expect((await stored(page)).onFieldPlayerIds).toContain("p5");
         await expect.poll(() => shownOrder(page)).toEqual(before);
       }
@@ -398,7 +459,7 @@ function flowTests(viewportNote = "") {
       await page.mouse.up();
       await expect(strip(page)).toHaveAttribute("data-strip", "undo");
       expect((await stored(page)).onFieldPlayerIds).toContain(order[0]);
-      await page.clock.fastForward(6000);
+      await advanceClock(page, 6000);
       await expect(strip(page)).not.toHaveAttribute("data-strip", "undo");
 
       // Position swap by tap ("Bytt plass") and by drag.
@@ -409,7 +470,7 @@ function flowTests(viewportNote = "") {
       await token(page, "p4").click();
       await expect(strip(page)).toHaveAttribute("data-strip", "positionUndo");
       expect([await slotOf("p3"), await slotOf("p4")]).toEqual([s4, s3]);
-      await page.clock.fastForward(6000);
+      await advanceClock(page, 6000);
 
       const cdp = await page.context().newCDPSession(page);
       const [s5, s7] = [await slotOf("p5"), await slotOf("p7")];
