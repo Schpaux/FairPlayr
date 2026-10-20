@@ -127,7 +127,8 @@
   --fp-surface-2: #F1F3F0;       /* pressed / quiet fills */
   --fp-surface-3: #E7EAE6;       /* stronger quiet fill */
   --fp-rule: #E3E6E2;            /* hairlines */
-  --fp-rule-strong: #C9CEC8;     /* outlines, secondary-button borders */
+  --fp-rule-strong: #C9CEC8;     /* outlines, grab handles */
+  --fp-control-line: #848E86;    /* control outlines: ≥3:1 on canvas, surface, surface-2 (WCAG 1.4.11) */
   --fp-ink: #111A15;             /* text */
   --fp-ink-2: #4A564F;           /* secondary text */
 
@@ -262,6 +263,7 @@
   --fp-surface-3: #2A3A31;
   --fp-rule: #2C3C34;
   --fp-rule-strong: #43574C;
+  --fp-control-line: #6A7E72;
   --fp-ink: #EEF1EA;
   --fp-ink-2: #A4B3A9;
 

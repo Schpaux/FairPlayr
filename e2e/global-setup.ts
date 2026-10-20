@@ -26,6 +26,8 @@ const ROUTES = [
   "/no/settings",
   "/no/auth/sign-in",
   "/no/auth/sign-up",
+  // Development-only gallery of the shared UI primitives (ui-audit, ui-components).
+  "/no/dev/ui",
   // The not-found page compiles separately (and pushed an HMR update to an
   // open page when a test first hit an unknown path).
   "/no/__fp-e2e-warmup-not-found",

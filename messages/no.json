@@ -1049,5 +1049,67 @@
       "label": "Frakoblet",
       "detail": "Kampen lagres på enheten"
     }
+  },
+  "ui": {
+    "sheet": {
+      "close": "Lukk"
+    },
+    "confirm": {
+      "cancel": "Avbryt"
+    },
+    "notice": {
+      "dismiss": "Lukk meldingen",
+      "tone": {
+        "info": "Info",
+        "success": "Fullført",
+        "warning": "Advarsel",
+        "error": "Feil"
+      }
+    },
+    "loading": "Laster …"
+  },
+  "uiGallery": {
+    "title": "UI-komponenter",
+    "subtitle": "Felles komponenter fra DESIGN.md. Vises bare i utvikling.",
+    "buttons": "Knapper",
+    "primary": "Start kamp",
+    "secondary": "Bytt plass",
+    "ghost": "Hopp over",
+    "destructive": "Ja, avslutt kampen",
+    "disabled": "Lagre",
+    "small": "Angre",
+    "link": "Til forsiden",
+    "sheets": "Ark",
+    "openSheet": "Åpne ark",
+    "openConfirm": "Avslutt kampen",
+    "sheetTitle": "Kampinnstillinger",
+    "sheetBody": "Endringene gjelder fra neste kamp.",
+    "confirmTitle": "Avslutte kampen nå?",
+    "confirmBody": "Stillingen er 2–1 etter 38 minutter. Kampen kan ikke startes igjen.",
+    "confirmed": "Kampen er avsluttet (eksempel).",
+    "notices": "Meldinger",
+    "noticeInfo": "Appen var lukket i 7 min. Klokka har gått videre.",
+    "noticeSuccess": "Laget er lagret.",
+    "noticeWarningTitle": "Krever nett",
+    "noticeWarning": "Historikken lastes når du er på nett igjen.",
+    "noticeError": "Kunne ikke lagre på telefonen. Kampen fortsetter, men frigjør plass.",
+    "noticeAction": "Prøv igjen",
+    "lists": "Lister",
+    "listTitle": "Laget",
+    "rowPlayers": "Spillere",
+    "rowPlayersValue": "11",
+    "rowFormat": "Standardformat",
+    "rowFormatValue": "7v7",
+    "rowStatic": "Emma Haugen",
+    "rowStaticDescription": "Nr. 6 · 34′ totalt",
+    "rowDelete": "Slett laget",
+    "empty": "Tom tilstand",
+    "emptyTitle": "Ingen spillere ennå",
+    "emptyDescription": "Legg til spillerne på laget før første kamp.",
+    "emptyAction": "Legg til spiller",
+    "skeleton": "Lasting",
+    "segmented": "Valg",
+    "segmentedLabel": "Kampformat",
+    "reducedMotion": "Animasjon er av når systemet ber om redusert bevegelse."
   }
 }

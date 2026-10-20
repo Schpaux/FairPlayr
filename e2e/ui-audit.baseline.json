@@ -1,0 +1,364 @@
+{
+  "_about": "STAB-06 UI guard baseline: known deviations from FP-UI-REVISION-2026-10 (signature → highest count on any viewport), per theme. 'chrome' is the app shell shared by all routes; 'routes' is each route's own content. May only shrink. Regenerate with e2e/support/ui-audit-baseline.mjs.",
+  "chrome": {
+    "dark": {
+      "smallText": {
+        "span \"G\"": 1,
+        "span \"Historikk\"": 1,
+        "span \"Hjem\"": 1,
+        "span \"Innstillinger\"": 1,
+        "span \"Kamper\"": 1,
+        "span \"Spillere\"": 1
+      },
+      "targets": {
+        "a \"FairPlayr\"": 1,
+        "select \"Aktivt lag\"": 1
+      }
+    },
+    "light": {
+      "limeText": {
+        "span \"Historikk\"": 1,
+        "span \"Hjem\"": 1,
+        "span \"Innstillinger\"": 1,
+        "span \"Kamper\"": 1,
+        "span \"Spillere\"": 1
+      },
+      "smallText": {
+        "span \"G\"": 1,
+        "span \"Historikk\"": 1,
+        "span \"Hjem\"": 1,
+        "span \"Innstillinger\"": 1,
+        "span \"Kamper\"": 1,
+        "span \"Spillere\"": 1
+      },
+      "targets": {
+        "a \"FairPlayr\"": 1,
+        "select \"Aktivt lag\"": 1
+      }
+    }
+  },
+  "routes": {
+    "gallery": {
+      "dark": {},
+      "light": {}
+    },
+    "gallery-confirm": {
+      "dark": {},
+      "light": {}
+    },
+    "history": {
+      "dark": {
+        "targets": {
+          "a \"Logg inn\"": 1
+        }
+      },
+      "light": {
+        "limeText": {
+          "h1 \"Historikk\"": 1
+        },
+        "targets": {
+          "a \"Logg inn\"": 1
+        }
+      }
+    },
+    "home": {
+      "dark": {
+        "smallText": {
+          "p \"Ingen kamper ennå\"": 1,
+          "p \"Tilgjengelighet og spillere\"": 1,
+          "p \"Vårsesong · #\"": 1,
+          "span \"NESTE KAMP\"": 1
+        }
+      },
+      "light": {
+        "smallText": {
+          "p \"Ingen kamper ennå\"": 1,
+          "p \"Tilgjengelighet og spillere\"": 1,
+          "p \"Vårsesong · #\"": 1,
+          "span \"NESTE KAMP\"": 1
+        }
+      }
+    },
+    "lineup": {
+      "dark": {
+        "smallText": {
+          "button \"Tøm\"": 1,
+          "button \"Velg alle\"": 1,
+          "div \"Aktivt lag: Lyn G#\"": 1,
+          "p \"Kampformat\"": 1,
+          "p \"Trykk en posisjon og velg spilleren som \"": 1,
+          "span \"# / # plassert\"": 1,
+          "span \"# av # valgt\"": 1,
+          "span \"# på banen\"": 5,
+          "span \"#\"": 5,
+          "span \"Plass\"": 5
+        }
+      },
+      "light": {
+        "limeText": {
+          "button \"#-#\"": 1,
+          "h1 \"Lagoppstilling\"": 1,
+          "span \"#v#\"": 1
+        },
+        "smallText": {
+          "button \"Tøm\"": 1,
+          "button \"Velg alle\"": 1,
+          "div \"Aktivt lag: Lyn G#\"": 1,
+          "p \"Kampformat\"": 1,
+          "p \"Trykk en posisjon og velg spilleren som \"": 1,
+          "span \"# / # plassert\"": 1,
+          "span \"# av # valgt\"": 1,
+          "span \"# på banen\"": 5,
+          "span \"#\"": 5,
+          "span \"Plass\"": 5
+        }
+      }
+    },
+    "live-legacy": {
+      "dark": {
+        "smallText": {
+          "a \"Til forsiden – kampen fortsetter\"": 1,
+          "p \"Dem\"": 1,
+          "p \"Oss\"": 1,
+          "span \"#:#\"": 11,
+          "span \"#. omgang\"": 1,
+          "span \"Emma Han\"": 1,
+          "span \"Emma Hau\"": 1,
+          "span \"Frida\"": 1,
+          "span \"Ida\"": 1,
+          "span \"Ingrid\"": 1,
+          "span \"Klar\"": 1,
+          "span \"Maja\"": 1,
+          "span \"Mathilde\"": 1,
+          "span \"Selma\"": 1,
+          "span \"Sofie\"": 1,
+          "span \"Thea\"": 1,
+          "span \"Varighet: # min\"": 1,
+          "span \"Vilde\"": 1
+        }
+      },
+      "light": {
+        "smallText": {
+          "a \"Til forsiden – kampen fortsetter\"": 1,
+          "p \"Dem\"": 1,
+          "p \"Oss\"": 1,
+          "span \"#:#\"": 11,
+          "span \"#. omgang\"": 1,
+          "span \"Emma Han\"": 1,
+          "span \"Emma Hau\"": 1,
+          "span \"Frida\"": 1,
+          "span \"Ida\"": 1,
+          "span \"Ingrid\"": 1,
+          "span \"Klar\"": 1,
+          "span \"Maja\"": 1,
+          "span \"Mathilde\"": 1,
+          "span \"Selma\"": 1,
+          "span \"Sofie\"": 1,
+          "span \"Thea\"": 1,
+          "span \"Varighet: # min\"": 1,
+          "span \"Vilde\"": 1
+        }
+      }
+    },
+    "live-sideline": {
+      "dark": {},
+      "light": {}
+    },
+    "live-sideline-menu": {
+      "dark": {},
+      "light": {}
+    },
+    "planner": {
+      "dark": {
+        "smallText": {
+          "div \"Planlegging, skysynk og Spond-import kre\"": 1,
+          "p \"Du kan gjennomføre hele kampflyten lokal\"": 1
+        }
+      },
+      "light": {
+        "limeText": {
+          "h1 \"Kampplanlegging\"": 1
+        },
+        "smallText": {
+          "div \"Planlegging, skysynk og Spond-import kre\"": 1,
+          "p \"Du kan gjennomføre hele kampflyten lokal\"": 1
+        }
+      }
+    },
+    "settings": {
+      "dark": {
+        "console": {
+          "error: A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client": 1
+        },
+        "smallText": {
+          "button \"Lys\"": 1,
+          "button \"Mørk\"": 1,
+          "button \"System\"": 1,
+          "p \"Bruk FairPlayr uten innlogging, eller lo\"": 1,
+          "p \"Du er i lokal modus. Logg inn for synkro\"": 1,
+          "p \"Konto\"": 1,
+          "p \"Lagring og synkronisering\"": 1,
+          "p \"Språk\"": 1,
+          "p \"Utseende\"": 1,
+          "span \"✓\"": 1,
+          "span \"Jobber lokalt\"": 1
+        },
+        "targets": {
+          "a \"Logg inn\"": 1
+        }
+      },
+      "light": {
+        "console": {
+          "error: A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client": 1
+        },
+        "limeText": {
+          "span \"✓\"": 1,
+          "span \"Norsk (Bokmål)\"": 1
+        },
+        "smallText": {
+          "button \"Lys\"": 1,
+          "button \"Mørk\"": 1,
+          "button \"System\"": 1,
+          "p \"Bruk FairPlayr uten innlogging, eller lo\"": 1,
+          "p \"Du er i lokal modus. Logg inn for synkro\"": 1,
+          "p \"Konto\"": 1,
+          "p \"Lagring og synkronisering\"": 1,
+          "p \"Språk\"": 1,
+          "p \"Utseende\"": 1,
+          "span \"✓\"": 1,
+          "span \"Jobber lokalt\"": 1
+        },
+        "targets": {
+          "a \"Logg inn\"": 1
+        }
+      }
+    },
+    "setup": {
+      "dark": {
+        "smallText": {
+          "div \"Aktivt lag: Lyn G#\"": 1,
+          "p \"# av # spillere valgt\"": 1,
+          "p \"Egendefinert totalvarighet\"": 1,
+          "p \"Formasjon\"": 1,
+          "p \"Hvem er med i dag?\"": 1,
+          "p \"Kampformat\"": 1,
+          "p \"Kampmodus\"": 1,
+          "p \"Kampoppsummering\"": 1,
+          "p \"Registrer målscorer og assist underveis,\"": 1,
+          "p \"Totalt: # min\"": 1,
+          "p \"Varighet\"": 1,
+          "p \"Velg hvem som faktisk er med i dag. Kun \"": 1,
+          "span \"# på banen\"": 5
+        },
+        "targets": {
+          "button \"Aktiver kampoppsummering\"": 1
+        }
+      },
+      "light": {
+        "limeText": {
+          "button \"# omganger\"": 1,
+          "button \"#-#\"": 1,
+          "button \"#x#\"": 1,
+          "h1 \"Kampoppsett\"": 1,
+          "span \"#v#\"": 1
+        },
+        "smallText": {
+          "div \"Aktivt lag: Lyn G#\"": 1,
+          "p \"# av # spillere valgt\"": 1,
+          "p \"Egendefinert totalvarighet\"": 1,
+          "p \"Formasjon\"": 1,
+          "p \"Hvem er med i dag?\"": 1,
+          "p \"Kampformat\"": 1,
+          "p \"Kampmodus\"": 1,
+          "p \"Kampoppsummering\"": 1,
+          "p \"Registrer målscorer og assist underveis,\"": 1,
+          "p \"Totalt: # min\"": 1,
+          "p \"Varighet\"": 1,
+          "p \"Velg hvem som faktisk er med i dag. Kun \"": 1,
+          "span \"# på banen\"": 5
+        },
+        "targets": {
+          "button \"Aktiver kampoppsummering\"": 1
+        }
+      }
+    },
+    "signin": {
+      "dark": {
+        "smallText": {
+          "label \"E-post\"": 1,
+          "p \"Vi sender deg en innloggingslenke på e-p\"": 1,
+          "span \"ELLER\"": 1
+        }
+      },
+      "light": {
+        "limeText": {
+          "h1 \"Logg inn\"": 1
+        },
+        "smallText": {
+          "label \"E-post\"": 1,
+          "p \"Vi sender deg en innloggingslenke på e-p\"": 1,
+          "span \"ELLER\"": 1
+        }
+      }
+    },
+    "signup": {
+      "dark": {
+        "smallText": {
+          "a \"Bruk magisk lenke i stedet\"": 1,
+          "a \"Fortsett som gjest\"": 1,
+          "a \"Gå til innlogging\"": 1,
+          "label \"Bekreft passord\"": 1,
+          "label \"E-post\"": 1,
+          "label \"Passord\"": 1,
+          "p \"Har du allerede konto?\"": 1,
+          "p \"Logg inn for å synkronisere data på tver\"": 1,
+          "p \"Vil du heller slippe passord?\"": 1,
+          "span \"eller\"": 1
+        },
+        "targets": {
+          "a \"Bruk magisk lenke i stedet\"": 1,
+          "a \"Fortsett som gjest\"": 1,
+          "a \"Gå til innlogging\"": 1
+        }
+      },
+      "light": {
+        "limeText": {
+          "a \"Bruk magisk lenke i stedet\"": 1,
+          "a \"Gå til innlogging\"": 1,
+          "h1 \"Opprett konto\"": 1
+        },
+        "smallText": {
+          "a \"Bruk magisk lenke i stedet\"": 1,
+          "a \"Fortsett som gjest\"": 1,
+          "a \"Gå til innlogging\"": 1,
+          "label \"Bekreft passord\"": 1,
+          "label \"E-post\"": 1,
+          "label \"Passord\"": 1,
+          "p \"Har du allerede konto?\"": 1,
+          "p \"Logg inn for å synkronisere data på tver\"": 1,
+          "p \"Vil du heller slippe passord?\"": 1,
+          "span \"eller\"": 1
+        },
+        "targets": {
+          "a \"Bruk magisk lenke i stedet\"": 1,
+          "a \"Fortsett som gjest\"": 1,
+          "a \"Gå til innlogging\"": 1
+        }
+      }
+    },
+    "team": {
+      "dark": {
+        "smallText": {
+          "p \"# spillere\"": 1,
+          "p \"Aktivt lag\"": 1
+        }
+      },
+      "light": {
+        "smallText": {
+          "p \"# spillere\"": 1,
+          "p \"Aktivt lag\"": 1
+        }
+      }
+    }
+  }
+}

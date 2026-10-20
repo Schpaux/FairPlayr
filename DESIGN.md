@@ -39,7 +39,8 @@ The user is a volunteer coach on a sideline, outdoors, often one-handed and unde
 | `surface-2` | `#F1F3F0` | `#233229` | Pressed/quiet fills, disabled buttons |
 | `surface-3` | `#E7EAE6` | `#2A3A31` | Stronger quiet fill |
 | `rule` | `#E3E6E2` | `#2C3C34` | Hairlines, card borders, input borders |
-| `rule-strong` | `#C9CEC8` | `#43574C` | Outlines, secondary-button borders |
+| `rule-strong` | `#C9CEC8` | `#43574C` | Outlines, grab handles (decorative; below 3:1) |
+| `control-line` | `#848E86` | `#6A7E72` | Outlines that identify a control (secondary button). At least 3:1 on canvas, surface and surface-2 (WCAG 1.4.11) |
 | `ink` | `#111A15` | `#EEF1EA` | Text |
 | `ink-2` | `#4A564F` | `#A4B3A9` | Secondary text |
 
@@ -239,11 +240,12 @@ With an empty bench, the idle line reads "Ingen innbyttere".
 A small, discreet, temporary message for exceptions that the coach should know about but not act on at once: "the app was closed for 7 min, the clock kept running" (OFF-01a B9), or a storage problem.
 - **Placement:** over the top edge of the pitch, directly under the scoreboard. It **never covers critical match controls**: the scoreboard (clock, score, goal keys, menu), the action strip and the bench stay fully visible and tappable. It may cover grass, and the token closest to the top edge must stay tappable (the band shrinks or the message moves into the menu rather than cover it).
 - **Look:** `surface` fill with a 1px `rule`, 10px radius, Inter 500 14 in `ink`; a glyph plus words (never colour only); `warn-text` glyph for warnings. No lime (it is not an action), no shadow, no blur.
-- **Behaviour:** one at a time; `role="status"` (polite); dismissed by a tap or after 8 s; enters with `quick` (140ms fade), and with reduced motion it simply appears. It never takes the strip's place: the strip remains the only "what now".
-- A condition that must keep speaking until it is resolved (for example a failed save) keeps a glyph in the scoreboard meta line and an explanation in the menu after the band is gone.
+- **Behaviour:** one at a time; `role="status"` (polite), errors `role="alert"`; enters with `quick` (140ms fade), and with reduced motion it simply appears. It never takes the strip's place: the strip remains the only "what now".
+- **Dismissal:** only passive info (info or success tone, no action, also available elsewhere, such as "the app was closed for 7 min") goes away after 8 s, with the timer paused while hovered or focused. **Warnings, errors (a storage failure, a persistent sync error) and notices that ask for an action never go away on their own**: they stay until the condition is resolved or the coach dismisses them. `Notice` enforces this (`autoDismissMs` is ignored for them).
+- A condition that must keep speaking until it is resolved (for example a failed save) also keeps a glyph in the scoreboard meta line and an explanation in the menu after the coach has dismissed the band.
 
 ### 5.7 Buttons
-- Pills, 52px (or 44px small). **Primary:** lime fill with `on-lime`. **Secondary:** 1.5px `rule-strong` outline with ink text. **Destructive:** red fill with white text, only inside its confirmation.
+- Pills, 52px (or 44px small). **Primary:** lime fill with `on-lime`. **Secondary:** 1.5px `control-line` outline with ink text. **Destructive:** red fill with white text, only inside its confirmation.
 - **Disabled:** `surface-2` fill with `ink-2` text, and a real `disabled` attribute.
 - Pressed state: `scale(.97)` for 90ms. Hover applies only on pointer devices and is a fill shift, never a scale-up.
 
@@ -353,4 +355,5 @@ A 24 grid with 1.75 stroke and round caps and joins (lucide-compatible). Icons o
 | Position swap (§6.1.1) | **Done in the Modern Sideline view** (FP-MS2.1-B1). The legacy live view (flag off) does not offer it. |
 | Fairness suggestion (§6.2) | **Keeper exclusion and 4′ gap implemented** (MATCH-09, A1 patch, not yet committed) in both live views. The strip button is **Velg** (selects the outgoing player; the coach then taps the bench), a deliberate choice over a one-tap **Bytt** (§6.2, decided 2026-10-20). |
 | Display names (§5.2) | **Ladder implemented** (FEAT-NAME-01, A1 patch, not yet committed) on live pitch, bench, scorer sheet and event history, and on the setup pitch. The player list still shows (truncated) full names (UI-TEAM-01). |
+| Shared primitives (UI-FOUND-01) | **Built** (B1, not yet committed) in `src/components/ui/primitives/`: `Button`/`ButtonLink` (§5.7), `Sheet`/`ConfirmSheet` (§5.5, base-ui Dialog), `Notice` (§5.6 look; the one notice component, also for OFF-01a), `ListGroup`/`ListRow` (§7), `EmptyState`, `Skeleton`, `SegmentedChoice`. Dev gallery at `/[locale]/dev/ui`. Older `src/components/ui/*` stay until each screen is rebuilt (C1–C6). The UI guard `e2e/ui-audit.spec.ts` (STAB-06) checks targets, text floor, lime-on-light, overflow and console errors against a shrinking baseline. |
 | Adaptive bench (§5.3) | **Done in the Modern Sideline view** (FP-MS2.1-B2). Verified in Chromium (Playwright, real CDP touch). **Not yet verified on iOS Safari or in the Capacitor shell.** |

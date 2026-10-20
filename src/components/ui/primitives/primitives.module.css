@@ -1,0 +1,579 @@
+/*
+ * Shared UI primitives (UI-FOUND-01), Modern Sideline (DESIGN.md §2–5).
+ * Every colour is a --fp-* token from src/app/globals.css, so light and dark
+ * come from the theme class. Flat: no glow, gradient, blur or decorative
+ * shadow. Every button is a pill. Hit areas are at least 44px.
+ *
+ * The focus ring is the global :focus-visible ring (globals.css). Rules here
+ * only replace it where an offset ring would be clipped (rows in a group).
+ */
+
+/* ── Button / ButtonLink (DESIGN.md §5.7) ─────────────────────────────── */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 44px;
+  /* min-height, not height: a long label or larger text wraps, never clips. */
+  min-height: 52px;
+  padding: 6px 22px;
+  border: 1.5px solid transparent;
+  border-radius: 999px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 17px;
+  line-height: 1.15;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition:
+    transform var(--fp-d-press) var(--fp-ease-out),
+    background-color var(--fp-d-quick) var(--fp-ease-out),
+    border-color var(--fp-d-quick) var(--fp-ease-out);
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.button:disabled {
+  cursor: default;
+}
+
+.sm {
+  min-height: 44px;
+  padding: 4px 18px;
+  font-size: 16px;
+}
+
+.block {
+  display: flex;
+  width: 100%;
+}
+
+.buttonIcon {
+  display: inline-flex;
+  flex: none;
+}
+
+.primary {
+  background: var(--fp-lime);
+  color: var(--fp-on-lime);
+}
+
+.secondary {
+  background: transparent;
+  border-color: var(--fp-control-line);
+  color: var(--fp-ink);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--fp-ink);
+}
+
+.destructive {
+  background: var(--fp-danger);
+  color: var(--fp-on-danger);
+}
+
+.button:disabled,
+.button[aria-disabled="true"] {
+  background: var(--fp-surface-2);
+  border-color: transparent;
+  color: var(--fp-ink-2);
+}
+
+/* Hover only on pointer devices, and only as a fill shift (never a scale-up). */
+@media (hover: hover) and (pointer: fine) {
+  .secondary:hover:not(:disabled),
+  .ghost:hover:not(:disabled) {
+    background: var(--fp-surface-2);
+  }
+
+  .primary:hover:not(:disabled),
+  .destructive:hover:not(:disabled) {
+    filter: brightness(0.95);
+  }
+}
+
+/* ── Sheet / ConfirmSheet (DESIGN.md §5.5) ────────────────────────────── */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: var(--fp-scrim);
+  transition: opacity var(--fp-d-quick) var(--fp-ease-out);
+}
+
+.scrim[data-starting-style],
+.scrim[data-ending-style] {
+  opacity: 0;
+}
+
+.sheet {
+  position: fixed;
+  z-index: 81;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  max-height: 92dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--fp-canvas);
+  color: var(--fp-ink);
+  border-radius: 20px 20px 0 0;
+  padding: 8px calc(env(safe-area-inset-right) + 16px) calc(env(safe-area-inset-bottom) + 16px)
+    calc(env(safe-area-inset-left) + 16px);
+  outline: none;
+  transition: transform var(--fp-d-sheet) var(--fp-ease-out);
+}
+
+.sheet[data-starting-style],
+.sheet[data-ending-style] {
+  transform: translateY(100%);
+}
+
+.grab {
+  width: 36px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--fp-rule-strong);
+  margin: 0 auto 12px;
+}
+
+.sheetTitle {
+  margin: 0 0 4px;
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  outline: none;
+}
+
+/* The title takes focus only so screen readers start there; it is not a
+   control, so it shows no focus ring (as in LiveSheets). */
+.sheetTitle:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.sheetDescription {
+  margin: 0;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--fp-ink-2);
+}
+
+.sheetBody {
+  margin-top: 16px;
+}
+
+.sheetActions {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+/* ── Notice (DESIGN.md §5.6 look; UI-FOUND-01 contract) ──────────────── */
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 6px 10px 12px;
+  border: 1px solid var(--fp-rule);
+  border-radius: 10px;
+  background: var(--fp-surface);
+  color: var(--fp-ink);
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.4;
+  animation: noticeIn var(--fp-d-quick) var(--fp-ease-out);
+}
+
+.noticeGlyph {
+  display: inline-flex;
+  flex: none;
+  /* Centres a 20px glyph on the first 14px line. */
+  margin-top: 0;
+  color: var(--fp-ink-2);
+}
+
+.notice[data-tone="success"] .noticeGlyph {
+  color: var(--fp-ok-text);
+}
+
+.notice[data-tone="warning"] .noticeGlyph {
+  color: var(--fp-warn-text);
+}
+
+.notice[data-tone="error"] .noticeGlyph {
+  color: var(--fp-danger-text);
+}
+
+.noticeText {
+  flex: 1;
+  min-width: 0;
+  /* Leaves room on the right when there is no dismiss button. */
+  padding-right: 6px;
+  overflow-wrap: anywhere;
+}
+
+.noticeTitle {
+  display: block;
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.noticeTitle + .noticeBody {
+  margin-top: 2px;
+  color: var(--fp-ink-2);
+}
+
+.noticeAction {
+  margin-top: 10px;
+}
+
+.noticeDismiss {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: -10px 0 -10px -6px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fp-ink-2);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.noticeDismiss:active {
+  background: var(--fp-surface-2);
+}
+
+/* ── ListGroup / ListRow (DESIGN.md §7 "Lists") ───────────────────────── */
+.listSection {
+  margin: 0;
+}
+
+.listTitle {
+  margin: 0 0 8px;
+  padding: 0 4px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fp-ink-2);
+}
+
+.listGroup {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--fp-rule);
+  border-radius: 14px;
+  background: var(--fp-surface);
+  overflow: hidden;
+}
+
+.listItem + .listItem {
+  border-top: 1px solid var(--fp-rule);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 54px;
+  padding: 10px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--fp-ink);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.rowInteractive {
+  cursor: pointer;
+  transition: background-color var(--fp-d-quick) var(--fp-ease-out);
+}
+
+.rowInteractive:active:not(:disabled) {
+  background: var(--fp-surface-2);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .rowInteractive:hover:not(:disabled) {
+    background: var(--fp-surface-2);
+  }
+}
+
+/* An offset ring would be clipped by the group's rounded overflow. */
+.rowInteractive:focus-visible {
+  box-shadow: none;
+  outline: 2px solid var(--fp-focus);
+  outline-offset: -2px;
+}
+
+.row:disabled {
+  cursor: default;
+  color: var(--fp-ink-2);
+}
+
+.rowLeading {
+  display: inline-flex;
+  flex: none;
+  color: var(--fp-ink-2);
+}
+
+.rowText {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Names and labels wrap; they are never truncated (DESIGN.md §5.2). */
+.rowLabel {
+  display: block;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.rowDescription {
+  display: block;
+  margin-top: 2px;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--fp-ink-2);
+  overflow-wrap: anywhere;
+}
+
+.rowTrailing {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+  font-size: 16px;
+  color: var(--fp-ink-2);
+}
+
+.rowDestructive .rowLabel {
+  color: var(--fp-danger-text);
+  font-weight: 600;
+}
+
+/* ── EmptyState (flat; neutral glyph; one action) ─────────────────────── */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.emptyGlyph {
+  display: inline-flex;
+  margin-bottom: 4px;
+  color: var(--fp-ink-2);
+}
+
+.emptyTitle {
+  margin: 0;
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1.3;
+  letter-spacing: 0;
+  color: var(--fp-ink);
+}
+
+.emptyDescription {
+  margin: 0;
+  max-width: 32ch;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--fp-ink-2);
+}
+
+.emptyAction {
+  margin-top: 12px;
+}
+
+/* ── Skeleton (static: no pulse, no shimmer) ──────────────────────────── */
+.skeleton {
+  display: block;
+  background: var(--fp-surface-2);
+  border-radius: 6px;
+}
+
+.skeletonList .row {
+  cursor: default;
+}
+
+.skeletonLine + .skeletonLine {
+  margin-top: 8px;
+}
+
+/* ── SegmentedChoice (native radios in a pill track) ─────────────────── */
+.segmented {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.segmentedLegend {
+  margin: 0 0 8px;
+  padding: 0 4px;
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fp-ink-2);
+}
+
+.segmentedTrack {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--fp-surface-2);
+}
+
+.segment {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  color: var(--fp-ink-2);
+  font-weight: 500;
+  font-size: 15px;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform var(--fp-d-press) var(--fp-ease-out),
+    background-color var(--fp-d-quick) var(--fp-ease-out);
+}
+
+.segment:active {
+  transform: scale(0.97);
+}
+
+/* The radio covers the whole segment, so its hit area is the segment. */
+.segmentInput {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+
+.segment:has(.segmentInput:checked) {
+  background: var(--fp-lime);
+  color: var(--fp-on-lime);
+  font-weight: 600;
+}
+
+.segment:has(.segmentInput:disabled) {
+  cursor: default;
+  opacity: 0.55;
+  transform: none;
+}
+
+.segment:has(.segmentInput:focus-visible) {
+  outline: 2px solid var(--fp-focus);
+  outline-offset: 2px;
+}
+
+.segmentLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  overflow-wrap: anywhere;
+}
+
+/* The check glyph is the non-colour cue for the selected segment. */
+.segmentCheck {
+  display: none;
+  flex: none;
+}
+
+.segment:has(.segmentInput:checked) .segmentCheck {
+  display: inline-flex;
+}
+
+@media (forced-colors: active) {
+  .segment:has(.segmentInput:checked) {
+    outline: 2px solid Highlight;
+  }
+}
+
+/* ── Shared ───────────────────────────────────────────────────────────── */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes noticeIn {
+  from {
+    opacity: 0;
+  }
+}
+
+/* DESIGN.md §4: with reduced motion, transforms and transitions go to 1ms
+   and a notice simply appears. */
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .scrim,
+  .sheet,
+  .notice,
+  .rowInteractive,
+  .segment {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+
+  .button:active:not(:disabled),
+  .segment:active {
+    transform: none;
+  }
+}

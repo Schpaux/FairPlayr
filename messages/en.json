@@ -1049,5 +1049,67 @@
       "label": "Offline",
       "detail": "Match is saved on this device"
     }
+  },
+  "ui": {
+    "sheet": {
+      "close": "Close"
+    },
+    "confirm": {
+      "cancel": "Cancel"
+    },
+    "notice": {
+      "dismiss": "Dismiss message",
+      "tone": {
+        "info": "Info",
+        "success": "Done",
+        "warning": "Warning",
+        "error": "Error"
+      }
+    },
+    "loading": "Loading…"
+  },
+  "uiGallery": {
+    "title": "UI components",
+    "subtitle": "Shared components from DESIGN.md. Shown in development only.",
+    "buttons": "Buttons",
+    "primary": "Start match",
+    "secondary": "Swap places",
+    "ghost": "Skip",
+    "destructive": "Yes, end the match",
+    "disabled": "Save",
+    "small": "Undo",
+    "link": "Go home",
+    "sheets": "Sheets",
+    "openSheet": "Open sheet",
+    "openConfirm": "End match",
+    "sheetTitle": "Match settings",
+    "sheetBody": "Changes apply from the next match.",
+    "confirmTitle": "End the match now?",
+    "confirmBody": "The score is 2–1 after 38 minutes. The match cannot be restarted.",
+    "confirmed": "The match has ended (example).",
+    "notices": "Notices",
+    "noticeInfo": "The app was closed for 7 min. The clock kept running.",
+    "noticeSuccess": "Team saved.",
+    "noticeWarningTitle": "Needs a connection",
+    "noticeWarning": "History loads when you are back online.",
+    "noticeError": "Could not save on this phone. The match continues, but free up space.",
+    "noticeAction": "Try again",
+    "lists": "Lists",
+    "listTitle": "Team",
+    "rowPlayers": "Players",
+    "rowPlayersValue": "11",
+    "rowFormat": "Default format",
+    "rowFormatValue": "7v7",
+    "rowStatic": "Emma Haugen",
+    "rowStaticDescription": "No. 6 · 34′ total",
+    "rowDelete": "Delete team",
+    "empty": "Empty state",
+    "emptyTitle": "No players yet",
+    "emptyDescription": "Add the team's players before the first match.",
+    "emptyAction": "Add player",
+    "skeleton": "Loading",
+    "segmented": "Choice",
+    "segmentedLabel": "Match format",
+    "reducedMotion": "Animation is off when the system asks for reduced motion."
   }
 }
