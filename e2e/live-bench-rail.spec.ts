@@ -257,10 +257,13 @@ const tall = (page: Page) => page.viewportSize()!.height >= 780;
 function expectedLayout(page: Page, subs: number) {
   const isTall = tall(page);
   const rowH = isTall ? 50 : 44;
-  // This squad's five names ("Emma H", "Emma H2", "Henriette S", "Ida R",
-  // "Selma L") need ~343px in one row even at 5px sides: two rows at 360 wide.
+  // Measured with the DESIGN §5.2 name ladder (FEAT-NAME-01). The five
+  // substitutes ("Mathilde", "Marie-Louise", "Emma Han", "Emma Hau",
+  // "Henriette") need two rows at 360 wide.
   if (subs <= 5) return { rows: page.viewportSize()!.width < 375 ? 2 : 1, rail: false, rowH };
   if (subs <= 8) return { rows: 2, rail: false, rowH };
+  // Nine of these names fit two rows from about 400px wide (402×750).
+  if (subs <= 9 && page.viewportSize()!.width >= 400) return { rows: 2, rail: false, rowH };
   if (subs <= 11) return isTall ? { rows: 3, rail: false, rowH } : { rows: 2, rail: true, rowH };
   return { rows: isTall ? 3 : 2, rail: true, rowH };
 }

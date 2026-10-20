@@ -8,6 +8,8 @@ import {
 } from "@/domain/liveMatch";
 import type { MatchSetup } from "@/domain/match";
 import { INITIAL_SUB_STATE } from "@/domain/liveSubInteraction";
+import { createGoalEvent, createSubstitutionEvent } from "@/domain/matchEvent";
+import type { Player } from "@/domain/team";
 import { buildLiveScreenModel } from "@/components/live/liveScreenModel";
 
 const setup: MatchSetup = {
@@ -88,5 +90,60 @@ describe("buildLiveScreenModel — number vs ring", () => {
     expect(keeper.isKeeper).toBe(true);
     expect(keeper.ringRatio).toBeCloseTo(14 / 15);
     expect(keeper.fatigue).toBe("fresh");
+  });
+});
+
+describe("buildLiveScreenModel — event names (FEAT-NAME-01)", () => {
+  const player = (id: string, name: string): Player => ({
+    id,
+    name,
+    source: "manual",
+    externalProvider: null,
+    externalId: null,
+    isManaged: false,
+    createdAt: "2026-04-15T10:00:00.000Z",
+    updatedAt: "2026-04-15T10:00:00.000Z",
+  });
+
+  it("shows the pitch display name for known players and the stored name for a player no longer in the team", () => {
+    const state: LiveMatchState = {
+      ...startLiveMatch(createLiveMatchFromSetup(setup), T0),
+      events: [
+        createGoalEvent({
+          minute: 3,
+          teamSide: "own",
+          scorerPlayerId: "p2",
+          scorerName: "Emma Haugen",
+          assistPlayerId: "gone",
+          assistName: "Ola Nordmann",
+        }),
+        createSubstitutionEvent({
+          minute: 6,
+          inPlayerId: "p6",
+          inPlayerName: "Emma Hansen",
+          outPlayerId: "p2",
+          outPlayerName: "Emma Haugen",
+        }),
+      ],
+    };
+    const short: Record<string, string> = { p2: "Emma Hau", p6: "Emma Han" };
+    const model = buildLiveScreenModel({
+      liveMatch: state,
+      nowMs: at(7),
+      clock: "07:00",
+      inStoppage: false,
+      playersById: new Map([
+        ["p2", player("p2", "Emma Haugen")],
+        ["p6", player("p6", "Emma Hansen")],
+      ]),
+      getShortName: (id) => short[id] ?? id,
+      suggestion: null,
+      interaction: INITIAL_SUB_STATE,
+    });
+
+    expect(model.events.map(({ primary, secondary }) => [primary, secondary])).toEqual([
+      ["Emma Hau", "Ola Nordmann"],
+      ["Emma Han", "Emma Hau"],
+    ]);
   });
 });

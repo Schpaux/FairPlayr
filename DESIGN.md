@@ -1,6 +1,6 @@
 # FairPlayr design system: Modern Sideline
 
-**Status:** approved visual direction, authoritative. **Version:** 1.3 (2026-10-16).
+**Status:** approved visual direction, authoritative. **Version:** 1.4 (2026-10-20): dark is the default theme (U4), notice band (§5.6, U5), name ladder for identical names (§5.2), the suggestion gap defined and its button kept as «Velg» (§6.2), four tabs with settings under the profile (§7, U8), squad preselection (§7, U9).
 This document is the single source of truth for FairPlayr's visual and interaction design. Where it conflicts with older notes, prototypes, skills or generic design advice, this document wins. Tokens live in [`src/app/globals.css`](src/app/globals.css); design context for agents lives in [`.impeccable.md`](.impeccable.md).
 
 Background and evidence: `design-exploration/modern-sideline/` (prototype v1.1, `FINAL-VALIDATION.md`, `IMPLEMENTATION-PLAN.md`). The prototype is reference material, not spec: where it differs from this document (for example its chalk canvas), this document is correct.
@@ -28,7 +28,7 @@ The user is a volunteer coach on a sideline, outdoors, often one-handed and unde
 
 ## 2. Colour
 
-Light is the default (daylight matches). Dark is "floodlight" mode. The scoreboard, grass, lime and club green are identical in both modes; only the surfaces change.
+**Dark is the default theme** (decision U4, 2026-10-20; the app ships with `defaultTheme="dark"`). Light is fully supported and can be chosen in settings; it suits bright daylight. The scoreboard, grass, lime and club green are identical in both modes; only the surfaces change.
 
 ### 2.1 Surfaces and text
 
@@ -173,7 +173,7 @@ Full screen, with no global header or bottom nav and no scrolling. It is portrai
 - **Name tag** below: `tag` fill, display name plus **total match minutes** (Inter 700, tabular). On one line up to 7v7, stacked in compact. The tag width is capped by the gap to its neighbour.
 - **Stint ring (D1):** the arc shows **continuous playing time since the player last rested**, as a share of one half. It resets on coming off and **at half-time**. It is `ring-fresh` < 60 %, `ring-watch` from 60 %, `ring-act` from 75 %, with the track tinted from 85 %. The keeper's ring never escalates. The ring carries no number; the exact stint minutes appear in the strip on selection. **Total match minutes stay the prominent number.**
 - **States:** selected (lime disc and tag, scale 1.08), valid target (dashed chalk halo), suggested out (2px lime outline on the tag), just swapped in (360ms land).
-- **Display names:** first name; on a clash, first name + surname initial; then the shortest unique surname prefix ("Emma Han" / "Emma Hau"). The ladder is built from the match squad. Cut order: stack first, then cut the first name ("E… Hau"), never the distinguishing suffix.
+- **Display names:** first name; on a clash, first name + surname initial; then the shortest unique surname prefix ("Emma Han" / "Emma Hau"). Each player gets the shortest form that tells them apart, so "Emma Berg" stays "Emma B" next to them. Same surname with different middle names uses the shortest unique prefix of everything after the first name ("Ida M" / "Ida S"). Identical full names use first name + shirt number ("Emma #7" / "Emma #12"); only without a distinguishing number does a counter ("Emma (2)") appear, as a last resort. Never a bare number suffix ("Emma H2"). The ladder is built from the match squad (`buildDisplayNameMap`, `src/lib/utils/playerName.ts`) and used on pitch, bench, scorer sheet and event history; stored names and ids are unchanged. Cut order: stack first, then cut the first name ("E… Hau"), never what follows it.
 - **Placement:** formation lines are spread evenly over a token-safe box, and rows never collide.
 
 ### 5.3 Bench (FP-MS2.1-B2: Alternative C, the "fairness rail")
@@ -196,7 +196,7 @@ Implementation: `src/components/live/Bench.tsx`, `benchLayout.ts` and `src/domai
 
 The bench is never more than two rows on phones under 780px tall, so the pitch keeps or gains height against the previous bench (measured: +4 to +62px). Rows are 44px (50px on tall phones) with a 4px gap. Names are **never cut** and never ellipsised.
 
-**Tile.** Display name (Inter 600 14, no truncation) over **total minutes** (Inter 700 14, tabular). The shirt number is in the accessible label, not on the tile. At least 44 × 44. Duplicate names use the existing ladder ("Thea S2"). The fair-share gap ("−6") is not shown yet.
+**Tile.** Display name (Inter 600 14, no truncation) over **total minutes** (Inter 700 14, tabular). The shirt number is in the accessible label, not on the tile. At least 44 × 44. Duplicate names use the ladder from §5.2 ("Thea So" / "Thea St"). The fair-share gap ("−6") is not shown yet.
 - **States:** selected (lime fill), valid target (2px ink outline), suggested in (2px lime outline), dragging (35 % opacity), just swapped out (lime flash fading over 420ms).
 
 **Rail.** When not everyone fits:
@@ -224,7 +224,7 @@ A single slot that shows exactly one message, in this priority order (copy is in
 | 4 | Half-time | "Pause · 2–1" | "Bytt nå, uten klokke" | **Start 2. omgang** (lime) |
 | 5 | Full-time | "Slutt · 2–1" | "Kampen er ferdig" | Ferdig |
 | 6 | Time up | "25:00 er spilt" | "Tiden er ute" | Avslutt omgang (outline → confirm) |
-| 7 | Suggestion | "Forslag · 4′ mot 16′ spilt" | "Selma inn for Maja" | **Bytt** (lime) |
+| 7 | Suggestion | "Forslag · 4′ mot 16′ spilt" | "Selma inn for Maja" | **Velg** (lime): selects the outgoing player; the coach then taps the substitute (§6.2) |
 | 8 | Idle | "Tallet er total spilletid. Ringen er tid siden siste hvile." | "Trykk en spiller, så en på benken" | — |
 
 With an empty bench, the idle line reads "Ingen innbyttere".
@@ -235,7 +235,14 @@ With an empty bench, the idle line reads "Ingen innbyttere".
 - **Confirmation:** the primary action states the outcome ("Ja, avslutt omgangen"), and the secondary is always "Fortsett å spille".
 - **Scorer sheet:** the existing production rules apply (only when reports are enabled; scorer, then assist; auto-advance after 10 s, shown with the same drain bar as undo). Two columns of 52px pills, outfield first and the keeper last, plus "Hopp over". Tapping the scrim does not dismiss it.
 
-### 5.6 Buttons
+### 5.6 Notice band (U5, transient)
+A small, discreet, temporary message for exceptions that the coach should know about but not act on at once: "the app was closed for 7 min, the clock kept running" (OFF-01a B9), or a storage problem.
+- **Placement:** over the top edge of the pitch, directly under the scoreboard. It **never covers critical match controls**: the scoreboard (clock, score, goal keys, menu), the action strip and the bench stay fully visible and tappable. It may cover grass, and the token closest to the top edge must stay tappable (the band shrinks or the message moves into the menu rather than cover it).
+- **Look:** `surface` fill with a 1px `rule`, 10px radius, Inter 500 14 in `ink`; a glyph plus words (never colour only); `warn-text` glyph for warnings. No lime (it is not an action), no shadow, no blur.
+- **Behaviour:** one at a time; `role="status"` (polite); dismissed by a tap or after 8 s; enters with `quick` (140ms fade), and with reduced motion it simply appears. It never takes the strip's place: the strip remains the only "what now".
+- A condition that must keep speaking until it is resolved (for example a failed save) keeps a glyph in the scoreboard meta line and an explanation in the menu after the band is gone.
+
+### 5.7 Buttons
 - Pills, 52px (or 44px small). **Primary:** lime fill with `on-lime`. **Secondary:** 1.5px `rule-strong` outline with ink text. **Destructive:** red fill with white text, only inside its confirmation.
 - **Disabled:** `surface-2` fill with `ink-2` text, and a real `disabled` attribute.
 - Pressed state: `scale(.97)` for 90ms. Hover applies only on pointer devices and is a fill shift, never a scale-up.
@@ -266,9 +273,9 @@ Two players on the pitch exchange positions. **It is not a substitution**: no ev
 - **Routing a drag by what it is dropped on:** pitch player → occupied pitch slot = position swap; bench → pitch = substitution (unchanged); pitch → bench = no change (not a substitution path); pitch → empty or invalid area = no change.
 
 ### 6.2 Fairness suggestion (D2)
-- **Out:** the outfield player with the most total time (the keeper is excluded). **In:** the bench player with the least total time.
-- It is shown **only when the fair-share gap is at least 4 minutes**. The threshold is a configurable parameter (`minGapSeconds`, default 240). Fair share = field slots × elapsed time ÷ available squad.
-- One tap on **Bytt** swaps, followed by undo.
+- **Out:** the outfield player with the most total time (the keeper is excluded: the player in the formation's first slot; 3v3 has no keeper). **In:** the bench player with the least total time.
+- It is shown **only when the gap is at least 4 minutes**: the outgoing player's total time minus the incoming player's total time, the two numbers the strip shows ("Forslag · 4′ mot 16′ spilt"). So there is never a suggestion right after kick-off (0′ vs 0′). The threshold is a configurable parameter (`minGapSeconds`, `DEFAULT_SUGGESTION_MIN_GAP_SECONDS` = 240 in `src/domain/substitutionSuggestion.ts`); there is no settings UI for it yet. (Fair share, field slots × elapsed time ÷ available squad, is the bench tile's "−6" gap in §5.3 and §9, not this threshold.)
+- The strip button is **Velg**, not a one-tap **Bytt**. Tapping it selects the suggested outgoing player (exactly as if the coach had tapped that token). The coach then taps the substitute, the suggested one or any other, and the normal substitution and 5 s undo follow. **This deliberately differs from the one-tap flows elsewhere** (undo, half-time, position swap): the coach decides and the app suggests (AGENTS.md §2), so a suggestion never performs a substitution by itself (decision 2026-10-20).
 
 ### 6.3 Goals and goal correction
 The scoreboard, goal attribution, stored match events and cloud sync must agree at all times. **The score is derived from goal events.** It is never edited as an independent counter.
@@ -295,8 +302,9 @@ The live screen behaves identically offline. The only visible change is the ambe
 ## 7. Other screens
 - **Home:** quiet lists plus **one** club-green fixture panel (with a faint centre-circle arc at 14 % stroke, the only decorative geometry in the system) and a lime CTA. Season stats are inline numbers, not hero-metric cards.
 - **Setup:** an attendance grid of shirt discs (lime check = present; "Borte" = absent) and the setup pitch, which reuses the live token without minutes or ring and uses the same tap–tap model. A sticky footer shows squad count, readiness and **Start kamp**.
+  - **Squad preselection (U9):** when appropriate (for example a new setup for the active team), the whole squad starts as present, so the coach only removes who is absent. Attendance stays visible and editable until **Start kamp**; nobody accrues playing time before the match is started, and only the players in the started squad are in it. A preselected player who is absent must never get minutes by accident.
 - **Lists:** hairline-separated rows on `surface`, with no nested cards.
-- **Bottom nav:** four tabs with a lime pill on the active one. It is absent on Live.
+- **Bottom nav:** four tabs (Hjem, Spillere, Kamp, Historikk) with a lime pill on the active one. **Settings live under the profile menu**, not in a tab (U8). It is absent on Live.
 
 ---
 
@@ -326,6 +334,11 @@ A 24 grid with 1.75 stroke and round caps and joins (lucide-compatible). Icons o
 | D7 | Position swaps on the pitch support **both** tap ("Bytt plass", then the other player) **and** drag-and-drop. Both use one domain operation and the same targeted 5 s undo, and never create a substitution (§6.1.1). |
 | C1 | The light canvas is near-white `#F9FAF8` with white surfaces and neutral borders; beige `#F2EFE7` is no longer a surface colour. |
 | C2 | Goal correction: quick goal keys, undo last goal, correct older goals via event history; the score is derived from events and kept consistent with the server. |
+| U4 | Dark is the default theme; light stays fully supported (2026-10-20). Supersedes "light is the default". |
+| U5 | A small transient notice band under the scoreboard (§5.6); it never covers critical match controls. |
+| U8 | Four bottom-nav tabs; settings via the profile. |
+| U9 | Preselect the squad where it fits, without ever giving unintended players playing time. |
+| MATCH-09 | The suggestion never names the keeper and needs a 4′ gap between the pair (§6.2), 2026-10-20. Its button is **Velg** (selects the outgoing player), deliberately not a one-tap **Bytt**: the coach completes the substitution. |
 | B2 | Adaptive bench, Alternative C (FP-MS2.1-B2, §5.3): sorted least-played first by displayed whole minutes, ties in squad order, at every squad size; order held during interactions and re-sorted once after, with the rail back at its start; one row → two (three tall) → horizontal rail; "+N ›" / "‹ N" jump buttons with counts only; touch direction lock on the rail; tiles 44px tall (amends "≥ 60px"). |
 
 ## 11. Implementation status
@@ -338,4 +351,6 @@ A 24 grid with 1.75 stroke and round caps and joins (lucide-compatible). Icons o
 | Live screen, setup, home (§5–7) | Not started. Follow `design-exploration/modern-sideline/IMPLEMENTATION-PLAN.md`, behind `NEXT_PUBLIC_LIVE_UI=sideline`. |
 | Goal correction (§6.3) | Blocked on server event reconciliation. |
 | Position swap (§6.1.1) | **Done in the Modern Sideline view** (FP-MS2.1-B1). The legacy live view (flag off) does not offer it. |
+| Fairness suggestion (§6.2) | **Keeper exclusion and 4′ gap implemented** (MATCH-09, A1 patch, not yet committed) in both live views. The strip button is **Velg** (selects the outgoing player; the coach then taps the bench), a deliberate choice over a one-tap **Bytt** (§6.2, decided 2026-10-20). |
+| Display names (§5.2) | **Ladder implemented** (FEAT-NAME-01, A1 patch, not yet committed) on live pitch, bench, scorer sheet and event history, and on the setup pitch. The player list still shows (truncated) full names (UI-TEAM-01). |
 | Adaptive bench (§5.3) | **Done in the Modern Sideline view** (FP-MS2.1-B2). Verified in Chromium (Playwright, real CDP touch). **Not yet verified on iOS Safari or in the Capacitor shell.** |

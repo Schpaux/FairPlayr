@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -983,6 +983,137 @@ describe("MatchLiveManager match completion", () => {
       expect(stored?.events.filter((event) => event.type === "goal")).toHaveLength(2);
       expect(getPendingMatchCompletion("match-1")?.body).toMatchObject({ scoreFor: 1, scoreAgainst: 1 });
       expect(screen.getByTestId("live-strip").getAttribute("data-strip")).toBe("fullTime");
+    });
+
+    // MATCH-09: never the keeper, and only from a 4′ playing-time gap.
+    describe("fairness suggestion", () => {
+      const strip = () => screen.getByTestId("live-strip").getAttribute("data-strip");
+      let now: number;
+      const advanceTo = (ms: number) => {
+        now = 1_000_000 + ms;
+        act(() => {
+          window.dispatchEvent(new Event("focus"));
+        });
+      };
+
+      beforeEach(() => {
+        now = 1_000_000;
+        vi.spyOn(Date, "now").mockImplementation(() => now);
+      });
+
+      it("stays silent from kick-off until the gap reaches 4′, and never names the keeper", () => {
+        renderManager();
+        fireEvent.click(screen.getByRole("button", { name: sideline.strip.kickoff }));
+        expect(strip()).toBe("idle");
+
+        advanceTo(1_000);
+        expect(strip()).toBe("idle");
+
+        advanceTo(4 * 60_000 - 1_000);
+        expect(strip()).toBe("idle");
+
+        advanceTo(4 * 60_000);
+        expect(strip()).toBe("suggestion");
+        // p1 is in the keeper slot and has played as long as everyone else.
+        expect(screen.getByTestId("live-strip").textContent).toContain("Player 6 on for Player 2");
+        expect(screen.getByTestId("live-strip").textContent).not.toContain("Player 1");
+      });
+
+      it("selecting the suggestion picks the outfield player, not the keeper", () => {
+        renderManager();
+        fireEvent.click(screen.getByRole("button", { name: sideline.strip.kickoff }));
+        advanceTo(10 * 60_000);
+
+        fireEvent.click(screen.getByRole("button", { name: sideline.strip.suggestionLabel.replace("{out}", "Player 2") }));
+        expect(strip()).toBe("selection");
+        expect(fieldToken("p2").getAttribute("aria-pressed")).toBe("true");
+      });
+    });
+
+    // FEAT-NAME-01: one name ladder for pitch, bench, scorer sheet and events.
+    describe("display names", () => {
+      const original = WORKSPACE.teams[0].players;
+      const named = (id: string, name: string, number?: number): Player => ({
+        ...PLAYERS.find((player) => player.id === id)!,
+        name,
+        number,
+      });
+
+      beforeEach(() => {
+        WORKSPACE.teams[0].players = [
+          named("p1", "Frida Berg", 1),
+          named("p2", "Emma Haugen"),
+          named("p3", "Emma Hansen", 7),
+          named("p4", "Ida Ruud"),
+          named("p5", "Thea Solberg"),
+          named("p6", "Emma Hansen", 12),
+          named("p7", "Emma Berg"),
+        ];
+      });
+
+      afterEach(() => {
+        WORKSPACE.teams[0].players = original;
+      });
+
+      /** The tag shows the first name and, apart, what tells the player apart. */
+      const tagName = (playerId: string) =>
+        [...fieldToken(playerId).querySelectorAll("[data-name] > span")].map((part) => part.textContent).join(" ");
+
+      it("shows the shortest unique name on pitch and bench, with the shirt number only for identical names", () => {
+        renderManager();
+
+        expect(tagName("p1")).toBe("Frida");
+        expect(tagName("p2")).toBe("Emma Hau");
+        expect(tagName("p3")).toBe("Emma #7");
+        expect(tagName("p4")).toBe("Ida");
+        expect(tagName("p5")).toBe("Thea");
+        // A cut may only shorten the first name, never the part that tells them apart.
+        expect(fieldToken("p3").querySelector("[data-name] > span:last-child")?.textContent).toBe("#7");
+        expect(fieldToken("p2").querySelector("[data-name] > span:last-child")?.textContent).toBe("Hau");
+        expect(fieldToken("p2").getAttribute("aria-label")).toMatch(/^Emma Hau/);
+        expect(benchTile("p6").textContent).toContain("Emma #12");
+        expect(benchTile("p7").textContent).toContain("Emma B");
+        expect(document.body.textContent).not.toMatch(/Emma H2|Emma Han2/);
+      });
+
+      it("uses the same names in the scorer sheet and the event history", async () => {
+        fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+          const url = String(input);
+          if (url.endsWith("/events") && init?.method === "POST") {
+            return Promise.resolve(new Response(JSON.stringify({ event: { id: "srv-goal-1" } }), { status: 201 }));
+          }
+          if (url.endsWith("/api/matches/match-1") && init?.method === "GET") {
+            return Promise.resolve(new Response(JSON.stringify({ match: { status: "live", reportEnabled: true } })));
+          }
+          return Promise.resolve(new Response(null, { status: 204 }));
+        });
+
+        renderManager();
+        // Reports are on for this match once the server says so.
+        await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init?.method === "GET")).toBe(true));
+        await act(() => Promise.resolve());
+        fireEvent.click(screen.getByRole("button", { name: sideline.strip.kickoff }));
+        fireEvent.click(screen.getByRole("button", { name: sideline.goals.us }));
+
+        const sheet = await screen.findByTestId("live-scorer");
+        expect(sheet.textContent).toContain("Emma Hau");
+        expect(sheet.textContent).toContain("Emma #7");
+        fireEvent.click(within(sheet).getByRole("button", { name: /Emma Hau/ }));
+
+        await waitFor(() => {
+          const goal = getStoredLiveMatch()?.events.find((event) => event.type === "goal");
+          expect(goal && goal.type === "goal" ? goal.scorerPlayerId : null).toBe("p2");
+        });
+        // The stored event keeps the full name; only the display changes.
+        const goal = getStoredLiveMatch()!.events.find((event) => event.type === "goal");
+        expect(goal?.type === "goal" ? goal.scorerName : null).toBe("Emma Haugen");
+
+        fireEvent.click(screen.getByRole("button", { name: sideline.menu.open }));
+        fireEvent.click(screen.getByRole("button", { name: sideline.menu.events }));
+        const events = await screen.findByTestId("live-events");
+        expect(events.textContent).toContain("Emma Hau");
+        expect(events.textContent).not.toContain("Emma Haugen");
+      });
     });
 
     // FP-MS2.1-B1: position swaps by tap and by drag share one domain path.

@@ -29,7 +29,11 @@ import {
   type LiveMatchState,
 } from "@/domain/liveMatch";
 import { getFormationSlots } from "@/domain/match";
-import { getSubstitutionSuggestion } from "@/domain/substitutionSuggestion";
+import {
+  DEFAULT_SUGGESTION_MIN_GAP_SECONDS,
+  getLiveKeeperPlayerIds,
+  getSubstitutionSuggestion,
+} from "@/domain/substitutionSuggestion";
 import { getPlayerFatigue, type FatigueLevel } from "@/domain/playerFatigue";
 import {
   createGoalEvent,
@@ -47,7 +51,7 @@ import {
   normalizeLiveMatchState,
   saveStoredLiveMatch,
 } from "@/lib/storage/liveMatchStorage";
-import { buildShortNameMap } from "@/lib/utils/playerName";
+import { buildDisplayNameMap } from "@/lib/utils/playerName";
 import { fetchOrNull, readJsonOrNull } from "@/lib/utils/fetchOrNull";
 import { resolveClosedOnDevice } from "@/lib/match/activeMatchRecovery";
 import {
@@ -464,7 +468,13 @@ export function MatchLiveManager() {
   const currentHalf = liveMatch ? getCurrentHalfNumber(liveMatch) : null;
   const inStoppage = liveMatch ? isInStoppageTime(liveMatch, matchClock.nowMs) : false;
 
-  const suggestion = liveMatch ? getSubstitutionSuggestion(liveMatch, matchClock.nowMs) : null;
+  // Product rules (MATCH-09): never the keeper, and only from a 4′ gap.
+  const suggestion = liveMatch
+    ? getSubstitutionSuggestion(liveMatch, matchClock.nowMs, {
+        excludePlayerIds: getLiveKeeperPlayerIds(liveMatch),
+        minGapSeconds: DEFAULT_SUGGESTION_MIN_GAP_SECONDS,
+      })
+    : null;
   const suggestedOutgoingPlayer = suggestion
     ? playersById.get(suggestion.outgoingPlayerId) ?? null
     : null;
@@ -827,10 +837,22 @@ export function MatchLiveManager() {
 
   // ─── Short names + fatigue ─────────────────────────────────────────────────
 
-  const shortNameMap = useMemo(
-    () => buildShortNameMap(teamPlayers),
-    [teamPlayers]
-  );
+  // The name ladder is built from the match squad (DESIGN.md §5.2), in team
+  // order like setup, so a clash with a player who is not here adds nothing.
+  const squadKey = liveMatch
+    ? [
+        ...new Set([
+          ...Object.keys(liveMatch.playerAccumulatedMs),
+          ...liveMatch.onFieldPlayerIds,
+          ...liveMatch.benchPlayerIds,
+        ]),
+      ].join("\n")
+    : null;
+  const shortNameMap = useMemo(() => {
+    if (squadKey === null) return buildDisplayNameMap(teamPlayers);
+    const squad = new Set(squadKey.split("\n"));
+    return buildDisplayNameMap(teamPlayers.filter((player) => squad.has(player.id)));
+  }, [teamPlayers, squadKey]);
 
   const getShortName = (playerId: string) =>
     shortNameMap.get(playerId) ?? playersById.get(playerId)?.name ?? playerId;
@@ -1574,7 +1596,7 @@ export function MatchLiveManager() {
                   }}
                 >
                   <span className="text-[11px] text-muted-foreground">
-                    ↻ {suggestedOutgoingPlayer?.name ?? suggestion.outgoingPlayerId}{" "}
+                    ↻ {getShortName(suggestion.outgoingPlayerId)}{" "}
                     · {formatPlaytime(suggestion.outgoingSeconds)}
                   </span>
                 </button>

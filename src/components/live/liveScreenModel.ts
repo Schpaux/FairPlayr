@@ -217,6 +217,11 @@ export function buildLiveScreenModel({
         }
       : null;
 
+  // Same display names as pitch and bench (FEAT-NAME-01); the stored name is
+  // the fallback for a player no longer in the team. Stored events are untouched.
+  const eventName = (playerId: string | null, storedName: string | null) =>
+    playerId && playersById.has(playerId) ? getShortName(playerId) : storedName;
+
   const events: LiveEventView[] = [];
   for (const event of liveMatch.events) {
     if (event.type === "goal") {
@@ -224,16 +229,16 @@ export function buildLiveScreenModel({
         id: event.id,
         kind: event.teamSide === "own" ? "goalUs" : "goalThem",
         minute: event.minute,
-        primary: event.scorerName,
-        secondary: event.assistName,
+        primary: eventName(event.scorerPlayerId, event.scorerName),
+        secondary: eventName(event.assistPlayerId, event.assistName),
       });
     } else if (event.type === "substitution") {
       events.push({
         id: event.id,
         kind: "substitution",
         minute: event.minute,
-        primary: event.inPlayerName,
-        secondary: event.outPlayerName,
+        primary: eventName(event.inPlayerId, event.inPlayerName),
+        secondary: eventName(event.outPlayerId, event.outPlayerName),
       });
     }
   }

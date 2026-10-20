@@ -70,9 +70,9 @@ function PlayerToken({
     t("minutes", { minutes: token.minutes }),
     token.fatigue === "fresh" ? "" : t(token.fatigue),
   ].join("");
-  // The display name's last word tells clashing players apart ("Emma H" /
-  // "Emma Hau"), so a cut shortens the first name and keeps it (DESIGN.md §5.2).
-  const split = token.name.lastIndexOf(" ");
+  // Everything after the first name tells clashing players apart ("Emma Hau",
+  // "Emma #7"), so a cut shortens the first name only (DESIGN.md §5.2).
+  const split = token.name.indexOf(" ");
   const nameHead = split > 0 ? token.name.slice(0, split) : token.name;
   const nameSuffix = split > 0 ? token.name.slice(split + 1) : "";
 

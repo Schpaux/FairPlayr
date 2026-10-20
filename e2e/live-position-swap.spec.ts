@@ -207,7 +207,7 @@ for (const theme of ["light", "dark"] as const) {
     expect(resting.cut, "selection strip").toEqual([]);
     // "Bytt plass" leads; the compact ✕ cancel sits after it, at the 44px touch size.
     const swapButton = (await strip(page).getByRole("button", { name: "Bytt plass", exact: true }).boundingBox())!;
-    const cancelIcon = (await strip(page).getByRole("button", { name: "Avbryt valget av Selma L", exact: true }).boundingBox())!;
+    const cancelIcon = (await strip(page).getByRole("button", { name: "Avbryt valget av Selma", exact: true }).boundingBox())!;
     expect(cancelIcon.x).toBeGreaterThan(swapButton.x);
     expect([Math.round(cancelIcon.width), Math.round(cancelIcon.height)]).toEqual([44, 44]);
     await snap(page, testInfo, `${theme}-1-selected`);
@@ -361,7 +361,7 @@ test("cancelling a tap swap, and the undo window expiring, keep the right lineup
   // Selection → the compact ✕ cancels, with the player named in its label.
   await token(page, "p3").click();
   await expect(strip(page)).toHaveAttribute("data-strip", "selection");
-  await strip(page).getByRole("button", { name: "Avbryt valget av Selma L", exact: true }).click();
+  await strip(page).getByRole("button", { name: "Avbryt valget av Selma", exact: true }).click();
   await expect(strip(page)).toHaveAttribute("data-strip", RESTING);
   await expect(page.locator('[data-player-id][aria-pressed="true"]')).toHaveCount(0);
 

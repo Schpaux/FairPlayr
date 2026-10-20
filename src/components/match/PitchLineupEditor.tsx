@@ -39,7 +39,7 @@ import {
   getRequiredStarters,
   swapFieldSlots,
 } from "@/domain/match";
-import { buildShortNameMap } from "@/lib/utils/playerName";
+import { buildDisplayNameMap } from "@/lib/utils/playerName";
 import { cn } from "@/lib/utils";
 import { discLabel, hasShirtNumber } from "@/components/live/liveScreenModel";
 import { isKeeperSlot, placeTokens, tokenDensity } from "@/components/live/placeTokens";
@@ -107,7 +107,8 @@ export function PitchLineupEditor({
     () => new Map(players.map((p) => [p.id, p])),
     [players]
   );
-  const shortNames = useMemo(() => buildShortNameMap(players), [players]);
+  // Same name ladder as Live, from the same squad (DESIGN.md §5.2).
+  const shortNames = useMemo(() => buildDisplayNameMap(players), [players]);
   const getShort = (id: string) =>
     shortNames.get(id) ?? playerMap.get(id)?.name ?? id;
 
@@ -351,8 +352,8 @@ export function PitchLineupEditor({
             const player = occupantId ? playerMap.get(occupantId) : undefined;
             const hasNumber = hasShirtNumber(player);
             const name = occupantId ? getShort(occupantId) : "";
-            // The last word tells clashing players apart, so a cut keeps it (DESIGN.md §5.2).
-            const split = name.lastIndexOf(" ");
+            // Everything after the first name tells clashing players apart, so a cut keeps it (DESIGN.md §5.2).
+            const split = name.indexOf(" ");
             const nameHead = split > 0 ? name.slice(0, split) : name;
             const nameSuffix = split > 0 ? name.slice(split + 1) : "";
             const label = occupantId

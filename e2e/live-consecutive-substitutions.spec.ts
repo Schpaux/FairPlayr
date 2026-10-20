@@ -317,7 +317,9 @@ test("15 substitutes on a scrolled rail: the order holds, a swipe never confirms
   // Window over: one re-sort, least-played first (the three who came off have 6′).
   await page.clock.fastForward(6000);
   await expect(strip(page)).toHaveAttribute("data-strip", RESTING);
-  await expect.poll(() => scrollLeft(page)).toBe(0);
+  // Back at the start. Bench treats ≤ 1px as the start (no fade, no "‹ N"):
+  // with fractional tile widths, scroll snapping can leave 1px (FP follow-up).
+  await expect.poll(() => scrollLeft(page)).toBeLessThanOrEqual(1);
   const resorted = await shownOrder(page);
   expect(resorted.slice(-3).sort()).toEqual(["p2", "p3", "p4"]);
   await cdp.detach();
