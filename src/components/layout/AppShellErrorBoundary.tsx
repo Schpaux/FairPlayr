@@ -1,6 +1,7 @@
 "use client";
 
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { unstable_rethrow } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 
 interface Props {
@@ -26,7 +27,11 @@ interface State {
 export class AppShellErrorBoundary extends Component<Props, State> {
   override state: State = { hasError: false };
 
-  static getDerivedStateFromError(): State {
+  static getDerivedStateFromError(error: unknown): State {
+    // notFound(), redirect() and friends are Next.js control flow, not crashes.
+    // Rethrow them to the framework boundaries above the shell (STAB-09), as
+    // Next's own error boundary does.
+    unstable_rethrow(error);
     return { hasError: true };
   }
 
