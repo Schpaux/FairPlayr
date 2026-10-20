@@ -3,14 +3,13 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { CalendarClock, MapPin, Trophy, ShieldAlert } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { AppCard } from "@/components/ui/AppCard";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FpButton } from "@/components/ui/FpButton";
+import { ButtonLink } from "@/components/ui/primitives";
 
 interface MatchItem {
   id: string;
@@ -121,9 +120,7 @@ export function MatchHistoryManager() {
           title={t("guestTitle")}
           description={t("guestDescription")}
           action={
-            <Link href="/auth/sign-in">
-              <FpButton variant="primary" size="md">{t("guestCta")}</FpButton>
-            </Link>
+            <ButtonLink href="/auth/sign-in" variant="primary" size="sm">{t("guestCta")}</ButtonLink>
           }
         />
       </PageShell>
@@ -139,9 +136,7 @@ export function MatchHistoryManager() {
           title={t("noTeamTitle")}
           description={t("noTeamDescription")}
           action={
-            <Link href="/team">
-              <FpButton variant="primary" size="md">{t("goToTeam")}</FpButton>
-            </Link>
+            <ButtonLink href="/team" variant="primary" size="sm">{t("goToTeam")}</ButtonLink>
           }
         />
       </PageShell>
@@ -188,9 +183,7 @@ export function MatchHistoryManager() {
             title={t("emptyTitle")}
             description={t("emptyDescription")}
             action={
-              <Link href="/match">
-                <FpButton variant="secondary" size="md">{t("goToMatches")}</FpButton>
-              </Link>
+              <ButtonLink href="/match" variant="secondary" size="sm">{t("goToMatches")}</ButtonLink>
             }
           />
         ) : (
@@ -255,11 +248,9 @@ export function MatchHistoryManager() {
                     </div>
 
                     {/* Primary action */}
-                    <Link href={`/match/${match.id}`} className="block">
-                      <FpButton variant="primary" size="md" fullWidth>
-                        {t("openMatch")}
-                      </FpButton>
-                    </Link>
+                    <ButtonLink href={`/match/${match.id}`} variant="primary" size="sm" block>
+                      {t("openMatch")}
+                    </ButtonLink>
                   </AppCard>
                 </li>
               );

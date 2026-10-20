@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, ChevronDown, ChevronUp, ShieldAlert, Users } from "lucide-react";
 import { hasPlayerNameConflict } from "@/domain/team";
@@ -9,6 +9,7 @@ import { PageShell } from "@/components/ui/PageShell";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AppCard } from "@/components/ui/AppCard";
 import { FpButton } from "@/components/ui/FpButton";
+import { Button, ConfirmSheet } from "@/components/ui/primitives";
 import { PlayerList } from "@/components/team/PlayerList";
 import { PlayerQuickAddForm } from "@/components/team/PlayerQuickAddForm";
 import { TeamNameForm } from "@/components/team/TeamNameForm";
@@ -27,6 +28,17 @@ export function TeamManager() {
   const [showTeamSettings, setShowTeamSettings] = useState(false);
   const [showSpondInfo, setShowSpondInfo] = useState(false);
   const [teamError, setTeamError] = useState<string | null>(null);
+  // UI-A11Y-02: deleting a team or a player always goes through a
+  // confirmation that says what is lost. Kept after closing, so the copy does
+  // not change while the sheet slides out.
+  const [deleteTarget, setDeleteTarget] = useState<
+    { kind: "team"; id: string; name: string; playerCount: number } | { kind: "player"; id: string; name: string } | null
+  >(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  // After a confirmed deletion the trigger is gone (its row, or the team), so
+  // focus moves on instead: the add-player field, or the page's first control.
+  const deleteFinalFocus = useRef<HTMLElement | null>(null);
 
   const spondConnected = useSpondStatus(workspace.activeTeam?.id ?? null, workspace.mode);
 
@@ -80,7 +92,6 @@ export function TeamManager() {
   };
 
   const handleDeleteTeam = async (teamId: string) => {
-    if (!window.confirm(t("actions.confirmDeleteTeam"))) return;
     try {
       await workspace.deleteTeam(teamId);
       setTeamError(null);
@@ -123,12 +134,36 @@ export function TeamManager() {
     if (player && (player.isManaged || player.source === "spond")) {
       return;
     }
-    if (!window.confirm(t("actions.confirmDeletePlayer"))) return;
     try {
       await workspace.deletePlayer(team.id, playerId);
       setTeamError(null);
     } catch (error) {
       setTeamError(resolveTeamErrorMessage(error));
+    }
+  };
+
+  const requestDeletePlayer = (playerId: string) => {
+    const player = team?.players.find((candidate) => candidate.id === playerId);
+    if (!player || player.isManaged || player.source === "spond") return;
+    deleteFinalFocus.current = null;
+    setDeleteTarget({ kind: "player", id: player.id, name: player.name });
+    setDeleteOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget || isDeleting) return;
+    setIsDeleting(true);
+    try {
+      if (deleteTarget.kind === "team") {
+        await handleDeleteTeam(deleteTarget.id);
+        deleteFinalFocus.current = document.querySelector("main");
+      } else {
+        await handleDeletePlayer(deleteTarget.id);
+        deleteFinalFocus.current = document.getElementById("player-name-input");
+      }
+    } finally {
+      setIsDeleting(false);
+      setDeleteOpen(false);
     }
   };
 
@@ -153,7 +188,12 @@ export function TeamManager() {
         <AppCard className="p-3 text-xs text-danger">{workspace.error}</AppCard>
       ) : null}
 
-      {teamError ? <AppCard className="p-3 text-xs text-danger">{teamError}</AppCard> : null}
+      {/* role="alert": a failed deletion is reported after its sheet has closed. */}
+      {teamError ? (
+        <AppCard className="p-3 text-xs text-danger">
+          <p role="alert">{teamError}</p>
+        </AppCard>
+      ) : null}
 
       {/* ── Empty state ───────────────────────────────────────── */}
       {!workspace.isLoading && workspace.teams.length === 0 ? (
@@ -308,17 +348,19 @@ export function TeamManager() {
                     <MatchDefaultsEditor teamId={team.id} />
                   </div>
 
-                  {/* Delete team – danger zone */}
+                  {/* Delete team – danger zone. Destructive only inside its
+                      confirmation (DESIGN.md §5.7). */}
                   <div className="p-4">
-                    <FpButton
-                      type="button"
-                      variant="danger"
-                      size="md"
-                      className="tap-target"
-                      onClick={() => void handleDeleteTeam(team.id)}
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        deleteFinalFocus.current = null;
+                        setDeleteTarget({ kind: "team", id: team.id, name: team.name, playerCount: team.players.length });
+                        setDeleteOpen(true);
+                      }}
                     >
                       {t("actions.deleteTeam")}
-                    </FpButton>
+                    </Button>
                   </div>
                 </AppCard>
               </motion.div>
@@ -404,7 +446,7 @@ export function TeamManager() {
                     copy={playerCopy}
                     allowReorder={allowReorder}
                     onRenamePlayer={handleRenamePlayer}
-                    onDeletePlayer={handleDeletePlayer}
+                    onDeletePlayer={requestDeletePlayer}
                     onMovePlayer={handleMovePlayer}
                   />
                 )}
@@ -413,6 +455,29 @@ export function TeamManager() {
           ) : null}
         </motion.div>
       ) : null}
+
+      <ConfirmSheet
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={
+          deleteTarget?.kind === "player"
+            ? t("deletePlayerConfirm.title", { name: deleteTarget.name })
+            : t("deleteTeamConfirm.title", { name: deleteTarget?.name ?? "" })
+        }
+        description={
+          deleteTarget?.kind === "player"
+            ? t("deletePlayerConfirm.description", { name: deleteTarget.name })
+            : t(workspace.mode === "cloud" ? "deleteTeamConfirm.descriptionCloud" : "deleteTeamConfirm.descriptionLocal", {
+                count: deleteTarget?.kind === "team" ? deleteTarget.playerCount : 0,
+              })
+        }
+        confirmLabel={deleteTarget?.kind === "player" ? t("deletePlayerConfirm.confirm") : t("deleteTeamConfirm.confirm")}
+        destructive
+        pending={isDeleting}
+        onConfirm={() => void confirmDelete()}
+        finalFocus={deleteFinalFocus}
+        testId="delete-confirm"
+      />
     </PageShell>
   );
 }

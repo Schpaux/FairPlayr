@@ -8,6 +8,7 @@ import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { AppCard } from "@/components/ui/AppCard";
 import { FpButton } from "@/components/ui/FpButton";
+import { ButtonLink } from "@/components/ui/primitives";
 import { teamTextInputClassName } from "@/components/team/styles";
 import { useAuth } from "@/components/providers/AuthProvider";
 
@@ -136,11 +137,9 @@ export default function SignUpPage() {
       {status === "authenticated" ? (
         <AppCard className="space-y-3 p-4">
           <p className="text-sm font-semibold text-foreground">{t("signUp.alreadySignedIn")}</p>
-          <Link href="/team">
-            <FpButton variant="secondary" size="md" className="tap-target">
-              {t("signUp.goToTeam")}
-            </FpButton>
-          </Link>
+          <ButtonLink href="/team" variant="secondary" size="sm">
+            {t("signUp.goToTeam")}
+          </ButtonLink>
         </AppCard>
       ) : (
         <AppCard className="space-y-4 p-4">
@@ -235,7 +234,7 @@ export default function SignUpPage() {
           </form>
 
           <p className="text-xs text-muted-foreground">{t("signUp.magicAlternative")}</p>
-          <Link href={{ pathname: "/auth/sign-in", query: { next: nextPath } }} className="text-xs text-primary">
+          <Link href={{ pathname: "/auth/sign-in", query: { next: nextPath } }} className="inline-flex min-h-11 items-center text-xs text-primary">
             {t("actions.useMagicLinkInstead")}
           </Link>
 
@@ -244,12 +243,12 @@ export default function SignUpPage() {
 
           <div className="space-y-2 text-xs text-muted-foreground">
             <p>{t("signUp.haveAccount")}</p>
-            <Link href={{ pathname: "/auth/sign-in", query: { next: nextPath } }} className="text-primary">
+            <Link href={{ pathname: "/auth/sign-in", query: { next: nextPath } }} className="inline-flex min-h-11 items-center text-primary">
               {t("actions.goToSignIn")}
             </Link>
           </div>
 
-          <Link href={nextPath} className="text-xs text-muted-foreground underline underline-offset-2">
+          <Link href={nextPath} className="inline-flex min-h-11 items-center text-xs text-muted-foreground underline underline-offset-2">
             {t("actions.continueAsGuest")}
           </Link>
         </AppCard>

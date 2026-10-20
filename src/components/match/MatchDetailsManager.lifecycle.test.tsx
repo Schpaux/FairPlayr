@@ -1,5 +1,5 @@
 // FP-P0-F2: details-page Start/Finish against this device's own match.
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -103,12 +103,20 @@ function snapshot() {
   };
 }
 
-const confirmSpy = () => vi.mocked(window.confirm);
+// UI-A11Y-02: Finish is confirmed in a sheet (no window.confirm).
+async function finishSheet() {
+  return within(await screen.findByRole("dialog", { name: en.matchPlanner.finishConfirm.title }));
+}
+
+async function finishAndConfirm() {
+  fireEvent.click(await screen.findByRole("button", { name: en.matchPlanner.finishMatchCta }));
+  const sheet = await finishSheet();
+  fireEvent.click(sheet.getByRole("button", { name: en.matchPlanner.finishConfirm.confirm }));
+}
 
 beforeEach(() => {
   window.localStorage.clear();
   offline = false;
-  vi.spyOn(window, "confirm").mockReturnValue(true);
 });
 
 afterEach(() => {
@@ -130,9 +138,13 @@ describe("details Finish", () => {
     expect(screen.queryByText(en.matchPlanner.continueMatchCta)).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: en.matchPlanner.finishMatchCta }));
+    const sheet = await finishSheet();
+    // The consequence: only the server record, nothing on this device.
+    sheet.getByText(en.matchPlanner.finishConfirm.descriptionServerOnly);
+    expect(patches()).toEqual([]);
+    fireEvent.click(sheet.getByRole("button", { name: en.matchPlanner.finishConfirm.confirm }));
 
     await waitFor(() => expect(patches()).toEqual([{ url: "/api/matches/match-B", body: { status: "completed" } }]));
-    expect(confirmSpy()).toHaveBeenCalledWith(en.matchPlanner.confirmFinishServerOnly);
     expect(snapshot()).toEqual(before);
     expect(getStoredLiveMatch()?.clock.isRunning).toBe(true);
     await screen.findByText(en.matchPlanner.completedNotice);
@@ -143,11 +155,32 @@ describe("details Finish", () => {
     const before = snapshot();
     stubServer(serverMatch("match-A", "live"));
     renderDetails("match-A");
-    confirmSpy().mockReturnValue(false);
 
     fireEvent.click(await screen.findByRole("button", { name: en.matchPlanner.finishMatchCta }));
+    const sheet = await finishSheet();
+    sheet.getByText(en.matchPlanner.finishConfirm.description);
+    fireEvent.click(sheet.getByRole("button", { name: en.ui.confirm.cancel }));
 
-    expect(confirmSpy()).toHaveBeenCalledWith(en.matchPlanner.confirmFinish);
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(patches()).toEqual([]);
+    expect(snapshot()).toEqual(before);
+    expect(getStoredLiveMatch()?.clock.isRunning).toBe(true);
+  });
+
+  it("does nothing when the device's match changed while the confirmation was open", async () => {
+    runOnDevice("match-A");
+    stubServer(serverMatch("match-A", "live"));
+    renderDetails("match-A");
+
+    fireEvent.click(await screen.findByRole("button", { name: en.matchPlanner.finishMatchCta }));
+    const sheet = await finishSheet();
+    // Another tab starts a different match on this device meanwhile.
+    runOnDevice("match-C");
+    const before = snapshot();
+    fireEvent.click(sheet.getByRole("button", { name: en.matchPlanner.finishConfirm.confirm }));
+
+    await screen.findByText(en.matchPlanner.otherMatchOnDevice);
+    await screen.findByText(en.matchPlanner.finishConfirm.changed);
     expect(patches()).toEqual([]);
     expect(snapshot()).toEqual(before);
   });
@@ -158,7 +191,7 @@ describe("details Finish", () => {
     renderDetails("match-A");
     offline = true;
 
-    fireEvent.click(await screen.findByRole("button", { name: en.matchPlanner.finishMatchCta }));
+    await finishAndConfirm();
 
     await screen.findByText(en.matchPlanner.completedOfflineNotice);
     expect(getStoredMatchSetup()?.status).toBe("ended");
@@ -182,7 +215,7 @@ describe("details Finish", () => {
     stubServer(serverMatch("match-A", "live"));
     renderDetails("match-A");
 
-    fireEvent.click(await screen.findByRole("button", { name: en.matchPlanner.finishMatchCta }));
+    await finishAndConfirm();
 
     await waitFor(() => expect(patches()).toHaveLength(1));
     const sent = patches()[0].body.runtimeState as Parameters<typeof getPlayerAccumulatedSeconds>[0];
@@ -204,7 +237,7 @@ describe("details for a match ended here but not yet synced", () => {
     // Ended offline on this device: the server row is still live.
     offline = true;
     const view = renderDetails("match-A");
-    fireEvent.click(await screen.findByRole("button", { name: en.matchPlanner.finishMatchCta }));
+    await finishAndConfirm();
     await screen.findByText(en.matchPlanner.completedOfflineNotice);
     view.unmount();
     expect(getStoredMatchSetup()).toMatchObject({ status: "ended", config: { id: setup.id } });
@@ -216,11 +249,11 @@ describe("details for a match ended here but not yet synced", () => {
     expect(screen.queryByRole("button", { name: en.matchPlanner.startMatchCta })).toBeNull();
     expect(screen.queryByText(en.matchPlanner.continueMatchCta)).toBeNull();
 
-    confirmSpy().mockClear();
     fireEvent.click(screen.getByRole("button", { name: en.matchPlanner.syncFinishCta }));
 
+    // Already confirmed when it was ended: sending the result asks nothing.
     await screen.findByText(en.matchPlanner.completedNotice);
-    expect(confirmSpy()).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).toBeNull();
     expect(patches()).toHaveLength(1);
     expect(patches()[0].body).toMatchObject({ status: "completed", runtimeState: { status: "ended" } });
     expect(getPendingMatchCompletion("match-A")).toBeNull();

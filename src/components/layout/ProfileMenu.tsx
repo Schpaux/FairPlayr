@@ -1,8 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
-import { createPortal } from "react-dom";
-import { X } from "lucide-react";
+import { useId, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
@@ -13,6 +11,7 @@ import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
 import { UserAvatar } from "@/components/layout/UserAvatar";
 import { SyncStatusRow } from "@/components/layout/SyncStatusRow";
 import { useSpondStatus } from "@/components/team/useSpondStatus";
+import { Button, ButtonLink, Sheet } from "@/components/ui/primitives";
 
 function readProfileMetadata(user: ReturnType<typeof useAuth>["user"]) {
   const metadata = user?.user_metadata as Record<string, unknown> | undefined;
@@ -41,20 +40,13 @@ export function ProfileMenu() {
   const { theme, setTheme } = useTheme();
 
   const [open, setOpen] = useState(false);
+  const languageLabelId = useId();
+  const themeLabelId = useId();
 
   const profile = useMemo(() => readProfileMetadata(user), [user]);
   const isGuest = status !== "authenticated";
 
   const spondConnected = useSpondStatus(workspace.activeTeamId, workspace.mode);
-
-  useEffect(() => {
-    if (!open) return;
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [open]);
 
   return (
     <>
@@ -73,168 +65,145 @@ export function ProfileMenu() {
         />
       </button>
 
-      {open ? createPortal(
-        <div className="fixed inset-0 z-[70]">
-          <button
-            type="button"
-            className="absolute inset-0 bg-background/65"
-            aria-label={t("close")}
-            onClick={() => setOpen(false)}
+      {/* A Sheet (UI-A11Y-03): labelled dialog, focus trapped and returned to
+          the avatar button, page behind inert, Escape and the scrim close it. */}
+      <Sheet
+        open={open}
+        onOpenChange={setOpen}
+        title={t("title")}
+        testId="profile-menu"
+        actions={
+          isGuest ? (
+            <ButtonLink href="/auth/sign-in" variant="primary" block onClick={() => setOpen(false)}>
+              {authT("signIn")}
+            </ButtonLink>
+          ) : (
+            <Button
+              block
+              onClick={() => {
+                void signOut().finally(() => setOpen(false));
+              }}
+            >
+              {authT("signOut")}
+            </Button>
+          )
+        }
+      >
+        <div className="flex items-center gap-3 rounded-xl border border-fp-border bg-fp-surface-2 p-3">
+          <UserAvatar
+            name={profile.name}
+            email={user?.email ?? null}
+            photoUrl={profile.photoUrl}
+            isGuest={isGuest}
           />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-foreground">
+              {profile.name ?? (isGuest ? t("guestName") : user?.email ?? "-")}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {isGuest ? t("guestEmail") : user?.email ?? "-"}
+            </p>
+          </div>
+        </div>
 
-          <div className="absolute inset-x-0 bottom-0 top-[max(env(safe-area-inset-top),0.5rem)] flex items-end px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)]">
-            <div className="mx-auto flex h-full w-full max-w-screen-sm flex-col overflow-hidden rounded-2xl border border-fp-border bg-background shadow-xl">
-              <div className="flex-1 overflow-y-auto px-4 pb-4 pt-3">
-                <div className="relative mb-4 flex items-center justify-center">
-                  <div className="h-1.5 w-12 rounded-full bg-fp-border" />
+        <div className="mt-3 space-y-2">
+          <SyncStatusRow mode={workspace.mode} hasError={Boolean(workspace.error)} />
+
+          {workspace.mode === "cloud" ? (
+            <div className="flex items-center justify-between rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2">
+              <span className="text-xs font-medium text-foreground">Spond</span>
+              <span
+                className={
+                  spondConnected
+                    ? "inline-flex items-center gap-1 text-xs font-medium text-fp-accent"
+                    : "inline-flex items-center gap-1 text-xs font-medium text-muted-foreground"
+                }
+              >
+                <span
+                  className={
+                    spondConnected
+                      ? "h-1.5 w-1.5 rounded-full bg-fp-accent"
+                      : "h-1.5 w-1.5 rounded-full bg-muted-foreground/40"
+                  }
+                />
+                {spondConnected ? t("spondConnected") : t("spondNotConnected")}
+              </span>
+            </div>
+          ) : null}
+
+          <Link
+            href="/settings"
+            className="tap-target flex items-center justify-between rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-sm font-medium text-foreground"
+            onClick={() => setOpen(false)}
+          >
+            <span>{settingsT("title")}</span>
+            <span className="text-xs text-muted-foreground">›</span>
+          </Link>
+        </div>
+
+        <div className="mt-4 space-y-3">
+          <div>
+            <p id={languageLabelId} className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {settingsT("language")}
+            </p>
+            <div role="group" aria-labelledby={languageLabelId} className="grid grid-cols-2 gap-2">
+              {routing.locales.map((l) => {
+                const meta = localeConfig[l as keyof typeof localeConfig];
+                const active = l === locale;
+                return (
                   <button
+                    key={l}
                     type="button"
-                    className="absolute right-0 flex h-7 w-7 items-center justify-center rounded-full border border-fp-border bg-fp-surface-2 text-muted-foreground"
-                    aria-label={t("close")}
-                    onClick={() => setOpen(false)}
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-3 rounded-xl border border-fp-border bg-fp-surface-2 p-3">
-                  <UserAvatar
-                    name={profile.name}
-                    email={user?.email ?? null}
-                    photoUrl={profile.photoUrl}
-                    isGuest={isGuest}
-                  />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-foreground">
-                      {profile.name ?? (isGuest ? t("guestName") : user?.email ?? "-")}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {isGuest ? t("guestEmail") : user?.email ?? "-"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-3 space-y-2">
-                  <SyncStatusRow mode={workspace.mode} hasError={Boolean(workspace.error)} />
-
-                  {workspace.mode === "cloud" ? (
-                    <div className="flex items-center justify-between rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2">
-                      <span className="text-xs font-medium text-foreground">Spond</span>
-                      <span
-                        className={
-                          spondConnected
-                            ? "inline-flex items-center gap-1 text-xs font-medium text-fp-accent"
-                            : "inline-flex items-center gap-1 text-xs font-medium text-muted-foreground"
-                        }
-                      >
-                        <span
-                          className={
-                            spondConnected
-                              ? "h-1.5 w-1.5 rounded-full bg-fp-accent"
-                              : "h-1.5 w-1.5 rounded-full bg-muted-foreground/40"
-                          }
-                        />
-                        {spondConnected ? "Tilkoblet Spond" : "Ikke koblet til"}
-                      </span>
-                    </div>
-                  ) : null}
-
-                  <Link
-                    href="/settings"
-                    className="tap-target flex items-center justify-between rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-sm font-medium text-foreground"
-                    onClick={() => setOpen(false)}
-                  >
-                    <span>{settingsT("title")}</span>
-                    <span className="text-xs text-muted-foreground">›</span>
-                  </Link>
-                </div>
-
-                <div className="mt-4 space-y-3">
-                  <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      {settingsT("language")}
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {routing.locales.map((l) => {
-                        const meta = localeConfig[l as keyof typeof localeConfig];
-                        const active = l === locale;
-                        return (
-                          <button
-                            key={l}
-                            type="button"
-                            className={
-                              active
-                                ? "tap-target rounded-xl border border-fp-cta/35 bg-fp-cta/10 px-3 py-2 text-sm font-medium text-fp-cta"
-                                : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-sm font-medium text-muted-foreground"
-                            }
-                            onClick={() => {
-                              router.replace(pathname, { locale: l });
-                              setOpen(false);
-                            }}
-                          >
-                            {meta?.full ?? l}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      {settingsT("theme")}
-                    </p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { value: "light", label: settingsT("lightMode") },
-                        { value: "dark", label: settingsT("darkMode") },
-                        { value: "system", label: settingsT("systemMode") },
-                      ].map((option) => {
-                        const active = theme === option.value;
-                        return (
-                          <button
-                            key={option.value}
-                            type="button"
-                            className={
-                              active
-                                ? "tap-target rounded-xl border border-fp-cta/35 bg-fp-cta/10 px-2 py-2 text-xs font-semibold text-fp-cta"
-                                : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-2 py-2 text-xs font-semibold text-muted-foreground"
-                            }
-                            onClick={() => setTheme(option.value)}
-                          >
-                            {option.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-fp-border px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-3">
-                {isGuest ? (
-                  <Link
-                    href="/auth/sign-in"
-                    onClick={() => setOpen(false)}
-                    className="tap-target inline-flex min-h-12 w-full items-center justify-center rounded-full border border-fp-cta/40 bg-fp-cta/15 px-4 text-sm font-semibold text-fp-cta"
-                  >
-                    {authT("signIn")}
-                  </Link>
-                ) : (
-                  <button
-                    type="button"
-                    className="tap-target inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-fp-border bg-fp-surface-2 px-4 text-sm font-semibold text-foreground"
+                    aria-pressed={active}
+                    lang={l}
+                    className={
+                      active
+                        ? "tap-target rounded-xl border border-fp-cta/35 bg-fp-cta/10 px-3 py-2 text-sm font-medium text-fp-cta"
+                        : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-sm font-medium text-muted-foreground"
+                    }
                     onClick={() => {
-                      void signOut().finally(() => setOpen(false));
+                      router.replace(pathname, { locale: l });
+                      setOpen(false);
                     }}
                   >
-                    {authT("signOut")}
+                    {meta?.full ?? l}
                   </button>
-                )}
-              </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <p id={themeLabelId} className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {settingsT("theme")}
+            </p>
+            <div role="group" aria-labelledby={themeLabelId} className="grid grid-cols-3 gap-2">
+              {[
+                { value: "light", label: settingsT("lightMode") },
+                { value: "dark", label: settingsT("darkMode") },
+                { value: "system", label: settingsT("systemMode") },
+              ].map((option) => {
+                const active = theme === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={active}
+                    className={
+                      active
+                        ? "tap-target rounded-xl border border-fp-cta/35 bg-fp-cta/10 px-2 py-2 text-xs font-semibold text-fp-cta"
+                        : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-2 py-2 text-xs font-semibold text-muted-foreground"
+                    }
+                    onClick={() => setTheme(option.value)}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
-      , document.body) : null}
+      </Sheet>
     </>
   );
 }

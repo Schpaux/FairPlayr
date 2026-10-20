@@ -14,7 +14,9 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { AppCard } from "@/components/ui/AppCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FpButton } from "@/components/ui/FpButton";
+import { Button, ButtonLink } from "@/components/ui/primitives";
 import { teamTextInputClassName } from "@/components/team/styles";
+import { ActiveMatchCloseConfirm, useActiveMatchCloseConfirm } from "@/components/match/ActiveMatchCloseConfirm";
 
 interface MatchItem {
   id: string;
@@ -98,6 +100,17 @@ export function MatchPlannerManager() {
   const [hasSpondLink, setHasSpondLink] = useState(false);
   const [manualStartMode, setManualStartMode] = useState<"now" | "scheduled">("now");
   const [isResolvingActiveAction, setIsResolvingActiveAction] = useState(false);
+  const closeConfirm = useActiveMatchCloseConfirm(async (action) => {
+    setIsResolvingActiveAction(true);
+    try {
+      await (action === "end" ? forceCloseActiveMatch() : discardActiveMatch());
+      await loadMatches();
+    } catch {
+      setError(t("errors.generic"));
+    } finally {
+      setIsResolvingActiveAction(false);
+    }
+  });
 
   // Custom title only set when user has deliberately typed one
   const [customTitle, setCustomTitle] = useState("");
@@ -422,9 +435,7 @@ export function MatchPlannerManager() {
           title={t("noTeamTitle")}
           description={t("noTeamDescription")}
           action={
-            <Link href="/team">
-              <FpButton variant="primary" size="md">{t("goToTeam")}</FpButton>
-            </Link>
+            <ButtonLink href="/team" variant="primary" size="sm">{t("goToTeam")}</ButtonLink>
           }
         />
       </PageShell>
@@ -439,13 +450,9 @@ export function MatchPlannerManager() {
           <h3 className="text-sm font-semibold text-foreground">{t("guest.title")}</h3>
           <p className="text-xs text-muted-foreground">{t("guest.description")}</p>
           <div className="flex flex-wrap gap-2">
-            <Link href="/match/setup">
-              <FpButton variant="primary" size="md">{t("guest.startCta")}</FpButton>
-            </Link>
+            <ButtonLink href="/match/setup" variant="primary" size="sm">{t("guest.startCta")}</ButtonLink>
             {hasActiveLocalMatch ? (
-              <Link href="/match/live">
-                <FpButton variant="secondary" size="md">{t("guest.resumeCta")}</FpButton>
-              </Link>
+              <ButtonLink href="/match/live" variant="secondary" size="sm">{t("guest.resumeCta")}</ButtonLink>
             ) : null}
           </div>
         </AppCard>
@@ -471,9 +478,7 @@ export function MatchPlannerManager() {
           title={t("noTeamTitle")}
           description={t("noTeamDescription")}
           action={
-            <Link href="/team">
-              <FpButton variant="primary" size="md">{t("goToTeam")}</FpButton>
-            </Link>
+            <ButtonLink href="/team" variant="primary" size="sm">{t("goToTeam")}</ButtonLink>
           }
         />
       </PageShell>
@@ -706,9 +711,7 @@ export function MatchPlannerManager() {
               <p className="text-sm font-semibold text-foreground">{t("mode.spondNotLinkedTitle")}</p>
             </div>
             <p className="text-xs text-muted-foreground">{t("mode.spondNotLinkedHint")}</p>
-            <Link href="/settings">
-              <FpButton variant="secondary" size="sm">{t("mode.spondGoToSettings")}</FpButton>
-            </Link>
+            <ButtonLink href="/settings" variant="secondary" size="sm">{t("mode.spondGoToSettings")}</ButtonLink>
           </div>
         )}
       </AppCard>
@@ -723,40 +726,31 @@ export function MatchPlannerManager() {
             </span>
             <p className="text-base font-bold text-foreground leading-tight">{activeMatch.title || t("deviceMatchTitle")}</p>
             <div className="grid grid-cols-2 gap-2">
-              <Link href={activeMatchHref}>
-                <FpButton variant="primary" size="sm" fullWidth>{t("activeActions.continue")}</FpButton>
-              </Link>
-              <FpButton
-                variant="secondary"
+              <ButtonLink href={activeMatchHref} variant="primary" size="sm" block>
+                {t("activeActions.continue")}
+              </ButtonLink>
+              <Button
                 size="sm"
-                fullWidth
+                block
                 disabled={isResolvingActiveAction}
-                onClick={() => {
-                  setIsResolvingActiveAction(true);
-                  void forceCloseActiveMatch()
-                    .then(() => loadMatches())
-                    .finally(() => setIsResolvingActiveAction(false));
-                }}
+                onClick={() => closeConfirm.request("end", activeMatch.title || t("deviceMatchTitle"))}
               >
                 {t("activeActions.end")}
-              </FpButton>
+              </Button>
             </div>
-            <FpButton
-              variant="danger"
+            {/* Destructive only inside its confirmation (DESIGN.md §5.7). */}
+            <Button
+              variant="ghost"
               size="sm"
-              fullWidth
+              block
               disabled={isResolvingActiveAction}
-              onClick={() => {
-                setIsResolvingActiveAction(true);
-                void discardActiveMatch()
-                  .then(() => loadMatches())
-                  .finally(() => setIsResolvingActiveAction(false));
-              }}
+              onClick={() => closeConfirm.request("discard", activeMatch.title || t("deviceMatchTitle"))}
             >
               {t("activeActions.discard")}
-            </FpButton>
+            </Button>
           </div>
         ) : null}
+        <ActiveMatchCloseConfirm state={closeConfirm} />
 
         {ongoingMatches.length === 0 ? (
           <p className="text-xs text-muted-foreground">{t("ongoingEmpty")}</p>
@@ -775,13 +769,9 @@ export function MatchPlannerManager() {
                   {/* The live screen always shows this device's match, so only
                       that one continues there; any other opens its own page. */}
                   {activeMatch?.serverMatchId === match.id ? (
-                    <Link href={activeMatchHref}>
-                      <FpButton variant="primary" size="sm">{t("activeActions.continue")}</FpButton>
-                    </Link>
+                    <ButtonLink href={activeMatchHref} variant="primary" size="sm">{t("activeActions.continue")}</ButtonLink>
                   ) : (
-                    <Link href={`/match/${encodeURIComponent(match.id)}`}>
-                      <FpButton variant="secondary" size="sm">{t("ongoingResolve")}</FpButton>
-                    </Link>
+                    <ButtonLink href={`/match/${encodeURIComponent(match.id)}`} variant="secondary" size="sm">{t("ongoingResolve")}</ButtonLink>
                   )}
                 </div>
               </li>
@@ -833,12 +823,10 @@ export function MatchPlannerManager() {
                     }>
                       {formatStatus(match.status)}
                     </span>
-                    <Link href={`/match/${match.id}`}>
-                      <FpButton variant="ghost" size="sm">
-                        {t("openMatch")}
-                        <ExternalLink size={12} />
-                      </FpButton>
-                    </Link>
+                    <ButtonLink href={`/match/${match.id}`} variant="ghost" size="sm">
+                      {t("openMatch")}
+                      <ExternalLink size={12} />
+                    </ButtonLink>
                   </div>
                 </div>
               </li>
@@ -848,11 +836,9 @@ export function MatchPlannerManager() {
       </AppCard>
 
       <AppCard className="p-3">
-        <Link href="/historikk">
-          <FpButton variant="secondary" size="md" fullWidth>
-            {t("goToHistory")}
-          </FpButton>
-        </Link>
+        <ButtonLink href="/historikk" variant="secondary" size="sm" block>
+          {t("goToHistory")}
+        </ButtonLink>
       </AppCard>
     </PageShell>
   );

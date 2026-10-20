@@ -19,11 +19,12 @@ export function ActiveMatchBanner() {
     return (
       <Link
         href={activeMatchHref}
-        className="sticky top-14 z-40 mx-auto mt-2 flex min-h-12 w-[calc(100%-2rem)] max-w-screen-lg items-center justify-between gap-2 rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-2.5 transition-opacity active:opacity-75"
+        className="sticky top-[calc(3.5rem+1px+env(safe-area-inset-top))] z-40 mx-auto mt-2 flex min-h-12 w-[calc(100%-2rem)] max-w-screen-lg items-center justify-between gap-2 rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-2.5 transition-opacity active:opacity-75"
       >
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 truncate text-[11px] font-bold uppercase tracking-widest text-red-600 dark:text-red-400">
-            <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-red-500" aria-hidden />
+            {/* A steady dot: no ambient motion (DESIGN.md §4, UI-A11Y-03). */}
+            <span className="inline-flex h-2 w-2 rounded-full bg-red-500" aria-hidden />
             {t("label")}
           </p>
           <p className="truncate text-sm font-semibold text-foreground">{activeMatch.title || t("deviceMatch")}</p>
@@ -42,7 +43,7 @@ export function ActiveMatchBanner() {
     return (
       <Link
         href={recoveryMatchHref}
-        className="sticky top-14 z-40 mx-auto mt-2 flex min-h-12 w-[calc(100%-2rem)] max-w-screen-lg items-center justify-between gap-2 rounded-2xl border border-fp-border bg-fp-surface px-4 py-2.5 transition-opacity active:opacity-75"
+        className="sticky top-[calc(3.5rem+1px+env(safe-area-inset-top))] z-40 mx-auto mt-2 flex min-h-12 w-[calc(100%-2rem)] max-w-screen-lg items-center justify-between gap-2 rounded-2xl border border-fp-border bg-fp-surface px-4 py-2.5 transition-opacity active:opacity-75"
       >
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 truncate text-[11px] font-bold uppercase tracking-widest text-fp-warn-text">

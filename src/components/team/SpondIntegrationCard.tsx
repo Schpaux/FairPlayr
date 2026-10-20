@@ -5,6 +5,7 @@ import { Link2, RefreshCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { AppCard } from "@/components/ui/AppCard";
 import { FpButton } from "@/components/ui/FpButton";
+import { Button, ConfirmSheet } from "@/components/ui/primitives";
 import { teamTextInputClassName } from "@/components/team/styles";
 import type { TeamStorageMode } from "@/lib/teamData/types";
 
@@ -84,6 +85,10 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
   const [importPreviewCandidates, setImportPreviewCandidates] = useState<SpondImportPreviewCandidate[]>([]);
   const [selectedCandidateExternalIds, setSelectedCandidateExternalIds] = useState<string[]>([]);
   const [pendingResetAction, setPendingResetAction] = useState<SpondResetAction | null>(null);
+  // UI-A11Y-02: both clean-ups delete data, so each is confirmed first. The
+  // action is kept after closing so the copy does not change on the way out.
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [resetConfirmAction, setResetConfirmAction] = useState<SpondResetAction>("delete-imported-data");
 
   const selectedGroup = useMemo(
     () => groups.find((group) => group.id === selectedGroupId) ?? null,
@@ -500,16 +505,14 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
     }
   };
 
+  const requestResetAction = (action: SpondResetAction) => {
+    if (pendingResetAction) return;
+    setResetConfirmAction(action);
+    setResetConfirmOpen(true);
+  };
+
   const handleResetAction = async (action: SpondResetAction) => {
-    const confirmMessage =
-      action === "delete-imported-data"
-        ? `${t("cleanup.deleteImportedConfirmTitle")}\n\n${t("cleanup.deleteImportedConfirmText")}`
-        : `${t("cleanup.disconnectConfirmTitle")}\n\n${t("cleanup.disconnectConfirmText")}`;
-
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
-
+    if (pendingResetAction) return;
     setError(null);
     setNotice(null);
     setPendingResetAction(action);
@@ -841,15 +844,14 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
               <p className="text-xs font-semibold text-foreground">{t("cleanup.deleteImportedTitle")}</p>
               <p className="text-[11px] text-muted-foreground">{t("cleanup.deleteImportedHelp")}</p>
             </div>
-            <FpButton
-              type="button"
-              variant="danger"
+            <Button
               size="sm"
-              onClick={() => { void handleResetAction("delete-imported-data"); }}
-              disabled={pendingResetAction !== null}
+              onClick={() => requestResetAction("delete-imported-data")}
+              // aria-disabled, not disabled: focus returns here after the sheet.
+              aria-disabled={pendingResetAction !== null || undefined}
             >
               {pendingResetAction === "delete-imported-data" ? t("cleanup.running") : t("cleanup.deleteImportedCta")}
-            </FpButton>
+            </Button>
           </div>
 
           <div className="h-px bg-fp-border" />
@@ -859,15 +861,13 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
               <p className="text-xs font-semibold text-foreground">{t("cleanup.disconnectTitle")}</p>
               <p className="text-[11px] text-muted-foreground">{t("cleanup.disconnectHelp")}</p>
             </div>
-            <FpButton
-              type="button"
-              variant="danger"
+            <Button
               size="sm"
-              onClick={() => { void handleResetAction("disconnect-and-delete"); }}
-              disabled={pendingResetAction !== null}
+              onClick={() => requestResetAction("disconnect-and-delete")}
+              aria-disabled={pendingResetAction !== null || undefined}
             >
               {pendingResetAction === "disconnect-and-delete" ? t("cleanup.running") : t("cleanup.disconnectCta")}
-            </FpButton>
+            </Button>
           </div>
         </div>
       )}
@@ -875,10 +875,38 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
       {/* ── Feedback messages ────────────────────────────────────── */}
       {(notice || error) && (
         <div className="space-y-1 p-4">
-          {notice ? <p className="text-xs text-fp-spond-foreground">{notice}</p> : null}
-          {error ? <p className="text-xs text-danger">{error}</p> : null}
+          {notice ? <p role="status" className="text-xs text-fp-spond-foreground">{notice}</p> : null}
+          {error ? <p role="alert" className="text-xs text-danger">{error}</p> : null}
         </div>
       )}
+
+      <ConfirmSheet
+        open={resetConfirmOpen}
+        onOpenChange={setResetConfirmOpen}
+        title={
+          resetConfirmAction === "delete-imported-data"
+            ? t("cleanup.deleteImportedConfirmTitle")
+            : t("cleanup.disconnectConfirmTitle")
+        }
+        description={
+          resetConfirmAction === "delete-imported-data"
+            ? t("cleanup.deleteImportedConfirmText")
+            : t("cleanup.disconnectConfirmText")
+        }
+        confirmLabel={
+          resetConfirmAction === "delete-imported-data"
+            ? t("cleanup.deleteImportedConfirmCta")
+            : t("cleanup.disconnectConfirmCta")
+        }
+        destructive
+        onConfirm={() => {
+          // Ignore a second press while the sheet slides out.
+          if (!resetConfirmOpen) return;
+          setResetConfirmOpen(false);
+          void handleResetAction(resetConfirmAction);
+        }}
+        testId="spond-reset-confirm"
+      />
     </AppCard>
   );
 }

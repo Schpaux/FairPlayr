@@ -247,7 +247,9 @@
         "disconnectConfirmText": "This removes the Spond link for this team and deletes all imported Spond data. You can reconnect later.",
         "deleteImportedSuccess": "Imported Spond data was deleted.",
         "disconnectSuccess": "Spond was disconnected and data was deleted.",
-        "running": "Working..."
+        "running": "Working...",
+        "deleteImportedConfirmCta": "Yes, delete Spond data",
+        "disconnectConfirmCta": "Yes, disconnect and delete"
       },
       "errors": {
         "unauthorized": "You must be signed in.",
@@ -283,13 +285,22 @@
       "deleteTeam": "Delete Team",
       "addPlayer": "Add Player",
       "moveUp": "Move player up",
-      "moveDown": "Move player down",
-      "confirmDeletePlayer": "Delete this player?",
-      "confirmDeleteTeam": "Delete this team? This cannot be undone."
+      "moveDown": "Move player down"
     },
     "errors": {
       "generic": "Something went wrong. Please try again.",
       "playerManagedCannotDelete": "This player is imported from Spond and cannot be deleted manually."
+    },
+    "deleteTeamConfirm": {
+      "title": "Delete {name}?",
+      "descriptionCloud": "The team, {count, plural, =0 {which has no players,} one {its # player} other {all # players}} and all of the team's matches are deleted, including the match history and the Spond link. This can't be undone.",
+      "descriptionLocal": "The team and {count, plural, =0 {no players} one {its # player} other {all # players}} are deleted from this device. This can't be undone.",
+      "confirm": "Yes, delete the team"
+    },
+    "deletePlayerConfirm": {
+      "title": "Delete {name}?",
+      "description": "{name} is removed from the team's player list. This can't be undone.",
+      "confirm": "Yes, delete the player"
     }
   },
   "auth": {
@@ -900,14 +911,19 @@
       "activeMatchExists": "Another match is already live for this team.",
       "generic": "Something went wrong while planning matches."
     },
-    "confirmFinish": "Finish the match now? The clock stops and the match is saved as finished.",
-    "confirmFinishServerOnly": "Finish this match? It is not running on this device, and nothing on this device changes.",
     "completedOfflineNotice": "Match finished on this device. It will be saved to the cloud when you are back online.",
     "otherMatchOnDevice": "Another match is running on this device. Finishing this one does not affect it.",
     "ongoingResolve": "Open",
     "deviceMatchTitle": "Match on this device",
     "closedOnDevice": "This match was finished on this device but is not saved to the cloud yet.",
-    "syncFinishCta": "Save the finish now"
+    "syncFinishCta": "Save the finish now",
+    "finishConfirm": {
+      "title": "End the match now?",
+      "description": "The clock stops and the match is saved as finished with the score and playing time recorded so far. It can't be continued afterwards.",
+      "descriptionServerOnly": "This match isn't running on this device. It is marked as finished, and nothing on this device changes.",
+      "confirm": "Yes, end the match",
+      "changed": "The match changed on this device while you were confirming. Nothing was ended; check its status and try again."
+    }
   },
   "matchHistory": {
     "title": "History",
@@ -1027,7 +1043,6 @@
   },
   "profileMenu": {
     "open": "Open profile menu",
-    "close": "Close profile menu",
     "guestName": "Guest",
     "guestEmail": "Not signed in",
     "sync": {
@@ -1035,7 +1050,10 @@
       "cloud": "Synced with cloud",
       "local": "Working locally",
       "attention": "Needs attention"
-    }
+    },
+    "title": "Profile",
+    "spondConnected": "Connected to Spond",
+    "spondNotConnected": "Not connected"
   },
   "activeMatchBanner": {
     "label": "Match in progress",
@@ -1111,5 +1129,18 @@
     "segmented": "Choice",
     "segmentedLabel": "Match format",
     "reducedMotion": "Animation is off when the system asks for reduced motion."
+  },
+  "matchClose": {
+    "end": {
+      "title": "End {title}?",
+      "description": "The clock stops and the match is saved as finished with the score and playing time recorded so far. It can't be continued afterwards.",
+      "confirm": "Yes, end the match"
+    },
+    "discard": {
+      "title": "Discard {title}?",
+      "description": "The match is closed, and the goals, substitutions and playing time recorded are deleted. This can't be undone.",
+      "confirm": "Yes, discard the match"
+    },
+    "cancel": "Keep the match"
   }
 }

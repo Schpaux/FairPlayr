@@ -1,6 +1,6 @@
 // FP-P0 match lifecycle — reproduction tests. These encode the required
 // invariant and FAIL on the current implementation; they are not a fix.
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -94,8 +94,6 @@ describe("P0: details-page lifecycle buttons vs this device's live match", () =>
     const setup = createMatchSetup("team-1");
     activateMatch(setup, "match-A");
     saveStoredLiveMatch(startLiveMatch(createLiveMatchFromSetup(setup), Date.now() - DAY_MS));
-    // Ending a match is always a confirmed action (FP-P0-F2 added the prompt).
-    vi.spyOn(window, "confirm").mockReturnValue(true);
   });
 
   afterEach(() => {
@@ -110,6 +108,9 @@ describe("P0: details-page lifecycle buttons vs this device's live match", () =>
     renderDetails("match-A");
 
     fireEvent.click(await screen.findByRole("button", { name: en.matchPlanner.finishMatchCta }));
+    // Ending a match is always a confirmed action (FP-P0-F2; a sheet since UI-A11Y-02).
+    const sheet = within(await screen.findByRole("dialog", { name: en.matchPlanner.finishConfirm.title }));
+    fireEvent.click(sheet.getByRole("button", { name: en.matchPlanner.finishConfirm.confirm }));
     await waitFor(() => expect(statusPatches()).toEqual([{ url: "/api/matches/match-A", status: "completed" }]));
 
     // Today the server row is completed but the device keeps the match active

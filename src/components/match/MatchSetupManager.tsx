@@ -37,7 +37,8 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AppCard } from "@/components/ui/AppCard";
 import { FpButton } from "@/components/ui/FpButton";
-import { Link } from "@/i18n/navigation";
+import { Button, ButtonLink } from "@/components/ui/primitives";
+import { ActiveMatchCloseConfirm, useActiveMatchCloseConfirm } from "@/components/match/ActiveMatchCloseConfirm";
 import { FormatSelector } from "@/components/match/FormatSelector";
 import { DurationPicker } from "@/components/match/DurationPicker";
 import { FormationSelector } from "@/components/match/FormationSelector";
@@ -232,6 +233,17 @@ export function MatchSetupManager() {
   const [startError, setStartError] = useState<string | null>(null);
   const [showStartGuard, setShowStartGuard] = useState(false);
   const [isResolvingGuardAction, setIsResolvingGuardAction] = useState(false);
+  const closeConfirm = useActiveMatchCloseConfirm(async (action) => {
+    setIsResolvingGuardAction(true);
+    try {
+      await (action === "end" ? forceCloseActiveMatch() : discardActiveMatch());
+      setShowStartGuard(false);
+    } catch {
+      setStartError(t("errors.startFailed"));
+    } finally {
+      setIsResolvingGuardAction(false);
+    }
+  });
 
   const handleStartMatch = async () => {
     if (!setup || !canStartMatch(setup)) return;
@@ -323,9 +335,7 @@ export function MatchSetupManager() {
           title={t("activeMatch.title")}
           description={t("activeMatch.description")}
           action={
-            <Link href={activeLiveHref}>
-              <FpButton variant="primary" size="md">{t("activeMatch.continue")}</FpButton>
-            </Link>
+            <ButtonLink href={activeLiveHref} variant="primary" size="sm">{t("activeMatch.continue")}</ButtonLink>
           }
         />
       </PageShell>
@@ -341,9 +351,7 @@ export function MatchSetupManager() {
           title={t("noTeam.title")}
           description={t("noTeam.description")}
           action={
-            <Link href="/team">
-              <FpButton variant="primary" size="md">{t("noTeam.action")}</FpButton>
-            </Link>
+            <ButtonLink href="/team" variant="primary" size="sm">{t("noTeam.action")}</ButtonLink>
           }
         />
       </PageShell>
@@ -359,9 +367,7 @@ export function MatchSetupManager() {
           title={t("noPlayers.title")}
           description={t("noPlayers.description")}
           action={
-            <Link href="/team">
-              <FpButton variant="primary" size="md">{t("noPlayers.action")}</FpButton>
-            </Link>
+            <ButtonLink href="/team" variant="primary" size="sm">{t("noPlayers.action")}</ButtonLink>
           }
         />
       </PageShell>
@@ -508,19 +514,25 @@ export function MatchSetupManager() {
                 aria-checked={setup.reportEnabled}
                 aria-label={t("reportToggle.label")}
                 onClick={() => handleReportToggle(!setup.reportEnabled)}
-                className={cn(
-                  "relative flex-shrink-0 h-7 w-12 rounded-full border transition-colors",
-                  setup.reportEnabled
-                    ? "border-fp-cta/40 bg-fp-cta"
-                    : "border-fp-border bg-fp-surface-2"
-                )}
+                // 44px hit area around the 28px track (DESIGN.md §4).
+                className="flex h-11 w-14 flex-shrink-0 items-center justify-center rounded-full"
               >
                 <span
+                  aria-hidden
                   className={cn(
-                    "absolute top-[3px] left-[3px] h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200",
-                    setup.reportEnabled ? "translate-x-5" : "translate-x-0"
+                    "relative h-7 w-12 rounded-full border transition-colors",
+                    setup.reportEnabled
+                      ? "border-fp-cta/40 bg-fp-cta"
+                      : "border-fp-border bg-fp-surface-2"
                   )}
-                />
+                >
+                  <span
+                    className={cn(
+                      "absolute top-[3px] left-[3px] h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200",
+                      setup.reportEnabled ? "translate-x-5" : "translate-x-0"
+                    )}
+                  />
+                </span>
               </button>
             </div>
           </div>
@@ -543,44 +555,31 @@ export function MatchSetupManager() {
                 })}
               </p>
               <div className="grid gap-2">
-                <Link href={conflictHref}>
-                  <FpButton variant="primary" size="md" fullWidth>
-                    {t("startGuard.continue")}
-                  </FpButton>
-                </Link>
-                <FpButton
-                  variant="secondary"
-                  size="md"
-                  fullWidth
+                <ButtonLink href={conflictHref} variant="primary" size="sm" block>
+                  {t("startGuard.continue")}
+                </ButtonLink>
+                <Button
+                  size="sm"
+                  block
                   disabled={isResolvingGuardAction}
-                  onClick={() => {
-                    setIsResolvingGuardAction(true);
-                    void forceCloseActiveMatch()
-                      .then(() => setShowStartGuard(false))
-                      .catch(() => setStartError(t("errors.startFailed")))
-                      .finally(() => setIsResolvingGuardAction(false));
-                  }}
+                  onClick={() => closeConfirm.request("end", conflictMatch?.title || t("startGuard.unknownMatch"))}
                 >
                   {t("startGuard.end")}
-                </FpButton>
-                <FpButton
-                  variant="danger"
-                  size="md"
-                  fullWidth
+                </Button>
+                {/* Destructive only inside its confirmation (DESIGN.md §5.7). */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  block
                   disabled={isResolvingGuardAction}
-                  onClick={() => {
-                    setIsResolvingGuardAction(true);
-                    void discardActiveMatch()
-                      .then(() => setShowStartGuard(false))
-                      .catch(() => setStartError(t("errors.startFailed")))
-                      .finally(() => setIsResolvingGuardAction(false));
-                  }}
+                  onClick={() => closeConfirm.request("discard", conflictMatch?.title || t("startGuard.unknownMatch"))}
                 >
                   {t("startGuard.discard")}
-                </FpButton>
+                </Button>
               </div>
             </div>
           ) : null}
+          <ActiveMatchCloseConfirm state={closeConfirm} />
 
           {/* Validation hint */}
           <div className="mb-3 flex items-center justify-center gap-2 min-h-[20px]">

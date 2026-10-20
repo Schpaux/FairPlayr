@@ -16,6 +16,8 @@ const eslintConfig = defineConfig([
     "playwright-report/**",
     "test-results/**",
     "design-exploration/**",
+    // Agent worktrees (AGENTS.md §7): other checkouts, linted there.
+    ".claude/worktrees/**",
   ]),
 ]);
 

@@ -428,3 +428,35 @@
   .pl-safe { padding-left: env(safe-area-inset-left); }
   .pr-safe { padding-right: env(safe-area-inset-right); }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   App-wide accessibility rules (B2). Unlayered on purpose: a Tailwind utility
+   (layered) on an element must not be able to undercut them.
+───────────────────────────────────────────────────────────────────────────── */
+
+/* UI-VIEWPORT-01: iOS Safari zooms into a focused field whose text is under
+   16px. Text fields and selects are 16px, the prerequisite for removing the
+   zoom lock (UI-A11Y-01). Checkboxes, radios and buttons are not text. */
+input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="button"], [type="submit"], [type="reset"], [type="image"]),
+select,
+textarea {
+  font-size: 16px;
+}
+
+/* UI-A11Y-03, DESIGN.md §4: with reduced motion transitions are off (0s,
+   not 1ms: with the default transition-property "all" a 1ms duration would
+   make every property change on every element transition), animations take
+   1ms so their end events still fire, nothing loops and scrolling jumps. Countdowns that
+   carry information (the live undo and scorer bars) restore their duration
+   in LiveScreen.module.css with a more specific selector; framer-motion is
+   covered by <MotionConfig reducedMotion="user"> in ThemeProvider. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0s !important;
+    scroll-behavior: auto !important;
+  }
+}

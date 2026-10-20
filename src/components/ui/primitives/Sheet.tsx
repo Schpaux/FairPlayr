@@ -137,6 +137,11 @@ export interface ConfirmSheetProps {
   pending?: boolean;
   /** The caller performs the action and closes the sheet. */
   onConfirm: () => void;
+  /**
+   * Where focus goes on close when the trigger will be gone or disabled
+   * afterwards (a deleted row, a closed match). Defaults to the trigger.
+   */
+  finalFocus?: RefObject<HTMLElement | null>;
   testId?: string;
 }
 
@@ -155,6 +160,7 @@ export function ConfirmSheet({
   destructive = false,
   pending = false,
   onConfirm,
+  finalFocus,
   testId,
 }: ConfirmSheetProps) {
   const t = useTranslations("ui.confirm");
@@ -166,6 +172,7 @@ export function ConfirmSheet({
       title={title}
       description={description}
       closeButton={false}
+      finalFocus={finalFocus}
       testId={testId}
       actions={
         <>

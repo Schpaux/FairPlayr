@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ArrowLeftRight, Loader2, ShieldAlert, Sparkles, Users } from "lucide-react";
-import { Link, useRouter } from "@/i18n/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useActiveMatch } from "@/components/providers/ActiveMatchProvider";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
@@ -12,6 +12,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { AppCard } from "@/components/ui/AppCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FpButton } from "@/components/ui/FpButton";
+import { Button, ButtonLink, ConfirmSheet } from "@/components/ui/primitives";
 import type { Player } from "@/domain/team";
 import {
   createGoalEvent,
@@ -151,6 +152,13 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
   const [isRegeneratingReport, setIsRegeneratingReport] = useState(false);
   const [autoReportTriggeredFor, setAutoReportTriggeredFor] = useState<string | null>(null);
   const [deviceRelation, setDeviceRelation] = useState<DeviceRelation>("none");
+  const [finishConfirm, setFinishConfirm] = useState<{ open: boolean; relation: Exclude<DeviceRelation, "closed"> }>({
+    open: false,
+    relation: "this",
+  });
+  // The Finish button is disabled and then gone once the match is completed,
+  // so after confirming, focus goes to the page's first control instead.
+  const finishFinalFocus = useRef<HTMLElement | null>(null);
 
   const playerOptions = useMemo(() => {
     if (!match) {
@@ -405,7 +413,32 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
       return;
     }
 
-    if (!window.confirm(relation === "this" ? t("confirmFinish") : t("confirmFinishServerOnly"))) {
+    finishFinalFocus.current = null;
+    setFinishConfirm({ open: true, relation });
+  };
+
+  // UI-A11Y-02: runs only for the relation the confirmation described. If it
+  // changed while the sheet was open (another tab), nothing happens and the
+  // page shows the new state instead.
+  const confirmFinish = async () => {
+    // A second press while the sheet slides out is ignored.
+    if (!finishConfirm.open) {
+      return;
+    }
+
+    const shown = finishConfirm.relation;
+    finishFinalFocus.current = document.querySelector("main");
+    setFinishConfirm((current) => ({ ...current, open: false }));
+
+    if (!match) {
+      return;
+    }
+
+    const relation = readDeviceRelation(match.id);
+    setDeviceRelation(relation);
+
+    if (relation !== shown) {
+      setNotice(t("finishConfirm.changed"));
       return;
     }
 
@@ -686,9 +719,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
           title={t("loginRequiredTitle")}
           description={t("loginRequiredDescription")}
           action={
-            <Link href="/auth/sign-in">
-              <FpButton variant="primary" size="md">{t("loginCta")}</FpButton>
-            </Link>
+            <ButtonLink href="/auth/sign-in" variant="primary" size="sm">{t("loginCta")}</ButtonLink>
           }
         />
       </PageShell>
@@ -724,14 +755,20 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
         subtitle={match.title}
         accent
         action={
-          <Link href="/match">
-            <FpButton variant="ghost" size="sm">{t("backToList")}</FpButton>
-          </Link>
+          <ButtonLink href="/match" variant="ghost" size="sm">{t("backToList")}</ButtonLink>
         }
       />
 
-      {notice ? <AppCard className="p-3 text-xs text-fp-accent">{notice}</AppCard> : null}
-      {error ? <AppCard className="p-3 text-xs text-danger">{error}</AppCard> : null}
+      {notice ? (
+        <AppCard className="p-3 text-xs text-fp-accent">
+          <p role="status">{notice}</p>
+        </AppCard>
+      ) : null}
+      {error ? (
+        <AppCard className="p-3 text-xs text-danger">
+          <p role="alert">{error}</p>
+        </AppCard>
+      ) : null}
 
       {/* Hero score card */}
       <AppCard className="p-5">
@@ -786,21 +823,22 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
                   {/* Only a link that opens this very match: the live screen
                       always shows the match running on this device. */}
                   {deviceRelation === "this" || (deviceRelation === "none" && match.runtimeState) ? (
-                    <Link
+                    <ButtonLink
                       href={deviceRelation === "this" ? liveHrefFor(match.id) : `/match/live?matchId=${encodeURIComponent(match.id)}`}
+                      variant="primary"
+                      size="sm"
                       className="flex-1"
                     >
-                      <FpButton variant="primary" size="md" fullWidth>{t("continueMatchCta")}</FpButton>
-                    </Link>
+                      {t("continueMatchCta")}
+                    </ButtonLink>
                   ) : deviceRelation === "none" ? (
                     <FpButton type="button" variant="primary" size="md" className="flex-1" onClick={handleStart}>
                       {t("startMatchCta")}
                     </FpButton>
                   ) : null}
-                  <FpButton
-                    type="button"
-                    variant="danger"
-                    size="md"
+                  {/* Destructive only inside its confirmation (DESIGN.md §5.7). */}
+                  <Button
+                    size="sm"
                     className={deviceRelation === "other" || deviceRelation === "closed" ? "flex-1" : undefined}
                     disabled={isUpdatingStatus}
                     onClick={() => { void handleFinish(); }}
@@ -810,13 +848,27 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
                       : deviceRelation === "closed"
                         ? t("syncFinishCta")
                         : t("finishMatchCta")}
-                  </FpButton>
+                  </Button>
                 </>
               )}
             </div>
           </div>
         )}
       </AppCard>
+
+      <ConfirmSheet
+        open={finishConfirm.open}
+        onOpenChange={(open) => setFinishConfirm((current) => ({ ...current, open }))}
+        title={t("finishConfirm.title")}
+        description={
+          finishConfirm.relation === "this" ? t("finishConfirm.description") : t("finishConfirm.descriptionServerOnly")
+        }
+        confirmLabel={t("finishConfirm.confirm")}
+        destructive
+        onConfirm={() => { void confirmFinish(); }}
+        finalFocus={finishFinalFocus}
+        testId="finish-match-confirm"
+      />
 
       {/* Timeline */}
       <AppCard className="space-y-3 p-4">

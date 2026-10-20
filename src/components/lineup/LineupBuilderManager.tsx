@@ -2,14 +2,14 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, PlayCircle, ShieldAlert, Users, X } from "lucide-react";
+import { CheckCircle2, PlayCircle, ShieldAlert, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AppCard } from "@/components/ui/AppCard";
 import { FpButton } from "@/components/ui/FpButton";
+import { ButtonLink, Sheet } from "@/components/ui/primitives";
 import { LineupField } from "@/components/lineup/LineupField";
 import { FormatSelector } from "@/components/match/FormatSelector";
 import { FormationSelector } from "@/components/match/FormationSelector";
@@ -68,6 +68,9 @@ export function LineupBuilderManager() {
 
   const [config, setConfig] = useState<MatchConfig | null>(null);
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
+  // The picker's slot, kept after it closes so its title does not change
+  // while the sheet slides out.
+  const [pickerSlotId, setPickerSlotId] = useState<string | null>(null);
   // True once the coach changes something here. Only then is the draft saved,
   // so opening the lineup never writes anything.
   const [hasEdits, setHasEdits] = useState(false);
@@ -158,12 +161,12 @@ export function LineupBuilderManager() {
   );
 
   const selectedSlotLabel = useMemo(() => {
-    if (!activeSlotId) {
+    if (!pickerSlotId) {
       return null;
     }
 
-    return slots.find((slot) => slot.id === activeSlotId)?.label ?? null;
-  }, [slots, activeSlotId]);
+    return slots.find((slot) => slot.id === pickerSlotId)?.label ?? null;
+  }, [slots, pickerSlotId]);
 
   const handleAssignFromPool = (playerId: string) => {
     if (!config || !activeSlotId) {
@@ -207,11 +210,9 @@ export function LineupBuilderManager() {
           title={t("activeMatch.title")}
           description={t("activeMatch.description")}
           action={
-            <Link href={activeLiveHref}>
-              <FpButton variant="primary" size="md">
-                {t("activeMatch.continue")}
-              </FpButton>
-            </Link>
+            <ButtonLink href={activeLiveHref} variant="primary" size="sm">
+              {t("activeMatch.continue")}
+            </ButtonLink>
           }
         />
       </PageShell>
@@ -227,11 +228,9 @@ export function LineupBuilderManager() {
           title={t("noTeam.title")}
           description={t("noTeam.description")}
           action={
-            <Link href="/team">
-              <FpButton variant="primary" size="md">
-                {t("noTeam.action")}
-              </FpButton>
-            </Link>
+            <ButtonLink href="/team" variant="primary" size="sm">
+              {t("noTeam.action")}
+            </ButtonLink>
           }
         />
       </PageShell>
@@ -251,11 +250,9 @@ export function LineupBuilderManager() {
           title={t("noPlayers.title")}
           description={t("noPlayers.description")}
           action={
-            <Link href="/team">
-              <FpButton variant="primary" size="md">
-                {t("noPlayers.action")}
-              </FpButton>
-            </Link>
+            <ButtonLink href="/team" variant="primary" size="sm">
+              {t("noPlayers.action")}
+            </ButtonLink>
           }
         />
       </PageShell>
@@ -325,9 +322,10 @@ export function LineupBuilderManager() {
               playersById={playersById}
               activeSlotId={activeSlotId}
               slotEmptyLabel={t("field.slot")}
-              onSelectSlot={(slotId) =>
-                setActiveSlotId((previous) => (previous === slotId ? null : slotId))
-              }
+              onSelectSlot={(slotId) => {
+                setPickerSlotId(slotId);
+                setActiveSlotId((previous) => (previous === slotId ? null : slotId));
+              }}
             />
 
             {activeSlotId && (
@@ -437,60 +435,38 @@ export function LineupBuilderManager() {
         </motion.div>
       </motion.div>
 
-      {activeSlotId && (
-        <div className="fixed inset-0 z-40 bg-black/45" onClick={() => setActiveSlotId(null)}>
-          <div
-            className="absolute inset-x-0 bottom-0 top-0 flex items-end px-2 pb-2"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="mx-auto flex max-h-[min(90svh,44rem)] w-full max-w-screen-sm flex-col overflow-hidden rounded-2xl border border-fp-border bg-background shadow-xl">
-              <div className="border-b border-fp-border px-4 pb-3 pt-3">
-                <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-fp-border" />
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                      {t("picker.title")}
-                    </p>
-                    <p className="text-sm font-semibold text-foreground">
-                      {t("picker.slot", { slot: selectedSlotLabel ?? "" })}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="tap-target rounded-lg border border-fp-border bg-fp-surface-2 p-2 text-muted-foreground"
-                    onClick={() => setActiveSlotId(null)}
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3">
-                {benchPlayers.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-fp-border bg-fp-surface-2 p-3 text-sm text-muted-foreground">
-                    {t("remaining.empty")}
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {benchPlayers.map((player) => (
-                      <button
-                        key={player.id}
-                        type="button"
-                        onClick={() => handleAssignFromPool(player.id)}
-                        className={cn(
-                          "tap-target w-full rounded-xl border border-fp-border bg-fp-surface-2 p-3 text-left transition-all hover:border-primary/25"
-                        )}
-                      >
-                        <p className="text-sm font-semibold text-foreground">{player.name}</p>
-                      </button>
-                    ))}
-                  </div>
+      {/* UI-A11Y-03: a Sheet, so the picker is a labelled dialog with focus
+          trapped and returned, the field behind inert, and Escape to close. */}
+      <Sheet
+        open={activeSlotId !== null}
+        onOpenChange={(open) => {
+          if (!open) setActiveSlotId(null);
+        }}
+        title={t("picker.title")}
+        description={selectedSlotLabel ? t("picker.slot", { slot: selectedSlotLabel }) : undefined}
+        testId="lineup-picker"
+      >
+        {benchPlayers.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-fp-border bg-fp-surface-2 p-3 text-sm text-muted-foreground">
+            {t("remaining.empty")}
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {benchPlayers.map((player) => (
+              <button
+                key={player.id}
+                type="button"
+                onClick={() => handleAssignFromPool(player.id)}
+                className={cn(
+                  "tap-target w-full rounded-xl border border-fp-border bg-fp-surface-2 p-3 text-left transition-all hover:border-primary/25"
                 )}
-              </div>
-            </div>
+              >
+                <p className="text-sm font-semibold text-foreground">{player.name}</p>
+              </button>
+            ))}
           </div>
-        </div>
-      )}
+        )}
+      </Sheet>
     </PageShell>
   );
 }

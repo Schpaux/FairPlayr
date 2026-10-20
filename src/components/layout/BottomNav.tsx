@@ -23,7 +23,7 @@ export function BottomNav() {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-fp-border bg-background/92 backdrop-blur-xl pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-fp-border bg-background/92 backdrop-blur-xl pb-safe pl-safe pr-safe">
       <div className="mx-auto flex max-w-screen-lg items-stretch justify-around px-1 h-[60px]">
         {navItems.map(({ href, icon: Icon, labelKey }) => {
           const active = isActive(href);

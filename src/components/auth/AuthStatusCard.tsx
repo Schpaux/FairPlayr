@@ -2,9 +2,9 @@
 
 import { useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
 import { AppCard } from "@/components/ui/AppCard";
 import { FpButton } from "@/components/ui/FpButton";
+import { ButtonLink } from "@/components/ui/primitives";
 import { useAuth } from "@/components/providers/AuthProvider";
 
 export function AuthStatusCard() {
@@ -23,11 +23,9 @@ export function AuthStatusCard() {
       <AppCard className="space-y-3 p-4">
         <p className="text-sm font-semibold text-foreground">{t("status.guestTitle")}</p>
         <p className="text-xs text-muted-foreground">{t("status.guestDescription")}</p>
-        <Link href="/auth/sign-in">
-          <FpButton variant="primary" size="md" className="tap-target">
-            {t("actions.signIn")}
-          </FpButton>
-        </Link>
+        <ButtonLink href="/auth/sign-in" variant="primary" size="sm">
+          {t("actions.signIn")}
+        </ButtonLink>
       </AppCard>
     );
   }

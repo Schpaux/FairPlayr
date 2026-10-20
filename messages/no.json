@@ -247,7 +247,9 @@
         "disconnectConfirmText": "Dette fjerner Spond-koblingen for dette laget og sletter alle importerte Spond-data. Du kan koble til igjen senere.",
         "deleteImportedSuccess": "Importerte Spond-data ble slettet.",
         "disconnectSuccess": "Spond ble koblet fra og data ble slettet.",
-        "running": "Utfører..."
+        "running": "Utfører...",
+        "deleteImportedConfirmCta": "Ja, slett Spond-data",
+        "disconnectConfirmCta": "Ja, koble fra og slett"
       },
       "errors": {
         "unauthorized": "Du må være logget inn.",
@@ -283,13 +285,22 @@
       "deleteTeam": "Slett lag",
       "addPlayer": "Legg til spiller",
       "moveUp": "Flytt spiller opp",
-      "moveDown": "Flytt spiller ned",
-      "confirmDeletePlayer": "Slette denne spilleren?",
-      "confirmDeleteTeam": "Slette dette laget? Dette kan ikke angres."
+      "moveDown": "Flytt spiller ned"
     },
     "errors": {
       "generic": "Noe gikk galt. Prøv igjen.",
       "playerManagedCannotDelete": "Denne spilleren er importert fra Spond og kan ikke slettes manuelt."
+    },
+    "deleteTeamConfirm": {
+      "title": "Slette {name}?",
+      "descriptionCloud": "Laget{count, plural, =0 {} one {, # spiller} other {, alle # spillerne}} og alle kampene til laget slettes, også kamphistorikken og Spond-koblingen. Dette kan ikke angres.",
+      "descriptionLocal": "Laget og {count, plural, =0 {ingen spillere} one {# spiller} other {alle # spillerne}} slettes fra denne enheten. Dette kan ikke angres.",
+      "confirm": "Ja, slett laget"
+    },
+    "deletePlayerConfirm": {
+      "title": "Slette {name}?",
+      "description": "{name} fjernes fra spillerlisten til laget. Dette kan ikke angres.",
+      "confirm": "Ja, slett spilleren"
     }
   },
   "auth": {
@@ -900,14 +911,19 @@
       "activeMatchExists": "En annen kamp pågår allerede for dette laget.",
       "generic": "Noe gikk galt under kampplanlegging."
     },
-    "confirmFinish": "Avslutte kampen nå? Klokken stoppes og kampen lagres som ferdig.",
-    "confirmFinishServerOnly": "Avslutte denne kampen? Den kjører ikke på denne enheten, og ingenting på enheten endres.",
     "completedOfflineNotice": "Kampen er avsluttet på enheten. Den lagres i skyen når du er på nett igjen.",
     "otherMatchOnDevice": "En annen kamp pågår på denne enheten. Å avslutte denne påvirker ikke den.",
     "ongoingResolve": "Åpne",
     "deviceMatchTitle": "Kamp på denne enheten",
     "closedOnDevice": "Kampen er avsluttet på denne enheten, men er ikke lagret i skyen ennå.",
-    "syncFinishCta": "Lagre avslutningen nå"
+    "syncFinishCta": "Lagre avslutningen nå",
+    "finishConfirm": {
+      "title": "Avslutte kampen nå?",
+      "description": "Klokken stoppes, og kampen lagres som ferdig med stillingen og spilletiden som er registrert. Den kan ikke fortsettes etterpå.",
+      "descriptionServerOnly": "Kampen kjører ikke på denne enheten. Den markeres som ferdig, og ingenting på enheten endres.",
+      "confirm": "Ja, avslutt kampen",
+      "changed": "Kampen ble endret på denne enheten mens du bekreftet. Ingenting er avsluttet; sjekk statusen og prøv igjen."
+    }
   },
   "matchHistory": {
     "title": "Historikk",
@@ -1027,7 +1043,6 @@
   },
   "profileMenu": {
     "open": "Åpne profilmeny",
-    "close": "Lukk profilmeny",
     "guestName": "Gjest",
     "guestEmail": "Ikke logget inn",
     "sync": {
@@ -1035,7 +1050,10 @@
       "cloud": "Synkronisert med skyen",
       "local": "Jobber lokalt",
       "attention": "Krever oppmerksomhet"
-    }
+    },
+    "title": "Profil",
+    "spondConnected": "Tilkoblet Spond",
+    "spondNotConnected": "Ikke koblet til"
   },
   "activeMatchBanner": {
     "label": "Kamp pågår",
@@ -1111,5 +1129,18 @@
     "segmented": "Valg",
     "segmentedLabel": "Kampformat",
     "reducedMotion": "Animasjon er av når systemet ber om redusert bevegelse."
+  },
+  "matchClose": {
+    "end": {
+      "title": "Avslutte {title}?",
+      "description": "Klokken stoppes, og kampen lagres som ferdig med stillingen og spilletiden som er registrert. Den kan ikke fortsettes etterpå.",
+      "confirm": "Ja, avslutt kampen"
+    },
+    "discard": {
+      "title": "Forkaste {title}?",
+      "description": "Kampen lukkes, og mål, bytter og spilletid som er registrert, slettes. Dette kan ikke angres.",
+      "confirm": "Ja, forkast kampen"
+    },
+    "cancel": "Behold kampen"
   }
 }

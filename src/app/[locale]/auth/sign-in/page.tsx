@@ -3,11 +3,11 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { AppCard } from "@/components/ui/AppCard";
 import { FpButton } from "@/components/ui/FpButton";
+import { ButtonLink } from "@/components/ui/primitives";
 import { teamTextInputClassName } from "@/components/team/styles";
 import { useAuth } from "@/components/providers/AuthProvider";
 
@@ -145,11 +145,9 @@ export default function SignInPage() {
       {status === "authenticated" ? (
         <AppCard className="space-y-3 p-4">
           <p className="text-sm font-semibold text-foreground">{t("signIn.alreadySignedIn")}</p>
-          <Link href="/team">
-            <FpButton variant="secondary" size="md" className="tap-target">
-              {t("signIn.goToTeam")}
-            </FpButton>
-          </Link>
+          <ButtonLink href="/team" variant="secondary" size="sm">
+            {t("signIn.goToTeam")}
+          </ButtonLink>
         </AppCard>
       ) : (
         <AppCard className="space-y-4 p-4">

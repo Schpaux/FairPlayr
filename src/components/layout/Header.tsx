@@ -6,9 +6,11 @@ import { OfflineIndicator } from "@/components/layout/OfflineIndicator";
 export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-fp-border bg-background/85 backdrop-blur-xl pt-safe">
-      <div className="mx-auto flex h-14 max-w-screen-lg items-center justify-between gap-2 px-4 sm:px-5">
-        {/* Logo / Wordmark */}
-        <Link href="/" className="flex min-w-0 items-center gap-2.5 group shrink-0">
+      {/* UI-VIEWPORT-01: the side gutters include the left/right safe area
+          (landscape iPhone, Capacitor), like the 16px gutter elsewhere. */}
+      <div className="mx-auto flex h-14 max-w-screen-lg items-center justify-between gap-2 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.25rem,env(safe-area-inset-left))] sm:pr-[max(1.25rem,env(safe-area-inset-right))]">
+        {/* Logo / Wordmark (44px tall hit area, DESIGN.md §4) */}
+        <Link href="/" className="flex min-h-11 min-w-0 items-center gap-2.5 group shrink-0">
           {/* Icon mark — pitch field */}
           <div className="relative h-8 w-8 rounded-xl bg-fp-cta flex items-center justify-center overflow-hidden shadow-[0_0_0_1px_rgba(14,15,12,0.12)]">
             <svg
