@@ -66,7 +66,7 @@ function getPhaseDurationSeconds(state: LiveMatchState): number {
   return state.durationSeconds;
 }
 
-function getElapsedMsFromClock(clock: MatchClockBasis, nowMs: number): number {
+export function getElapsedMsFromClock(clock: MatchClockBasis, nowMs: number): number {
   if (clock.startedAtMs === null) {
     return 0;
   }

@@ -16,6 +16,8 @@ import {
   Skeleton,
   SkeletonList,
 } from "@/components/ui/primitives";
+import { MatchPlayingTime } from "@/components/match/MatchPlayingTime";
+import { summarizeMatchPlayingTime } from "@/domain/matchPlayingTime";
 
 const ICON = { size: 20, strokeWidth: 1.75 } as const;
 
@@ -180,6 +182,10 @@ export function UiGallery() {
         <SkeletonList rows={3} withDescription />
       </Section>
 
+      <Section id="playing-time" title={t("playingTime")}>
+        <MatchPlayingTime summary={PLAYING_TIME} names={PLAYING_TIME_NAMES} titleAs="h3" />
+      </Section>
+
       <Section id="segmented" title={t("segmented")}>
         <SegmentedChoice label={t("segmentedLabel")} options={FORMAT_OPTIONS} value={format} onValueChange={setFormat} />
         <p className="text-sm text-fp-ink-2">{t("reducedMotion")}</p>
@@ -193,3 +199,24 @@ const FORMAT_OPTIONS = [
   { value: "7v7", label: "7v7" },
   { value: "9v9", label: "9v9" },
 ] as const;
+
+// UI-DETAIL-01 fixture: a stored 7v7 match, 2 × 20, squad of 10. Two
+// substitutions (12′ and 20′), one player never on; read like a real one.
+const MIN = 60_000;
+const PLAYING_TIME = summarizeMatchPlayingTime(
+  {
+    format: "7v7",
+    clock: { startedAtMs: 0, pausedAtMs: 40 * MIN, accumulatedPausedMs: 0, isRunning: false },
+    initialOnFieldPlayerIds: ["p1", "p2", "p3", "p4", "p5", "p6", "p7"],
+    onFieldPlayerIds: ["p1", "p2", "p3", "p4", "p5", "p8", "p9"],
+    benchPlayerIds: ["p6", "p7", "p10"],
+    playerAccumulatedMs: { p1: 0, p2: 0, p3: 0, p4: 0, p5: 0, p6: 12 * MIN, p7: 20 * MIN, p8: 0, p9: 0, p10: 0 },
+    onFieldStartedAtElapsedMs: { p1: 0, p2: 0, p3: 0, p4: 0, p5: 0, p6: null, p7: null, p8: 12 * MIN, p9: 20 * MIN, p10: null },
+  },
+  { nowMs: 0 }
+);
+const PLAYING_TIME_NAMES = new Map(
+  ["Frida Berg", "Ida Ruud", "Selma Lie", "Vilde Moe", "Maja Dahl", "Emma Haugen", "Emma Hansen", "Thea Strand", "Ingrid Lund", "Sofie Bakke"].map(
+    (name, index) => [`p${index + 1}`, name]
+  )
+);

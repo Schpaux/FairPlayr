@@ -816,6 +816,32 @@
     "reportBadge": "Summary",
     "lineupTitle": "Lineup",
     "playingTimeTitle": "Playing time",
+    "playingTime": {
+      "fairShare": "Fair share: {minutes}′ per player",
+      "fairShareA11y": "Fair share: {minutes, plural, one {# minute} other {# minutes}} per player",
+      "fairShareBasis": "{fieldSlots} places × {playedMinutes}′ played ÷ {squadSize} players in the squad",
+      "fairShareBasisA11y": "{fieldSlots} places times {playedMinutes} minutes played, divided by {squadSize} players in the squad",
+      "listLabel": "Playing time per player, least played first",
+      "role": {
+        "starter": "Started",
+        "substitute": "Came on",
+        "unused": "Did not play"
+      },
+      "leastPlayed": "Least played",
+      "belowFairShare": "{minutes}′ below fair share",
+      "belowFairShareA11y": "{minutes, plural, one {# minute} other {# minutes}} below fair share",
+      "minutesA11y": "{minutes, plural, one {# minute} other {# minutes}}",
+      "unknownPlayer": "Unnamed player",
+      "live": "The match is in progress. Minutes are provisional.",
+      "unavailable": "Playing time was not recorded for this match.",
+      "notesLabel": "Notes on playing time",
+      "gaps": {
+        "startersMissing": "The starting lineup was not saved for this match, so who started is not shown.",
+        "openSpellsMissing": "The match clock was not saved. Minutes for players on the pitch at the end may be missing, and fair share cannot be calculated.",
+        "legacyFormat": "This match was saved by an older version. Minutes are shown as they were recorded.",
+        "clockNotStopped": "The match clock was not stopped. Minutes are counted up to the last save."
+      }
+    },
     "defaultOpponent": "Opponent",
     "lineupStarters": "Starting XI",
     "lineupSubbedOn": "Substitutes (came on)",
@@ -1132,7 +1158,8 @@
     "skeleton": "Loading",
     "segmented": "Choice",
     "segmentedLabel": "Match format",
-    "reducedMotion": "Animation is off when the system asks for reduced motion."
+    "reducedMotion": "Animation is off when the system asks for reduced motion.",
+    "playingTime": "Playing time"
   },
   "matchClose": {
     "end": {

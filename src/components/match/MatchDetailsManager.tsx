@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { ArrowLeftRight, Loader2, ShieldAlert, Sparkles, Users } from "lucide-react";
+import { ArrowLeftRight, Loader2, ShieldAlert, Sparkles } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useActiveMatch } from "@/components/providers/ActiveMatchProvider";
@@ -13,6 +13,8 @@ import { AppCard } from "@/components/ui/AppCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FpButton } from "@/components/ui/FpButton";
 import { Button, ButtonLink, ConfirmSheet } from "@/components/ui/primitives";
+import { MatchPlayingTime } from "@/components/match/MatchPlayingTime";
+import { summarizeMatchPlayingTime } from "@/domain/matchPlayingTime";
 import type { Player } from "@/domain/team";
 import {
   createGoalEvent,
@@ -288,23 +290,40 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
       });
   }, [match?.runtimeState?.events, sortedServerEvents]);
 
-  // Playing time per player, derived from live match accumulated time tracking
-  const playerTimes = useMemo(() => {
-    const runtimeState = match?.runtimeState as Record<string, unknown> | null | undefined;
-    const accumulated = runtimeState?.playerAccumulatedMs;
-    if (!accumulated || typeof accumulated !== "object" || Array.isArray(accumulated)) {
-      return [];
+  // UI-DETAIL-01: every squad player's total, 0′ included, from the stored
+  // match state. A running match is counted up to when the page loaded.
+  const [loadedAtMs] = useState(() => Date.now());
+  const playingTime = useMemo(
+    () =>
+      summarizeMatchPlayingTime(match?.runtimeState, {
+        format: match?.format ?? null,
+        nowMs: loadedAtMs,
+        completed: match?.status === "completed",
+      }),
+    [loadedAtMs, match?.format, match?.runtimeState, match?.status]
+  );
+
+  // Current team names first; names stored with the match's own events cover
+  // players who have since left the team.
+  const playingTimeNames = useMemo(() => {
+    const names = new Map<string, string>();
+    const remember = (playerId: string | null | undefined, name: string | null | undefined) => {
+      if (playerId && name && !names.has(playerId)) names.set(playerId, name);
+    };
+
+    for (const player of playerOptions) remember(player.id, player.name);
+    for (const event of timelineEvents) {
+      if (event.type === "goal") {
+        remember(event.scorerPlayerId, event.scorerName);
+        remember(event.assistPlayerId, event.assistName);
+      } else if (event.type === "substitution") {
+        remember(event.inPlayerId, event.inPlayerName);
+        remember(event.outPlayerId, event.outPlayerName);
+      }
     }
 
-    return Object.entries(accumulated as Record<string, unknown>)
-      .map(([playerId, ms]) => {
-        const name = playerById.get(playerId)?.name;
-        const minutes = Math.round((typeof ms === "number" && Number.isFinite(ms) ? ms : 0) / 60000);
-        return name && minutes > 0 ? { name, minutes } : null;
-      })
-      .filter((entry): entry is { name: string; minutes: number } => entry !== null)
-      .sort((a, b) => b.minutes - a.minutes);
-  }, [match?.runtimeState, playerById]);
+    return names;
+  }, [playerOptions, timelineEvents]);
 
   const formatDate = (value: string | null) => {
     if (!value) {
@@ -964,36 +983,10 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
         )}
       </AppCard>
 
-      {/* Playing time overview */}
-      {playerTimes.length > 0 ? (
-        <AppCard className="space-y-3 p-4">
-          <div className="flex items-center gap-2">
-            <Users size={15} className="text-primary" />
-            <p className="text-sm font-semibold text-foreground">{t("playingTimeTitle")}</p>
-          </div>
-          <ul className="space-y-2">
-            {playerTimes.map(({ name, minutes }) => {
-              const maxMinutes = playerTimes[0]?.minutes ?? 1;
-              const pct = Math.round((minutes / Math.max(maxMinutes, 1)) * 100);
-              return (
-                <li key={name} className="space-y-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-medium text-foreground">{name}</span>
-                    <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                      {minutes} min
-                    </span>
-                  </div>
-                  <div className="h-1 w-full overflow-hidden rounded-full bg-fp-surface">
-                    <div
-                      className="h-full rounded-full bg-primary/50 transition-all"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </AppCard>
+      {/* Playing time: shown whenever the match recorded it, and for every
+          completed match, which says so when it did not. */}
+      {playingTime || isCompleted ? (
+        <MatchPlayingTime summary={playingTime} names={playingTimeNames} isLive={match.status === "live"} />
       ) : null}
 
       {/* AI report */}

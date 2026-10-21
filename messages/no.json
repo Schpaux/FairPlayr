@@ -816,6 +816,32 @@
     "reportBadge": "Kampoppsummering",
     "lineupTitle": "Oppstilling",
     "playingTimeTitle": "Spilletid",
+    "playingTime": {
+      "fairShare": "Rettferdig andel: {minutes}′ per spiller",
+      "fairShareA11y": "Rettferdig andel: {minutes, plural, one {# minutt} other {# minutter}} per spiller",
+      "fairShareBasis": "{fieldSlots} plasser × {playedMinutes}′ spilt ÷ {squadSize} spillere i troppen",
+      "fairShareBasisA11y": "{fieldSlots} plasser ganger {playedMinutes} minutter spilt, delt på {squadSize} spillere i troppen",
+      "listLabel": "Spilletid per spiller, minst spilt først",
+      "role": {
+        "starter": "Startet",
+        "substitute": "Byttet inn",
+        "unused": "Kom ikke på banen"
+      },
+      "leastPlayed": "Minst spilt",
+      "belowFairShare": "{minutes}′ under rettferdig andel",
+      "belowFairShareA11y": "{minutes, plural, one {# minutt} other {# minutter}} under rettferdig andel",
+      "minutesA11y": "{minutes, plural, one {# minutt} other {# minutter}}",
+      "unknownPlayer": "Spiller uten navn",
+      "live": "Kampen pågår. Minuttene er foreløpige.",
+      "unavailable": "Spilletid ble ikke registrert for denne kampen.",
+      "notesLabel": "Merknader om spilletiden",
+      "gaps": {
+        "startersMissing": "Startoppstillingen ble ikke lagret for denne kampen, så det vises ikke hvem som startet.",
+        "openSpellsMissing": "Kampklokken ble ikke lagret. Minutter for spillere som var på banen ved slutt kan mangle, og rettferdig andel kan ikke beregnes.",
+        "legacyFormat": "Kampen ble lagret av en eldre versjon. Minuttene vises slik de ble registrert.",
+        "clockNotStopped": "Kampklokken ble ikke stoppet. Minuttene er regnet frem til siste lagring."
+      }
+    },
     "defaultOpponent": "Motstander",
     "lineupStarters": "Startoppstilling",
     "lineupSubbedOn": "Innbyttere (kom inn)",
@@ -1132,7 +1158,8 @@
     "skeleton": "Lasting",
     "segmented": "Valg",
     "segmentedLabel": "Kampformat",
-    "reducedMotion": "Animasjon er av når systemet ber om redusert bevegelse."
+    "reducedMotion": "Animasjon er av når systemet ber om redusert bevegelse.",
+    "playingTime": "Spilletid"
   },
   "matchClose": {
     "end": {
