@@ -330,7 +330,7 @@ export function MatchSetupManager() {
   if (workspace.error) {
     return (
       <PageShell>
-        <AppCard className="p-3 text-xs text-danger">{workspace.error}</AppCard>
+        <AppCard className="p-3 text-xs text-fp-danger-text">{workspace.error}</AppCard>
       </PageShell>
     );
   }
@@ -338,7 +338,7 @@ export function MatchSetupManager() {
   if (activeLiveHref) {
     return (
       <PageShell>
-        <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
+        <SectionHeader title={t("title")} subtitle={t("subtitle")} />
         <EmptyState
           icon={PlayCircle}
           title={t("activeMatch.title")}
@@ -354,7 +354,7 @@ export function MatchSetupManager() {
   if (!team) {
     return (
       <PageShell>
-        <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
+        <SectionHeader title={t("title")} subtitle={t("subtitle")} />
         <EmptyState
           icon={ShieldAlert}
           title={t("noTeam.title")}
@@ -370,7 +370,7 @@ export function MatchSetupManager() {
   if (team.players.length === 0) {
     return (
       <PageShell>
-        <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
+        <SectionHeader title={t("title")} subtitle={t("subtitle")} />
         <EmptyState
           icon={Users}
           title={t("noPlayers.title")}
@@ -387,7 +387,7 @@ export function MatchSetupManager() {
 
   return (
     <PageShell className="space-y-4">
-      <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
+      <SectionHeader title={t("title")} subtitle={t("subtitle")} />
 
       <motion.div
         initial="hidden"
@@ -411,7 +411,7 @@ export function MatchSetupManager() {
               <button
                 type="button"
                 onClick={handleStartFromDefaults}
-                className="tap-target text-sm font-semibold text-fp-cta"
+                className="tap-target text-sm font-semibold text-fp-ink underline decoration-fp-lime decoration-2 underline-offset-4"
               >
                 {t("draft.startFromDefaults")}
               </button>
@@ -427,7 +427,7 @@ export function MatchSetupManager() {
                 {t("compact.title")}
               </p>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-xl border border-fp-cta/30 bg-fp-cta/10 px-3 py-1 text-sm font-bold text-fp-cta">
+                <span className="rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-1 text-sm font-bold text-foreground">
                   {setup.format}
                 </span>
                 <span className="rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-1 text-sm font-semibold text-foreground">
@@ -442,7 +442,7 @@ export function MatchSetupManager() {
               <button
                 type="button"
                 onClick={() => setIsCompact(false)}
-                className="tap-target flex items-center gap-1.5 text-sm font-semibold text-fp-cta"
+                className="tap-target flex items-center gap-1.5 text-sm font-semibold text-fp-ink underline decoration-fp-lime decoration-2 underline-offset-4"
               >
                 <Pencil size={13} />
                 {t("compact.edit")}
@@ -531,14 +531,14 @@ export function MatchSetupManager() {
                   className={cn(
                     "relative h-7 w-12 rounded-full border transition-colors",
                     setup.reportEnabled
-                      ? "border-fp-cta/40 bg-fp-cta"
-                      : "border-fp-border bg-fp-surface-2"
+                      ? "border-fp-lime bg-fp-lime"
+                      : "border-fp-control-line bg-fp-surface-2"
                   )}
                 >
                   <span
                     className={cn(
-                      "absolute top-[3px] left-[3px] h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200",
-                      setup.reportEnabled ? "translate-x-5" : "translate-x-0"
+                      "absolute top-[3px] left-[3px] h-5 w-5 rounded-full transition-transform duration-200",
+                      setup.reportEnabled ? "translate-x-5 bg-fp-on-lime" : "translate-x-0 bg-fp-ink-2"
                     )}
                   />
                 </span>
@@ -550,7 +550,7 @@ export function MatchSetupManager() {
         {/* Start match CTA */}
         <motion.div variants={variants.fadeInUp} className="pt-2 pb-4">
           {startError ? (
-            <p className="mb-2 text-xs text-danger">{startError}</p>
+            <p className="mb-2 text-xs text-fp-danger-text">{startError}</p>
           ) : null}
 
           {showStartGuard ? (
@@ -593,7 +593,7 @@ export function MatchSetupManager() {
           {/* Validation hint */}
           <div className="mb-3 flex items-center justify-center gap-2 min-h-[20px]">
             {matchReady ? (
-              <span className="flex items-center gap-1.5 text-sm font-medium text-fp-accent">
+              <span className="flex items-center gap-1.5 text-sm font-medium text-fp-ok-text">
                 <CheckCircle2 size={15} />
                 {t("validation.ready")}
               </span>
@@ -616,13 +616,10 @@ export function MatchSetupManager() {
             onClick={() => {
               void handleStartMatch();
             }}
-            className={cn("group transition-all", matchReady && "glow-cta-sm")}
+            className="group"
           >
             {isStarting ? t("actions.starting") : t("startMatch")}
-            <ArrowRight
-              size={18}
-              className="transition-transform group-hover:translate-x-0.5"
-            />
+            <ArrowRight size={18} />
           </FpButton>
         </motion.div>
       </motion.div>

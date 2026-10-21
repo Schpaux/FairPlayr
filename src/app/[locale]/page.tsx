@@ -71,27 +71,16 @@ export default async function HomePage({ params }: Props) {
             </g>
           </svg>
 
-          {/* Dark gradient overlay for text legibility */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0"
-            style={{
-              background:
-                "linear-gradient(180deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.35) 100%)",
-            }}
-          />
-
           {/* Top row */}
           <div className="absolute inset-x-0 top-0 flex items-start justify-between px-5 pt-5">
             <div>
               <HomeTeamName />
-              <p className="font-mono text-[11px] text-white/50">{t("hero.seasonLabel")}</p>
+              <p className="font-mono text-[11px] text-fp-on-club">{t("hero.seasonLabel")}</p>
             </div>
             <button
               type="button"
               aria-label={t("hero.notificationsLabel")}
-              className="tap-target flex h-9 w-9 items-center justify-center rounded-full text-white backdrop-blur-md"
-              style={{ background: "rgba(255,255,255,0.15)" }}
+              className="tap-target flex h-9 w-9 items-center justify-center rounded-full bg-fp-on-club/15 text-fp-on-club"
             >
               <Bell size={16} />
             </button>
@@ -100,8 +89,8 @@ export default async function HomePage({ params }: Props) {
           {/* Center-left headline */}
           <div className="absolute bottom-14 left-5 right-16">
             <h1
-              className="heading-display text-[52px] text-white"
-              style={{ textShadow: "0 2px 10px rgba(0,0,0,0.2)", whiteSpace: "pre-line" }}
+              className="heading-display text-[52px] text-fp-on-club"
+              style={{ whiteSpace: "pre-line" }}
             >
               {t("hero.headline")}
             </h1>
@@ -112,7 +101,7 @@ export default async function HomePage({ params }: Props) {
             <div
               key={slot.id}
               aria-hidden
-              className="pointer-events-none absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/20"
+              className="pointer-events-none absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-fp-on-club/20"
               style={{ left: `${slot.x}%`, bottom: `${(slot.y / 100) * 56}px` }}
             />
           ))}
@@ -121,10 +110,10 @@ export default async function HomePage({ params }: Props) {
         {/* ── Block 2: Dark "Next Match" CTA ───────────────────────────────── */}
         <Link
           href="/match/setup"
-          className="flex w-full items-center gap-3.5 rounded-[24px] bg-foreground p-4 text-background shadow-[0_12px_28px_-12px_rgba(0,0,0,0.3)] transition-all hover:scale-[1.01] active:scale-[0.98]"
+          className="flex w-full items-center gap-3.5 rounded-[24px] bg-foreground p-4 text-background transition active:scale-[0.98]"
         >
           <HomeNextMatch />
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-fp-cta text-fp-cta-foreground">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-fp-lime text-fp-on-lime">
             <ArrowRight size={20} />
           </div>
         </Link>
@@ -136,7 +125,7 @@ export default async function HomePage({ params }: Props) {
         <div className="grid grid-cols-2 gap-2">
           <Link
             href="/team"
-            className="flex flex-col gap-3 rounded-[20px] bg-fp-surface p-4 shadow-[inset_0_0_0_1px_var(--fp-border)] transition-all hover:scale-[1.02] active:scale-[0.97]"
+            className="flex flex-col gap-3 rounded-[20px] bg-fp-surface p-4 shadow-[inset_0_0_0_1px_var(--fp-border)] transition active:scale-[0.97]"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-fp-surface-2">
               <Users size={20} className="text-foreground" />
@@ -149,7 +138,7 @@ export default async function HomePage({ params }: Props) {
 
           <Link
             href="/historikk"
-            className="flex flex-col gap-3 rounded-[20px] bg-fp-surface p-4 shadow-[inset_0_0_0_1px_var(--fp-border)] transition-all hover:scale-[1.02] active:scale-[0.97]"
+            className="flex flex-col gap-3 rounded-[20px] bg-fp-surface p-4 shadow-[inset_0_0_0_1px_var(--fp-border)] transition active:scale-[0.97]"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-fp-surface-2">
               <History size={20} className="text-foreground" />

@@ -740,9 +740,9 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
                         <span className="flex flex-wrap items-center gap-1 text-xs">
                           <span className={
                             candidate.importClassification === "likely_player"
-                              ? "rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-emerald-700 dark:text-emerald-300"
+                              ? "rounded-full border border-fp-ok-text/40 bg-fp-ok-text/10 px-2 py-0.5 text-fp-ok-text"
                               : candidate.importClassification === "likely_staff"
-                                ? "rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-amber-700 dark:text-amber-300"
+                                ? "rounded-full border border-fp-warn-text/40 bg-fp-warn-text/10 px-2 py-0.5 text-fp-warn-text"
                                 : "rounded-full border border-fp-border bg-fp-surface-2 px-2 py-0.5 text-muted-foreground"
                           }>
                             {candidate.importClassification === "likely_player"
@@ -835,7 +835,7 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
       {/* ── Section 5: Danger zone ───────────────────────────────── */}
       {connected && (
         <div className="space-y-3 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-danger/70">
+          <p className="text-xs font-semibold uppercase tracking-wide text-fp-danger-text">
             {t("cleanup.sectionTitle")}
           </p>
 
@@ -876,7 +876,7 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
       {(notice || error) && (
         <div className="space-y-1 p-4">
           {notice ? <p role="status" className="text-xs text-fp-spond-foreground">{notice}</p> : null}
-          {error ? <p role="alert" className="text-xs text-danger">{error}</p> : null}
+          {error ? <p role="alert" className="text-xs text-fp-danger-text">{error}</p> : null}
         </div>
       )}
 

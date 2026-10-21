@@ -30,8 +30,8 @@ interface MatchTimerPanelProps {
 }
 
 function statusBadgeClass(status: LiveMatchStatus) {
-  if (status === "running") return "bg-fp-accent/15 text-fp-accent border-fp-accent/30";
-  if (status === "ended") return "bg-danger/15 text-danger border-danger/30";
+  if (status === "running") return "bg-fp-ok-text/10 text-fp-ok-text border-fp-ok-text/30";
+  if (status === "ended") return "bg-fp-danger/15 text-fp-danger-text border-fp-danger/30";
   return "bg-fp-surface-2 text-muted-foreground border-fp-border";
 }
 
@@ -87,7 +87,7 @@ export function MatchTimerPanel({
         <div className="text-right">
           <p className="text-sm text-muted-foreground tabular-nums leading-tight">{secondaryLabel}</p>
           {stoppageLabel ? (
-            <p className="mt-0.5 text-xs font-semibold text-danger tabular-nums">{stoppageLabel}</p>
+            <p className="mt-0.5 text-xs font-semibold text-fp-danger-text tabular-nums">{stoppageLabel}</p>
           ) : null}
         </div>
       </div>

@@ -56,12 +56,12 @@ export default function SettingsPage() {
               <Cloud size={14} className="text-muted-foreground" />
               <p className="text-sm font-medium text-foreground">{t("syncStatus")}</p>
             </div>
-            <span className={workspace.mode === "cloud" ? "text-xs font-medium text-fp-accent" : "text-xs font-medium text-fp-warning"}>
+            <span className={workspace.mode === "cloud" ? "text-xs font-medium text-fp-ok-text" : "text-xs font-medium text-fp-warn-text"}>
               {workspace.mode === "cloud" ? t("syncCloud") : t("syncLocal")}
             </span>
           </div>
           {workspace.error ? (
-            <p className="text-xs text-fp-warning">{t("syncAttention")}</p>
+            <p className="text-xs text-fp-warn-text">{t("syncAttention")}</p>
           ) : (
             <p className="text-xs text-muted-foreground">
               {workspace.mode === "cloud" ? t("syncCloudHint") : t("syncLocalHint")}
@@ -87,9 +87,9 @@ export default function SettingsPage() {
                   key={value}
                   onClick={() => setTheme(value)}
                   className={cn(
-                    "flex flex-col items-center gap-2 rounded-xl p-3 text-xs font-medium transition-all tap-target",
+                    "flex flex-col items-center gap-2 rounded-xl p-3 text-xs font-medium transition tap-target",
                     theme === value
-                      ? "bg-fp-cta/15 text-fp-cta border border-fp-cta/30"
+                      ? "bg-fp-lime text-fp-on-lime border border-fp-lime"
                       : "bg-fp-surface-2 text-muted-foreground hover:text-foreground"
                   )}
                 >
@@ -121,14 +121,14 @@ export default function SettingsPage() {
                   key={l}
                   onClick={() => router.replace(pathname, { locale: l })}
                   className={cn(
-                    "flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-all tap-target",
+                    "flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition tap-target",
                     l === locale
-                      ? "bg-fp-cta/15 text-fp-cta font-semibold"
+                      ? "bg-fp-lime text-fp-on-lime font-semibold"
                       : "text-muted-foreground hover:bg-fp-surface-2 hover:text-foreground"
                   )}
                 >
                   <span>{meta?.full ?? l}</span>
-                  {l === locale && <span className="text-xs text-fp-cta">✓</span>}
+                  {l === locale && <span className="text-xs">✓</span>}
                 </button>
               );
             })}

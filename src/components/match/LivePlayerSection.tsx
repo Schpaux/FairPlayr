@@ -56,12 +56,12 @@ export function LivePlayerSection({
                 <button
                   type="button"
                   onClick={() => onSelectPlayer(player.id)}
-                  className={`tap-target w-full rounded-xl border p-3 text-left transition-all ${
+                  className={`tap-target w-full rounded-xl border p-3 text-left transition ${
                       selected
-                      ? "border-primary bg-primary/10 shadow-[var(--glow-primary-sm)]"
+                      ? "border-fp-lime bg-fp-lime/15"
                         : suggested
-                          ? "border-fp-accent/50 bg-fp-accent/10"
-                      : "border-fp-border bg-fp-surface-2 hover:border-primary/30"
+                          ? "border-fp-lime bg-fp-surface-2"
+                      : "border-fp-border bg-fp-surface-2 hover:border-fp-control-line"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-3">
@@ -74,12 +74,12 @@ export function LivePlayerSection({
                       </p>
                     </div>
                       {selected && (
-                      <span className="rounded-full border border-primary/30 bg-primary/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                      <span className="rounded-full border border-fp-lime bg-fp-lime px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-fp-on-lime">
                         {selectedLabel}
                       </span>
                     )}
                       {!selected && suggested && suggestedLabel && (
-                        <span className="rounded-full border border-fp-accent/35 bg-fp-accent/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-fp-accent">
+                        <span className="rounded-full border border-fp-lime bg-fp-lime px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-fp-on-lime">
                           {suggestedLabel}
                         </span>
                       )}

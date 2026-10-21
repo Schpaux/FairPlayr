@@ -9,20 +9,9 @@
         "span \"Innstillinger\"": 1,
         "span \"Kamper\"": 1,
         "span \"Spillere\"": 1
-      },
-      "targets": {
-        "a \"FairPlayr\"": 1,
-        "select \"Aktivt lag\"": 1
       }
     },
     "light": {
-      "limeText": {
-        "span \"Historikk\"": 1,
-        "span \"Hjem\"": 1,
-        "span \"Innstillinger\"": 1,
-        "span \"Kamper\"": 1,
-        "span \"Spillere\"": 1
-      },
       "smallText": {
         "span \"G\"": 1,
         "span \"Historikk\"": 1,
@@ -30,10 +19,6 @@
         "span \"Innstillinger\"": 1,
         "span \"Kamper\"": 1,
         "span \"Spillere\"": 1
-      },
-      "targets": {
-        "a \"FairPlayr\"": 1,
-        "select \"Aktivt lag\"": 1
       }
     }
   },
@@ -47,19 +32,8 @@
       "light": {}
     },
     "history": {
-      "dark": {
-        "targets": {
-          "a \"Logg inn\"": 1
-        }
-      },
-      "light": {
-        "limeText": {
-          "h1 \"Historikk\"": 1
-        },
-        "targets": {
-          "a \"Logg inn\"": 1
-        }
-      }
+      "dark": {},
+      "light": {}
     },
     "home": {
       "dark": {
@@ -95,11 +69,6 @@
         }
       },
       "light": {
-        "limeText": {
-          "button \"#-#\"": 1,
-          "h1 \"Lagoppstilling\"": 1,
-          "span \"#v#\"": 1
-        },
         "smallText": {
           "button \"Tøm\"": 1,
           "button \"Velg alle\"": 1,
@@ -176,9 +145,6 @@
         }
       },
       "light": {
-        "limeText": {
-          "h1 \"Kampplanlegging\"": 1
-        },
         "smallText": {
           "div \"Planlegging, skysynk og Spond-import kre\"": 1,
           "p \"Du kan gjennomføre hele kampflyten lokal\"": 1
@@ -202,18 +168,11 @@
           "p \"Utseende\"": 1,
           "span \"✓\"": 1,
           "span \"Jobber lokalt\"": 1
-        },
-        "targets": {
-          "a \"Logg inn\"": 1
         }
       },
       "light": {
         "console": {
           "error: A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client": 1
-        },
-        "limeText": {
-          "span \"✓\"": 1,
-          "span \"Norsk (Bokmål)\"": 1
         },
         "smallText": {
           "button \"Lys\"": 1,
@@ -227,9 +186,6 @@
           "p \"Utseende\"": 1,
           "span \"✓\"": 1,
           "span \"Jobber lokalt\"": 1
-        },
-        "targets": {
-          "a \"Logg inn\"": 1
         }
       }
     },
@@ -249,19 +205,9 @@
           "p \"Varighet\"": 1,
           "p \"Velg hvem som faktisk er med i dag. Kun \"": 1,
           "span \"# på banen\"": 5
-        },
-        "targets": {
-          "button \"Aktiver kampoppsummering\"": 1
         }
       },
       "light": {
-        "limeText": {
-          "button \"# omganger\"": 1,
-          "button \"#-#\"": 1,
-          "button \"#x#\"": 1,
-          "h1 \"Kampoppsett\"": 1,
-          "span \"#v#\"": 1
-        },
         "smallText": {
           "div \"Aktivt lag: Lyn G#\"": 1,
           "p \"# av # spillere valgt\"": 1,
@@ -276,9 +222,6 @@
           "p \"Varighet\"": 1,
           "p \"Velg hvem som faktisk er med i dag. Kun \"": 1,
           "span \"# på banen\"": 5
-        },
-        "targets": {
-          "button \"Aktiver kampoppsummering\"": 1
         }
       }
     },
@@ -291,9 +234,6 @@
         }
       },
       "light": {
-        "limeText": {
-          "h1 \"Logg inn\"": 1
-        },
         "smallText": {
           "label \"E-post\"": 1,
           "p \"Vi sender deg en innloggingslenke på e-p\"": 1,
@@ -314,19 +254,9 @@
           "p \"Logg inn for å synkronisere data på tver\"": 1,
           "p \"Vil du heller slippe passord?\"": 1,
           "span \"eller\"": 1
-        },
-        "targets": {
-          "a \"Bruk magisk lenke i stedet\"": 1,
-          "a \"Fortsett som gjest\"": 1,
-          "a \"Gå til innlogging\"": 1
         }
       },
       "light": {
-        "limeText": {
-          "a \"Bruk magisk lenke i stedet\"": 1,
-          "a \"Gå til innlogging\"": 1,
-          "h1 \"Opprett konto\"": 1
-        },
         "smallText": {
           "a \"Bruk magisk lenke i stedet\"": 1,
           "a \"Fortsett som gjest\"": 1,
@@ -338,11 +268,6 @@
           "p \"Logg inn for å synkronisere data på tver\"": 1,
           "p \"Vil du heller slippe passord?\"": 1,
           "span \"eller\"": 1
-        },
-        "targets": {
-          "a \"Bruk magisk lenke i stedet\"": 1,
-          "a \"Fortsett som gjest\"": 1,
-          "a \"Gå til innlogging\"": 1
         }
       }
     },

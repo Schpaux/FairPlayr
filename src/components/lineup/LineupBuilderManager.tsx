@@ -196,7 +196,7 @@ export function LineupBuilderManager() {
   if (workspace.error) {
     return (
       <PageShell>
-        <AppCard className="p-3 text-xs text-danger">{workspace.error}</AppCard>
+        <AppCard className="p-3 text-xs text-fp-danger-text">{workspace.error}</AppCard>
       </PageShell>
     );
   }
@@ -204,7 +204,7 @@ export function LineupBuilderManager() {
   if (activeLiveHref) {
     return (
       <PageShell>
-        <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
+        <SectionHeader title={t("title")} subtitle={t("subtitle")} />
         <EmptyState
           icon={PlayCircle}
           title={t("activeMatch.title")}
@@ -222,7 +222,7 @@ export function LineupBuilderManager() {
   if (!team) {
     return (
       <PageShell>
-        <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
+        <SectionHeader title={t("title")} subtitle={t("subtitle")} />
         <EmptyState
           icon={ShieldAlert}
           title={t("noTeam.title")}
@@ -244,7 +244,7 @@ export function LineupBuilderManager() {
   if (team.players.length === 0) {
     return (
       <PageShell>
-        <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
+        <SectionHeader title={t("title")} subtitle={t("subtitle")} />
         <EmptyState
           icon={Users}
           title={t("noPlayers.title")}
@@ -261,7 +261,7 @@ export function LineupBuilderManager() {
 
   return (
     <PageShell className="space-y-4 pb-6">
-      <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
+      <SectionHeader title={t("title")} subtitle={t("subtitle")} />
 
       <AppCard className="p-3 text-xs text-muted-foreground">
         {t("activeTeam", { name: team.name })}
@@ -412,16 +412,16 @@ export function LineupBuilderManager() {
                         previous ? toggleSquadPlayer(previous, player.id) : previous
                       )
                     }
-                    className={`tap-target rounded-xl border p-3 text-left transition-all ${
+                    className={`tap-target rounded-xl border p-3 text-left transition ${
                       selected
-                        ? "border-primary/30 bg-primary/10"
-                        : "border-fp-border bg-fp-surface-2"
+                        ? "border-fp-lime bg-fp-lime text-fp-on-lime"
+                        : "border-fp-border bg-fp-surface-2 text-foreground"
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-semibold text-foreground">{player.name}</span>
+                      <span className="text-sm font-semibold">{player.name}</span>
                       {assigned ? (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-fp-accent/35 bg-fp-accent/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-fp-accent">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-current/30 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide">
                           <CheckCircle2 size={12} />
                           {t("players.assigned")}
                         </span>
@@ -458,7 +458,7 @@ export function LineupBuilderManager() {
                 type="button"
                 onClick={() => handleAssignFromPool(player.id)}
                 className={cn(
-                  "tap-target w-full rounded-xl border border-fp-border bg-fp-surface-2 p-3 text-left transition-all hover:border-primary/25"
+                  "tap-target w-full rounded-xl border border-fp-border bg-fp-surface-2 p-3 text-left transition hover:border-fp-control-line"
                 )}
               >
                 <p className="text-sm font-semibold text-foreground">{player.name}</p>

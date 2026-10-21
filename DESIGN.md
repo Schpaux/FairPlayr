@@ -81,7 +81,7 @@ Destructive button fill: `#B3261E` with white text in light mode (6.5 : 1), and 
 - **Lime is never text on a light surface.** It is only a fill, a ring or an underline, always with `on-lime` ink on top.
 - **Never grey text on green.** Text on club green uses `on-club-2`.
 - **Status is never colour-only.** Fatigue uses arc length, selection uses scale and outline, and offline uses a glyph.
-- **No glow, gradients, blur or glass.** The legacy `.glow-*` utilities are deprecated; remove them as components are rebuilt. The one exception is functional: the bench rail's edge fade (`transparent` → `canvas`), which shows that players continue off-screen (§5.3).
+- **No glow, gradients, blur or glass.** The legacy `.glow-*` utilities and `--glow-*` tokens were removed in UI-TOKENS-01 (B3). The one exception is functional: the bench rail's edge fade (`transparent` → `canvas`), which shows that players continue off-screen (§5.3).
 
 ### 2.6 Measured contrast (WCAG 2.x)
 
@@ -347,9 +347,9 @@ A 24 grid with 1.75 stroke and round caps and joins (lucide-compatible). Icons o
 
 | Area | State |
 |---|---|
-| Tokens (§2) | **In `globals.css`.** Light and dark surfaces are applied app-wide. Identity, pitch and status tokens are defined and exposed as Tailwind colours (`bg-fp-club`, `text-fp-warn-text`, …) but not yet used by components. |
+| Tokens (§2) | **In `globals.css`, used app-wide** (UI-TOKENS-01, B3). Every §2 token is a Tailwind colour (`bg-fp-club`, `text-fp-warn-text`, `border-fp-control-line`, `bg-fp-scrim`, …). The off-spec `fp-cta`, `fp-accent`, `danger` and `fp-warning` tokens are gone; lime is never text (`text-primary`/`text-accent` are not used). `src/lib/design/designGuard.test.ts` fails on glow, lime text, blur, hover scale/translate, retired tokens and hard-coded colours, with explicit, documented exceptions only. |
 | Typography (§3) | **Done.** Inter everywhere (Urbanist removed); Barlow Condensed bundled and available via `.font-num`. |
-| Legacy tokens | `--fp-pitch-*`, `.glow-*` and `src/lib/tokens.ts` `colors` are legacy. Remove them as the live UI and setup are rebuilt. |
+| Legacy tokens | `--fp-pitch-*` and `src/lib/tokens.ts` `colors` are legacy (C6). Remove them as the live UI and setup are rebuilt. `.glow-*` is removed. |
 | Live screen, setup, home (§5–7) | Not started. Follow `design-exploration/modern-sideline/IMPLEMENTATION-PLAN.md`, behind `NEXT_PUBLIC_LIVE_UI=sideline`. |
 | Goal correction (§6.3) | Blocked on server event reconciliation. |
 | Position swap (§6.1.1) | **Done in the Modern Sideline view** (FP-MS2.1-B1). The legacy live view (flag off) does not offer it. |

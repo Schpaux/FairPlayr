@@ -34,9 +34,9 @@ export function DurationPicker({
           <button
             type="button"
             className={cn(
-              "h-11 rounded-xl border px-3 text-sm font-semibold tap-target transition-all duration-150",
+              "h-11 rounded-xl border px-3 text-sm font-semibold tap-target transition duration-150",
               currentHalves === 2
-                ? "border-fp-cta/40 bg-fp-cta/15 text-fp-cta"
+                ? "border-fp-lime bg-fp-lime text-fp-on-lime"
                 : "border-fp-border bg-fp-surface-2 text-muted-foreground hover:text-foreground"
             )}
             onClick={() => onHalvesChange(2)}
@@ -46,9 +46,9 @@ export function DurationPicker({
           <button
             type="button"
             className={cn(
-              "h-11 rounded-xl border px-3 text-sm font-semibold tap-target transition-all duration-150",
+              "h-11 rounded-xl border px-3 text-sm font-semibold tap-target transition duration-150",
               currentHalves === 1
-                ? "border-fp-cta/40 bg-fp-cta/15 text-fp-cta"
+                ? "border-fp-lime bg-fp-lime text-fp-on-lime"
                 : "border-fp-border bg-fp-surface-2 text-muted-foreground hover:text-foreground"
             )}
             onClick={() => onHalvesChange(1)}
@@ -72,9 +72,9 @@ export function DurationPicker({
               onClick={() => onPresetChange(presetId)}
               aria-pressed={isSelected}
               className={cn(
-                "h-11 min-w-[72px] rounded-xl border px-3 text-sm font-semibold transition-all duration-150 tap-target",
+                "h-11 min-w-[72px] rounded-xl border px-3 text-sm font-semibold transition duration-150 tap-target",
                 isSelected
-                  ? "border-fp-cta/40 bg-fp-cta/15 text-fp-cta glow-cta-sm"
+                  ? "border-fp-lime bg-fp-lime text-fp-on-lime"
                   : "border-fp-border bg-fp-surface-2 text-muted-foreground hover:text-foreground"
               )}
             >

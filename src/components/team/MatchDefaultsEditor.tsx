@@ -100,9 +100,9 @@ export function MatchDefaultsEditor({ teamId }: Props) {
                 onClick={() => handleDurationChange(presetId)}
                 aria-pressed={isSelected}
                 className={cn(
-                  "h-10 rounded-xl border px-3 text-sm font-medium transition-all duration-150 tap-target",
+                  "h-10 rounded-xl border px-3 text-sm font-medium transition duration-150 tap-target",
                   isSelected
-                    ? "border-fp-cta/40 bg-fp-cta/15 text-fp-cta glow-cta-sm"
+                    ? "border-fp-lime bg-fp-lime text-fp-on-lime"
                     : "border-fp-border bg-fp-surface-2 text-muted-foreground hover:text-foreground"
                 )}
               >

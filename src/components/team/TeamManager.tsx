@@ -185,12 +185,12 @@ export function TeamManager() {
       ) : null}
 
       {workspace.error ? (
-        <AppCard className="p-3 text-xs text-danger">{workspace.error}</AppCard>
+        <AppCard className="p-3 text-xs text-fp-danger-text">{workspace.error}</AppCard>
       ) : null}
 
       {/* role="alert": a failed deletion is reported after its sheet has closed. */}
       {teamError ? (
-        <AppCard className="p-3 text-xs text-danger">
+        <AppCard className="p-3 text-xs text-fp-danger-text">
           <p role="alert">{teamError}</p>
         </AppCard>
       ) : null}
@@ -267,9 +267,9 @@ export function TeamManager() {
                       key={candidate.id}
                       type="button"
                       onClick={() => void workspace.setActiveTeam(candidate.id)}
-                      className={`tap-target rounded-full border px-3 py-1 text-xs font-semibold transition-all ${
+                      className={`tap-target rounded-full border px-3 py-1 text-xs font-semibold transition ${
                         isActive
-                          ? "border-fp-cta/40 bg-fp-cta/15 text-fp-cta"
+                          ? "border-fp-lime bg-fp-lime text-fp-on-lime"
                           : "border-fp-border bg-fp-surface-2 text-muted-foreground"
                       }`}
                     >

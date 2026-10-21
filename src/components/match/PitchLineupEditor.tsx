@@ -309,7 +309,7 @@ export function PitchLineupEditor({
         <span
           className={cn(
             "text-xs font-semibold tabular-nums",
-            current === required ? "text-fp-accent" : "text-muted-foreground"
+            current === required ? "text-fp-ok-text" : "text-muted-foreground"
           )}
         >
           {current} / {required} startere
@@ -453,11 +453,11 @@ export function PitchLineupEditor({
                   key={playerId}
                   type="button"
                   className={cn(
-                    "tap-target rounded-full border px-3 py-1.5 text-xs font-semibold transition-all",
+                    "tap-target rounded-full border px-3 py-1.5 text-xs font-semibold transition",
                     beingDragged && "opacity-30",
                     selected
-                      ? "border-fp-cta/40 bg-fp-cta/15 text-fp-cta shadow-[var(--glow-cta-sm)] scale-105"
-                      : "border-fp-border bg-fp-surface text-foreground shadow-sm"
+                      ? "border-fp-lime bg-fp-lime text-fp-on-lime scale-105"
+                      : "border-fp-border bg-fp-surface text-foreground"
                   )}
                   style={{ touchAction: "none" }}
                   onPointerDown={(e) =>

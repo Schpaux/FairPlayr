@@ -10,9 +10,9 @@
  * ## Visual chip states (priority order, highest first)
  *   1. selected          — lime ring + scale (overrides everything)
  *   2. being_dragged     — ghost follows cursor; source chip fades
- *   3. drop_target       — amber ring when a drag is active
+ *   3. drop_target       — chalk ring when a drag is active
  *   4. dimmed            — 50% opacity when another player is selected
- *   5. fatigue colour    — fresh (lime) / watch (amber) / act+critical (red)
+ *   5. fatigue colour    — fresh (disc) / watch / act+critical (ring tokens)
  *   6. empty slot        — dashed outline
  *
  * ## Zone lines
@@ -28,12 +28,21 @@ import {
   getDraggingBenchPlayerId,
   isDragging,
 } from "@/domain/liveSubInteraction";
-import {
-  FATIGUE_CHIP_CLASSES,
-  shouldPulse,
-  type FatigueLevel,
-} from "@/domain/playerFatigue";
+import { shouldPulse, type FatigueLevel } from "@/domain/playerFatigue";
 import { cn } from "@/lib/utils";
+
+/**
+ * Chip fill per fatigue level, from the pitch tokens (DESIGN.md §2.3): fresh
+ * is a plain disc, watch and act use the stint-ring colours. Lime stays for
+ * the selection ring. `critical` shares act's colours; the pulse (shouldPulse)
+ * tells it apart.
+ */
+const FATIGUE_CHIP_CLASSES: Record<FatigueLevel, string> = {
+  fresh: "bg-fp-disc text-fp-on-disc",
+  watch: "bg-fp-ring-watch text-fp-tag",
+  act: "bg-fp-ring-act text-fp-tag",
+  critical: "bg-fp-ring-act text-fp-tag",
+};
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -174,18 +183,17 @@ export function LivePitchView({
               // Base — 52px touch target centred on the slot coordinate.
               "absolute -translate-x-1/2 -translate-y-1/2",
               "flex h-[52px] w-[52px] flex-col items-center justify-center",
-              "rounded-full border-2 transition-all duration-150",
+              "rounded-full border-2 transition-[left,top,transform,background-color,border-color,color,opacity] duration-150",
               "select-none cursor-pointer",
               // Fatigue background (base layer).
               FATIGUE_CHIP_CLASSES[fatigue],
               // Modifiers.
               isSelected && [
-                "ring-[3px] ring-fp-cta ring-offset-[2px] ring-offset-transparent",
+                "ring-[3px] ring-fp-lime ring-offset-[2px] ring-offset-transparent",
                 "scale-110 z-10",
-                "shadow-[0_0_0_6px_rgba(159,232,112,0.20)]",
               ],
               isDropTarget && !isSelected && [
-                "ring-2 ring-amber-300 ring-offset-1",
+                "ring-2 ring-fp-on-tag ring-offset-1",
                 "scale-105",
               ],
               isBeingDraggedAway && "opacity-20",
@@ -193,7 +201,7 @@ export function LivePitchView({
               pulse && "animate-pulse",
               disabled && "cursor-default",
               // Border
-              isSelected ? "border-fp-cta/80" : "border-white/20"
+              isSelected ? "border-fp-lime/80" : "border-fp-grass-line"
             )}
             style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
             onClick={(e) => {

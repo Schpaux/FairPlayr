@@ -114,7 +114,7 @@ export function MatchHistoryManager() {
   if (isGuestMode) {
     return (
       <PageShell className="space-y-4">
-        <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
+        <SectionHeader title={t("title")} subtitle={t("subtitle")} />
         <EmptyState
           icon={ShieldAlert}
           title={t("guestTitle")}
@@ -130,7 +130,7 @@ export function MatchHistoryManager() {
   if (workspace.teams.length === 0) {
     return (
       <PageShell className="space-y-4">
-        <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
+        <SectionHeader title={t("title")} subtitle={t("subtitle")} />
         <EmptyState
           icon={ShieldAlert}
           title={t("noTeamTitle")}
@@ -145,7 +145,7 @@ export function MatchHistoryManager() {
 
   return (
     <PageShell className="space-y-5">
-      <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
+      <SectionHeader title={t("title")} subtitle={t("subtitle")} />
 
       {/* Team filter */}
       <AppCard className="p-3">
@@ -168,7 +168,7 @@ export function MatchHistoryManager() {
         </label>
       </AppCard>
 
-      {error ? <AppCard className="p-3 text-xs text-danger">{error}</AppCard> : null}
+      {error ? <AppCard className="p-3 text-xs text-fp-danger-text">{error}</AppCard> : null}
 
       <div className="space-y-3">
         <h3 className="px-1 text-sm font-semibold text-foreground">{t("listTitle")}</h3>
@@ -215,7 +215,7 @@ export function MatchHistoryManager() {
                     <div className="flex items-center gap-3">
                       <span
                         className={`text-2xl font-black leading-none tabular-nums ${
-                          won ? "text-fp-accent" : draw ? "text-foreground" : "text-danger"
+                          won ? "text-fp-ok-text" : draw ? "text-foreground" : "text-fp-danger-text"
                         }`}
                       >
                         {scoreFor} – {scoreAgainst}
@@ -223,10 +223,10 @@ export function MatchHistoryManager() {
                       <span
                         className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
                           won
-                            ? "border-fp-accent/25 bg-fp-accent/10 text-fp-accent"
+                            ? "border-fp-ok-text/25 bg-fp-ok-text/10 text-fp-ok-text"
                             : draw
                               ? "border-fp-border bg-fp-surface text-muted-foreground"
-                              : "border-danger/25 bg-danger/10 text-danger"
+                              : "border-fp-danger-text/25 bg-fp-danger/10 text-fp-danger-text"
                         }`}
                       >
                         {won ? t("resultWon") : draw ? t("resultDraw") : t("resultLost")}

@@ -6,8 +6,6 @@ interface SectionHeaderProps {
   subtitle?: string;
   action?: ReactNode;
   className?: string;
-  /** Visually emphasise with primary color. Default: false */
-  accent?: boolean;
 }
 
 /**
@@ -19,17 +17,12 @@ export function SectionHeader({
   subtitle,
   action,
   className,
-  accent = false,
 }: SectionHeaderProps) {
   return (
     <div className={cn("flex items-start justify-between gap-4 mb-6", className)}>
       <div>
-        <h1
-          className={cn(
-            "text-2xl font-bold tracking-tight",
-            accent ? "text-fp-cta" : "text-foreground"
-          )}
-        >
+        {/* Titles are ink: lime is only for the next action (DESIGN.md §1). */}
+        <h1 className="text-2xl font-bold tracking-tight text-fp-ink">
           {title}
         </h1>
         {subtitle && (

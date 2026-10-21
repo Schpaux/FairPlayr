@@ -353,19 +353,19 @@ export function LivePitchLineupEditor({
               data-slot-id={slot.id}
               disabled={disabled && !occupantId}
               className={cn(
-                "tap-target absolute -translate-x-1/2 -translate-y-1/2 rounded-xl border px-2.5 py-1.5 text-center transition-all duration-150",
+                "tap-target absolute -translate-x-1/2 -translate-y-1/2 rounded-xl border px-2.5 py-1.5 text-center transition-[left,top,transform,background-color,border-color,color,opacity] duration-150",
                 "min-w-[56px]",
                 isBeingDragged && "opacity-20",
                 disabled && "cursor-default",
                 isSelected
-                  ? "border-fp-cta bg-fp-cta text-fp-cta-foreground shadow-[var(--glow-cta-sm)] scale-110"
+                  ? "border-fp-lime bg-fp-lime text-fp-on-lime scale-110"
                   : isDropTarget || isTapTarget
                     ? isOccupied
-                      ? "border-amber-300/90 bg-amber-50/90 text-amber-900"
-                      : "border-fp-cta/60 bg-fp-cta/20 text-fp-cta"
+                      ? "border-dashed border-fp-on-tag bg-fp-disc text-fp-on-disc"
+                      : "border-dashed border-fp-on-tag bg-fp-on-tag/15 text-fp-on-tag"
                     : isOccupied
-                      ? "border-white/20 bg-white/90 text-fp-cta-foreground shadow-sm"
-                      : "border-dashed border-white/25 bg-white/6 text-white/40"
+                      ? "border-fp-grass-line bg-fp-disc text-fp-on-disc"
+                      : "border-dashed border-fp-grass-line bg-fp-on-tag/5 text-fp-on-tag"
               )}
               style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
               onPointerDown={
@@ -433,12 +433,12 @@ export function LivePitchLineupEditor({
                   type="button"
                   disabled={disabled}
                   className={cn(
-                    "tap-target rounded-full border px-3 py-1.5 text-xs font-semibold transition-all",
+                    "tap-target rounded-full border px-3 py-1.5 text-xs font-semibold transition",
                     beingDragged && "opacity-30",
                     disabled && "cursor-default",
                     selected
-                      ? "border-fp-cta/40 bg-fp-cta/15 text-fp-cta shadow-[var(--glow-cta-sm)] scale-105"
-                      : "border-fp-border bg-fp-surface text-foreground shadow-sm"
+                      ? "border-fp-lime bg-fp-lime text-fp-on-lime scale-105"
+                      : "border-fp-border bg-fp-surface text-foreground"
                   )}
                   style={{ touchAction: "none" }}
                   onPointerDown={
@@ -476,7 +476,7 @@ export function LivePitchLineupEditor({
       {/* ── Drag ghost ────────────────────────────────────────────────────── */}
       {drag?.active && (
         <div
-          className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-white/20 bg-white/95 px-3 py-1.5 text-xs font-semibold text-fp-cta-foreground shadow-xl"
+          className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-fp-grass-line bg-fp-disc px-3 py-1.5 text-xs font-semibold text-fp-on-disc"
           style={{ left: drag.currentX, top: drag.currentY }}
         >
           {getShort(drag.source.playerId)}

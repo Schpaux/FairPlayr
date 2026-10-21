@@ -140,7 +140,7 @@ export default function SignInPage() {
 
   return (
     <PageShell className="space-y-4">
-      <SectionHeader title={t("signIn.title")} subtitle={t("signIn.subtitle")} accent />
+      <SectionHeader title={t("signIn.title")} subtitle={t("signIn.subtitle")} />
 
       {status === "authenticated" ? (
         <AppCard className="space-y-3 p-4">
@@ -198,7 +198,7 @@ export default function SignInPage() {
             variant="secondary"
             size="lg"
             fullWidth
-            className="tap-target border border-fp-border bg-white text-foreground hover:bg-zinc-50 dark:bg-zinc-950 dark:hover:bg-zinc-900"
+            className="tap-target"
             disabled={isBusy}
             onClick={handleGoogleSignIn}
           >
@@ -206,8 +206,8 @@ export default function SignInPage() {
             {activeAction === "google" ? t("actions.connecting") : t("actions.continueWithGoogle")}
           </FpButton>
 
-          {error ? <p className="text-xs text-danger">{error}</p> : null}
-          {message ? <p className="text-xs text-fp-accent">{message}</p> : null}
+          {error ? <p className="text-xs text-fp-danger-text">{error}</p> : null}
+          {message ? <p className="text-xs text-fp-ok-text">{message}</p> : null}
         </AppCard>
       )}
     </PageShell>

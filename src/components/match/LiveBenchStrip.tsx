@@ -106,19 +106,17 @@ export function LiveBenchStrip({
               // Base chip — pill, 52px height, min 64px width.
               "shrink-0 flex flex-col items-center justify-center gap-0.5",
               "h-[52px] min-w-[64px] rounded-full border px-3",
-              "transition-all duration-150 select-none",
+              "transition duration-150 select-none",
               // Default: dark, muted, waiting.
               "bg-fp-surface-2 border-fp-border text-foreground",
               // Ready target: field player is selected.
               isReadyTarget && [
-                "border-fp-cta/50 bg-fp-cta/10 text-fp-cta",
-                "shadow-[0_0_8px_rgba(159,232,112,0.18)]",
+                "border-fp-lime bg-fp-lime text-fp-on-lime",
                 "scale-105",
               ],
               // Suggested: coach intelligence hint (only when nothing selected).
               isSuggested && [
-                "border-fp-cta/30",
-                "shadow-[0_0_12px_rgba(159,232,112,0.15)]",
+                "border-fp-lime",
               ],
               // Being dragged: original chip fades.
               isBeingDragged && "opacity-20 scale-95",

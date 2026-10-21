@@ -109,7 +109,7 @@ export function PlayerList({
                     placeholder={copy.playerNamePlaceholder}
                     className={teamTextInputClassName}
                   />
-                  {error && <p className="text-xs text-danger">{error}</p>}
+                  {error && <p className="text-xs text-fp-danger-text">{error}</p>}
                   <div className="flex items-center gap-2">
                     <FpButton type="submit" variant="primary" size="md" className="tap-target px-3">
                       <Check size={16} />

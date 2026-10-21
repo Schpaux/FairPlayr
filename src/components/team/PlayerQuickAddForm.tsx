@@ -80,7 +80,7 @@ export function PlayerQuickAddForm({
           {submitLabel}
         </FpButton>
       </div>
-      {error && <p className="text-xs text-danger">{error}</p>}
+      {error && <p className="text-xs text-fp-danger-text">{error}</p>}
     </form>
   );
 }

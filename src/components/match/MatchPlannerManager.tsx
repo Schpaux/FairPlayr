@@ -429,7 +429,7 @@ export function MatchPlannerManager() {
   if (isGuestMode && !team) {
     return (
       <PageShell className="space-y-4">
-        <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
+        <SectionHeader title={t("title")} subtitle={t("subtitle")} />
         <EmptyState
           icon={ShieldAlert}
           title={t("noTeamTitle")}
@@ -445,7 +445,7 @@ export function MatchPlannerManager() {
   if (isGuestMode) {
     return (
       <PageShell className="space-y-4">
-        <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
+        <SectionHeader title={t("title")} subtitle={t("subtitle")} />
         <AppCard className="space-y-3 p-4">
           <h3 className="text-sm font-semibold text-foreground">{t("guest.title")}</h3>
           <p className="text-xs text-muted-foreground">{t("guest.description")}</p>
@@ -464,7 +464,7 @@ export function MatchPlannerManager() {
   if (workspace.error) {
     return (
       <PageShell>
-        <AppCard className="p-3 text-xs text-danger">{workspace.error}</AppCard>
+        <AppCard className="p-3 text-xs text-fp-danger-text">{workspace.error}</AppCard>
       </PageShell>
     );
   }
@@ -472,7 +472,7 @@ export function MatchPlannerManager() {
   if (!team) {
     return (
       <PageShell className="space-y-4">
-        <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
+        <SectionHeader title={t("title")} subtitle={t("subtitle")} />
         <EmptyState
           icon={ShieldAlert}
           title={t("noTeamTitle")}
@@ -487,19 +487,19 @@ export function MatchPlannerManager() {
 
   return (
     <PageShell className="space-y-5">
-      <SectionHeader title={t("title")} subtitle={t("subtitle")} accent />
+      <SectionHeader title={t("title")} subtitle={t("subtitle")} />
 
       <AppCard className="p-3 text-xs text-muted-foreground">
         {t("activeTeam", { name: team.name })}
       </AppCard>
 
       {notice ? (
-        <div className="rounded-2xl border border-fp-accent/30 bg-fp-accent/10 px-4 py-3 text-xs font-medium text-fp-accent">
+        <div className="rounded-2xl border border-fp-rule bg-fp-surface px-4 py-3 text-xs font-medium text-fp-ink">
           {notice}
         </div>
       ) : null}
       {error ? (
-        <div className="rounded-2xl border border-danger/25 bg-danger/8 px-4 py-3 text-xs font-medium text-danger">
+        <div className="rounded-2xl border border-fp-danger/25 bg-fp-danger/8 px-4 py-3 text-xs font-medium text-fp-danger-text">
           {error}
         </div>
       ) : null}
@@ -515,7 +515,7 @@ export function MatchPlannerManager() {
               type="button"
               className={
                 entryMode === "manual"
-                  ? "tap-target rounded-xl border border-fp-cta/30 bg-fp-cta/10 px-3 py-2.5 text-xs font-semibold text-fp-cta"
+                  ? "tap-target rounded-xl border border-fp-lime bg-fp-lime px-3 py-2.5 text-xs font-semibold text-fp-on-lime"
                   : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2.5 text-xs font-semibold text-muted-foreground"
               }
               onClick={() => setEntryMode("manual")}
@@ -541,7 +541,7 @@ export function MatchPlannerManager() {
         ) : entryMode === "manual" ? (
           <>
             <div className="flex items-center gap-2">
-              <PlusCircle size={16} className="text-primary" />
+              <PlusCircle size={16} className="text-fp-ink" />
               <h3 className="text-sm font-semibold text-foreground">{t("createTitle")}</h3>
             </div>
 
@@ -551,7 +551,7 @@ export function MatchPlannerManager() {
                   type="button"
                   className={
                     manualStartMode === "now"
-                      ? "tap-target rounded-xl border border-fp-cta/35 bg-fp-cta/10 px-3 py-2 text-xs font-semibold text-fp-cta"
+                      ? "tap-target rounded-xl border border-fp-lime bg-fp-lime px-3 py-2 text-xs font-semibold text-fp-on-lime"
                       : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-xs font-semibold text-muted-foreground"
                   }
                   onClick={() => setManualStartMode("now")}
@@ -562,7 +562,7 @@ export function MatchPlannerManager() {
                   type="button"
                   className={
                     manualStartMode === "scheduled"
-                      ? "tap-target rounded-xl border border-fp-cta/35 bg-fp-cta/10 px-3 py-2 text-xs font-semibold text-fp-cta"
+                      ? "tap-target rounded-xl border border-fp-lime bg-fp-lime px-3 py-2 text-xs font-semibold text-fp-on-lime"
                       : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-xs font-semibold text-muted-foreground"
                   }
                   onClick={() => setManualStartMode("scheduled")}
@@ -601,7 +601,7 @@ export function MatchPlannerManager() {
                   required
                 />
               ) : (
-                <p className="rounded-xl border border-fp-cta/20 bg-fp-cta/5 px-3 py-2 text-xs text-fp-cta">
+                <p className="rounded-xl border border-fp-rule bg-fp-surface-2 px-3 py-2 text-xs text-fp-ink-2">
                   {t("manualStart.nowHint")}
                 </p>
               )}
@@ -681,7 +681,7 @@ export function MatchPlannerManager() {
                             {t("alreadyImported")}
                           </span>
                           <Link href={`/match/${event.importedMatchId}`}>
-                            <span className="text-xs font-medium text-primary">{t("openMatch")}</span>
+                            <span className="text-xs font-medium text-fp-ink underline decoration-fp-lime decoration-2 underline-offset-4">{t("openMatch")}</span>
                           </Link>
                         </div>
                       ) : (
@@ -720,8 +720,8 @@ export function MatchPlannerManager() {
         <h3 className="text-sm font-semibold text-foreground">{t("ongoingTitle")}</h3>
 
         {activeMatch ? (
-          <div className="rounded-xl border border-fp-cta/45 bg-fp-cta/15 p-4 space-y-3">
-            <span className="inline-block rounded-full bg-fp-cta px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-fp-cta-foreground">
+          <div className="rounded-xl border border-fp-rule bg-fp-surface p-4 space-y-3">
+            <span className="inline-block rounded-full border border-fp-rule bg-fp-surface-2 text-fp-ink px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
               {t("status.live")}
             </span>
             <p className="text-base font-bold text-foreground leading-tight">{activeMatch.title || t("deviceMatchTitle")}</p>
@@ -757,10 +757,10 @@ export function MatchPlannerManager() {
         ) : (
           <ul className="space-y-2">
             {ongoingMatches.map((match) => (
-              <li key={match.id} className="rounded-xl border border-fp-cta/45 bg-fp-cta/15 p-3">
+              <li key={match.id} className="rounded-xl border border-fp-rule bg-fp-surface p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 space-y-1.5">
-                    <span className="inline-block rounded-full bg-fp-cta px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-fp-cta-foreground">
+                    <span className="inline-block rounded-full border border-fp-rule bg-fp-surface-2 text-fp-ink px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
                       {t("status.live")}
                     </span>
                     <p className="text-sm font-bold text-foreground truncate">{match.title}</p>
@@ -816,7 +816,7 @@ export function MatchPlannerManager() {
                     ) : null}
                     <span className={
                       match.status === "live"
-                        ? "rounded-full border border-fp-cta/40 bg-fp-cta/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-cta"
+                        ? "rounded-full border border-fp-rule bg-fp-surface-2 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-ink"
                         : match.status === "upcoming"
                           ? "rounded-full border border-fp-border bg-fp-surface-3 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-foreground/70"
                           : "rounded-full border border-dashed border-fp-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"

@@ -23,7 +23,7 @@ export function BottomNav() {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-fp-border bg-background/92 backdrop-blur-xl pb-safe pl-safe pr-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-fp-border bg-fp-canvas pb-safe pl-safe pr-safe">
       <div className="mx-auto flex max-w-screen-lg items-stretch justify-around px-1 h-[60px]">
         {navItems.map(({ href, icon: Icon, labelKey }) => {
           const active = isActive(href);
@@ -38,21 +38,21 @@ export function BottomNav() {
                 {active && (
                   <motion.div
                     layoutId="nav-pill"
-                    className="absolute inset-0 -mx-3 -my-1 rounded-full bg-fp-cta/20"
+                    className="absolute inset-0 -mx-3 -my-1 rounded-full bg-fp-lime/20"
                     transition={{ type: "spring", stiffness: 420, damping: 32 }}
                   />
                 )}
                 <Icon
                   size={21}
                   className={`relative transition-colors ${
-                    active ? "text-fp-cta dark:text-fp-cta" : "text-muted-foreground"
+                    active ? "text-fp-ink" : "text-muted-foreground"
                   }`}
                   strokeWidth={active ? 2.2 : 1.8}
                 />
               </div>
               <span
                 className={`text-[10px] font-semibold leading-none transition-colors ${
-                  active ? "text-fp-cta dark:text-fp-cta" : "text-muted-foreground"
+                  active ? "text-fp-ink" : "text-muted-foreground"
                 }`}
               >
                 {t(labelKey)}

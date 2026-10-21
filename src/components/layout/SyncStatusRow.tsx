@@ -19,19 +19,19 @@ export function SyncStatusRow({
       <span
         className={
           status === "cloud"
-            ? "inline-flex items-center gap-1 text-xs font-medium text-fp-accent"
+            ? "inline-flex items-center gap-1 text-xs font-medium text-fp-ok-text"
             : status === "attention"
-              ? "inline-flex items-center gap-1 text-xs font-medium text-fp-warning"
-              : "inline-flex items-center gap-1 text-xs font-medium text-fp-warning"
+              ? "inline-flex items-center gap-1 text-xs font-medium text-fp-warn-text"
+              : "inline-flex items-center gap-1 text-xs font-medium text-fp-warn-text"
         }
       >
         <span
           className={
             status === "cloud"
-              ? "h-1.5 w-1.5 rounded-full bg-fp-accent"
+              ? "h-1.5 w-1.5 rounded-full bg-fp-ok-text"
               : status === "attention"
-                ? "h-1.5 w-1.5 rounded-full bg-fp-warning"
-                : "h-1.5 w-1.5 rounded-full bg-fp-warning"
+                ? "h-1.5 w-1.5 rounded-full bg-fp-warn-text"
+                : "h-1.5 w-1.5 rounded-full bg-fp-warn-text"
           }
         />
         {status === "cloud" ? t("cloud") : status === "attention" ? t("attention") : t("local")}

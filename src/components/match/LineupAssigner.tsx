@@ -96,7 +96,7 @@ export function LineupAssigner({
           <span
             className={cn(
               "text-xs font-semibold tabular-nums",
-              currentStarters === required ? "text-fp-accent" : "text-muted-foreground"
+              currentStarters === required ? "text-fp-ok-text" : "text-muted-foreground"
             )}
           >
             {t("starterSlots", { current: currentStarters, required })}
@@ -126,7 +126,7 @@ export function LineupAssigner({
               className={cn(
                 "tap-target rounded-xl border px-3 py-3 text-left transition-colors",
                 player
-                  ? "border-primary/30 bg-primary/10"
+                  ? "border-fp-rule-strong bg-fp-surface"
                   : "border-dashed border-fp-border bg-fp-surface-2"
               )}
             >
@@ -188,7 +188,7 @@ export function LineupAssigner({
             {benchIds.length > 8 ? (
               <button
                 type="button"
-                className="tap-target text-xs font-medium text-primary"
+                className="tap-target text-xs font-medium text-fp-ink underline decoration-fp-lime decoration-2 underline-offset-4"
                 onClick={() => setShowAllBench((previous) => !previous)}
               >
                 {showAllBench ? t("showLessBench") : t("showMoreBench", { count: benchIds.length - 8 })}
@@ -199,8 +199,8 @@ export function LineupAssigner({
       </div>
 
       {activeSlotId ? (
-        <div className="fixed inset-0 z-40 flex items-end bg-black/45 p-3">
-          <div className="w-full max-h-[78vh] overflow-hidden rounded-2xl border border-fp-border bg-background shadow-xl">
+        <div className="fixed inset-0 z-40 flex items-end bg-fp-scrim p-3">
+          <div className="w-full max-h-[78vh] overflow-hidden rounded-2xl border border-fp-border bg-background">
             <div className="flex items-center justify-between border-b border-fp-border px-4 py-3">
               <div>
                 <p className="text-sm font-semibold text-foreground">{t("pickerTitle")}</p>
@@ -244,7 +244,7 @@ export function LineupAssigner({
                       className={cn(
                         "tap-target flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left",
                         isCurrent
-                          ? "border-primary/30 bg-primary/10"
+                          ? "border-fp-rule-strong bg-fp-surface"
                           : "border-fp-border bg-fp-surface-2"
                       )}
                     >
@@ -253,10 +253,10 @@ export function LineupAssigner({
                         className={cn(
                           "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
                           isCurrent
-                            ? "bg-primary/15 text-primary"
+                            ? "bg-fp-lime text-fp-on-lime"
                             : isOnField
                               ? "bg-fp-surface-3 text-muted-foreground"
-                              : "bg-fp-accent/15 text-fp-accent"
+                              : "bg-fp-surface-2 text-fp-ink"
                         )}
                       >
                         {isCurrent ? t("status.current") : isOnField ? t("status.onField") : t("status.bench")}

@@ -132,7 +132,7 @@ export default function SignUpPage() {
 
   return (
     <PageShell className="space-y-4">
-      <SectionHeader title={t("signUp.title")} subtitle={t("signUp.subtitle")} accent />
+      <SectionHeader title={t("signUp.title")} subtitle={t("signUp.subtitle")} />
 
       {status === "authenticated" ? (
         <AppCard className="space-y-3 p-4">
@@ -234,16 +234,16 @@ export default function SignUpPage() {
           </form>
 
           <p className="text-xs text-muted-foreground">{t("signUp.magicAlternative")}</p>
-          <Link href={{ pathname: "/auth/sign-in", query: { next: nextPath } }} className="inline-flex min-h-11 items-center text-xs text-primary">
+          <Link href={{ pathname: "/auth/sign-in", query: { next: nextPath } }} className="inline-flex min-h-11 items-center text-xs text-fp-ink underline decoration-fp-lime decoration-2 underline-offset-4">
             {t("actions.useMagicLinkInstead")}
           </Link>
 
-          {error ? <p className="text-xs text-danger">{error}</p> : null}
-          {message ? <p className="text-xs text-fp-accent">{message}</p> : null}
+          {error ? <p className="text-xs text-fp-danger-text">{error}</p> : null}
+          {message ? <p className="text-xs text-fp-ok-text">{message}</p> : null}
 
           <div className="space-y-2 text-xs text-muted-foreground">
             <p>{t("signUp.haveAccount")}</p>
-            <Link href={{ pathname: "/auth/sign-in", query: { next: nextPath } }} className="inline-flex min-h-11 items-center text-primary">
+            <Link href={{ pathname: "/auth/sign-in", query: { next: nextPath } }} className="inline-flex min-h-11 items-center text-fp-ink underline decoration-fp-lime decoration-2 underline-offset-4">
               {t("actions.goToSignIn")}
             </Link>
           </div>

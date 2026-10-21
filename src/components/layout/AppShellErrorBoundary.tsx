@@ -45,7 +45,7 @@ export class AppShellErrorBoundary extends Component<Props, State> {
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background px-6 pt-safe pb-safe">
           <div className="flex flex-col items-center gap-6 text-center max-w-xs">
             <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-fp-surface">
-              <AlertTriangle className="h-9 w-9 text-fp-warning" />
+              <AlertTriangle className="h-9 w-9 text-fp-warn-text" />
             </div>
             <div className="flex flex-col gap-2">
               <h1 className="text-xl font-semibold text-foreground">
@@ -61,7 +61,7 @@ export class AppShellErrorBoundary extends Component<Props, State> {
                 this.setState({ hasError: false });
                 window.location.reload();
               }}
-              className="tap-target inline-flex items-center justify-center rounded-full bg-fp-cta px-6 py-3 text-sm font-semibold text-fp-cta-foreground transition-all active:scale-95"
+              className="tap-target inline-flex items-center justify-center rounded-full bg-fp-lime px-6 py-3 text-sm font-semibold text-fp-on-lime transition active:scale-95"
             >
               Try again
             </button>

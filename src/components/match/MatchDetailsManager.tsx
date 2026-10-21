@@ -732,7 +732,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
   if (auth.status !== "authenticated") {
     return (
       <PageShell className="space-y-4">
-        <SectionHeader title={t("detailsTitle")} subtitle={t("subtitle")} accent />
+        <SectionHeader title={t("detailsTitle")} subtitle={t("subtitle")} />
         <EmptyState
           icon={ShieldAlert}
           title={t("loginRequiredTitle")}
@@ -748,8 +748,8 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
   if (error || !match) {
     return (
       <PageShell className="space-y-4">
-        <SectionHeader title={t("detailsTitle")} subtitle={t("subtitle")} accent />
-        <AppCard className="p-3 text-xs text-danger">{error ?? t("errors.generic")}</AppCard>
+        <SectionHeader title={t("detailsTitle")} subtitle={t("subtitle")} />
+        <AppCard className="p-3 text-xs text-fp-danger-text">{error ?? t("errors.generic")}</AppCard>
       </PageShell>
     );
   }
@@ -757,9 +757,9 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
   const isCompleted = match.status === "completed";
   const resultBadge = isCompleted
     ? match.scoreFor > match.scoreAgainst
-      ? { label: t("result.win"), className: "bg-green-500/15 text-green-600 dark:text-green-400" }
+      ? { label: t("result.win"), className: "bg-fp-ok-text/10 text-fp-ok-text" }
       : match.scoreFor < match.scoreAgainst
-        ? { label: t("result.loss"), className: "bg-danger/10 text-danger" }
+        ? { label: t("result.loss"), className: "bg-fp-danger/10 text-fp-danger-text" }
         : { label: t("result.draw"), className: "bg-fp-surface text-muted-foreground" }
     : null;
 
@@ -772,19 +772,18 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
       <SectionHeader
         title={t("detailsTitle")}
         subtitle={match.title}
-        accent
         action={
           <ButtonLink href="/match" variant="ghost" size="sm">{t("backToList")}</ButtonLink>
         }
       />
 
       {notice ? (
-        <AppCard className="p-3 text-xs text-fp-accent">
+        <AppCard className="p-3 text-xs text-fp-ok-text">
           <p role="status">{notice}</p>
         </AppCard>
       ) : null}
       {error ? (
-        <AppCard className="p-3 text-xs text-danger">
+        <AppCard className="p-3 text-xs text-fp-danger-text">
           <p role="alert">{error}</p>
         </AppCard>
       ) : null}
@@ -914,9 +913,9 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
                     type="button"
                     className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${
                       isOwnGoal
-                        ? "border-green-500/20 bg-green-500/5 active:bg-green-500/10"
+                        ? "border-fp-ok-text/20 bg-fp-ok-text/5 active:bg-fp-ok-text/10"
                         : isOpponentGoal
-                          ? "border-danger/20 bg-danger/5 active:bg-danger/10"
+                          ? "border-fp-danger-text/20 bg-fp-danger/5 active:bg-fp-danger/10"
                           : "border-fp-border bg-fp-surface-2 active:bg-fp-surface"
                     }`}
                     onClick={() => {
@@ -951,7 +950,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
                             <ArrowLeftRight size={13} className="shrink-0 text-muted-foreground" />
                             <div>
                               <p className="text-xs text-foreground">
-                                <span className="text-green-600 dark:text-green-400">
+                                <span className="text-fp-ok-text">
                                   {t("event.substitutionIn")}: {event.inPlayerName ?? t("event.notRegistered")}
                                 </span>
                               </p>
@@ -993,7 +992,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
       {match.reportEnabled ? (
         <AppCard className="space-y-3 p-4">
           <div className="flex items-center gap-2">
-            <Sparkles size={15} className="text-fp-accent" />
+            <Sparkles size={15} className="text-fp-ink-2" />
             <p className="text-sm font-semibold text-foreground">{t("reportTitle")}</p>
           </div>
           {match.reportStatus === "pending" && (
@@ -1003,7 +1002,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
             </div>
           )}
           {match.reportStatus === "failed" && (
-            <p className="text-sm text-danger">{t("reportFailed")}</p>
+            <p className="text-sm text-fp-danger-text">{t("reportFailed")}</p>
           )}
           {match.reportStatus === "ready" && match.reportText ? (
             <div className="space-y-2">
@@ -1035,8 +1034,8 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
       ) : null}
 
       {/* Danger zone */}
-      <AppCard className="space-y-3 border-danger/20 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-danger/70">
+      <AppCard className="space-y-3 border-fp-danger/20 p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-fp-danger-text">
           {t("actionsTitle")}
         </p>
         <FpButton
@@ -1052,7 +1051,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
 
       {/* Goal edit modal */}
       {editingEvent ? (
-        <div className="fixed inset-0 z-40 flex items-end bg-black/45 p-3">
+        <div className="fixed inset-0 z-40 flex items-end bg-fp-scrim p-3">
           <AppCard className="w-full space-y-3 p-4">
             <p className="text-sm font-semibold text-foreground">{t("event.editTitle")}</p>
 
@@ -1127,7 +1126,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
 
       {/* Delete confirmation modal */}
       {showDeleteConfirm ? (
-        <div className="fixed inset-0 z-50 flex items-end bg-black/50 p-3">
+        <div className="fixed inset-0 z-50 flex items-end bg-fp-scrim p-3">
           <AppCard className="w-full space-y-4 p-5">
             <div className="space-y-1.5">
               <p className="text-base font-semibold text-foreground">{t("delete.title")}</p>

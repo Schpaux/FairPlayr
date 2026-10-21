@@ -70,12 +70,12 @@ export function LineupField({
             <button
               key={slot.id}
               type="button"
-              className={`tap-target absolute -translate-x-1/2 -translate-y-1/2 rounded-2xl border px-2 py-1.5 text-center transition-all ${
+              className={`tap-target absolute -translate-x-1/2 -translate-y-1/2 rounded-2xl border px-2 py-1.5 text-center transition-[left,top,transform,background-color,border-color,color,opacity] ${
                 active
-                  ? "border-primary bg-primary text-primary-foreground shadow-[var(--glow-primary-sm)]"
+                  ? "border-fp-lime bg-fp-lime text-fp-on-lime"
                   : player
-                    ? "border-white/40 bg-black/40 text-white"
-                    : "border-white/30 bg-white/10 text-white"
+                    ? "border-fp-grass-line bg-fp-tag text-fp-on-tag"
+                    : "border-fp-grass-line bg-fp-on-tag/10 text-fp-on-tag"
               }`}
               style={{ left: `${slot.x}%`, top: `${slot.y}%` }}
               onClick={() => onSelectSlot(slot.id)}

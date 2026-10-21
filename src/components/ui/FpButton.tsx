@@ -11,20 +11,22 @@ interface FpButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   fullWidth?: boolean;
 }
 
-// Wise-inspired: primary = lime green pill with dark text + scale hover
-// Secondary/ghost remain neutral with pill shape
+// DESIGN.md §5.7: primary = lime fill with on-lime ink; secondary = 1.5px
+// control-line outline with ink text; danger = red fill with white text.
+// Pressed is scale(.97) for 90ms; hover (pointer devices only in Tailwind v4)
+// is a fill shift, never a scale-up. Disabled = surface-2 fill, ink-2 text.
 const variantClasses: Record<Variant, string> = {
   primary:
-    "bg-fp-cta text-fp-cta-foreground glow-cta-sm font-semibold hover:scale-[1.03] active:scale-[0.96]",
+    "bg-fp-lime text-fp-on-lime font-semibold hover:brightness-95 disabled:bg-fp-surface-2 disabled:text-fp-ink-2",
   secondary:
-    "bg-fp-surface-2 text-foreground border border-fp-border hover:bg-fp-surface hover:scale-[1.02] active:scale-[0.97]",
+    "bg-transparent text-fp-ink border-[1.5px] border-fp-control-line hover:bg-fp-surface-2 disabled:bg-fp-surface-2 disabled:text-fp-ink-2 disabled:border-transparent",
   ghost:
-    "text-foreground hover:bg-fp-surface-2 active:scale-[0.97]",
+    "text-fp-ink hover:bg-fp-surface-2 disabled:text-fp-ink-2",
   danger:
-    "bg-destructive text-destructive-foreground font-semibold hover:scale-[1.02] active:scale-[0.96]",
+    "bg-fp-danger text-fp-on-danger font-semibold hover:brightness-95 disabled:bg-fp-surface-2 disabled:text-fp-ink-2",
 };
 
-// Pill shape on all sizes — Wise signature
+// Every button is a pill (DESIGN.md §4).
 const sizeClasses: Record<Size, string> = {
   sm: "h-9 px-4 text-sm rounded-full gap-1.5",
   md: "h-11 px-5 text-sm rounded-full gap-2",
@@ -33,7 +35,7 @@ const sizeClasses: Record<Size, string> = {
 
 /**
  * FairPlayr's primary button primitive.
- * Wise-inspired: pill shape, lime green primary CTA, scale hover animation.
+ * Pill shape, lime primary, flat (no glow, no hover scale).
  */
 export const FpButton = forwardRef<HTMLButtonElement, FpButtonProps>(
   (
@@ -51,9 +53,10 @@ export const FpButton = forwardRef<HTMLButtonElement, FpButtonProps>(
       <button
         ref={ref}
         className={cn(
-          "inline-flex items-center justify-center font-medium transition-all duration-150 cursor-pointer",
+          "inline-flex items-center justify-center font-medium cursor-pointer",
+          "transition-[transform,background-color,border-color,filter] duration-(--fp-d-press) ease-fp-out active:scale-[.97]",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-          "disabled:pointer-events-none disabled:opacity-40 disabled:cursor-not-allowed",
+          "disabled:pointer-events-none disabled:cursor-not-allowed",
           variantClasses[variant],
           sizeClasses[size],
           fullWidth && "w-full",

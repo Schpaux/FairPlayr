@@ -40,8 +40,8 @@ export function UndoToast({ secondsRemaining, onUndo }: UndoToastProps) {
             onClick={onUndo}
             className={cn(
               "flex items-center gap-2 rounded-full",
-              "border border-fp-border bg-fp-surface-2/90 backdrop-blur-sm",
-              "px-3.5 py-2 shadow-lg",
+              "border border-fp-border bg-fp-surface-2",
+              "px-3.5 py-2",
               "text-xs font-semibold text-foreground",
               "transition-colors active:bg-fp-surface-3",
               "tap-target"

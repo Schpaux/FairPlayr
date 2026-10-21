@@ -1309,7 +1309,7 @@ export function MatchLiveManager() {
   if (workspace.error && !liveMatch) {
     return (
       <PageShell>
-        <AppCard className="p-3 text-xs text-danger">{workspace.error}</AppCard>
+        <AppCard className="p-3 text-xs text-fp-danger-text">{workspace.error}</AppCard>
       </PageShell>
     );
   }
@@ -1589,7 +1589,7 @@ export function MatchLiveManager() {
         variants={variants.staggerContainer}
         className="space-y-3"
       >
-        {error ? <AppCard className="p-3 text-xs text-danger">{error}</AppCard> : null}
+        {error ? <AppCard className="p-3 text-xs text-fp-danger-text">{error}</AppCard> : null}
 
         {bandItems.length > 0 ? (
           <div className="grid gap-2" data-testid="live-notice-band">
@@ -1608,7 +1608,7 @@ export function MatchLiveManager() {
               </div>
             ) : (
               <div role="alert" className="space-y-1">
-                <p className="text-sm font-semibold text-danger">{t("pendingSync.notSavedTitle")}</p>
+                <p className="text-sm font-semibold text-fp-danger-text">{t("pendingSync.notSavedTitle")}</p>
                 <p className="text-xs text-muted-foreground">
                   {isOnline
                     ? t("pendingSync.notSavedDescriptionOnline")
@@ -1651,7 +1651,7 @@ export function MatchLiveManager() {
           <AppCard className="space-y-2 p-3">
             {localEndUnsaved ? (
               <div role="alert" className="space-y-1">
-                <p className="text-sm font-semibold text-danger">{t("endedLocally.title")}</p>
+                <p className="text-sm font-semibold text-fp-danger-text">{t("endedLocally.title")}</p>
                 <p className="text-xs text-muted-foreground">{t("endedLocally.notSaved")}</p>
               </div>
             ) : (
@@ -1672,10 +1672,7 @@ export function MatchLiveManager() {
 
         {/* ── Combined score + timer card ──────────────────────── */}
         <motion.div variants={variants.fadeInUp}>
-          <AppCard
-            glow={liveMatch.status === "running" ? "accent" : "none"}
-            className="space-y-4 p-4"
-          >
+          <AppCard className="space-y-4 p-4">
             {/* Score row: [- score +] : [- score +] */}
             <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
               {/* Team */}
@@ -1699,7 +1696,7 @@ export function MatchLiveManager() {
                   <button
                     type="button"
                     aria-label={t("score.increaseTeam")}
-                    className="tap-target flex h-11 w-11 items-center justify-center rounded-full border border-fp-cta/40 bg-fp-cta/15 text-fp-cta transition-colors active:bg-fp-cta/25 disabled:opacity-40"
+                    className="tap-target flex h-11 w-11 items-center justify-center rounded-full border-[1.5px] border-fp-control-line text-fp-ink transition-colors active:bg-fp-surface-2 disabled:opacity-40"
                     onClick={() => handleTeamScore(1)}
                     disabled={liveMatch.status === "ended"}
                   >
@@ -1851,7 +1848,7 @@ export function MatchLiveManager() {
               {/* Drag ghost chip */}
               {subInteraction.ghostChip && (
                 <div
-                  className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 flex h-[52px] w-[52px] items-center justify-center rounded-full border-2 border-white/20 bg-fp-surface-2 text-[10px] font-bold text-foreground shadow-2xl"
+                  className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-1/2 flex h-[52px] w-[52px] items-center justify-center rounded-full border-2 border-fp-rule bg-fp-surface-2 text-[10px] font-bold text-foreground"
                   style={{
                     left: subInteraction.ghostChip.x,
                     top: subInteraction.ghostChip.y,
@@ -1866,7 +1863,7 @@ export function MatchLiveManager() {
 
         {liveMatch.status === "ended" && (
           <motion.div variants={variants.fadeInUp}>
-            <AppCard className="space-y-3 border-danger/30 bg-danger/5 p-4">
+            <AppCard className="space-y-3 border-fp-danger/30 bg-fp-danger/5 p-4">
               <p className="text-sm font-semibold text-foreground">{t("ended.title")}</p>
               <p className="text-xs text-muted-foreground">{t("ended.description")}</p>
               <FpButton variant="secondary" size="md" fullWidth onClick={handleResetView}>
@@ -1878,12 +1875,12 @@ export function MatchLiveManager() {
       </motion.div>
 
       {promptQueue[0] ? (
-        <div className="fixed inset-0 z-40 flex items-end bg-black/45 p-3">
+        <div className="fixed inset-0 z-40 flex items-end bg-fp-scrim p-3">
           <AppCard className="w-full space-y-3 p-4">
             <div className="h-0.5 w-full overflow-hidden rounded-full bg-fp-border">
               <motion.div
                 key={`${promptQueue[0].localEventId}-${promptQueue[0].step}`}
-                className="h-full bg-primary/40"
+                className="h-full bg-fp-lime"
                 initial={{ scaleX: 1 }}
                 animate={{ scaleX: 0 }}
                 transition={{ duration: 10, ease: "linear" }}
@@ -1951,7 +1948,7 @@ export function MatchLiveManager() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-background/95 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-fp-canvas"
           >
             {endMatchDone ? (
               <motion.div
@@ -1960,7 +1957,7 @@ export function MatchLiveManager() {
                 animate={{ scale: 1, opacity: 1 }}
                 className="flex flex-col items-center gap-3 text-center"
               >
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-fp-surface-2 text-fp-ok-text">
                   <Play size={32} fill="currentColor" />
                 </div>
                 <p className="text-xl font-bold text-foreground">{t("endingSequence.done")}</p>

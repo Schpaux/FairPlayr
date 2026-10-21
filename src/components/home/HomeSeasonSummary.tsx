@@ -160,7 +160,7 @@ export function HomeTeamName() {
   return (
     <p
       data-testid="home-team-name"
-      className="font-mono text-[13px] font-semibold uppercase tracking-wider text-white/75"
+      className="font-mono text-[13px] font-semibold uppercase tracking-wider text-fp-on-club"
     >
       {teamName}
     </p>
@@ -176,7 +176,7 @@ export function HomeNextMatch() {
   return (
     <div className="min-w-0 flex-1">
       <div className="mb-1 flex items-center gap-1.5">
-        <span className="rounded-full bg-fp-cta px-2 py-0.5 text-[10px] font-bold text-fp-cta-foreground">
+        <span className="rounded-full border border-fp-rule bg-fp-surface-2 text-fp-ink px-2 py-0.5 text-[10px] font-bold">
           {t("nextMatch.badge")}
         </span>
         {upcoming && countdown ? (
@@ -244,7 +244,7 @@ export function HomeSeasonSummary() {
         {/* Left: Balance card */}
         <div className="flex flex-col justify-between rounded-[20px] bg-fp-surface p-4 shadow-[inset_0_0_0_1px_var(--fp-border)]">
           <div className="flex items-center gap-1.5">
-            <Sparkles size={14} className="text-fp-cta shrink-0" />
+            <Sparkles size={14} className="text-fp-ink-2 shrink-0" />
             <p className="text-[11px] font-semibold text-fp-text-secondary">{t("balance.title")}</p>
           </div>
           <div>
@@ -254,7 +254,7 @@ export function HomeSeasonSummary() {
             </p>
             {/* Progress bar */}
             <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-fp-surface-3">
-              <div className="h-full rounded-full bg-fp-cta transition-all" style={{ width: `${stats.balance}%` }} />
+              <div className="h-full rounded-full bg-fp-ink transition-[width]" style={{ width: `${stats.balance}%` }} />
             </div>
             <p className="mt-2 text-[10px] text-fp-text-secondary">
               {t("balance.spread", {
@@ -269,12 +269,12 @@ export function HomeSeasonSummary() {
         <div className="flex flex-col gap-2">
           {/* Last match */}
           {stats.lastMatch && (
-            <div className="flex flex-col justify-between rounded-[20px] bg-fp-cta/10 p-3 shadow-[inset_0_0_0_1px_var(--fp-border)]">
+            <div className="flex flex-col justify-between rounded-[20px] bg-fp-surface p-3 shadow-[inset_0_0_0_1px_var(--fp-border)]">
               <p className="font-mono text-[10px] text-fp-text-secondary">
                 {t("lastMatch.title", { when: formatLastMatchDay(stats.lastMatch.when) })}
               </p>
               <div className="flex items-baseline gap-1">
-                <span className="text-[11px] font-bold text-fp-cta">{t(`lastMatch.${stats.lastMatch.result}`)}</span>
+                <span className="text-[11px] font-bold text-fp-ink">{t(`lastMatch.${stats.lastMatch.result}`)}</span>
                 <span className="font-mono text-base font-bold text-foreground tabular-nums">
                   {stats.lastMatch.scoreFor}–{stats.lastMatch.scoreAgainst}
                 </span>
@@ -303,7 +303,7 @@ export function HomeSeasonSummary() {
             {stats.needsMinutes.map((player) => (
               <div key={player.playerId} className="flex items-center gap-3">
                 {/* Avatar */}
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-fp-cta text-[11px] font-black text-fp-cta-foreground">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-fp-club-disc text-[11px] font-black text-fp-on-club">
                   {getInitials(player.name)}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -312,7 +312,7 @@ export function HomeSeasonSummary() {
                     {player.position ?? "–"} · {player.totalMinutes}min
                   </p>
                 </div>
-                <span className="rounded-full bg-fp-cta/15 px-2 py-0.5 text-[11px] font-bold text-fp-cta">
+                <span className="rounded-full bg-fp-surface-2 px-2 py-0.5 text-[11px] font-bold text-fp-warn-text">
                   {t("needsMinutes.deficit", { hours: (player.deficitMinutes / 60).toFixed(1) })}
                 </span>
               </div>

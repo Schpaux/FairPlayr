@@ -41,7 +41,7 @@ export function LanguageSwitcher() {
             <DropdownMenuItem
               key={l}
               onClick={() => switchLocale(l)}
-              className={l === locale ? "bg-primary/10 text-primary" : ""}
+              className={l === locale ? "bg-fp-lime text-fp-on-lime" : ""}
             >
               <span className="text-sm font-medium">{meta?.full ?? l}</span>
               {l === locale && (

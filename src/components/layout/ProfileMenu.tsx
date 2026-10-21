@@ -115,14 +115,14 @@ export function ProfileMenu() {
               <span
                 className={
                   spondConnected
-                    ? "inline-flex items-center gap-1 text-xs font-medium text-fp-accent"
+                    ? "inline-flex items-center gap-1 text-xs font-medium text-fp-ok-text"
                     : "inline-flex items-center gap-1 text-xs font-medium text-muted-foreground"
                 }
               >
                 <span
                   className={
                     spondConnected
-                      ? "h-1.5 w-1.5 rounded-full bg-fp-accent"
+                      ? "h-1.5 w-1.5 rounded-full bg-fp-ok-text"
                       : "h-1.5 w-1.5 rounded-full bg-muted-foreground/40"
                   }
                 />
@@ -158,7 +158,7 @@ export function ProfileMenu() {
                     lang={l}
                     className={
                       active
-                        ? "tap-target rounded-xl border border-fp-cta/35 bg-fp-cta/10 px-3 py-2 text-sm font-medium text-fp-cta"
+                        ? "tap-target rounded-xl border border-fp-lime bg-fp-lime px-3 py-2 text-sm font-medium text-fp-on-lime"
                         : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-sm font-medium text-muted-foreground"
                     }
                     onClick={() => {
@@ -191,7 +191,7 @@ export function ProfileMenu() {
                     aria-pressed={active}
                     className={
                       active
-                        ? "tap-target rounded-xl border border-fp-cta/35 bg-fp-cta/10 px-2 py-2 text-xs font-semibold text-fp-cta"
+                        ? "tap-target rounded-xl border border-fp-lime bg-fp-lime px-2 py-2 text-xs font-semibold text-fp-on-lime"
                         : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-2 py-2 text-xs font-semibold text-muted-foreground"
                     }
                     onClick={() => setTheme(option.value)}

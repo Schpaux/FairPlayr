@@ -1,9 +1,9 @@
 /**
  * Player fatigue — pure calculation.
  *
- * Fatigue is expressed as a fraction of a single half's duration. The levels
- * drive chip colour on the live pitch: fresh (lime) → watch (amber) → act (red)
- * → critical (red + breathing pulse).
+ * Fatigue is expressed as a fraction of a single half's duration:
+ * fresh → watch → act → critical. How a level looks is up to the view
+ * (LivePitchView, the live screen's stint ring); this module has no styling.
  *
  * Thresholds are purposefully conservative for youth football: a 10-minute half
  * has a shorter fatigue curve than a 30-minute half, but the same percentages
@@ -39,19 +39,6 @@ export function getPlayerFatigue(
   if (ratio >= FATIGUE_THRESHOLDS.watch) return "watch";
   return "fresh";
 }
-
-/**
- * Tailwind class names for each fatigue level.
- * Applied to the player chip background + text. The `critical` level shares
- * the same colours as `act` — the distinguishing visual is the CSS pulse
- * animation applied separately by the rendering component.
- */
-export const FATIGUE_CHIP_CLASSES: Record<FatigueLevel, string> = {
-  fresh: "bg-fp-cta text-fp-cta-foreground",
-  watch: "bg-amber-400 text-amber-950",
-  act: "bg-red-500 text-white",
-  critical: "bg-red-500 text-white",
-};
 
 /**
  * Returns true when the chip should pulse (breathing animation).

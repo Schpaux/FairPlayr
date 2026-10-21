@@ -44,10 +44,9 @@
   --color-sidebar-ring: var(--sidebar-ring);
 
   /* FairPlayr brand tokens — theme-aware */
-  --color-fp-accent: var(--fp-accent);           /* Lime — active/positive/action states */
-  --color-fp-warning: #f59e0b;
-  --color-fp-danger: #ef4444;
-  --color-danger: #ef4444;                       /* Direct alias — used in inline error text */
+  /* Destructive fill (DESIGN.md §2.4); text uses fp-danger-text. */
+  --color-fp-danger: var(--fp-danger);
+  --color-fp-on-danger: var(--fp-on-danger);
   --color-fp-spond: var(--fp-spond);
   --color-fp-spond-soft: var(--fp-spond-soft);
   --color-fp-spond-foreground: var(--fp-spond-foreground);
@@ -84,10 +83,18 @@
   --color-fp-warn-text: var(--fp-warn-text);
   --color-fp-danger-text: var(--fp-danger-text);
   --color-fp-ok-text: var(--fp-ok-text);
+  --color-fp-control-line: var(--fp-control-line); /* secondary-button outline (§5.7) */
+  --color-fp-scrim: var(--fp-scrim);
+  --color-fp-focus: var(--fp-focus);
+  --color-fp-grass-line: var(--fp-grass-line);
+  --color-fp-ring-track: var(--fp-ring-track);
+  --color-fp-ring-fresh: var(--fp-ring-fresh);
+  --color-fp-ring-watch: var(--fp-ring-watch);
+  --color-fp-ring-act: var(--fp-ring-act);
 
-  /* CTA token — lime green, primary action color */
-  --color-fp-cta: var(--fp-cta);
-  --color-fp-cta-foreground: var(--fp-cta-foreground);
+  /* Motion (DESIGN.md §4): `ease-fp-out`; durations via duration-(--fp-d-press). */
+  --ease-fp-out: var(--fp-ease-out);
+  --ease-fp-land: var(--fp-ease-land);
 
   /* Pitch surface tokens — hue 148, sibling to lime (132) */
   --color-fp-pitch-a: var(--fp-pitch-a);
@@ -197,8 +204,8 @@
   --accent: var(--fp-lime);
   --accent-foreground: var(--fp-on-lime);
 
-  --destructive: #B3261E;
-  --destructive-foreground: #FFFFFF;
+  --destructive: var(--fp-danger);
+  --destructive-foreground: var(--fp-on-danger);
   --border: var(--fp-rule);
   --input: var(--fp-rule);
 
@@ -210,16 +217,11 @@
   --fp-text-primary: var(--fp-ink);
   --fp-text-secondary: var(--fp-ink-2);
   --fp-border: var(--fp-rule);
-  --fp-accent: var(--fp-lime);
 
   --fp-spond: #e15a37;
   --fp-spond-soft: rgba(225, 90, 55, 0.10);
   --fp-spond-foreground: #7a2d1b;
   --fp-spond-border: rgba(225, 90, 55, 0.30);
-
-  /* CTA — lime */
-  --fp-cta: var(--fp-lime);
-  --fp-cta-foreground: var(--fp-on-lime);
 
   /* Sidebar */
   --sidebar: var(--fp-surface);
@@ -238,15 +240,6 @@
   --fp-pitch-stripe-a: oklch(0.58 0.14 148);
   --fp-pitch-stripe-b: oklch(0.56 0.15 148);
   --fp-pitch-line: oklch(1 0 0 / 0.85);
-
-  /* Glow — legacy, still referenced by existing components. Modern Sideline
-     uses no glow (DESIGN.md §7); remove with the components that use it. */
-  --glow-primary: 0 0 20px rgba(159, 232, 112, 0.30);
-  --glow-primary-sm: 0 0 10px rgba(159, 232, 112, 0.22);
-  --glow-accent: 0 0 20px rgba(159, 232, 112, 0.25);
-  --glow-accent-sm: 0 0 10px rgba(159, 232, 112, 0.18);
-  --glow-cta: 0 0 20px rgba(159, 232, 112, 0.25);
-  --glow-cta-sm: 0 0 10px rgba(159, 232, 112, 0.18);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -301,8 +294,8 @@
   --accent: var(--fp-lime);
   --accent-foreground: var(--fp-on-lime);
 
-  --destructive: #d03238;
-  --destructive-foreground: #ffffff;
+  --destructive: var(--fp-danger);
+  --destructive-foreground: var(--fp-on-danger);
   --border: var(--fp-rule);
   --input: var(--fp-rule);
 
@@ -330,14 +323,6 @@
   --fp-pitch-stripe-a: oklch(0.40 0.12 148);
   --fp-pitch-stripe-b: oklch(0.38 0.13 148);
   --fp-pitch-line: oklch(1 0 0 / 0.55);
-
-  /* Glow — legacy */
-  --glow-primary: 0 0 30px rgba(159, 232, 112, 0.35);
-  --glow-primary-sm: 0 0 15px rgba(159, 232, 112, 0.22);
-  --glow-accent: 0 0 30px rgba(159, 232, 112, 0.32);
-  --glow-accent-sm: 0 0 15px rgba(159, 232, 112, 0.20);
-  --glow-cta: 0 0 30px rgba(159, 232, 112, 0.35);
-  --glow-cta-sm: 0 0 15px rgba(159, 232, 112, 0.22);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -379,14 +364,6 @@
    Utility Classes
 ───────────────────────────────────────────────────────────────────────────── */
 @layer utilities {
-  /* Glow effects — all emit lime, consistent with single-accent system */
-  .glow-primary    { box-shadow: var(--glow-primary); }
-  .glow-primary-sm { box-shadow: var(--glow-primary-sm); }
-  .glow-accent     { box-shadow: var(--glow-accent); }
-  .glow-accent-sm  { box-shadow: var(--glow-accent-sm); }
-  .glow-cta        { box-shadow: var(--glow-cta); }
-  .glow-cta-sm     { box-shadow: var(--glow-cta-sm); }
-
   /* FairPlayr surface helpers */
   .surface   { background-color: var(--fp-surface); }
   .surface-2 { background-color: var(--fp-surface-2); }

@@ -29,13 +29,13 @@ export function OfflineIndicator() {
       className={
         isOnline
           ? "sr-only"
-          : "inline-flex shrink-0 items-center gap-1.5 rounded-full border border-fp-warning/40 bg-fp-surface-2 px-2.5 py-1"
+          : "inline-flex shrink-0 items-center gap-1.5 rounded-full border border-fp-warn-text/40 bg-fp-surface-2 px-2.5 py-1"
       }
     >
       {isOnline ? null : (
         <>
-          <WifiOff className="h-3.5 w-3.5 shrink-0 text-fp-warning" aria-hidden />
-          <span className="text-xs font-semibold text-fp-warning">{t("label")}</span>
+          <WifiOff className="h-3.5 w-3.5 shrink-0 text-fp-warn-text" aria-hidden />
+          <span className="text-xs font-semibold text-fp-warn-text">{t("label")}</span>
           <span className="sr-only text-xs text-muted-foreground sm:not-sr-only">{t("detail")}</span>
         </>
       )}

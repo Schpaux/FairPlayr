@@ -31,13 +31,13 @@ export function FormatSelector({
             transition={{ duration: 0.1 }}
             aria-pressed={isSelected}
             className={cn(
-              "relative flex flex-col items-center justify-center gap-1.5 rounded-2xl border py-4 px-2 text-center transition-all duration-150 tap-target",
+              "relative flex flex-col items-center justify-center gap-1.5 rounded-2xl border py-4 px-2 text-center transition duration-150 tap-target",
               isSelected
-                ? "border-fp-cta/40 bg-fp-cta/15 text-foreground glow-cta-sm"
+                ? "border-fp-lime bg-fp-lime text-fp-on-lime"
                 : "border-fp-border bg-fp-surface-2 text-muted-foreground hover:border-fp-border hover:text-foreground"
             )}
           >
-            <span className={cn("text-base font-bold leading-none tracking-tight", isSelected && "text-fp-cta dark:text-fp-cta")}>
+            <span className={cn("text-base font-bold leading-none tracking-tight", isSelected && "text-fp-on-lime")}>
               {format}
             </span>
             <span className="text-[10px] font-medium leading-none opacity-70">
@@ -46,7 +46,7 @@ export function FormatSelector({
             {isSelected && (
               <motion.span
                 layoutId="format-dot"
-                className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-fp-cta"
+                className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-fp-on-lime"
                 transition={{ type: "spring", stiffness: 500, damping: 35 }}
               />
             )}
