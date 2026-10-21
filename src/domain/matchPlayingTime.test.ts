@@ -8,7 +8,7 @@ import {
   type LiveMatchState,
 } from "@/domain/liveMatch";
 import type { MatchFormat, MatchSetup } from "@/domain/match";
-import { summarizeMatchPlayingTime } from "@/domain/matchPlayingTime";
+import { sumSeasonPlayingTime, summarizeMatchPlayingTime } from "@/domain/matchPlayingTime";
 
 const MIN = 60_000;
 const T0 = 1_000_000;
@@ -188,6 +188,9 @@ describe("summarizeMatchPlayingTime", () => {
       expect(summary?.gaps).toEqual(["openSpellsMissing"]);
       expect(summary?.fairShare).toBeNull();
       expect(minutesById(summary)).toMatchObject({ p1: 0, p5: 10, p6: 0, p7: 0 });
+      // Those on the field at the end are a lower bound only; the others are exact.
+      const incomplete = summary?.players.filter((player) => player.incomplete).map((player) => player.playerId);
+      expect(incomplete?.sort()).toEqual(["p1", "p2", "p3", "p4", "p6"]);
       expect(summary?.players.every((player) => player.gapMinutes === null)).toBe(true);
     });
 
@@ -208,6 +211,17 @@ describe("summarizeMatchPlayingTime", () => {
       expect(unknown?.gaps).toEqual(["openSpellsMissing"]);
       expect(unknown?.fairShare).toBeNull();
       expect(minutesById(unknown).p1).toBe(0);
+    });
+
+    it("treats a stopped clock without its stop time as unmeasurable once the match is over", () => {
+      const state = stored(playedFiveVFive()) as Record<string, unknown>;
+      (state.clock as Record<string, unknown>).pausedAtMs = null;
+
+      const summary = summarizeMatchPlayingTime(state, { nowMs: T0 + 99 * MIN, completed: true });
+
+      expect(summary?.gaps).toEqual(["openSpellsMissing"]);
+      expect(summary?.fairShare).toBeNull();
+      expect(minutesById(summary)).toMatchObject({ p1: 0, p5: 10 });
     });
 
     it("never adds players who are not in the stored squad", () => {
@@ -237,5 +251,76 @@ describe("summarizeMatchPlayingTime", () => {
       expect(minutesById(summary)).toEqual({ a: 30, b: 30, c: 30, d: 30, e: 15, f: 15 });
       expect(summary?.fairShare?.minutes).toBe(25);
     });
+  });
+});
+
+describe("sumSeasonPlayingTime", () => {
+  /**
+   * 7v7, 2 × 20, squad of 9: p8 replaces p6 at 12′, p9 replaces p8 at 30′,
+   * and p6 comes back on for p9 at 35′ (a second spell).
+   */
+  function sevenVSeven(): LiveMatchState {
+    let state = createLiveMatchFromSetup(makeSetup("7v7", 9, 20));
+    state = startLiveMatch(state, T0);
+    state = substitutePlayers(state, "p6", "p8", T0 + 12 * MIN);
+    state = endCurrentHalf(state, T0 + 20 * MIN);
+    state = startLiveMatch(state, T0 + 30 * MIN);
+    state = substitutePlayers(state, "p8", "p9", T0 + 40 * MIN);
+    state = substitutePlayers(state, "p9", "p6", T0 + 45 * MIN);
+    return endLiveMatch(state, T0 + 50 * MIN);
+  }
+
+  it("adds each match's details-page totals once per player", () => {
+    const first = stored(playedFiveVFive()); // 5v5: p1–p4 30′, p5 10′, p6 20′, p7 0′
+    const second = stored(sevenVSeven()); // 7v7: p1–p5, p7 40′, p6 12′ + 5′, p8 18′, p9 5′
+
+    const season = sumSeasonPlayingTime([first, second], { nowMs: T0 });
+    const minutes = Object.fromEntries([...season.seconds].map(([id, seconds]) => [id, seconds / 60]));
+
+    expect(season).toMatchObject({ countedMatches: 2, skippedMatches: 0 });
+    expect(minutes).toEqual({ p1: 70, p2: 70, p3: 70, p4: 70, p5: 50, p6: 37, p7: 40, p8: 18, p9: 5 });
+    // Every counted second is a played second: 5 × 30 + 7 × 40.
+    expect([...season.seconds.values()].reduce((sum, value) => sum + value, 0)).toBe((5 * 30 + 7 * 40) * 60);
+  });
+
+  it("keeps squad players who never came on, at 0", () => {
+    const season = sumSeasonPlayingTime([stored(playedFiveVFive())], { nowMs: T0 });
+
+    expect(season.seconds.get("p7")).toBe(0);
+    expect(season.seconds.size).toBe(7);
+  });
+
+  it("counts a match stored twice in the list twice, and nothing else twice", () => {
+    // Totals are per stored match row; the caller passes each completed match once.
+    const match = stored(playedFiveVFive());
+    const season = sumSeasonPlayingTime([match, match], { nowMs: T0 });
+
+    expect(season.countedMatches).toBe(2);
+    expect(season.seconds.get("p1")).toBe(2 * 30 * 60);
+  });
+
+  it("leaves out matches it cannot support, for everyone in them", () => {
+    const noClock = stored(playedFiveVFive()) as Record<string, unknown>;
+    delete noClock.clock;
+    const legacy = {
+      onFieldPlayerIds: ["p1"],
+      benchPlayerIds: [],
+      elapsedSeconds: 600,
+      playerAccumulatedSeconds: { p1: 600 },
+    };
+
+    const season = sumSeasonPlayingTime([noClock, legacy, null, "garbage", stored(playedFiveVFive())], { nowMs: T0 });
+
+    expect(season).toMatchObject({ countedMatches: 1, skippedMatches: 4 });
+    expect(season.seconds.get("p1")).toBe(30 * 60);
+  });
+
+  it("reads a completed match's stale running clock at its last save", () => {
+    const running = startLiveMatch(createLiveMatchFromSetup(makeSetup("5v5", 6, 15)), T0);
+    const state = { ...(stored(running) as Record<string, unknown>), updatedAt: new Date(T0 + 12 * MIN).toISOString() };
+
+    const season = sumSeasonPlayingTime([state], { nowMs: T0 + 3 * 24 * 60 * MIN });
+
+    expect(season.seconds.get("p1")).toBe(12 * 60);
   });
 });

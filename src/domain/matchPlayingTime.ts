@@ -41,6 +41,11 @@ export interface PlayerPlayingTime {
   role: PlayingTimeRole;
   /** Displayed minutes minus the displayed fair share; null without one. */
   gapMinutes: number | null;
+  /**
+   * Set when the player was on the field with no usable match clock: their
+   * last spell is missing, so `seconds` is only a lower bound.
+   */
+  incomplete?: true;
 }
 
 export interface FairShare {
@@ -103,6 +108,8 @@ function uniqueInOrder(ids: string[]): string[] {
 interface RecordedTime {
   squad: string[];
   seconds: Map<string, number>;
+  /** Players whose open spell could not be measured. */
+  incomplete: Set<string>;
   playedSeconds: number | null;
   gaps: PlayingTimeGap[];
 }
@@ -112,6 +119,8 @@ interface RecordedTime {
  * read at the state's last save, never at "now". Null when that is unknown.
  */
 function readAtMs(state: Record<string, unknown>, clock: MatchClockBasis, nowMs: number, completed: boolean): number | null {
+  // A stopped clock without its stop time would keep growing with "now".
+  if (completed && !clock.isRunning && clock.startedAtMs !== null && clock.pausedAtMs === null) return null;
   if (!completed || !clock.isRunning) return nowMs;
 
   const savedAtMs = typeof state.updatedAt === "string" ? Date.parse(state.updatedAt) : Number.NaN;
@@ -136,6 +145,7 @@ function readModern(
   const elapsedMs = clock && atMs !== null ? getElapsedMsFromClock(clock, atMs) : null;
   const openSince = isRecord(state.onFieldStartedAtElapsedMs) ? state.onFieldStartedAtElapsedMs : {};
   const seconds = new Map<string, number>();
+  const incomplete = new Set<string>();
 
   for (const playerId of squad) {
     let ms = readNonNegative(accumulated[playerId]) ?? 0;
@@ -143,6 +153,7 @@ function readModern(
 
     if (since !== null) {
       if (elapsedMs === null) {
+        incomplete.add(playerId);
         if (!gaps.includes("openSpellsMissing")) gaps.push("openSpellsMissing");
       } else {
         ms += Math.max(0, elapsedMs - since);
@@ -155,6 +166,7 @@ function readModern(
   return {
     squad,
     seconds,
+    incomplete,
     playedSeconds: elapsedMs === null ? null : Math.floor(elapsedMs / 1000),
     gaps,
   };
@@ -177,6 +189,7 @@ function readLegacy(state: Record<string, unknown>, accumulated: Record<string, 
   return {
     squad,
     seconds,
+    incomplete: new Set(),
     playedSeconds: elapsed === null ? null : Math.floor(elapsed),
     gaps: ["legacyFormat"],
   };
@@ -250,6 +263,7 @@ export function summarizeMatchPlayingTime(
         minutes,
         role,
         gapMinutes: fairShare ? minutes - fairShare.minutes : null,
+        ...(recorded.incomplete.has(playerId) ? { incomplete: true as const } : {}),
       },
     };
   });
@@ -261,4 +275,44 @@ export function summarizeMatchPlayingTime(
     fairShare,
     gaps,
   };
+}
+
+export interface SeasonPlayingTime {
+  /** Player id → total seconds over the counted matches; 0 for squad players who never came on. */
+  seconds: Map<string, number>;
+  countedMatches: number;
+  /**
+   * Completed matches left out of the totals because their stored state
+   * cannot support them: no squad recorded, the early whole-seconds format,
+   * or players on the field whose last spell cannot be measured.
+   */
+  skippedMatches: number;
+}
+
+/**
+ * Season totals over completed matches (STATS-01), one stored state per
+ * match. Each match adds each of its squad players once, with the same
+ * per-match total as the match details page. A match is either counted for
+ * everyone in it or left out, so no player is short-changed by a partial one.
+ */
+export function sumSeasonPlayingTime(runtimeStates: readonly unknown[], options: { nowMs: number }): SeasonPlayingTime {
+  const seconds = new Map<string, number>();
+  let countedMatches = 0;
+  let skippedMatches = 0;
+
+  for (const state of runtimeStates) {
+    const summary = summarizeMatchPlayingTime(state, { nowMs: options.nowMs, completed: true });
+
+    if (!summary || summary.gaps.includes("openSpellsMissing") || summary.gaps.includes("legacyFormat")) {
+      skippedMatches += 1;
+      continue;
+    }
+
+    countedMatches += 1;
+    for (const player of summary.players) {
+      seconds.set(player.playerId, (seconds.get(player.playerId) ?? 0) + player.seconds);
+    }
+  }
+
+  return { seconds, countedMatches, skippedMatches };
 }

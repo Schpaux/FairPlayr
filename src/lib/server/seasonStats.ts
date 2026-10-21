@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { LiveMatchState } from "@/domain/liveMatch";
+import { sumSeasonPlayingTime } from "@/domain/matchPlayingTime";
 
 // Row shapes returned from Supabase queries in this file
 interface CompletedMatchRow {
@@ -68,15 +68,6 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function isLiveMatchState(value: unknown): value is LiveMatchState {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "playerAccumulatedMs" in value &&
-    typeof (value as Record<string, unknown>).playerAccumulatedMs === "object"
-  );
-}
-
 // ─── Main export ─────────────────────────────────────────────────────────────
 
 export async function getSeasonStats(
@@ -107,24 +98,12 @@ export async function getSeasonStats(
     };
   }
 
-  // Accumulate playtime per player (in seconds) across all completed matches.
-  const playerSeconds = new Map<string, number>();
-
-  for (const row of completed) {
-    const state = row.runtime_state;
-    if (!isLiveMatchState(state)) {
-      continue;
-    }
-
-    const accumulated = state.playerAccumulatedMs as Record<string, number>;
-
-    for (const [playerId, ms] of Object.entries(accumulated)) {
-      if (typeof ms !== "number") {
-        continue;
-      }
-      playerSeconds.set(playerId, (playerSeconds.get(playerId) ?? 0) + ms / 1000);
-    }
-  }
+  // Playing time per player (in seconds) across the completed matches, with
+  // the same per-match totals as the match details page (STATS-01).
+  const { seconds: playerSeconds } = sumSeasonPlayingTime(
+    completed.map((row) => row.runtime_state),
+    { nowMs: Date.now() }
+  );
 
   const allSeconds = Array.from(playerSeconds.values());
 
@@ -175,11 +154,13 @@ export async function getSeasonStats(
         name: meta?.name ?? id,
         number: meta?.number ?? null,
         position: meta?.position ?? null,
-        totalMinutes: Math.round(totalSec / 60),
+        // Whole minutes rounded down, as the live screen and match details show them.
+        totalMinutes: Math.floor(totalSec / 60),
         deficitMinutes: Math.round((threshold - totalSec) / 60),
       };
     })
-    .sort((a, b) => a.totalMinutes - b.totalMinutes)
+    // By exact seconds, so equal whole minutes never cut the wrong player.
+    .sort((a, b) => (playerSeconds.get(a.playerId) ?? 0) - (playerSeconds.get(b.playerId) ?? 0))
     .slice(0, 3);
 
   return {

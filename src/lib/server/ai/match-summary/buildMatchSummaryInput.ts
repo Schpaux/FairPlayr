@@ -1,5 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { summarizeMatchPlayingTime, type PlayerPlayingTime } from "@/domain/matchPlayingTime";
 import { IntegrationError } from "@/lib/server/integrations/spond/errors";
 import type { MatchEventItem, MatchEventRow, MatchRow } from "@/lib/server/matches/types";
 import type {
@@ -134,25 +135,36 @@ function extractSubstitutionsFromServerEvents(
 }
 
 /**
- * Compute per-player playing times from runtime_state.playerAccumulatedMs.
- * Returns only players with ms > 0 and a known name.
+ * Per-player playing time from the shared calculation (STATS-01), the same
+ * totals the match details page shows: it includes the last spell of players
+ * still on the pitch at the final whistle, which the raw
+ * `playerAccumulatedMs` misses. The report is built for a completed match.
  */
-function extractPlayerTimesFromRuntimeState(
+function readPlayingTime(
   runtimeState: Record<string, unknown> | null,
-  playerNameMap: Map<string, string>
-): MatchSummaryPlayerTime[] {
-  if (!runtimeState) return [];
+  format: MatchRow["format"] | null
+): Map<string, PlayerPlayingTime> {
+  const summary = summarizeMatchPlayingTime(runtimeState, { format, nowMs: Date.now(), completed: true });
+  return new Map((summary?.players ?? []).map((player) => [player.playerId, player]));
+}
 
-  const accumulated = runtimeState.playerAccumulatedMs;
-  if (!isRecord(accumulated)) return [];
+/**
+ * Minutes to report for a player, or null when they cannot be stated
+ * reliably or are under a whole minute (as before: no "played 0 minutes").
+ */
+function reportedMinutes(playingTime: Map<string, PlayerPlayingTime>, playerId: string): number | null {
+  const entry = playingTime.get(playerId);
+  return entry && !entry.incomplete && entry.minutes > 0 ? entry.minutes : null;
+}
 
-  return Object.entries(accumulated)
-    .map(([playerId, ms]) => {
-      const name = playerNameMap.get(playerId);
-      const minutes = Math.round((safeNumber(ms) ?? 0) / 60000);
-      return name && minutes > 0 ? { playerName: name, minutesPlayed: minutes } : null;
-    })
-    .filter((entry): entry is MatchSummaryPlayerTime => entry !== null)
+/**
+ * Per-player playing time for the players already in `playersUsedList`, most
+ * minutes first. Never names anyone the list does not (SEC-04).
+ */
+function extractPlayerTimes(playersUsedList: MatchSummaryPlayerUsed[]): MatchSummaryPlayerTime[] {
+  return playersUsedList
+    .filter((player): player is MatchSummaryPlayerUsed & { minutesPlayed: number } => player.minutesPlayed !== null)
+    .map((player) => ({ playerName: player.name, minutesPlayed: player.minutesPlayed }))
     .sort((a, b) => b.minutesPlayed - a.minutesPlayed);
 }
 
@@ -178,13 +190,18 @@ interface UsedPlayersResult {
  *   2. Substitution events — player IDs who came on (inPlayerId)
  *   3. playerAccumulatedMs — player IDs with tracked time > 0
  *
+ * Who is listed is decided from these sources only, as before STATS-01; the
+ * shared calculation supplies the minutes, never extra names (SEC-04: a squad
+ * player who never came on is not sent to the AI provider).
+ *
  * This ensures playersUsed is never incorrectly low due to missing time tracking
  * or incomplete runtime state. Player names are resolved from the DB map first,
  * then supplemented by names embedded in runtime substitution events.
  */
 function extractStartingAndUsedPlayers(
   runtimeState: Record<string, unknown> | null,
-  playerNameMap: Map<string, string>
+  playerNameMap: Map<string, string>,
+  playingTime: Map<string, PlayerPlayingTime>
 ): UsedPlayersResult {
   // 1. Starting lineup snapshot (captured at match creation, never mutated)
   const rawInitialIds = runtimeState?.initialOnFieldPlayerIds;
@@ -239,12 +256,9 @@ function extractStartingAndUsedPlayers(
     const name = nameMap.get(id);
     if (!name) continue; // no name available — skip rather than emit unnamed entry
 
-    const ms = isRecord(accumulated) ? safeNumber((accumulated as Record<string, unknown>)[id]) : null;
-    const minutesPlayed = ms !== null && ms > 0 ? Math.round(ms / 60000) : null;
-
     playersUsedList.push({
       name,
-      minutesPlayed,
+      minutesPlayed: reportedMinutes(playingTime, id),
       started: startingSet.has(id),
       cameOn: !startingSet.has(id) && subsInSet.has(id),
     });
@@ -446,14 +460,15 @@ export async function buildMatchSummaryInput(
   const substitutions =
     runtimeSubs.length > 0 ? runtimeSubs : extractSubstitutionsFromServerEvents(events);
 
-  // Player times — derived from live match accumulated time tracking
-  const playerTimes = extractPlayerTimesFromRuntimeState(runtimeState, playerNameMap);
-
-  // Players used — union-based calculation (starting lineup + subs + time-tracked)
+  // Players used — union-based calculation (starting lineup + subs + time-tracked),
+  // with minutes from the shared playing-time calculation
+  const playingTime = readPlayingTime(runtimeState, matchRow.format ?? null);
   const { startingPlayers, playersUsedList, playersUsed } = extractStartingAndUsedPlayers(
     runtimeState,
-    playerNameMap
+    playerNameMap,
+    playingTime
   );
+  const playerTimes = extractPlayerTimes(playersUsedList);
 
   // Match duration from live match setup
   const matchDurationMinutes = extractMatchDurationMinutes(runtimeState);
