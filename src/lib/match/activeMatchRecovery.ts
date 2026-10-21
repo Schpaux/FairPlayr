@@ -1,5 +1,6 @@
 import { createLiveMatchFromSetup, endLiveMatch, type LiveMatchState } from "@/domain/liveMatch";
 import type { MatchConfig } from "@/domain/match";
+import type { Player } from "@/domain/team";
 import {
   activateMatch,
   clearStoredMatchSetup,
@@ -12,6 +13,7 @@ import {
   getStoredLiveMatch,
   saveStoredLiveMatch,
 } from "@/lib/storage/liveMatchStorage";
+import { clearSquadSnapshot, saveSquadSnapshot } from "@/lib/storage/squadSnapshotStorage";
 import {
   listPendingMatchCompletionIds,
   type MatchCompletionBody,
@@ -189,6 +191,8 @@ export function resolveClosedOnDevice(): Set<string> {
 export function clearLocalActiveState(): void {
   clearStoredLiveMatch();
   clearStoredMatchSetup();
+  // The match's squad names go with it (children's data, AGENTS.md §2).
+  clearSquadSnapshot();
 }
 
 /**
@@ -251,6 +255,8 @@ export function endLocalActiveMatch(options: {
     saveStoredLiveMatch(endedLiveMatch);
   }
   endMatch(setup.config);
+  // An ended match is never restored from the snapshot again.
+  clearSquadSnapshot();
 
   const serverMatchId = setup.serverMatchId ?? null;
 
@@ -294,18 +300,36 @@ export type StartLocalMatchResult =
  */
 export function startLocalMatch(
   setup: MatchConfig,
-  serverMatchId: string | null
+  serverMatchId: string | null,
+  options: {
+    /**
+     * The team's players, when the caller has them: the match's own squad is
+     * saved with it (OFF-01a), so a restore never waits for the team list.
+     */
+    squadPlayers?: readonly Player[];
+  } = {}
 ): StartLocalMatchResult {
   if (hasActiveStoredMatch()) {
     return { ok: false, reason: "active_match" };
   }
 
   clearStoredLiveMatch();
+  // A previous match's squad never carries over to this one.
+  clearSquadSnapshot();
   const liveMatch = createLiveMatchFromSetup(setup);
   saveStoredLiveMatch(liveMatch);
   // Keep the server record with the local setup so the live screen can still
   // sync the completion when it is reopened without ?matchId (e.g. offline).
   activateMatch(setup, serverMatchId);
+
+  if (options.squadPlayers) {
+    saveSquadSnapshot({
+      setupId: setup.id,
+      teamId: setup.teamId,
+      squadPlayerIds: setup.selectedPlayerIds,
+      players: options.squadPlayers,
+    });
+  }
 
   return { ok: true, liveMatch };
 }

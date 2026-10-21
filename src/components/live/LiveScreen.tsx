@@ -24,6 +24,7 @@ import {
   GoalContributorSheet,
   MenuSheet,
   type GoalPromptView,
+  type LiveMenuNote,
 } from "@/components/live/LiveSheets";
 import { LiveNotices, type LiveNoticesProps } from "@/components/live/LiveNotices";
 import { isLastPhase } from "@/components/live/stripModel";
@@ -64,6 +65,13 @@ export interface LiveScreenProps {
   model: LiveScreenModel;
   handlers: LiveScreenHandlers;
   isOnline: boolean;
+  /**
+   * The match cannot be saved on the device: scoreboard meta line and the
+   * menu's first row say so for as long as it lasts (DESIGN.md §5.6).
+   */
+  saveFailed?: boolean;
+  /** Passive lines at the top of the menu, for the rest of the session. */
+  menuNotes?: readonly LiveMenuNote[];
   undo: { secondsRemaining: number; expiresAtMs: number } | null;
   /** The dragged player following the finger; `dropSlotId` is the valid slot under it. */
   ghost: { name: string; x: number; y: number; dropSlotId?: string | null } | null;
@@ -74,7 +82,18 @@ export interface LiveScreenProps {
 
 type OpenSheet = "menu" | "events" | "confirmEndHalf" | "confirmRemoveGoalUs" | "confirmRemoveGoalThem";
 
-export function LiveScreen({ model, handlers, isOnline, undo, ghost, goalPrompt, notices, ending }: LiveScreenProps) {
+export function LiveScreen({
+  model,
+  handlers,
+  isOnline,
+  saveFailed = false,
+  menuNotes,
+  undo,
+  ghost,
+  goalPrompt,
+  notices,
+  ending,
+}: LiveScreenProps) {
   const t = useTranslations("matchLive");
   const [sheet, setSheet] = useState<OpenSheet | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -143,6 +162,7 @@ export function LiveScreen({ model, handlers, isOnline, undo, ghost, goalPrompt,
       <Scoreboard
         model={model}
         isOnline={isOnline}
+        saveFailed={saveFailed}
         menuOpen={sheet !== null}
         onClockPress={onClockPress}
         onGoalUs={handlers.onGoalUs}
@@ -190,6 +210,8 @@ export function LiveScreen({ model, handlers, isOnline, undo, ghost, goalPrompt,
       {sheet === "menu" ? (
         <MenuSheet
           isOnline={isOnline}
+          saveFailed={saveFailed}
+          notes={menuNotes}
           canEndHalf={canEndHalf}
           canRemoveGoalUs={model.teamScore > 0 && !isEnded}
           canRemoveGoalThem={model.opponentScore > 0 && !isEnded}

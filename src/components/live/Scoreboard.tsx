@@ -5,7 +5,7 @@
  * green. Pure presentation: every press calls a handler from the controller.
  */
 
-import { Ellipsis, Flag, Pause, Play, Plus, WifiOff } from "lucide-react";
+import { CircleAlert, Ellipsis, Flag, Pause, Play, Plus, WifiOff } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { LiveScreenModel } from "@/components/live/liveScreenModel";
@@ -17,6 +17,12 @@ const ICON = { strokeWidth: 1.75, "aria-hidden": true } as const;
 interface ScoreboardProps {
   model: LiveScreenModel;
   isOnline: boolean;
+  /**
+   * The match cannot be saved on the device (DESIGN.md §5.6): the meta line
+   * shows an alert glyph and «Ikke lagret» for as long as it lasts, even
+   * after the band is dismissed. Takes priority over the offline glyph.
+   */
+  saveFailed?: boolean;
   menuOpen: boolean;
   onClockPress: () => void;
   onGoalUs: () => void;
@@ -35,6 +41,7 @@ export function usePhaseLabel(model: Pick<LiveScreenModel, "phase" | "halves" | 
 export function Scoreboard({
   model,
   isOnline,
+  saveFailed = false,
   menuOpen,
   onClockPress,
   onGoalUs,
@@ -42,6 +49,7 @@ export function Scoreboard({
   onOpenMenu,
 }: ScoreboardProps) {
   const t = useTranslations("matchLive.sideline");
+  const tRestore = useTranslations("restore.storageError");
   const phaseLabel = usePhaseLabel(model);
 
   const inPlay = isInPlay(model);
@@ -58,13 +66,16 @@ export function Scoreboard({
         ? t("meta.running", { phase: phaseLabel, minutes: model.halfMinutes })
         : t("meta.paused", { phase: phaseLabel });
 
-  const clockLabel = isDone
+  const baseClockLabel = isDone
     ? t("clock.done", { phase: phaseLabel, clock: model.clock })
     : model.status === "not_started"
       ? t("clock.kickoff")
       : isRunning
         ? t("clock.pause", { clock: model.clock })
         : t("clock.resume", { clock: model.clock });
+  // The meta line sits inside the clock button, whose label replaces its
+  // content for assistive tech: say "not saved" there too.
+  const clockLabel = saveFailed ? `${baseClockLabel}, ${tRestore("short")}` : baseClockLabel;
 
   return (
     <header className={styles.board}>
@@ -87,15 +98,26 @@ export function Scoreboard({
           </span>
           <span className={styles.clockText}>
             <b className={styles.clockDigits}>{model.clock}</b>
-            <span className={styles.clockMeta}>
-              {isOnline ? (
-                <span className={styles.statusDot} aria-hidden />
+            <span className={styles.clockMeta} data-testid="live-meta">
+              {saveFailed ? (
+                <>
+                  <span className={styles.saveFailed} aria-hidden>
+                    <CircleAlert size={16} {...ICON} />
+                  </span>
+                  <span className={styles.saveFailedText}>{tRestore("short")}</span>
+                </>
               ) : (
-                <span className={styles.offline} role="img" aria-label={t("meta.offline")}>
-                  <WifiOff size={16} {...ICON} />
-                </span>
+                <>
+                  {isOnline ? (
+                    <span className={styles.statusDot} aria-hidden />
+                  ) : (
+                    <span className={styles.offline} role="img" aria-label={t("meta.offline")}>
+                      <WifiOff size={16} {...ICON} />
+                    </span>
+                  )}
+                  {metaText}
+                </>
               )}
-              {metaText}
             </span>
           </span>
         </button>

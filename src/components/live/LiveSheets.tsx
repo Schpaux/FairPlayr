@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useId, useRef } from "react";
-import { Flag, History, House, Minus, WifiOff } from "lucide-react";
+import { CircleAlert, Flag, History, House, Minus, TriangleAlert, WifiOff } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
@@ -68,8 +68,19 @@ function Sheet({ title, lede, dismissible = true, onClose, children, testId }: S
   );
 }
 
+/** A passive line at the top of the menu (DESIGN.md §5.6: "moves into the menu"). */
+export interface LiveMenuNote {
+  key: string;
+  tone: "warning" | "info";
+  text: string;
+}
+
 interface MenuSheetProps {
   isOnline: boolean;
+  /** First row: why the match is not being saved (DESIGN.md §5.6). */
+  saveFailed?: boolean;
+  /** Further passive lines (a restored match, a team that could not load). */
+  notes?: readonly LiveMenuNote[];
   canEndHalf: boolean;
   canRemoveGoalUs: boolean;
   canRemoveGoalThem: boolean;
@@ -84,6 +95,8 @@ interface MenuSheetProps {
 
 export function MenuSheet({
   isOnline,
+  saveFailed = false,
+  notes = [],
   canEndHalf,
   canRemoveGoalUs,
   canRemoveGoalThem,
@@ -96,9 +109,30 @@ export function MenuSheet({
   onEndMatch,
 }: MenuSheetProps) {
   const t = useTranslations("matchLive.sideline.menu");
+  const tStorage = useTranslations("restore.storageError");
 
   return (
     <Sheet title={t("title")} onClose={onClose} testId="live-menu">
+      {saveFailed ? (
+        <p className={cn(styles.menuNote, styles.menuNoteDanger)} data-testid="live-menu-save-failed">
+          <CircleAlert size={18} {...ICON} />
+          <span>
+            <strong className={styles.menuNoteTitle}>{tStorage("title")}</strong> {tStorage("body")}
+          </span>
+        </p>
+      ) : null}
+
+      {notes.map((note) => (
+        <p
+          key={note.key}
+          className={cn(styles.menuNote, note.tone === "warning" && styles.menuNoteWarning)}
+          data-testid={`live-menu-note-${note.key}`}
+        >
+          {note.tone === "warning" ? <TriangleAlert size={18} {...ICON} /> : <History size={18} {...ICON} />}
+          <span>{note.text}</span>
+        </p>
+      ))}
+
       {!isOnline ? (
         <p className={styles.menuNote}>
           <WifiOff size={18} {...ICON} />

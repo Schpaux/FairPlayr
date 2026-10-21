@@ -43,14 +43,43 @@ import {
 import {
   endMatch,
   getStoredMatchSetup,
+  hasActiveStoredMatch,
   type MatchStatus,
 } from "@/lib/storage/matchStorage";
 import {
   clearStoredLiveMatch,
   getStoredLiveMatch,
+  LIVE_MATCH_STORAGE_KEY,
   normalizeLiveMatchState,
   saveStoredLiveMatch,
+  trySaveStoredLiveMatch,
 } from "@/lib/storage/liveMatchStorage";
+import {
+  getServerStorageSignalSnapshot,
+  getStorageSignalSnapshot,
+  subscribeStorageSignals,
+} from "@/lib/storage/storageEnvelope";
+import {
+  detectClosedGap,
+  keepInMemoryLiveMatch,
+  mayServerReplaceLocal,
+  resolveRestoreSquad,
+} from "@/domain/matchRestore";
+import { clearSquadSnapshot, getSquadSnapshot, saveSquadSnapshot } from "@/lib/storage/squadSnapshotStorage";
+import {
+  checkClosedGapOncePerDocument,
+  getDocumentClosedGap,
+  getLiveHeartbeat,
+  keepLiveHeartbeat,
+  saveLiveHeartbeat,
+  stopLiveHeartbeat,
+  type DocumentClosedGap,
+} from "@/lib/storage/liveHeartbeatStorage";
+import { requestPersistentStorage } from "@/lib/storage/persistentStorage";
+import { RestoredMatchNotice } from "@/components/match/RestoredMatchNotice";
+import { StorageErrorNotice, WorkspaceErrorNotice } from "@/components/match/StorageErrorNotice";
+import { pickLiveBandItem, type LiveBandItem } from "@/components/live/liveBand";
+import type { LiveMenuNote } from "@/components/live/LiveSheets";
 import { buildDisplayNameMap } from "@/lib/utils/playerName";
 import { fetchOrNull, readJsonOrNull } from "@/lib/utils/fetchOrNull";
 import { resolveClosedOnDevice } from "@/lib/match/activeMatchRecovery";
@@ -97,6 +126,8 @@ interface GoalPromptState {
   scorerName: string | null;
 }
 
+const NO_PLACEHOLDERS: ReadonlySet<string> = new Set();
+
 const EMPTY_CLOCK = {
   startedAtMs: null,
   pausedAtMs: null,
@@ -136,6 +167,7 @@ function statusLabel(
 export function MatchLiveManager() {
   const t = useTranslations("matchLive");
   const common = useTranslations("common");
+  const tRestore = useTranslations("restore");
   const router = useRouter();
   const searchParams = useSearchParams();
   const auth = useAuth();
@@ -217,14 +249,40 @@ export function MatchLiveManager() {
     lastCompletionAttemptRef.current = { matchId, epoch: connectivityEpochRef.current };
   };
 
+  // OFF-01a restore. The device is the source of truth for a match in
+  // progress: it is restored from localStorage only, never set to null while
+  // a local match exists, and never replaced by an older copy (from storage
+  // or the server) while it is on screen.
+  // B9: minutes the app was closed while the clock ran, for the band (null =
+  // no band). Evaluated once per document load (a cold start or reload),
+  // never on a remount after in-app navigation. `sessionClosedGap` keeps the
+  // result for the menu for the rest of the session.
+  const [closedGapMinutes, setClosedGapMinutes] = useState<number | null>(null);
+  const [sessionClosedGap, setSessionClosedGap] = useState<DocumentClosedGap | null>(() => getDocumentClosedGap());
+  // Players shown with a placeholder name («Spiller 3»): never stored in
+  // events or sent to the server (names resolve from ids at render time).
+  const [placeholderPlayerIds, setPlaceholderPlayerIds] = useState<ReadonlySet<string>>(NO_PLACEHOLDERS);
+
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (!isHydrated || workspace.isLoading) {
+    if (!isHydrated) {
       return;
     }
 
     const storedSetup = getStoredMatchSetup();
     const storedLiveMatch = getStoredLiveMatch();
+    const ownStoredLiveMatch =
+      storedSetup && storedLiveMatch && storedLiveMatch.setupId === storedSetup.config.id
+        ? storedLiveMatch
+        : null;
+    const hasLocalMatch = Boolean(storedSetup && (ownStoredLiveMatch || storedSetup.status === "active"));
+    const snapshot = storedSetup ? getSquadSnapshot(storedSetup.config.id) : null;
+
+    // A local match with a squad snapshot does not wait for the team list,
+    // which may be slow or never arrive offline; it is used once it loads.
+    if (workspace.isLoading && !(hasLocalMatch && snapshot)) {
+      return;
+    }
 
     setLocalSetupId(storedSetup?.config.id ?? null);
     setSetupSource("none");
@@ -232,25 +290,70 @@ export function MatchLiveManager() {
 
     if (!storedSetup) {
       setTeamPlayers([]);
+      setPlaceholderPlayerIds(NO_PLACEHOLDERS);
       setLiveMatch(null);
       setSetupStatus(null);
       return;
     }
 
-    const setupTeam = workspace.teams.find((team) => team.id === storedSetup.config.teamId) ?? null;
+    const setupTeam = workspace.isLoading
+      ? null
+      : workspace.teams.find((team) => team.id === storedSetup.config.teamId) ?? null;
+    // Team (live data or the local mirror) → squad snapshot → placeholders
+    // from the match's own ids. Null only without a local match.
+    const squad = resolveRestoreSquad({
+      setupId: storedSetup.config.id,
+      teamId: storedSetup.config.teamId,
+      squadPlayerIds: storedSetup.config.selectedPlayerIds,
+      team: setupTeam,
+      snapshot,
+      liveMatch: ownStoredLiveMatch,
+      hasLocalMatch,
+      placeholderName: (index) => tRestore("placeholderPlayer", { index }),
+    });
 
-    if (!setupTeam) {
+    if (!squad) {
       setTeamPlayers([]);
+      setPlaceholderPlayerIds(NO_PLACEHOLDERS);
       setLiveMatch(null);
       setSetupStatus(storedSetup.status);
       return;
     }
-    setTeamPlayers(setupTeam.players);
+    setTeamPlayers(squad.players);
+    setPlaceholderPlayerIds(
+      squad.placeholderPlayerIds.length > 0 ? new Set(squad.placeholderPlayerIds) : NO_PLACEHOLDERS
+    );
 
-    if (storedLiveMatch && storedLiveMatch.setupId === storedSetup.config.id) {
-      setLiveMatch(
-        reconcileLiveMatchWithSquad(storedLiveMatch, storedSetup.config.selectedPlayerIds)
-      );
+    if (setupTeam && storedSetup.status === "active") {
+      saveSquadSnapshot({
+        setupId: storedSetup.config.id,
+        teamId: storedSetup.config.teamId,
+        squadPlayerIds: storedSetup.config.selectedPlayerIds,
+        players: setupTeam.players,
+      });
+    }
+
+    if (storedSetup.status === "active") {
+      // Best effort: ask the browser not to evict this match (FP-OFF-01 G6).
+      void requestPersistentStorage();
+    }
+
+    if (ownStoredLiveMatch) {
+      const closedGap = checkClosedGapOncePerDocument(() => {
+        const gap = detectClosedGap({
+          heartbeat: getLiveHeartbeat(),
+          liveMatch: ownStoredLiveMatch,
+          nowMs: Date.now(),
+        });
+        return gap ? { matchId: ownStoredLiveMatch.id, minutes: gap.minutes } : null;
+      });
+      if (closedGap.firstCheck) {
+        setClosedGapMinutes(closedGap.gap ? closedGap.gap.minutes : null);
+      }
+      setSessionClosedGap(closedGap.gap);
+
+      const restored = reconcileLiveMatchWithSquad(ownStoredLiveMatch, storedSetup.config.selectedPlayerIds);
+      setLiveMatch((previous) => keepInMemoryLiveMatch(previous, restored));
       setSetupStatus(storedSetup.status);
       setSetupSource("setup");
       setSetupServerMatchId(storedSetup.serverMatchId);
@@ -258,7 +361,8 @@ export function MatchLiveManager() {
     }
 
     if (storedSetup.status === "active") {
-      setLiveMatch(createLiveMatchFromSetup(storedSetup.config));
+      const created = createLiveMatchFromSetup(storedSetup.config);
+      setLiveMatch((previous) => keepInMemoryLiveMatch(previous, created));
       setSetupStatus(storedSetup.status);
       setSetupSource("setup");
       setSetupServerMatchId(storedSetup.serverMatchId);
@@ -266,7 +370,7 @@ export function MatchLiveManager() {
     }
     setLiveMatch(null);
     setSetupStatus(storedSetup.status);
-  }, [activeMatch?.teamId, activeMatchId, isHydrated, workspace.activeTeamId, workspace.isLoading, workspace.teams]);
+  }, [activeMatch?.teamId, activeMatchId, isHydrated, tRestore, workspace.activeTeamId, workspace.isLoading, workspace.teams]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
@@ -274,15 +378,53 @@ export function MatchLiveManager() {
       return;
     }
 
-    // A full device (quota) must not throw out of this effect: that would
-    // unmount the screen and lose the in-memory match. The end flow detects
-    // and warns about failed persistence for the completion itself.
-    try {
-      saveStoredLiveMatch(liveMatch);
-    } catch {
-      // Keep running on in-memory state.
-    }
+    // Never throws: a full device must not unmount the screen and lose the
+    // in-memory match. A failed write raises the storage signal, which shows
+    // «Ikke lagret» (meta line, menu, band) until a later save works; a newer build's record is
+    // not overwritten (UpdateRequiredSheet asks for a reload). The end flow
+    // detects and warns about failed persistence for the completion itself.
+    trySaveStoredLiveMatch(liveMatch);
   }, [liveMatch, isHydrated]);
+
+  const storageSignals = useSyncExternalStore(
+    subscribeStorageSignals,
+    getStorageSignalSnapshot,
+    getServerStorageSignalSnapshot
+  );
+  const liveMatchSaveFailed = Boolean(storageSignals.writeErrors[LIVE_MATCH_STORAGE_KEY]);
+
+  // A dismissed storage band comes back with the next failure episode: the
+  // dismissal is forgotten once a save works again (state adjusted during
+  // render, not in an effect).
+  const [storageBandDismissed, setStorageBandDismissed] = useState(false);
+  if (storageBandDismissed && !liveMatchSaveFailed) {
+    setStorageBandDismissed(false);
+  }
+  // The team list error that the coach hid from the band (the menu keeps it).
+  const [dismissedWorkspaceError, setDismissedWorkspaceError] = useState<string | null>(null);
+
+  // B9 heartbeat: every 15 s and when the page is hidden or closed, so the
+  // next cold start can tell how long the app was closed. It is document
+  // wide: it keeps beating while the coach is on another screen and the
+  // match is still active, and it beats once more when Live unmounts.
+  const heartbeatMatchId = liveMatch && liveMatch.status !== "ended" ? liveMatch.id : null;
+
+  useEffect(() => {
+    if (!isHydrated || !heartbeatMatchId) {
+      return;
+    }
+
+    keepLiveHeartbeat(heartbeatMatchId, hasActiveStoredMatch);
+
+    return () => {
+      saveLiveHeartbeat(heartbeatMatchId);
+    };
+  }, [heartbeatMatchId, isHydrated]);
+
+  const liveMatchEnded = liveMatch?.status === "ended";
+  useEffect(() => {
+    if (liveMatchEnded) stopLiveHeartbeat();
+  }, [liveMatchEnded]);
 
   useEffect(() => {
     // An ended match is sent once, by the completion (FP-P0-F2); a runtime
@@ -408,7 +550,13 @@ export function MatchLiveManager() {
         return;
       }
 
-      setLiveMatch(normalized);
+      // OFF-01a: a server copy never replaces newer local data, nor a match
+      // that appeared on screen while the request was out.
+      if (!mayServerReplaceLocal(getStoredLiveMatch(), normalized)) {
+        return;
+      }
+
+      setLiveMatch((previous) => previous ?? normalized);
       setSetupStatus("active");
     })();
 
@@ -475,13 +623,6 @@ export function MatchLiveManager() {
         minGapSeconds: DEFAULT_SUGGESTION_MIN_GAP_SECONDS,
       })
     : null;
-  const suggestedOutgoingPlayer = suggestion
-    ? playersById.get(suggestion.outgoingPlayerId) ?? null
-    : null;
-  const suggestedIncomingPlayer = suggestion
-    ? playersById.get(suggestion.incomingPlayerId) ?? null
-    : null;
-
   const getPlayerPlaytime = (playerId: string) => {
     if (!liveMatch) {
       return "0:00";
@@ -694,6 +835,10 @@ export function MatchLiveManager() {
     if (storedSetup) {
       try {
         endMatch(storedSetup.config);
+        // The match is over on the device: its squad names go (AGENTS.md §2).
+        // Kept when the end could not be stored, so a reload still restores
+        // the match with names.
+        clearSquadSnapshot();
       } catch {
         savedOnDevice = false;
       }
@@ -737,6 +882,12 @@ export function MatchLiveManager() {
 
   };
 
+  // The name stored in events and sent to the server: the real name only,
+  // never a placeholder («Spiller 3»); without one, null, and screens resolve
+  // the name from the id when they render.
+  const storedPlayerName = (playerId: string | null | undefined): string | null =>
+    playerId && !placeholderPlayerIds.has(playerId) ? playersById.get(playerId)?.name ?? null : null;
+
   const handleApplySuggestion = () => {
     if (!suggestion) {
       return;
@@ -760,9 +911,9 @@ export function MatchLiveManager() {
                 minute,
                 timestampMs,
                 inPlayerId: suggestion.incomingPlayerId,
-                inPlayerName: suggestedIncomingPlayer?.name ?? null,
+                inPlayerName: storedPlayerName(suggestion.incomingPlayerId),
                 outPlayerId: suggestion.outgoingPlayerId,
-                outPlayerName: suggestedOutgoingPlayer?.name ?? null,
+                outPlayerName: storedPlayerName(suggestion.outgoingPlayerId),
               }),
             ],
           }
@@ -777,8 +928,6 @@ export function MatchLiveManager() {
   const handleSwap = (outgoingPlayerId: string, incomingPlayerId: string): SubstitutionRecord | null => {
     if (!liveMatch || liveMatch.status === "ended") return null;
 
-    const inPlayer = playersById.get(incomingPlayerId);
-    const outPlayer = playersById.get(outgoingPlayerId);
     const nowMs = Date.now();
     // One event and one time for both the record and the state update, so the
     // updater is deterministic and matches the record it returns.
@@ -786,9 +935,9 @@ export function MatchLiveManager() {
       minute: Math.floor(elapsedSeconds / 60),
       timestampMs: elapsedSeconds * 1000,
       inPlayerId: incomingPlayerId,
-      inPlayerName: inPlayer?.name ?? null,
+      inPlayerName: storedPlayerName(incomingPlayerId),
       outPlayerId: outgoingPlayerId,
-      outPlayerName: outPlayer?.name ?? null,
+      outPlayerName: storedPlayerName(outgoingPlayerId),
     });
 
     const applied = applySubstitution(liveMatch, outgoingPlayerId, incomingPlayerId, nowMs, event);
@@ -949,13 +1098,13 @@ export function MatchLiveManager() {
       return;
     }
 
-    const player = playerId ? current.options.find((option) => option.id === playerId) : null;
+    const scorerName = storedPlayerName(playerId);
 
     if (current.eventId) {
       void patchGoalEvent(current.eventId, {
         primaryPlayerId: playerId,
         payload: {
-          primaryPlayerName: player?.name ?? null,
+          primaryPlayerName: scorerName,
         },
       });
     }
@@ -969,7 +1118,7 @@ export function MatchLiveManager() {
         ...previous,
         events: updateGoalEventContributors(previous.events, current.localEventId, {
           scorerPlayerId: playerId,
-          scorerName: player?.name ?? null,
+          scorerName,
         }),
       };
     });
@@ -985,7 +1134,7 @@ export function MatchLiveManager() {
           ...head,
           step: "assist",
           scorerId: playerId,
-          scorerName: player?.name ?? null,
+          scorerName,
         },
         ...rest,
       ];
@@ -998,14 +1147,14 @@ export function MatchLiveManager() {
       return;
     }
 
-    const player = playerId ? current.options.find((option) => option.id === playerId) : null;
+    const assistName = storedPlayerName(playerId);
 
     if (current.eventId) {
       void patchGoalEvent(current.eventId, {
         secondaryPlayerId: playerId,
         payload: {
           primaryPlayerName: current.scorerName,
-          secondaryPlayerName: player?.name ?? null,
+          secondaryPlayerName: assistName,
         },
       });
     }
@@ -1019,7 +1168,7 @@ export function MatchLiveManager() {
         ...previous,
         events: updateGoalEventContributors(previous.events, current.localEventId, {
           assistPlayerId: playerId,
-          assistName: player?.name ?? null,
+          assistName,
         }),
       };
     });
@@ -1147,7 +1296,9 @@ export function MatchLiveManager() {
     );
   }
 
-  if (workspace.isLoading) {
+  // A restored match stays on screen while the team list reloads or fails
+  // (offline, deferred session): the match never waits for the network.
+  if (workspace.isLoading && !liveMatch) {
     return (
       <PageShell>
         <AppCard className="p-6 text-sm text-muted-foreground">{common("loading")}</AppCard>
@@ -1155,7 +1306,7 @@ export function MatchLiveManager() {
     );
   }
 
-  if (workspace.error) {
+  if (workspace.error && !liveMatch) {
     return (
       <PageShell>
         <AppCard className="p-3 text-xs text-danger">{workspace.error}</AppCard>
@@ -1249,6 +1400,61 @@ export function MatchLiveManager() {
     );
   }
 
+  // OFF-01a notice band (DESIGN.md §5.6): one message at a time by severity
+  // (error > warning > info), shown by the band only where it covers no
+  // token. A condition that lasts also keeps speaking from the scoreboard
+  // meta line and the menu, also after the band is dismissed or when it does
+  // not fit. Once the match has ended, the ended notice says whether the
+  // result was saved.
+  const isLiveMatchOver = liveMatch.status === "ended";
+  const showSaveFailed = !isLiveMatchOver && liveMatchSaveFailed;
+  const workspaceWarning = !isLiveMatchOver && workspace.error ? workspace.error : null;
+  const bandItems: LiveBandItem[] = [];
+
+  if (showSaveFailed && !storageBandDismissed) {
+    bandItems.push({
+      key: "storageError",
+      tone: "error",
+      announcement: tRestore("storageError.title"),
+      render: () => <StorageErrorNotice onDismiss={() => setStorageBandDismissed(true)} />,
+    });
+  }
+
+  if (workspaceWarning && workspaceWarning !== dismissedWorkspaceError) {
+    bandItems.push({
+      key: "workspaceError",
+      tone: "warning",
+      announcement: tRestore("workspaceError.title"),
+      render: () => <WorkspaceErrorNotice onDismiss={() => setDismissedWorkspaceError(workspaceWarning)} />,
+    });
+  }
+
+  if (!isLiveMatchOver && closedGapMinutes !== null) {
+    const minutes = closedGapMinutes;
+    bandItems.push({
+      key: "restoredMatch",
+      tone: "info",
+      announcement: tRestore("closedGap", { minutes }),
+      render: () => <RestoredMatchNotice minutes={minutes} onDismiss={() => setClosedGapMinutes(null)} />,
+    });
+  }
+
+  const menuNotes: LiveMenuNote[] = [];
+  if (workspaceWarning) {
+    menuNotes.push({
+      key: "workspaceError",
+      tone: "warning",
+      text: `${tRestore("workspaceError.title")} ${tRestore("workspaceError.body")}`,
+    });
+  }
+  if (sessionClosedGap && sessionClosedGap.matchId === liveMatch.id) {
+    menuNotes.push({
+      key: "restoredMatch",
+      tone: "info",
+      text: tRestore("closedGap", { minutes: sessionClosedGap.minutes }),
+    });
+  }
+
   // Modern Sideline view (flag, off by default). Presentation only: it reuses
   // the state and handlers above and adds no mutation path of its own.
   if (isSidelineLiveUiEnabled()) {
@@ -1267,6 +1473,8 @@ export function MatchLiveManager() {
           interaction: subInteraction.state,
         })}
         isOnline={isOnline}
+        saveFailed={showSaveFailed}
+        menuNotes={menuNotes}
         undo={
           (subInteraction.state.kind === "pendingUndo" || subInteraction.state.kind === "pendingPositionUndo") &&
           subInteraction.undoSecondsRemaining !== null
@@ -1328,6 +1536,7 @@ export function MatchLiveManager() {
             liveMatch.status === "ended" && !activeMatchId && !pendingCompletion && !syncedMatchId
               ? { unsaved: localEndUnsaved }
               : null,
+          band: bandItems,
         }}
         ending={isEndingMatch ? { done: endMatchDone } : null}
         handlers={{
@@ -1381,6 +1590,12 @@ export function MatchLiveManager() {
         className="space-y-3"
       >
         {error ? <AppCard className="p-3 text-xs text-danger">{error}</AppCard> : null}
+
+        {bandItems.length > 0 ? (
+          <div className="grid gap-2" data-testid="live-notice-band">
+            {pickLiveBandItem(bandItems)?.render()}
+          </div>
+        ) : null}
 
         {pendingCompletion ? (
           <AppCard className="space-y-2 p-3">

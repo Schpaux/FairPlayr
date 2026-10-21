@@ -8,8 +8,16 @@ import {
   migrateLegacyLiveEvents,
   normalizeMatchEvents,
 } from "@/domain/matchEvent";
+import {
+  classifyVersion,
+  reportNewerStoredVersion,
+  safeRemoveItem,
+  safeSetItem,
+  setItemOrThrow,
+  type SafeSetResult,
+} from "@/lib/storage/storageEnvelope";
 
-const LIVE_MATCH_STORAGE_KEY = "fairplayr.liveMatch.v1";
+export const LIVE_MATCH_STORAGE_KEY = "fairplayr.liveMatch.v1";
 const STORAGE_VERSION = 4;
 
 interface LiveMatchStorageEnvelope {
@@ -512,8 +520,14 @@ export function getStoredLiveMatch(): LiveMatchState | null {
       return null;
     }
 
-    if (parsed.version !== STORAGE_VERSION) {
-      saveStoredLiveMatch(normalized);
+    // Migrate forward only. A newer build's record is read tolerantly (the
+    // reader ignores fields it does not know) and never written back here.
+    const versionClass = classifyVersion(parsed.version, STORAGE_VERSION);
+
+    if (versionClass === "newer") {
+      reportNewerStoredVersion(LIVE_MATCH_STORAGE_KEY);
+    } else if (versionClass !== "current") {
+      trySaveStoredLiveMatch(normalized);
     }
 
     return normalized;
@@ -522,17 +536,36 @@ export function getStoredLiveMatch(): LiveMatchState | null {
   }
 }
 
-export function saveStoredLiveMatch(liveMatch: LiveMatchState): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-
+function serializeLiveMatch(liveMatch: LiveMatchState): string {
   const payload: LiveMatchStorageEnvelope = {
     version: STORAGE_VERSION,
     liveMatch,
   };
 
-  window.localStorage.setItem(LIVE_MATCH_STORAGE_KEY, JSON.stringify(payload));
+  return JSON.stringify(payload);
+}
+
+/**
+ * Saves the live match. Throws when the device refuses the write (a full
+ * device), as it always has, and with `StorageNewerVersionError` when the
+ * stored record is from a newer build (never overwritten); callers that must
+ * keep running use `trySaveStoredLiveMatch`.
+ */
+export function saveStoredLiveMatch(liveMatch: LiveMatchState): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  setItemOrThrow(LIVE_MATCH_STORAGE_KEY, serializeLiveMatch(liveMatch), STORAGE_VERSION);
+}
+
+/** Saves the live match without throwing; the result says whether it was stored. */
+export function trySaveStoredLiveMatch(liveMatch: LiveMatchState): SafeSetResult {
+  if (typeof window === "undefined") {
+    return { ok: false, reason: "unavailable" };
+  }
+
+  return safeSetItem(LIVE_MATCH_STORAGE_KEY, serializeLiveMatch(liveMatch), STORAGE_VERSION);
 }
 
 export function clearStoredLiveMatch(): void {
@@ -540,5 +573,5 @@ export function clearStoredLiveMatch(): void {
     return;
   }
 
-  window.localStorage.removeItem(LIVE_MATCH_STORAGE_KEY);
+  safeRemoveItem(LIVE_MATCH_STORAGE_KEY, STORAGE_VERSION);
 }

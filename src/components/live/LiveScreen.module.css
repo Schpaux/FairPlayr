@@ -214,6 +214,22 @@
   flex: none;
 }
 
+/* «Ikke lagret» (DESIGN.md §5.6). On club green in both themes, so the glyph
+   uses the act ring red (same value in both modes, readable on green) rather
+   than danger-text, whose light value is dark red and unreadable on green;
+   the words stay chalk (never grey on green). */
+.saveFailed {
+  display: inline-flex;
+  align-items: center;
+  color: var(--fp-ring-act);
+  flex: none;
+}
+
+.saveFailedText {
+  color: var(--fp-on-club);
+  font-weight: 600;
+}
+
 .clockPaused .clockDigits {
   color: var(--fp-on-club-2);
 }
@@ -1022,6 +1038,26 @@
   font-size: 15px;
 }
 
+/* ── Notice band (during the match, DESIGN.md §5.6) ───────────────────── */
+/* Over the top edge of the pitch, directly under the scoreboard. Only the
+   notice takes pointer events, and only while it is shown (it fits). */
+.band {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 12px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.band[data-fits="true"] > * {
+  pointer-events: auto;
+}
+
+.band[data-fits="false"] {
+  visibility: hidden;
+}
+
 /* ── Notices (after the match ends) ───────────────────────────────────── */
 .notices {
   position: absolute;
@@ -1153,6 +1189,20 @@
 
 .menuGrow {
   flex: 1;
+}
+
+/* Glyph in the tone colour, words in ink (never colour only). */
+.menuNoteDanger > svg {
+  color: var(--fp-danger-text);
+}
+
+.menuNoteWarning > svg {
+  color: var(--fp-warn-text);
+}
+
+.menuNoteTitle {
+  color: var(--fp-ink);
+  font-weight: 600;
 }
 
 .menuNote {

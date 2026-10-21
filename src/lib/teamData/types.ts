@@ -2,8 +2,13 @@ import type { Team } from "@/domain/team";
 
 export type TeamStorageMode = "guest-local" | "cloud";
 
+/** Where the last team read came from: the server, or the local mirror (read-only). */
+export type TeamDataSource = "server" | "mirror" | "local";
+
 export interface TeamRepository {
   mode: TeamStorageMode;
+  /** Optional: repositories without a mirror always read their own store. */
+  getDataSource?: () => TeamDataSource;
   getTeams: () => Promise<Team[]>;
   getTeam: (teamId: string) => Promise<Team | null>;
   getActiveTeamId: () => Promise<string | null>;

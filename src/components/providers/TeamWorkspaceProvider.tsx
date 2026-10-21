@@ -10,12 +10,17 @@ import {
   type ReactNode,
 } from "react";
 import type { Team } from "@/domain/team";
-import type { TeamStorageMode } from "@/lib/teamData/types";
+import type { TeamDataSource, TeamStorageMode } from "@/lib/teamData/types";
 import { createTeamRepository } from "@/lib/teamData/createTeamRepository";
 import { useAuth } from "@/components/providers/AuthProvider";
 
 interface TeamWorkspaceContextValue {
   mode: TeamStorageMode;
+  /**
+   * "mirror" when the teams come from the local read-only copy of the cloud
+   * teams (offline or deferred session, OFF-01a); "server" or "local" otherwise.
+   */
+  dataSource: TeamDataSource;
   isLoading: boolean;
   teams: Team[];
   activeTeamId: string | null;
@@ -61,11 +66,15 @@ export function TeamWorkspaceProvider({ children }: { children: ReactNode }) {
         supabase: auth.supabase,
         userId: auth.user?.id,
         userEmail: auth.user?.email,
+        // A deferred session has no token: reading the server would return
+        // nothing and overwrite the mirror, so only the mirror is read.
+        serverAvailable: !auth.isSessionDeferred,
       }),
-    [auth.supabase, auth.user?.id, auth.user?.email]
+    [auth.supabase, auth.user?.id, auth.user?.email, auth.isSessionDeferred]
   );
 
   const [isLoading, setIsLoading] = useState(true);
+  const [dataSource, setDataSource] = useState<TeamDataSource>("local");
   const [teams, setTeams] = useState<Team[]>([]);
   const [activeTeamId, setActiveTeamId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -95,6 +104,7 @@ export function TeamWorkspaceProvider({ children }: { children: ReactNode }) {
 
       setTeams(nextTeams);
       setActiveTeamId(resolvedActiveTeamId);
+      setDataSource(repository.getDataSource?.() ?? (repository.mode === "cloud" ? "server" : "local"));
       setError(null);
     } catch (cause) {
       setError(toWorkspaceErrorMessage(cause));
@@ -126,6 +136,7 @@ export function TeamWorkspaceProvider({ children }: { children: ReactNode }) {
   const value = useMemo<TeamWorkspaceContextValue>(
     () => ({
       mode: repository.mode,
+      dataSource,
       isLoading,
       teams,
       activeTeamId,
@@ -175,11 +186,13 @@ export function TeamWorkspaceProvider({ children }: { children: ReactNode }) {
         return team;
       },
     }),
-    [activeTeamId, error, isLoading, refresh, repository, teams, upsertTeamInState]
+    [activeTeamId, dataSource, error, isLoading, refresh, repository, teams, upsertTeamInState]
   );
 
   return (
-    <TeamWorkspaceContext.Provider value={value}>{children}</TeamWorkspaceContext.Provider>
+    <TeamWorkspaceContext.Provider value={value}>
+      {children}
+    </TeamWorkspaceContext.Provider>
   );
 }
 

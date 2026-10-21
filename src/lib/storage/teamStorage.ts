@@ -1,7 +1,13 @@
 import type { Team, Player } from "@/domain/team";
+import {
+  classifyVersion,
+  reportNewerStoredVersion,
+  safeRemoveItem,
+  setItemOrThrow,
+} from "@/lib/storage/storageEnvelope";
 
 const LEGACY_TEAM_STORAGE_KEY = "fairplayr.team.v1";
-const TEAM_STORAGE_KEY = "fairplayr.teams.v2";
+export const TEAM_STORAGE_KEY = "fairplayr.teams.v2";
 const TEAM_STORAGE_VERSION = 2;
 
 interface LegacyTeamStorageEnvelope {
@@ -165,7 +171,15 @@ function migrateLegacyIfNeeded(): TeamWorkspaceStorageEnvelope | null {
   }
 
   const workspace = toWorkspace([legacyTeam], legacyTeam.id);
-  saveStoredTeamWorkspace(workspace);
+
+  try {
+    saveStoredTeamWorkspace(workspace);
+  } catch {
+    // Not saved (a full device, or a newer build's teams): keep the legacy
+    // copy and use the team from memory; a later read retries.
+    return workspace;
+  }
+
   window.localStorage.removeItem(LEGACY_TEAM_STORAGE_KEY);
 
   return workspace;
@@ -194,8 +208,29 @@ export function getStoredTeamWorkspace(): TeamWorkspaceStorageEnvelope {
     }
 
     const parsed = JSON.parse(raw) as unknown;
+    const versionClass = isRecord(parsed)
+      ? classifyVersion(parsed.version, TEAM_STORAGE_VERSION)
+      : "invalid";
 
-    if (!isWorkspaceEnvelope(parsed) || parsed.version !== TEAM_STORAGE_VERSION) {
+    // A newer build's teams are read tolerantly and never replaced here: an
+    // empty workspace would let this build write over them.
+    if (versionClass === "newer" && isRecord(parsed) && Array.isArray(parsed.teams)) {
+      reportNewerStoredVersion(TEAM_STORAGE_KEY);
+      const activeTeamId = typeof parsed.activeTeamId === "string" ? parsed.activeTeamId : null;
+      return toWorkspace(toValidTeams(parsed.teams), activeTeamId);
+    }
+
+    if (versionClass === "older" && isWorkspaceEnvelope(parsed)) {
+      const migrated = toWorkspace(toValidTeams(parsed.teams), parsed.activeTeamId ?? null);
+      try {
+        saveStoredTeamWorkspace(migrated);
+      } catch {
+        // Still usable from memory; the next write retries.
+      }
+      return migrated;
+    }
+
+    if (!isWorkspaceEnvelope(parsed) || versionClass !== "current") {
       return (
         migrateLegacyIfNeeded() ?? {
           version: TEAM_STORAGE_VERSION,
@@ -226,7 +261,8 @@ export function saveStoredTeamWorkspace(workspace: {
   }
 
   const payload = toWorkspace(workspace.teams, workspace.activeTeamId);
-  window.localStorage.setItem(TEAM_STORAGE_KEY, JSON.stringify(payload));
+  // Throws on a failed write, as before; refuses to replace a newer build's teams.
+  setItemOrThrow(TEAM_STORAGE_KEY, JSON.stringify(payload), TEAM_STORAGE_VERSION);
 }
 
 export function getStoredTeams(): Team[] {
@@ -284,7 +320,7 @@ export function clearStoredTeam(): void {
   const workspace = getStoredTeamWorkspace();
 
   if (!workspace.activeTeamId) {
-    window.localStorage.removeItem(TEAM_STORAGE_KEY);
+    safeRemoveItem(TEAM_STORAGE_KEY, TEAM_STORAGE_VERSION);
     window.localStorage.removeItem(LEGACY_TEAM_STORAGE_KEY);
     return;
   }
@@ -292,7 +328,7 @@ export function clearStoredTeam(): void {
   const remainingTeams = workspace.teams.filter((team) => team.id !== workspace.activeTeamId);
 
   if (remainingTeams.length === 0) {
-    window.localStorage.removeItem(TEAM_STORAGE_KEY);
+    safeRemoveItem(TEAM_STORAGE_KEY, TEAM_STORAGE_VERSION);
     window.localStorage.removeItem(LEGACY_TEAM_STORAGE_KEY);
     return;
   }

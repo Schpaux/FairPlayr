@@ -30,5 +30,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "design-exploration", ".claude/worktrees"]
+  "exclude": ["node_modules", "design-exploration", ".claude/worktrees", "src/sw/sw.ts"]
 }

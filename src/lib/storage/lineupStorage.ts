@@ -1,7 +1,13 @@
 import type { LineupDraft } from "@/domain/lineup";
 import { ALL_FORMATS } from "@/domain/match";
+import {
+  classifyVersion,
+  reportNewerStoredVersion,
+  safeRemoveItem,
+  setItemOrThrow,
+} from "@/lib/storage/storageEnvelope";
 
-const LINEUP_STORAGE_KEY = "fairplayr.lineup.v1";
+export const LINEUP_STORAGE_KEY = "fairplayr.lineup.v1";
 const STORAGE_VERSION = 1;
 
 interface LineupStorageEnvelope {
@@ -88,7 +94,13 @@ export function getStoredLineupDraft(): LineupDraft | null {
       return null;
     }
 
-    if (parsed.version !== STORAGE_VERSION) {
+    // Version 1 is the first version, so there is nothing older to migrate.
+    // A newer build's draft is read tolerantly and never written over here.
+    const versionClass = classifyVersion(parsed.version, STORAGE_VERSION);
+
+    if (versionClass === "newer") {
+      reportNewerStoredVersion(LINEUP_STORAGE_KEY);
+    } else if (versionClass !== "current") {
       return null;
     }
 
@@ -108,7 +120,8 @@ export function saveStoredLineupDraft(lineup: LineupDraft): void {
     lineup,
   };
 
-  window.localStorage.setItem(LINEUP_STORAGE_KEY, JSON.stringify(payload));
+  // Throws on a failed write, as before; refuses to replace a newer build's draft.
+  setItemOrThrow(LINEUP_STORAGE_KEY, JSON.stringify(payload), STORAGE_VERSION);
 }
 
 export function clearStoredLineupDraft(): void {
@@ -116,5 +129,5 @@ export function clearStoredLineupDraft(): void {
     return;
   }
 
-  window.localStorage.removeItem(LINEUP_STORAGE_KEY);
+  safeRemoveItem(LINEUP_STORAGE_KEY, STORAGE_VERSION);
 }

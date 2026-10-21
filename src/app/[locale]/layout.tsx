@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import localFont from "next/font/local";
 import { NextIntlClientProvider } from "next-intl";
-import { getMessages } from "next-intl/server";
+import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
@@ -14,6 +14,8 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { ActiveMatchBanner } from "@/components/layout/ActiveMatchBanner";
 import { NativeAppShell } from "@/components/layout/NativeAppShell";
 import { AppShellErrorBoundary } from "@/components/layout/AppShellErrorBoundary";
+import { ThemeColorSync } from "@/components/layout/ThemeColorSync";
+import { PwaRoot } from "@/components/pwa/PwaRoot";
 import "../globals.css";
 
 // Inter is the only UI typeface (DESIGN.md §3). latin-ext covers player names
@@ -43,7 +45,8 @@ export const metadata: Metadata = {
   },
   description:
     "Fair playtime tracking for grassroots football coaches. Manage lineups, substitutions, and matchday — so every player gets their moment.",
-  manifest: "/manifest.json",
+  // No `manifest` here: src/app/manifest.ts is linked automatically
+  // (/manifest.webmanifest, OFF-02).
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -62,10 +65,9 @@ export const viewport: Viewport = {
   // viewport-fit=cover is required so env(safe-area-inset-*) works correctly
   // inside a Capacitor WKWebView and as a PWA on iOS.
   viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F9FAF8" },
-    { media: "(prefers-color-scheme: dark)", color: "#121B16" },
-  ],
+  // No `themeColor` here: the app theme is class-based (`enableSystem` is
+  // false), so <ThemeColorSync /> renders the one theme-color tag from the
+  // active theme instead of the OS colour scheme (OFF-02).
 };
 
 type Props = {
@@ -80,6 +82,9 @@ export default async function LocaleLayout({ children, params }: Props) {
     notFound();
   }
 
+  // The locale comes from the URL, not from request headers or cookies: the
+  // layout renders the same for every user (cache-safe shells, FP-OFF-01 B6).
+  setRequestLocale(locale);
   const messages = await getMessages();
 
   return (
@@ -96,9 +101,11 @@ export default async function LocaleLayout({ children, params }: Props) {
             enableSystem={false}
             disableTransitionOnChange={false}
           >
+            <ThemeColorSync />
             <AuthProvider>
               <TeamWorkspaceProvider>
                 <ActiveMatchProvider>
+                  <PwaRoot />
                   <AppShellErrorBoundary>
                     <NativeAppShell>
                       <div className="relative flex min-h-screen flex-col">

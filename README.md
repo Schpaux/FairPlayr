@@ -102,6 +102,8 @@ FairPlayr exists to make fair rotation and match organization easier in real tim
 │  │  │  ├─ lineup/                 # Dedicated lineup builder
 │  │  │  ├─ settings/               # Theme/language/auth status
 │  │  │  └─ auth/                   # Sign-in, sign-up, callback
+│  │  ├─ manifest.ts               # PWA manifest (/manifest.webmanifest)
+│  │  ├─ serwist/[path]/route.ts    # Builds and serves the service worker (/serwist/sw.js)
 │  │  └─ api/
 │  │     ├─ matches/                # Match CRUD/read endpoints
 │  │     └─ integrations/spond/     # Spond connect/sync/import endpoints
@@ -112,6 +114,7 @@ FairPlayr exists to make fair rotation and match organization easier in real tim
 │  │  ├─ auth/
 │  │  ├─ providers/
 │  │  └─ ui/
+│  ├─ sw/                           # Service worker: routing rules, caches, update gate
 │  ├─ domain/                       # Match/live/team domain logic
 │  ├─ i18n/                         # next-intl routing and request config
 │  └─ lib/
@@ -122,8 +125,7 @@ FairPlayr exists to make fair rotation and match organization easier in real tim
 ├─ supabase/
 │  ├─ config.toml
 │  └─ migrations/
-├─ messages/                        # en.json / no.json translations
-└─ public/manifest.json             # PWA manifest
+└─ messages/                        # en.json / no.json translations
 ```
 
 ## Authentication
@@ -252,6 +254,8 @@ The codebase currently reads these variables:
 | VERTEX_AI_LOCATION | Optional (default: `global`) | Vertex AI location for model endpoint selection |
 | VERTEX_AI_MODEL | Optional (default: `gemini-2.5-flash`) | Vertex AI Gemini model used by internal text generation |
 | AI_HEALTHCHECK_TOKEN | Optional (recommended in prod) | Protects internal AI health endpoint in production |
+| NEXT_PUBLIC_FP_SW | Optional (default: on) | `off` is the service worker kill switch, see [PWA and service worker](#pwa-and-service-worker) |
+| NEXT_PUBLIC_FP_SW_DEV | Optional, local only | `1` registers the service worker under `next dev` (debugging only) |
 
 Notes:
 
@@ -267,6 +271,36 @@ Notes:
 - Match setup/live state is persisted in local storage, even when cloud mode is active.
 - RLS and policy changes are high-impact: validate both API behavior and policy behavior when touching migrations.
 - Spond API calls run server-side in the provider/service layer; credentials are never exposed to the client after submit.
+
+## PWA and service worker
+
+The app ships a hand-written service worker (`src/sw/`, built by `src/app/serwist/[path]/route.ts` and served at `/serwist/sw.js` with `Cache-Control: no-cache, no-store` and `Service-Worker-Allowed: /`). It is registered in production builds only (not under `next dev`).
+
+**What it caches.** Per build, in `fp-precache-<buildId>`: the build's `/_next/static` files (JS, CSS, fonts), the manifest, the favicon, the app icons (`/apple-icon.png`, `/icons/*.png`), and the user-independent shells `/`, `/match/setup`, `/match/live`, `/team`, `/offline` and their `/no` versions. Shells are served cache-first; other pages are network-first (8 s) and fall back to the offline page. `/` opens the last used locale's Home from the cache. Navigation responses are never stored at runtime. `/api/*`, auth paths, RSC requests, non-GET requests and other origins (Supabase) are never cached or answered by the worker. `fp-meta` holds the last locale and the update gate. Match data lives in localStorage, which the worker never touches.
+
+**Updates during matches.** A new deploy is fetched on the next update check (page load, `online`, app back in view), but:
+
+- while a match is active on the device, the new build's install is refused, so it can neither wait nor activate at a cold start. It installs right after the match ends;
+- a build that was already waiting when the match started (the coach chose «Senere») may be activated by the browser when the app is closed, but it then keeps serving the previous build's files until the match ends, so the coach reopens the same version;
+- without a match the coach sees «Oppdatering klar» and the app reloads once on «Oppdater nå». Other open tabs reload once too, unless a match is active in them;
+- the one exception is «Oppdatering kreves»: data on the device is newer than the running build (it cannot save), so the newer build is activated even mid-match. If that does not help, the sheet asks the coach to close and reopen the app instead of reloading in a loop.
+
+**Kill switch** (a broken worker in production):
+
+1. Set `NEXT_PUBLIC_FP_SW=off` for the Production environment in Vercel and redeploy (it is a build-time variable, so a redeploy is required).
+2. That build serves a worker that activates immediately, deletes every `fp-` cache and unregisters itself; pages unregister any FairPlayr worker they find. It never reloads a page, so a running match is not interrupted; localStorage (matches, teams) is untouched.
+3. Users need to do nothing while online: the next update check (opening the app, coming back online) picks it up. A device that stays offline keeps the old worker until it is online again. If a page is stuck, closing and reopening the app is enough.
+4. Verify on the preview deployment first, twice (the second request must not come from a cache):
+
+   ```bash
+   curl -sI https://<preview-url>/serwist/sw.js   # 200, cache-control: no-cache, no-store, must-revalidate; service-worker-allowed: /
+   curl -sI https://<preview-url>/serwist/sw.js   # same headers again (no age / x-vercel-cache: HIT)
+   curl -s  https://<preview-url>/serwist/sw.js | head -c 200   # banner contains "mode":"off"
+   ```
+
+5. To turn the worker back on, remove the variable (or set it to `on`) and redeploy.
+
+The offline suite (`npm run test:e2e:offline`, `playwright.offline.config.ts`) builds the app and cuts the network with a local proxy (`e2e/offline/support/netControl.mjs`, all on `127.0.0.1`: proxy 3220, control API 3221, Supabase stub 3229, `next start` 3200).
 
 ## Security Scanning (Trivy)
 

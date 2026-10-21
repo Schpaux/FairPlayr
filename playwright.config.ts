@@ -20,6 +20,8 @@ const mobile = {
 
 export default defineConfig({
   testDir: "./e2e",
+  // The offline suite needs a production build: playwright.offline.config.ts.
+  testIgnore: ["offline/**"],
   // Compiles every route once before the first test, so on-demand compiles
   // (and the HMR they push to open pages) never land mid-test.
   globalSetup: "./e2e/global-setup.ts",

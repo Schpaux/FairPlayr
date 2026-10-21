@@ -6,8 +6,28 @@ import {
   type MatchFormat,
   type MatchConfig,
 } from "@/domain/match";
+import {
+  classifyVersion,
+  isStorageNewerVersionError,
+  reportNewerStoredVersion,
+  safeRemoveItem,
+  setItemOrThrow,
+} from "@/lib/storage/storageEnvelope";
 
-const MATCH_SETUP_KEY = "fairplayr.matchSetup.v1";
+export const MATCH_SETUP_KEY = "fairplayr.matchSetup.v1";
+
+/**
+ * Dispatched on `window` after this tab wrote or removed the stored setup (a
+ * match started, ended or was discarded). Other tabs see the `storage` event
+ * for MATCH_SETUP_KEY instead. Used to re-check a deferred session once no
+ * match is active any more (B10).
+ */
+export const MATCH_SETUP_CHANGED_EVENT = "fairplayr:match-setup-changed";
+
+function notifyMatchSetupChanged(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(MATCH_SETUP_CHANGED_EVENT));
+}
 const STORAGE_VERSION = 2;
 
 // ─── Status ───────────────────────────────────────────────────────────────────
@@ -216,7 +236,14 @@ export function getStoredMatchSetup(): StoredMatchConfig | null {
 
     const parsed = JSON.parse(raw) as unknown;
     if (isValidEnvelope(parsed)) {
-      if (parsed.version !== STORAGE_VERSION) return null;
+      // Migrate forward only. A setup from a newer build is still read (the
+      // reader ignores unknown fields), so its active match is never hidden
+      // or replaced; this build just never writes over it.
+      const versionClass = classifyVersion(parsed.version, STORAGE_VERSION);
+
+      if (versionClass === "newer") {
+        reportNewerStoredVersion(MATCH_SETUP_KEY);
+      }
 
       const config = toValidMatchConfig(parsed.config);
       if (!config) return null;
@@ -227,6 +254,14 @@ export function getStoredMatchSetup(): StoredMatchConfig | null {
           : typeof parsed.serverMatchId === "string" && parsed.serverMatchId.length > 0
             ? parsed.serverMatchId
             : null;
+
+      if (versionClass === "older" || versionClass === "invalid") {
+        try {
+          writeEnvelope(config, parsed.status, serverMatchId);
+        } catch {
+          // Still usable from memory; the next write retries.
+        }
+      }
 
       return { config, status: parsed.status, serverMatchId };
     }
@@ -246,7 +281,11 @@ export function getStoredMatchSetup(): StoredMatchConfig | null {
       serverMatchId: null,
     };
 
-    writeEnvelope(config, parsed.status, null);
+    try {
+      writeEnvelope(config, parsed.status, null);
+    } catch {
+      // Still usable from memory; the next write retries.
+    }
 
     return migrated;
   } catch {
@@ -271,7 +310,7 @@ export function hasActiveStoredMatch(): boolean {
  */
 export function saveMatchSetupDraft(config: MatchConfig): boolean {
   if (hasActiveStoredMatch()) return false;
-  writeEnvelope(config, "draft");
+  writeDraftEnvelope(config, "draft");
   return true;
 }
 
@@ -299,11 +338,11 @@ export function updateMatchConfig(config: MatchConfig): boolean {
   if (stored?.status === "active") return false;
 
   if (stored) {
-    writeEnvelope(config, stored.status);
+    writeDraftEnvelope(config, stored.status);
     return true;
   }
 
-  writeEnvelope(config, "draft");
+  writeDraftEnvelope(config, "draft");
   return true;
 }
 
@@ -320,7 +359,7 @@ export function discardMatchSetupDraft(): boolean {
 
 export function clearStoredMatchSetup(): void {
   if (typeof window === "undefined") return;
-  window.localStorage.removeItem(MATCH_SETUP_KEY);
+  if (safeRemoveItem(MATCH_SETUP_KEY, STORAGE_VERSION)) notifyMatchSetupChanged();
 }
 
 // ─── Internal ─────────────────────────────────────────────────────────────────
@@ -329,6 +368,19 @@ export function clearStoredMatchSetup(): void {
 function storedServerMatchIdFor(configId: string): string | null | undefined {
   const stored = getStoredMatchSetup();
   return stored && stored.config.id === configId ? stored.serverMatchId : null;
+}
+
+/**
+ * Draft writes run from effects in the setup editors, which have no catch: a
+ * newer build's setup is left alone without throwing (the update-required
+ * signal asks for a reload). Other failures (a full device) throw as before.
+ */
+function writeDraftEnvelope(config: MatchConfig, status: MatchStatus): void {
+  try {
+    writeEnvelope(config, status);
+  } catch (error) {
+    if (!isStorageNewerVersionError(error)) throw error;
+  }
 }
 
 function writeEnvelope(
@@ -343,5 +395,9 @@ function writeEnvelope(
     status,
     serverMatchId,
   };
-  window.localStorage.setItem(MATCH_SETUP_KEY, JSON.stringify(envelope));
+  // Throws on a failed write, as before, and when refusing to replace a newer
+  // build's setup (StorageNewerVersionError): lifecycle callers treat both as
+  // "not saved".
+  setItemOrThrow(MATCH_SETUP_KEY, JSON.stringify(envelope), STORAGE_VERSION);
+  notifyMatchSetupChanged();
 }

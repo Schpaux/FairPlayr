@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { LiveMatchState } from "@/domain/liveMatch";
 
 // Row shapes returned from Supabase queries in this file
@@ -28,10 +28,6 @@ interface UpcomingMatchRow {
   opponent_name: string | null;
   starts_at: string;
   location: string | null;
-}
-
-interface TeamNameRow {
-  name: string;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -83,9 +79,10 @@ function isLiveMatchState(value: unknown): value is LiveMatchState {
 
 // ─── Main export ─────────────────────────────────────────────────────────────
 
-export async function getSeasonStats(teamId: string): Promise<SeasonStats> {
-  const supabase = await createSupabaseServerClient();
-
+export async function getSeasonStats(
+  supabase: SupabaseClient,
+  teamId: string
+): Promise<SeasonStats> {
   const { data: rows } = await supabase
     .from("matches")
     .select(
@@ -226,9 +223,10 @@ function buildLastMatch(
 
 // ─── Upcoming match helper ────────────────────────────────────────────────────
 
-export async function getUpcomingMatch(teamId: string): Promise<UpcomingMatch | null> {
-  const supabase = await createSupabaseServerClient();
-
+export async function getUpcomingMatch(
+  supabase: SupabaseClient,
+  teamId: string
+): Promise<UpcomingMatch | null> {
   const { data } = await supabase
     .from("matches")
     .select("id, opponent_name, starts_at, location")
@@ -250,32 +248,60 @@ export async function getUpcomingMatch(teamId: string): Promise<UpcomingMatch | 
   };
 }
 
-// ─── User's first cloud team ──────────────────────────────────────────────────
+// ─── Home summary (GET /api/home/summary) ─────────────────────────────────────
 
-export async function getFirstCloudTeamId(): Promise<string | null> {
-  const supabase = await createSupabaseServerClient();
-
-  const { data: session } = await supabase.auth.getUser();
-  if (!session.user) return null;
-
-  const { data } = await supabase
-    .from("team_members")
-    .select("team_id")
-    .eq("user_id", session.user.id)
-    .limit(1)
-    .returns<TeamMemberRow[]>();
-
-  return data?.[0]?.team_id ?? null;
+export interface HomeSummary {
+  teamId: string;
+  stats: SeasonStats | null;
+  upcoming: UpcomingMatch | null;
 }
 
-export async function getFirstCloudTeamName(teamId: string): Promise<string | null> {
-  const supabase = await createSupabaseServerClient();
+export type HomeSummaryResult =
+  | { status: "ok"; summary: HomeSummary }
+  | { status: "forbidden" };
 
-  const { data } = await supabase
-    .from("teams")
-    .select("name")
-    .eq("id", teamId)
-    .maybeSingle<TeamNameRow>();
+/**
+ * True when `userId` is a member of `teamId`; the same query as
+ * `requireTeamMembership` in `src/lib/server/matches/service.ts`. Throws when
+ * the lookup itself fails, so a database error is never read as "member".
+ */
+export async function isTeamMember(
+  supabase: SupabaseClient,
+  userId: string,
+  teamId: string
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("team_members")
+    .select("team_id")
+    .eq("team_id", teamId)
+    .eq("user_id", userId)
+    .maybeSingle<TeamMemberRow>();
 
-  return data?.name ?? null;
+  if (error) {
+    throw new Error(`Team membership lookup failed: ${error.message}`);
+  }
+
+  return data !== null;
+}
+
+/**
+ * Season stats and the next fixture for Home, for members of the team only.
+ * Each part degrades to null on its own error, as Home did when it rendered
+ * them on the server.
+ */
+export async function getHomeSummary(
+  supabase: SupabaseClient,
+  userId: string,
+  teamId: string
+): Promise<HomeSummaryResult> {
+  if (!(await isTeamMember(supabase, userId, teamId))) {
+    return { status: "forbidden" };
+  }
+
+  const [stats, upcoming] = await Promise.all([
+    getSeasonStats(supabase, teamId).catch(() => null),
+    getUpcomingMatch(supabase, teamId).catch(() => null),
+  ]);
+
+  return { status: "ok", summary: { teamId, stats, upcoming } };
 }

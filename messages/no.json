@@ -26,7 +26,11 @@
       "subtitle": "Hold oversikt, gjør smarte bytter og gi alle spillerne den spilletiden de fortjener - helt uten kaos på sidelinja.",
       "ctaPrimary": "Kom i gang gratis",
       "ctaSecondary": "Se hvordan det funker",
-      "spondBadge": "Fungerer med Spond"
+      "spondBadge": "Fungerer med Spond",
+      "notificationsLabel": "Varsler"
+    },
+    "summary": {
+      "loading": "Laster sesongoversikt …"
     },
     "nextMatch": {
       "badge": "NESTE KAMP",
@@ -1142,5 +1146,52 @@
       "confirm": "Ja, forkast kampen"
     },
     "cancel": "Behold kampen"
+  },
+  "restore": {
+    "closedGap": "Appen var lukket i {minutes} min – klokken gikk videre",
+    "placeholderPlayer": "Spiller {index}",
+    "storageError": {
+      "title": "Kampen lagres ikke på enheten.",
+      "body": "Lagringen er full eller blokkert. Kampen fortsetter, men kan gå tapt hvis appen lukkes. Frigjør plass på enheten og la appen stå åpen.",
+      "hide": "Skjul meldingen om lagring",
+      "short": "Ikke lagret"
+    },
+    "workspaceError": {
+      "title": "Laget kunne ikke hentes.",
+      "body": "Kampen fortsetter med navnene som er lagret på enheten.",
+      "hide": "Skjul meldingen om laget"
+    },
+    "updateRequired": {
+      "title": "Oppdatering kreves",
+      "body": "En nyere versjon av FairPlayr har lagret data på denne enheten. Last inn på nytt for å fortsette. Kampen hentes fra enheten.",
+      "reload": "Last inn på nytt"
+    }
+  },
+  "pwa": {
+    "update": {
+      "title": "Oppdatering klar",
+      "body": "En ny versjon av FairPlayr er lastet ned. Oppdateringen tar noen sekunder.",
+      "action": "Oppdater nå",
+      "updating": "Oppdaterer …",
+      "later": "Senere"
+    },
+    "updateRequired": {
+      "updating": "Oppdaterer …",
+      "stuckTitle": "Kan ikke lagre",
+      "stuckBody": "Denne versjonen kan ikke lagre. Lukk appen og åpne den igjen.",
+      "close": "Lukk",
+      "reopen": "Hvorfor appen ikke lagrer"
+    },
+    "offline": {
+      "metaTitle": "Ingen forbindelse",
+      "title": "Denne siden trenger nett",
+      "body": "Du er uten forbindelse. Kampen, kampoppsettet og laget virker uten nett, og alt lagres på enheten.",
+      "toMatch": "Til kampen",
+      "toHome": "Til forsiden",
+      "retry": "Prøv igjen",
+      "availableTitle": "Virker uten nett",
+      "setup": "Kampoppsett",
+      "team": "Laget"
+    }
   }
 }

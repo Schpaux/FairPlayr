@@ -256,7 +256,16 @@ export function MatchSetupManager() {
     setStartError(null);
     setIsStarting(true);
 
-    const started = startLocalMatch(setup, matchId);
+    let started: ReturnType<typeof startLocalMatch>;
+    try {
+      started = startLocalMatch(setup, matchId, { squadPlayers: team?.players });
+    } catch {
+      // Not saved on the device (full, or a newer build's data): the match
+      // must not start without being stored.
+      setStartError(t("errors.startFailed"));
+      setIsStarting(false);
+      return;
+    }
     if (!started.ok) {
       // Another match became active (e.g. in another tab): keep it, show the
       // way back to it instead of starting over it.

@@ -26,7 +26,11 @@
       "subtitle": "Stay in control, make smart substitutions, and give every player the minutes they deserve - without sideline chaos.",
       "ctaPrimary": "Get started for free",
       "ctaSecondary": "See how it works",
-      "spondBadge": "Works with Spond"
+      "spondBadge": "Works with Spond",
+      "notificationsLabel": "Notifications"
+    },
+    "summary": {
+      "loading": "Loading season summary…"
     },
     "nextMatch": {
       "badge": "NEXT MATCH",
@@ -1142,5 +1146,52 @@
       "confirm": "Yes, discard the match"
     },
     "cancel": "Keep the match"
+  },
+  "restore": {
+    "closedGap": "The app was closed for {minutes} min – the clock kept running",
+    "placeholderPlayer": "Player {index}",
+    "storageError": {
+      "title": "The match is not being saved on this device.",
+      "body": "Storage is full or blocked. The match keeps running, but it can be lost if the app is closed. Free up space on the device and keep the app open.",
+      "hide": "Hide the storage message",
+      "short": "Not saved"
+    },
+    "workspaceError": {
+      "title": "The team could not be loaded.",
+      "body": "The match continues with the names saved on this device.",
+      "hide": "Hide the team message"
+    },
+    "updateRequired": {
+      "title": "Update required",
+      "body": "A newer version of FairPlayr has saved data on this device. Reload to continue. The match is restored from the device.",
+      "reload": "Reload"
+    }
+  },
+  "pwa": {
+    "update": {
+      "title": "Update ready",
+      "body": "A new version of FairPlayr has been downloaded. Updating takes a few seconds.",
+      "action": "Update now",
+      "updating": "Updating…",
+      "later": "Later"
+    },
+    "updateRequired": {
+      "updating": "Updating…",
+      "stuckTitle": "Can't save",
+      "stuckBody": "This version can't save. Close the app and open it again.",
+      "close": "Close",
+      "reopen": "Why the app isn't saving"
+    },
+    "offline": {
+      "metaTitle": "No connection",
+      "title": "This page needs a connection",
+      "body": "You are offline. The match, match setup and team work without a connection, and everything is saved on this device.",
+      "toMatch": "Back to the match",
+      "toHome": "Go to Home",
+      "retry": "Try again",
+      "availableTitle": "Works offline",
+      "setup": "Match setup",
+      "team": "Team"
+    }
   }
 }
