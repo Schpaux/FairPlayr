@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useId, useState } from "react";
 import { FpButton } from "@/components/ui/FpButton";
 import { teamTextInputClassName } from "@/components/team/styles";
 
@@ -29,7 +29,9 @@ export function TeamNameForm({
 }: TeamNameFormProps) {
   const [name, setName] = useState(initialValue);
   const [error, setError] = useState<string | null>(null);
-
+  // Create and rename forms can be on the page at once; ids must stay unique.
+  const inputId = useId();
+  const errorId = useId();
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -51,12 +53,14 @@ export function TeamNameForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      <label className="sr-only" htmlFor="team-name-input">
+      <label className="sr-only" htmlFor={inputId}>
         {label}
       </label>
       <input
-        id="team-name-input"
+        id={inputId}
         value={name}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? errorId : undefined}
         onChange={(event) => {
           setName(event.target.value);
           if (error) {
@@ -66,7 +70,11 @@ export function TeamNameForm({
         placeholder={placeholder}
         className={teamTextInputClassName}
       />
-      {error && <p className="text-xs text-fp-danger-text">{error}</p>}
+      {error ? (
+        <p id={errorId} role="alert" className="text-sm text-fp-danger-text">
+          {error}
+        </p>
+      ) : null}
       <div className="flex items-center gap-2">
         <FpButton type="submit" variant="primary" size="md" className="tap-target">
           {submitLabel}

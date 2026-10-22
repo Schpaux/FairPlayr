@@ -1,204 +1,158 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import { motion } from "framer-motion";
-import { ArrowDown, ArrowUp, Check, Pencil, Trash2, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
+import { ArrowDown, ArrowUp, ChevronRight } from "lucide-react";
 import type { Player } from "@/domain/team";
-import { AppCard } from "@/components/ui/AppCard";
-import { Badge } from "@/components/ui/badge";
-import { FpButton } from "@/components/ui/FpButton";
-import { transitions } from "@/lib/tokens";
-import { teamTextInputClassName } from "@/components/team/styles";
+import { ListGroup, ListRow } from "@/components/ui/primitives";
+import { discLabel, hasShirtNumber } from "@/components/live/liveScreenModel";
+import { cn } from "@/lib/utils";
 
-interface PlayerListCopy {
-  rename: string;
-  delete: string;
-  moveUp: string;
-  moveDown: string;
-  sourceSpondBadge: string;
-  save: string;
-  cancel: string;
-  playerNameLabel: string;
-  playerNamePlaceholder: string;
-  playerNameRequired: string;
-  playerNameDuplicate: string;
-}
+/**
+ * Player list (UI-TEAM-01, DESIGN.md §7 "Lists"): one hairline row per
+ * player with the shirt disc and the full name, which wraps and is never
+ * truncated, so two players with the same first name can always be told
+ * apart. Tapping a row opens the edit sheet; there is no destructive control
+ * in the list. Reordering is a separate mode with up/down buttons per row.
+ */
 
 interface PlayerListProps {
   players: Player[];
-  copy: PlayerListCopy;
-  allowReorder?: boolean;
-  onRenamePlayer: (playerId: string, name: string) => boolean | Promise<boolean>;
-  onDeletePlayer: (playerId: string) => void;
-  onMovePlayer: (playerId: string, direction: "up" | "down") => void;
+  /** Reorder mode: rows carry move buttons and do not open the edit sheet. */
+  reordering?: boolean;
+  onOpenPlayer: (playerId: string) => void;
+  /** Resolves to true once the move is saved. */
+  onMovePlayer: (playerId: string, direction: "up" | "down") => Promise<boolean>;
 }
 
-export function PlayerList({
-  players,
-  copy,
-  allowReorder = true,
-  onRenamePlayer,
-  onDeletePlayer,
-  onMovePlayer,
-}: PlayerListProps) {
-  const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
-  const [draftName, setDraftName] = useState("");
-  const [error, setError] = useState<string | null>(null);
+export const playerRowTestId = (playerId: string) => `player-row-${playerId}`;
 
-  const startEditing = (player: Player) => {
-    setEditingPlayerId(player.id);
-    setDraftName(player.name);
-    setError(null);
+export function isManagedPlayer(player: Player) {
+  return player.isManaged || player.source === "spond";
+}
+
+function ShirtDisc({ player }: { player: Player }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "flex size-9 shrink-0 items-center justify-center rounded-full bg-fp-club-disc leading-none text-fp-on-club",
+        hasShirtNumber(player) ? "font-num text-[19px]" : "text-[13px] font-semibold"
+      )}
+    >
+      {discLabel(player)}
+    </span>
+  );
+}
+
+export function PlayerList({ players, reordering = false, onOpenPlayer, onMovePlayer }: PlayerListProps) {
+  const t = useTranslations("team");
+  // `count` re-keys the live text, so the same message twice is read twice.
+  // The caller remounts the list when the mode changes, which clears it.
+  const [announcement, setAnnouncement] = useState({ text: "", count: 0 });
+  // The moved row is re-inserted in the DOM, which can drop focus; put it
+  // back on the button that was pressed, once the saved order has rendered.
+  const [refocus, setRefocus] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!refocus) return;
+    document.querySelector<HTMLElement>(`[data-move="${refocus}"]`)?.focus();
+  }, [refocus, players]);
+
+  const announce = (text: string) => setAnnouncement((previous) => ({ text, count: previous.count + 1 }));
+
+  const move = async (player: Player, index: number, direction: "up" | "down") => {
+    const target = direction === "up" ? index - 1 : index + 1;
+    if (target < 0 || target >= players.length) {
+      announce(t(direction === "up" ? "players.alreadyFirst" : "players.alreadyLast", { name: player.name }));
+      return;
+    }
+    const moved = await onMovePlayer(player.id, direction);
+    if (!moved) return;
+    setRefocus(`${player.id}-${direction}`);
+    announce(t("players.moved", { name: player.name, position: target + 1, total: players.length }));
   };
 
-  const handleRenameSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!editingPlayerId) {
-      return;
-    }
-
-    const trimmedName = draftName.trim();
-
-    if (!trimmedName) {
-      setError(copy.playerNameRequired);
-      return;
-    }
-
-    const didRename = await onRenamePlayer(editingPlayerId, trimmedName);
-
-    if (!didRename) {
-      setError(copy.playerNameDuplicate);
-      return;
-    }
-
-    setEditingPlayerId(null);
-    setDraftName("");
-    setError(null);
-  };
+  const numberText = (player: Player) =>
+    hasShirtNumber(player) ? <span className="sr-only">, {t("players.shirtNumber", { number: player.number })}</span> : null;
 
   return (
-    <ul className="space-y-3">
-      {players.map((player, index) => {
-        const isEditing = editingPlayerId === player.id;
-        const isManagedPlayer = player.isManaged || player.source === "spond";
-
-        return (
-          <motion.li
-            layout
-            key={player.id}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={transitions.fast}
-          >
-            <AppCard className="p-3">
-              {isEditing ? (
-                <form onSubmit={handleRenameSubmit} className="space-y-2">
-                  <label className="sr-only" htmlFor={`player-edit-${player.id}`}>
-                    {copy.playerNameLabel}
-                  </label>
-                  <input
-                    id={`player-edit-${player.id}`}
-                    value={draftName}
-                    onChange={(event) => {
-                      setDraftName(event.target.value);
-                      if (error) {
-                        setError(null);
-                      }
-                    }}
-                    placeholder={copy.playerNamePlaceholder}
-                    className={teamTextInputClassName}
-                  />
-                  {error && <p className="text-xs text-fp-danger-text">{error}</p>}
-                  <div className="flex items-center gap-2">
-                    <FpButton type="submit" variant="primary" size="md" className="tap-target px-3">
-                      <Check size={16} />
-                      {copy.save}
-                    </FpButton>
-                    <FpButton
-                      type="button"
-                      variant="ghost"
-                      size="md"
-                      className="tap-target px-3"
-                      onClick={() => {
-                        setEditingPlayerId(null);
-                        setDraftName("");
-                        setError(null);
-                      }}
-                    >
-                      <X size={16} />
-                      {copy.cancel}
-                    </FpButton>
-                  </div>
-                </form>
-              ) : (
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0 flex items-center gap-2">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {index + 1}. {player.name}
-                    </p>
-                    {player.source === "spond" ? (
-                      <Badge variant="spond" className="shrink-0 uppercase tracking-wide">
-                        {copy.sourceSpondBadge}
-                      </Badge>
-                    ) : null}
-                  </div>
-                  {!isManagedPlayer ? (
-                    <div className="flex shrink-0 items-center gap-1">
-                      {allowReorder ? (
-                        <>
-                          <FpButton
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="tap-target px-2"
-                            aria-label={copy.moveUp}
-                            onClick={() => onMovePlayer(player.id, "up")}
-                            disabled={index === 0}
-                          >
-                            <ArrowUp size={16} />
-                          </FpButton>
-                          <FpButton
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="tap-target px-2"
-                            aria-label={copy.moveDown}
-                            onClick={() => onMovePlayer(player.id, "down")}
-                            disabled={index === players.length - 1}
-                          >
-                            <ArrowDown size={16} />
-                          </FpButton>
-                        </>
-                      ) : null}
-                      <FpButton
+    <>
+      <ListGroup aria-label={t("players.listLabel")} testId="player-list">
+        {players.map((player, index) =>
+          reordering ? (
+            <li
+              key={player.id}
+              className="flex min-h-[54px] items-center gap-3 border-t border-fp-rule py-1 pr-1.5 pl-3.5 first:border-t-0"
+              data-testid={playerRowTestId(player.id)}
+            >
+              <ShirtDisc player={player} />
+              <span className="min-w-0 flex-1 text-base leading-[1.3] font-medium [overflow-wrap:anywhere]">
+                {player.name}
+                {numberText(player)}
+              </span>
+              {isManagedPlayer(player) ? null : (
+                <span className="flex shrink-0 items-center gap-1">
+                  {(["up", "down"] as const).map((direction) => {
+                    const atEdge = direction === "up" ? index === 0 : index === players.length - 1;
+                    return (
+                      <button
+                        key={direction}
                         type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="tap-target px-2"
-                        aria-label={copy.rename}
-                        onClick={() => startEditing(player)}
+                        className={cn(
+                          "flex size-11 items-center justify-center rounded-full text-fp-ink",
+                          "transition-transform duration-(--fp-d-press) ease-fp-out active:scale-[0.97]",
+                          // DESIGN.md §5.7 disabled look.
+                          atEdge && "bg-fp-surface-2 text-fp-ink-2"
+                        )}
+                        data-move={`${player.id}-${direction}`}
+                        // aria-disabled, not disabled: a row that reaches the
+                        // top or bottom keeps focus on the button just pressed.
+                        aria-disabled={atEdge || undefined}
+                        aria-label={t(direction === "up" ? "actions.moveUpNamed" : "actions.moveDownNamed", {
+                          name: player.name,
+                        })}
+                        onClick={() => void move(player, index, direction)}
                       >
-                        <Pencil size={16} />
-                      </FpButton>
-                      <FpButton
-                        type="button"
-                        variant="danger"
-                        size="sm"
-                        className="tap-target px-2"
-                        aria-label={copy.delete}
-                        onClick={() => onDeletePlayer(player.id)}
-                      >
-                        <Trash2 size={16} />
-                      </FpButton>
-                    </div>
-                  ) : null}
-                </div>
+                        {direction === "up" ? (
+                          <ArrowUp size={20} strokeWidth={1.75} aria-hidden />
+                        ) : (
+                          <ArrowDown size={20} strokeWidth={1.75} aria-hidden />
+                        )}
+                      </button>
+                    );
+                  })}
+                </span>
               )}
-            </AppCard>
-          </motion.li>
-        );
-      })}
-    </ul>
+            </li>
+          ) : (
+            <ListRow
+              key={player.id}
+              testId={playerRowTestId(player.id)}
+              leading={<ShirtDisc player={player} />}
+              label={
+                <>
+                  {player.name}
+                  {numberText(player)}
+                </>
+              }
+              description={
+                isManagedPlayer(player) ? (
+                  <>
+                    <span className="sr-only">, </span>
+                    {t("players.spondRow")}
+                  </>
+                ) : undefined
+              }
+              trailing={<ChevronRight size={20} strokeWidth={1.75} aria-hidden />}
+              onClick={() => onOpenPlayer(player.id)}
+            />
+          )
+        )}
+      </ListGroup>
+      <p aria-live="polite" className="sr-only">
+        <span key={announcement.count}>{announcement.text}</span>
+      </p>
+    </>
   );
 }

@@ -74,30 +74,52 @@ for (const theme of THEMES) {
   test.describe(`B2, ${theme}`, () => {
     test("deleting a player is confirmed; Escape keeps the player and returns focus", async ({ page }, testInfo) => {
       const errors = await open(page, "/no/team", theme);
-      const players = page.getByRole("main");
-      await expect(players.getByText(/^\d+\. Emma$/)).toBeVisible();
+      // UI-TEAM-01: the row opens the edit sheet; delete is at its bottom.
+      const list = page.getByRole("list", { name: no.team.players.listLabel });
+      const row = list.getByRole("button", { name: /^Emma\b/ });
+      await expect(row).toBeVisible();
+      await expect(list.getByRole("button", { name: no.common.delete })).toHaveCount(0);
 
-      const trigger = page.getByRole("button", { name: no.common.delete }).first();
-      await trigger.click();
+      // Avbryt in the edit sheet returns focus to the row.
+      await row.click();
+      await page.getByRole("dialog", { name: no.team.editPlayer.title }).getByRole("button", { name: no.common.cancel }).click();
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(row).toBeFocused();
+
+      const requestDelete = async () => {
+        await row.click();
+        const edit = page.getByRole("dialog", { name: no.team.editPlayer.title });
+        await expect(edit).toBeVisible();
+        await edit.getByRole("button", { name: no.team.editPlayer.deleteLabel }).click();
+      };
+
+      await requestDelete();
       const sheet = page.getByRole("dialog", { name: "Slette Emma?" });
       await expect(sheet).toBeVisible();
       await expect(sheet).toHaveAccessibleDescription("Emma fjernes fra spillerlisten til laget. Dette kan ikke angres.");
+      await expect(page.getByRole("heading", { name: "Slette Emma?" })).toBeFocused();
+      await expect(page.getByRole("dialog")).toHaveCount(1);
+      // The edit sheet closed in the same tick; once its exit (260ms) is over,
+      // its focus return must not have pulled focus out of the confirmation.
+      await page.waitForTimeout(600);
       await expect(page.getByRole("heading", { name: "Slette Emma?" })).toBeFocused();
       await shot(page, testInfo.project.name, theme, "delete-player");
       await expectTrapped(page, "delete-confirm");
 
       await page.keyboard.press("Escape");
       await expect(sheet).toBeHidden();
-      await expect(trigger).toBeFocused();
-      await expect(players.getByText(/^\d+\. Emma$/)).toBeVisible();
+      // The edit sheet that asked has closed, so focus goes back to the row.
+      await expect(row).toBeFocused();
+      await expect(row).toBeVisible();
 
-      await trigger.click();
+      await requestDelete();
       await sheet.getByRole("button", { name: no.team.deletePlayerConfirm.confirm }).click();
       await expect(sheet).toBeHidden();
       // The row (and its trigger) is gone, so focus moves to the add-player field.
-      await expect(page.locator("#player-name-input")).toBeFocused();
-      await expect(players.getByText(/^\d+\. Emma$/)).toHaveCount(0);
-      await expect(players.getByText(/^\d+\. Selma$/)).toBeVisible();
+      await expect(page.getByLabel(no.team.forms.playerNameLabel)).toBeFocused();
+      await expect(list.getByRole("button", { name: /^Emma\b/ })).toHaveCount(0);
+      await expect(list.getByRole("button", { name: /^Selma\b/ })).toBeVisible();
+      await expect(page.getByRole("status").filter({ hasText: "Emma er slettet." })).toHaveCount(1);
       expect(errors).toEqual([]);
     });
 

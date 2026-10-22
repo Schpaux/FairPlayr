@@ -1,16 +1,16 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CheckCircle2, ChevronDown, ChevronUp, ShieldAlert, Users } from "lucide-react";
+import { ArrowUpDown, CheckCircle2, ChevronDown, ChevronUp, Users } from "lucide-react";
 import { hasPlayerNameConflict } from "@/domain/team";
 import { useTranslations } from "next-intl";
 import { PageShell } from "@/components/ui/PageShell";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { AppCard } from "@/components/ui/AppCard";
 import { FpButton } from "@/components/ui/FpButton";
-import { Button, ConfirmSheet } from "@/components/ui/primitives";
-import { PlayerList } from "@/components/team/PlayerList";
+import { Button, ConfirmSheet, EmptyState } from "@/components/ui/primitives";
+import { PlayerList, isManagedPlayer, playerRowTestId } from "@/components/team/PlayerList";
+import { PlayerEditSheet, type RenameResult } from "@/components/team/PlayerEditSheet";
 import { PlayerQuickAddForm } from "@/components/team/PlayerQuickAddForm";
 import { TeamNameForm } from "@/components/team/TeamNameForm";
 import { variants } from "@/lib/tokens";
@@ -32,19 +32,42 @@ export function TeamManager() {
   // confirmation that says what is lost. Kept after closing, so the copy does
   // not change while the sheet slides out.
   const [deleteTarget, setDeleteTarget] = useState<
-    { kind: "team"; id: string; name: string; playerCount: number } | { kind: "player"; id: string; name: string } | null
+    | { kind: "team"; id: string; name: string; playerCount: number }
+    | { kind: "player"; teamId: string; id: string; name: string }
+    | null
   >(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   // After a confirmed deletion the trigger is gone (its row, or the team), so
   // focus moves on instead: the add-player field, or the page's first control.
+  // A cancelled player deletion goes back to the player's row (the sheet that
+  // asked for it has closed).
   const deleteFinalFocus = useRef<HTMLElement | null>(null);
+  const addPlayerInput = useRef<HTMLInputElement | null>(null);
+  const playersHeadingId = useId();
+
+  // UI-TEAM-01: a tap on a row opens the edit sheet. The player is kept after
+  // closing so the sheet does not go blank while it slides out; `editSession`
+  // remounts it with a fresh draft on every open. Edit target and reorder mode
+  // are tied to the team they were started for, so switching teams ends them.
+  const [editTarget, setEditTarget] = useState<{ teamId: string; playerId: string } | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editSession, setEditSession] = useState(0);
+  const [reorderTeamId, setReorderTeamId] = useState<string | null>(null);
+  // One polite status line for adds and deletions (WCAG 4.1.3).
+  const [status, setStatus] = useState("");
 
   const spondConnected = useSpondStatus(workspace.activeTeam?.id ?? null, workspace.mode);
 
   const team = workspace.activeTeam;
 
   const allowReorder = workspace.mode === "guest-local";
+  const canReorder = allowReorder && (team?.players.length ?? 0) > 1;
+  const isReordering = canReorder && reorderTeamId === team?.id;
+  const editPlayer =
+    team && editTarget?.teamId === team.id
+      ? (team.players.find((player) => player.id === editTarget.playerId) ?? null)
+      : null;
 
   const resolveTeamErrorMessage = (error: unknown) => {
     if (error instanceof Error && error.message === "PLAYER_MANAGED") {
@@ -52,23 +75,6 @@ export function TeamManager() {
     }
     return error instanceof Error ? error.message : t("errors.generic");
   };
-
-  const playerCopy = useMemo(
-    () => ({
-      rename: common("edit"),
-      delete: common("delete"),
-      moveUp: t("actions.moveUp"),
-      moveDown: t("actions.moveDown"),
-      sourceSpondBadge: t("playerSource.spondBadge"),
-      save: common("save"),
-      cancel: common("cancel"),
-      playerNameLabel: t("forms.playerNameLabel"),
-      playerNamePlaceholder: t("forms.playerNamePlaceholder"),
-      playerNameRequired: t("validation.playerNameRequired"),
-      playerNameDuplicate: t("validation.playerNameDuplicate"),
-    }),
-    [common, t]
-  );
 
   const handleCreateTeam = async (name: string) => {
     try {
@@ -108,6 +114,7 @@ export function TeamManager() {
     try {
       await workspace.addPlayer(team.id, name);
       setTeamError(null);
+      setStatus(t("players.added", { name }));
       return true;
     } catch (error) {
       setTeamError(resolveTeamErrorMessage(error));
@@ -115,38 +122,48 @@ export function TeamManager() {
     }
   };
 
-  const handleRenamePlayer = async (playerId: string, name: string): Promise<boolean> => {
-    if (!team) return false;
-    if (hasPlayerNameConflict(team, name, playerId)) return false;
+  // The edit sheet shows the outcome itself (the page behind it is inert), so
+  // a failure is not routed to `teamError`.
+  const handleRenamePlayer = async (playerId: string, name: string): Promise<RenameResult> => {
+    if (!team) return "error";
+    const player = team.players.find((candidate) => candidate.id === playerId);
+    if (!player || isManagedPlayer(player)) return "error";
+    if (hasPlayerNameConflict(team, name, playerId)) return "duplicate";
     try {
       await workspace.renamePlayer(team.id, playerId, name);
       setTeamError(null);
-      return true;
-    } catch (error) {
-      setTeamError(resolveTeamErrorMessage(error));
-      return false;
+      return "ok";
+    } catch {
+      return "error";
     }
   };
 
-  const handleDeletePlayer = async (playerId: string) => {
-    if (!team) return;
+  const handleDeletePlayer = async (teamId: string, playerId: string) => {
+    if (!team || team.id !== teamId) return;
     const player = team.players.find((c) => c.id === playerId);
-    if (player && (player.isManaged || player.source === "spond")) {
-      return;
-    }
+    if (!player || isManagedPlayer(player)) return;
     try {
       await workspace.deletePlayer(team.id, playerId);
       setTeamError(null);
+      setStatus(t("players.deleted", { name: player.name }));
     } catch (error) {
       setTeamError(resolveTeamErrorMessage(error));
     }
+  };
+
+  const openPlayer = (playerId: string) => {
+    if (!team) return;
+    setEditTarget({ teamId: team.id, playerId });
+    setEditSession((session) => session + 1);
+    setEditOpen(true);
   };
 
   const requestDeletePlayer = (playerId: string) => {
     const player = team?.players.find((candidate) => candidate.id === playerId);
-    if (!player || player.isManaged || player.source === "spond") return;
-    deleteFinalFocus.current = null;
-    setDeleteTarget({ kind: "player", id: player.id, name: player.name });
+    if (!team || !player || isManagedPlayer(player)) return;
+    setEditOpen(false);
+    deleteFinalFocus.current = document.querySelector<HTMLElement>(`[data-testid="${playerRowTestId(player.id)}"]`);
+    setDeleteTarget({ kind: "player", teamId: team.id, id: player.id, name: player.name });
     setDeleteOpen(true);
   };
 
@@ -158,8 +175,9 @@ export function TeamManager() {
         await handleDeleteTeam(deleteTarget.id);
         deleteFinalFocus.current = document.querySelector("main");
       } else {
-        await handleDeletePlayer(deleteTarget.id);
-        deleteFinalFocus.current = document.getElementById("player-name-input");
+        await handleDeletePlayer(deleteTarget.teamId, deleteTarget.id);
+        setEditTarget(null);
+        deleteFinalFocus.current = addPlayerInput.current;
       }
     } finally {
       setIsDeleting(false);
@@ -167,13 +185,15 @@ export function TeamManager() {
     }
   };
 
-  const handleMovePlayer = async (playerId: string, direction: "up" | "down") => {
-    if (!team || !allowReorder) return;
+  const handleMovePlayer = async (playerId: string, direction: "up" | "down"): Promise<boolean> => {
+    if (!team || !allowReorder) return false;
     try {
       await workspace.reorderPlayer(team.id, playerId, direction);
       setTeamError(null);
+      return true;
     } catch (error) {
       setTeamError(resolveTeamErrorMessage(error));
+      return false;
     }
   };
 
@@ -185,12 +205,12 @@ export function TeamManager() {
       ) : null}
 
       {workspace.error ? (
-        <AppCard className="p-3 text-xs text-fp-danger-text">{workspace.error}</AppCard>
+        <AppCard className="p-3 text-sm text-fp-danger-text">{workspace.error}</AppCard>
       ) : null}
 
       {/* role="alert": a failed deletion is reported after its sheet has closed. */}
       {teamError ? (
-        <AppCard className="p-3 text-xs text-fp-danger-text">
+        <AppCard className="p-3 text-sm text-fp-danger-text">
           <p role="alert">{teamError}</p>
         </AppCard>
       ) : null}
@@ -199,7 +219,7 @@ export function TeamManager() {
       {!workspace.isLoading && workspace.teams.length === 0 ? (
         <motion.div initial="hidden" animate="visible" variants={variants.fadeInUp}>
           <EmptyState
-            icon={ShieldAlert}
+            icon={Users}
             title={workspace.mode === "guest-local" ? t("noTeam.title") : t("noTeamCloud.title")}
             description={
               workspace.mode === "guest-local"
@@ -237,7 +257,7 @@ export function TeamManager() {
                 <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   {t("activeTeamLabel")}
                 </p>
-                <h1 className="truncate text-2xl font-bold tracking-tight text-foreground">
+                <h1 className="text-2xl font-bold tracking-tight text-foreground [overflow-wrap:anywhere]">
                   {team?.name ?? "—"}
                 </h1>
               </div>
@@ -367,63 +387,83 @@ export function TeamManager() {
             ) : null}
           </AnimatePresence>
 
-          {/* ── 3. Players section ────────────────────────────── */}
+          {/* ── 3. Players (UI-TEAM-01) ──────────────────────────
+              Flat rows on the canvas, no card around them. A row opens the
+              edit sheet; reordering is its own mode. */}
           {team ? (
-            <motion.div variants={variants.fadeInUp}>
-              <AppCard className="space-y-4">
-                {/* Players header + Spond status */}
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h2 className="text-base font-semibold text-foreground">
-                      {t("players.title")}
-                    </h2>
-                    <p className="text-xs text-muted-foreground">
-                      {t("players.count", { count: team.players.length })}
-                    </p>
-                  </div>
-
-                  {/* Spond inline status */}
-                  {workspace.mode === "cloud" && spondConnected !== null ? (
-                    <div className="shrink-0">
-                      {spondConnected ? (
-                        <button
-                          type="button"
-                          onClick={() => setShowSpondInfo((s) => !s)}
-                          className="tap-target flex items-center gap-1.5 rounded-full border border-fp-spond-border/60 bg-fp-spond-soft px-2.5 py-1 text-[11px] font-semibold text-fp-spond-foreground transition-opacity hover:opacity-80"
-                        >
-                          <CheckCircle2 size={11} className="shrink-0" />
-                          {t("players.spondSynced")}
-                        </button>
-                      ) : (
-                        <Link
-                          href="/settings"
-                          className="tap-target flex items-center gap-1.5 rounded-full border border-fp-border bg-fp-surface-2 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground"
-                        >
-                          {t("players.spondConnect")}
-                        </Link>
-                      )}
-                    </div>
-                  ) : null}
+            <motion.section variants={variants.fadeInUp} aria-labelledby={playersHeadingId} className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 id={playersHeadingId} className="text-xl font-semibold tracking-tight text-foreground">
+                    {t("players.title")}
+                  </h2>
+                  <p className="text-sm font-medium text-fp-ink-2 tabular-nums">
+                    {t("players.count", { count: team.players.length })}
+                  </p>
                 </div>
 
-                {/* Spond info popover (toggle on badge tap) */}
-                <AnimatePresence initial={false}>
-                  {showSpondInfo ? (
-                    <motion.div
-                      key="spond-info"
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.15, ease: "easeInOut" }}
-                      style={{ overflow: "hidden" }}
-                    >
-                      <p className="rounded-xl border border-fp-spond-border/40 bg-fp-spond-soft px-3 py-2.5 text-xs text-fp-spond-foreground">
-                        {t("players.spondSyncedInfo")}
-                      </p>
-                    </motion.div>
-                  ) : null}
-                </AnimatePresence>
+                {canReorder ? (
+                  isReordering ? (
+                    <Button size="sm" variant="primary" onClick={() => setReorderTeamId(null)}>
+                      {t("players.reorderDone")}
+                    </Button>
+                  ) : (
+                    <Button size="sm" icon={<ArrowUpDown size={18} />} onClick={() => setReorderTeamId(team.id)}>
+                      {t("players.reorder")}
+                    </Button>
+                  )
+                ) : null}
 
+                {/* Spond inline status */}
+                {workspace.mode === "cloud" && spondConnected !== null ? (
+                  <div className="shrink-0">
+                    {spondConnected ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowSpondInfo((s) => !s)}
+                        aria-expanded={showSpondInfo}
+                        className="tap-target flex items-center gap-1.5 rounded-full border border-fp-spond-border/60 bg-fp-spond-soft px-2.5 py-1 text-[11px] font-semibold text-fp-spond-foreground transition-opacity hover:opacity-80"
+                      >
+                        <CheckCircle2 size={11} className="shrink-0" />
+                        {t("players.spondSynced")}
+                      </button>
+                    ) : (
+                      <Link
+                        href="/settings"
+                        className="tap-target flex items-center gap-1.5 rounded-full border border-fp-border bg-fp-surface-2 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground"
+                      >
+                        {t("players.spondConnect")}
+                      </Link>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Spond info popover (toggle on badge tap) */}
+              <AnimatePresence initial={false}>
+                {showSpondInfo ? (
+                  <motion.div
+                    key="spond-info"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.15, ease: "easeInOut" }}
+                    style={{ overflow: "hidden" }}
+                  >
+                    <p className="rounded-xl border border-fp-spond-border/40 bg-fp-spond-soft px-3 py-2.5 text-xs text-fp-spond-foreground">
+                      {t("players.spondSyncedInfo")}
+                    </p>
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
+
+              <p role="status" className="sr-only">
+                {status}
+              </p>
+
+              {isReordering ? (
+                <p className="text-sm text-fp-ink-2">{t("players.reorderHint")}</p>
+              ) : (
                 <PlayerQuickAddForm
                   label={t("forms.playerNameLabel")}
                   placeholder={t("forms.playerNamePlaceholder")}
@@ -431,30 +471,40 @@ export function TeamManager() {
                   validationMessage={t("validation.playerNameRequired")}
                   duplicateMessage={t("validation.playerNameDuplicate")}
                   onAddPlayer={handleAddPlayer}
+                  inputRef={addPlayerInput}
                 />
+              )}
 
-                {team.players.length === 0 ? (
-                  <EmptyState
-                    icon={Users}
-                    className="py-10"
-                    title={t("players.emptyTitle")}
-                    description={t("players.emptyDescription")}
-                  />
-                ) : (
-                  <PlayerList
-                    players={team.players}
-                    copy={playerCopy}
-                    allowReorder={allowReorder}
-                    onRenamePlayer={handleRenamePlayer}
-                    onDeletePlayer={requestDeletePlayer}
-                    onMovePlayer={handleMovePlayer}
-                  />
-                )}
-              </AppCard>
-            </motion.div>
+              {team.players.length === 0 ? (
+                <EmptyState
+                  icon={Users}
+                  titleAs="h3"
+                  title={t("players.emptyTitle")}
+                  description={t("players.emptyDescription")}
+                  testId="players-empty"
+                />
+              ) : (
+                <PlayerList
+                  key={isReordering ? "reorder" : "list"}
+                  players={team.players}
+                  reordering={isReordering}
+                  onOpenPlayer={openPlayer}
+                  onMovePlayer={handleMovePlayer}
+                />
+              )}
+            </motion.section>
           ) : null}
         </motion.div>
       ) : null}
+
+      <PlayerEditSheet
+        key={editSession}
+        player={editPlayer}
+        open={editOpen && editPlayer !== null}
+        onOpenChange={setEditOpen}
+        onRename={handleRenamePlayer}
+        onRequestDelete={requestDeletePlayer}
+      />
 
       <ConfirmSheet
         open={deleteOpen}

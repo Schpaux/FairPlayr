@@ -102,10 +102,21 @@
       "title": "Spillere",
       "count": "{count, plural, =0 {Ingen spillere} one {# spiller} other {# spillere}}",
       "emptyTitle": "Ingen spillere ennå",
-      "emptyDescription": "Legg til den første spilleren for å begynne å bygge troppen.",
+      "emptyDescription": "Skriv navnet på første spiller i feltet over. Fornavn holder; legg til etternavn hvis to har samme fornavn.",
       "spondSynced": "Synkronisert fra Spond",
       "spondConnect": "Koble til Spond",
-      "spondSyncedInfo": "Spillere importert fra Spond kan ikke redigeres eller slettes manuelt her. Administrer dem i Spond — FairPlayr synkroniserer automatisk."
+      "spondSyncedInfo": "Spillere importert fra Spond kan ikke redigeres eller slettes manuelt her. Administrer dem i Spond — FairPlayr synkroniserer automatisk.",
+      "reorder": "Endre rekkefølge",
+      "reorderDone": "Ferdig",
+      "reorderHint": "Flytt spillerne med pilene. Trykk Ferdig når rekkefølgen er riktig.",
+      "moved": "{name} er nå nummer {position} av {total}.",
+      "spondRow": "Fra Spond",
+      "shirtNumber": "nummer {number}",
+      "listLabel": "Spillerliste",
+      "added": "{name} er lagt til.",
+      "deleted": "{name} er slettet.",
+      "alreadyFirst": "{name} står allerede først.",
+      "alreadyLast": "{name} står allerede sist."
     },
     "playerSource": {
       "spondBadge": "Spond",
@@ -223,7 +234,9 @@
       "deleteTeam": "Slett lag",
       "addPlayer": "Legg til spiller",
       "moveUp": "Flytt spiller opp",
-      "moveDown": "Flytt spiller ned"
+      "moveDown": "Flytt spiller ned",
+      "moveUpNamed": "Flytt {name} opp",
+      "moveDownNamed": "Flytt {name} ned"
     },
     "errors": {
       "generic": "Noe gikk galt. Prøv igjen.",
@@ -239,6 +252,12 @@
       "title": "Slette {name}?",
       "description": "{name} fjernes fra spillerlisten til laget. Dette kan ikke angres.",
       "confirm": "Ja, slett spilleren"
+    },
+    "editPlayer": {
+      "title": "Rediger spiller",
+      "deleteLabel": "Slett spiller",
+      "deleteGroup": "Fjern fra laget",
+      "spondDescription": "{name} er importert fra Spond. Navn og sletting styres i Spond, og FairPlayr oppdaterer laget automatisk."
     }
   },
   "auth": {

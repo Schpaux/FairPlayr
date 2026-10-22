@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useId, useRef, useState, type RefObject } from "react";
 import { UserPlus2 } from "lucide-react";
 import { FpButton } from "@/components/ui/FpButton";
 import { teamTextInputClassName } from "@/components/team/styles";
@@ -12,6 +12,8 @@ interface PlayerQuickAddFormProps {
   validationMessage: string;
   duplicateMessage: string;
   onAddPlayer: (name: string) => boolean | Promise<boolean>;
+  /** Lets the page move focus here, for example after a player is deleted. */
+  inputRef?: RefObject<HTMLInputElement | null>;
 }
 
 export function PlayerQuickAddForm({
@@ -21,10 +23,14 @@ export function PlayerQuickAddForm({
   validationMessage,
   duplicateMessage,
   onAddPlayer,
+  inputRef: externalInputRef,
 }: PlayerQuickAddFormProps) {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const ownInputRef = useRef<HTMLInputElement | null>(null);
+  const inputRef = externalInputRef ?? ownInputRef;
+  const inputId = useId();
+  const errorId = useId();
 
   const focusInput = () => {
     window.requestAnimationFrame(() => {
@@ -58,14 +64,18 @@ export function PlayerQuickAddForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-2">
-      <label className="sr-only" htmlFor="player-name-input">
+      <label className="sr-only" htmlFor={inputId}>
         {label}
       </label>
       <div className="flex items-center gap-2">
         <input
           ref={inputRef}
-          id="player-name-input"
+          id={inputId}
           value={name}
+          autoComplete="off"
+          enterKeyHint="done"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
           onChange={(event) => {
             setName(event.target.value);
             if (error) {
@@ -80,7 +90,11 @@ export function PlayerQuickAddForm({
           {submitLabel}
         </FpButton>
       </div>
-      {error && <p className="text-xs text-fp-danger-text">{error}</p>}
+      {error ? (
+        <p id={errorId} role="alert" className="text-sm text-fp-danger-text">
+          {error}
+        </p>
+      ) : null}
     </form>
   );
 }

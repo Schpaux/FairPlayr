@@ -102,10 +102,21 @@
       "title": "Players",
       "count": "{count, plural, =0 {No players} one {# player} other {# players}}",
       "emptyTitle": "No players yet",
-      "emptyDescription": "Add your first player to begin building your squad.",
+      "emptyDescription": "Type the first player’s name in the field above. A first name is enough; add a surname if two players share a first name.",
       "spondSynced": "Synced via Spond",
       "spondConnect": "Connect Spond",
-      "spondSyncedInfo": "Players imported from Spond cannot be edited or deleted manually here. Manage them in Spond — FairPlayr will sync automatically."
+      "spondSyncedInfo": "Players imported from Spond cannot be edited or deleted manually here. Manage them in Spond — FairPlayr will sync automatically.",
+      "reorder": "Reorder",
+      "reorderDone": "Done",
+      "reorderHint": "Move players with the arrows. Tap Done when the order is right.",
+      "moved": "{name} is now number {position} of {total}.",
+      "spondRow": "From Spond",
+      "shirtNumber": "number {number}",
+      "listLabel": "Player list",
+      "added": "{name} was added.",
+      "deleted": "{name} was deleted.",
+      "alreadyFirst": "{name} is already first.",
+      "alreadyLast": "{name} is already last."
     },
     "playerSource": {
       "spondBadge": "Spond",
@@ -223,7 +234,9 @@
       "deleteTeam": "Delete Team",
       "addPlayer": "Add Player",
       "moveUp": "Move player up",
-      "moveDown": "Move player down"
+      "moveDown": "Move player down",
+      "moveUpNamed": "Move {name} up",
+      "moveDownNamed": "Move {name} down"
     },
     "errors": {
       "generic": "Something went wrong. Please try again.",
@@ -239,6 +252,12 @@
       "title": "Delete {name}?",
       "description": "{name} is removed from the team's player list. This can't be undone.",
       "confirm": "Yes, delete the player"
+    },
+    "editPlayer": {
+      "title": "Edit player",
+      "deleteLabel": "Delete player",
+      "deleteGroup": "Remove from team",
+      "spondDescription": "{name} was imported from Spond. The name and deletion are managed in Spond, and FairPlayr updates the team automatically."
     }
   },
   "auth": {

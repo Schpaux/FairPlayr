@@ -206,13 +206,11 @@
     "team": {
       "dark": {
         "smallText": {
-          "p \"# spillere\"": 1,
           "p \"Aktivt lag\"": 1
         }
       },
       "light": {
         "smallText": {
-          "p \"# spillere\"": 1,
           "p \"Aktivt lag\"": 1
         }
       }
