@@ -15,6 +15,7 @@ import { activateMatch, endMatch, getStoredMatchSetup, saveMatchSetupDraft } fro
 import { getStoredLiveMatch, saveStoredLiveMatch } from "@/lib/storage/liveMatchStorage";
 import { getTeamMatchPrefs, saveTeamMatchPrefs } from "@/lib/storage/teamPrefsStorage";
 import en from "../../../messages/en.json";
+import no from "../../../messages/no.json";
 
 const routerPush = vi.fn();
 const ROUTER = { push: routerPush };
@@ -298,7 +299,7 @@ describe("MatchSetupManager team defaults and drafts", () => {
 
     renderManager();
     fireEvent.click(await screen.findByRole("button", { name: en.matchSetup.squad.selectAll }));
-    fireEvent.click(await screen.findByRole("button", { name: "Fyll automatisk" }));
+    fireEvent.click(await screen.findByRole("button", { name: en.matchSetup.pitch.autoFill }));
     fireEvent.click(await screen.findByRole("button", { name: en.matchSetup.startMatch }));
 
     await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/match/live"));
@@ -370,5 +371,165 @@ describe("MatchSetupManager team defaults and drafts", () => {
     expect(window.localStorage.getItem(PREFS_KEY)).toBe(before.prefs);
     expect(window.localStorage.getItem(SETUP_KEY)).toBe(before.setup);
     expect(window.localStorage.getItem("fairplayr.liveMatch.v1")).toBe(before.live);
+  });
+});
+
+// UI-MS-01a + U9: attendance first, the whole squad preselected for a new
+// setup but nobody on the pitch, settings collapsed, a sticky Start bar.
+describe("MatchSetupManager attendance and preselection (U9)", () => {
+  const SETUP_KEY = "fairplayr.matchSetup.v1";
+
+  const attendance = (name: string) =>
+    screen
+      .getAllByRole("button", { name: new RegExp(`^${name}`) })
+      .find((button) => button.closest("ul") !== null)!;
+  const startButton = () => screen.getByRole("button", { name: en.matchSetup.startMatch }) as HTMLButtonElement;
+  const filledSlots = () => document.querySelectorAll("[data-slot-id][data-player-id]");
+
+  beforeEach(() => {
+    window.localStorage.clear();
+    searchParams = new URLSearchParams();
+    routerPush.mockReset();
+    vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))));
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it("a new setup has everyone present, nobody on the pitch, Start disabled and nothing stored", async () => {
+    renderManager();
+    await screen.findByText(en.matchSetup.sections.squad);
+
+    for (const player of PLAYERS) {
+      expect(attendance(player.name).getAttribute("aria-pressed")).toBe("true");
+    }
+    expect(screen.queryByText(en.matchSetup.squad.absent)).toBeNull();
+    expect(screen.getByText(en.matchSetup.footer.squad.replace("{count}", "8"))).toBeTruthy();
+    expect(filledSlots()).toHaveLength(0);
+    expect(startButton().disabled).toBe(true);
+    expect(screen.getByText(en.matchSetup.footer.notReady)).toBeTruthy();
+    expect(window.localStorage.getItem(SETUP_KEY)).toBeNull();
+  });
+
+  it("says why Start is locked, in reading order and as the button's description", async () => {
+    renderManager();
+    await screen.findByText(en.matchSetup.sections.squad);
+
+    const description = () => document.getElementById(startButton().getAttribute("aria-describedby")!)!;
+    expect(description().textContent).toMatch(/^Start match is not available yet\. Place \d+ more players on the pitch\.$/);
+    // Read right before the button, since a disabled button can't be tabbed to.
+    expect(description().nextElementSibling).toBe(startButton());
+
+    fireEvent.click(screen.getByRole("button", { name: en.matchSetup.pitch.autoFill }));
+
+    await waitFor(() => expect(startButton().disabled).toBe(false));
+    expect(description().textContent).toBe(en.matchSetup.footer.ready);
+  });
+
+  it("enables Start only once the lineup is filled explicitly", async () => {
+    renderManager();
+    await screen.findByText(en.matchSetup.sections.squad);
+    expect(startButton().disabled).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: en.matchSetup.pitch.autoFill }));
+
+    await waitFor(() => expect(startButton().disabled).toBe(false));
+    expect(filledSlots().length).toBeGreaterThan(0);
+    expect(screen.getByText(en.matchSetup.footer.ready)).toBeTruthy();
+    expect(getStoredMatchSetup()).toMatchObject({ status: "draft" });
+  });
+
+  it("deselecting a player marks them away and removes them from the squad and the pitch", async () => {
+    renderManager();
+    await screen.findByText(en.matchSetup.sections.squad);
+    fireEvent.click(screen.getByRole("button", { name: en.matchSetup.pitch.autoFill }));
+    await waitFor(() => expect(startButton().disabled).toBe(false));
+    const starter = getStoredMatchSetup()!.config.startingPlayerIds[0];
+    const name = PLAYERS.find((player) => player.id === starter)!.name;
+
+    fireEvent.click(attendance(name));
+
+    await waitFor(() => expect(attendance(name).getAttribute("aria-pressed")).toBe("false"));
+    // Absent says so in words, never colour only.
+    expect(attendance(name).textContent).toContain(en.matchSetup.squad.absent);
+    const stored = getStoredMatchSetup()!.config;
+    expect(stored.selectedPlayerIds).not.toContain(starter);
+    expect(stored.startingPlayerIds).not.toContain(starter);
+    expect(document.querySelector(`[data-player-id="${starter}"]`)).toBeNull();
+    expect(startButton().disabled).toBe(true);
+  });
+
+  it("resumes a draft with its own selection, without adding the rest of the team", async () => {
+    const draft = selectAllSquad(createMatchSetupWithPrefs("team-1", { format: "5v5" }), ["p1", "p2", "p3"]);
+    saveMatchSetupDraft(draft);
+
+    renderManager();
+
+    expect(await screen.findByText(en.matchSetup.draft.resumed)).toBeTruthy();
+    expect(PLAYERS.map((player) => attendance(player.name).getAttribute("aria-pressed"))).toEqual([
+      "true", "true", "true", "false", "false", "false", "false", "false",
+    ]);
+    expect(getStoredMatchSetup()?.config).toEqual(draft);
+  });
+
+  it("starting over from the team defaults preselects the squad again, with an empty pitch", async () => {
+    saveMatchSetupDraft(autoFillLineup(selectAllSquad(createMatchSetupWithPrefs("team-1", { format: "5v5" }), ["p1", "p2", "p3", "p4", "p5"])));
+
+    renderManager();
+    fireEvent.click(await screen.findByRole("button", { name: en.matchSetup.draft.startFromDefaults }));
+
+    await waitFor(() => expect(screen.queryByText(en.matchSetup.draft.resumed)).toBeNull());
+    for (const player of PLAYERS) {
+      expect(attendance(player.name).getAttribute("aria-pressed")).toBe("true");
+    }
+    expect(filledSlots()).toHaveLength(0);
+    expect(startButton().disabled).toBe(true);
+    expect(getStoredMatchSetup()).toBeNull();
+  });
+
+  it("keeps the match settings collapsed by default, even without team defaults", async () => {
+    renderManager();
+
+    const toggle = await screen.findByRole("button", { name: en.matchSetup.compact.edit });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("button", { name: "7v7" })).toBeNull();
+    // The summary row: format · formation · duration.
+    expect(screen.getByText("5v5")).toBeTruthy();
+    expect(screen.getByText("2-2")).toBeTruthy();
+
+    fireEvent.click(toggle);
+
+    // One stable name; aria-expanded carries the state.
+    expect(screen.getByRole("button", { name: en.matchSetup.compact.edit })).toBe(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByRole("button", { name: /^7v7/ })).toBeTruthy();
+    // Opening the settings is not an edit.
+    expect(window.localStorage.getItem(SETUP_KEY)).toBeNull();
+  });
+
+  it("the report row is one switch that toggles and is saved with the draft", async () => {
+    renderManager();
+
+    const toggle = await screen.findByRole("switch", { name: en.matchSetup.reportToggle.label });
+    const before = toggle.getAttribute("aria-checked");
+
+    fireEvent.click(toggle);
+
+    await waitFor(() => expect(toggle.getAttribute("aria-checked")).not.toBe(before));
+    expect(getStoredMatchSetup()?.config.reportEnabled).toBe(before !== "true");
+  });
+
+  it("has every matchSetup string in both English and Norwegian", () => {
+    const keys = (value: unknown, prefix = ""): string[] =>
+      value && typeof value === "object"
+        ? Object.entries(value).flatMap(([key, child]) => keys(child, prefix ? `${prefix}.${key}` : key))
+        : [prefix];
+
+    expect(keys(no.matchSetup).sort()).toEqual(keys(en.matchSetup).sort());
+    for (const key of ["squad.absent", "footer.squad", "footer.ready", "compact.edit", "pitch.autoFill", "pitch.benchTitle"]) {
+      expect(keys(en.matchSetup)).toContain(key);
+    }
   });
 });

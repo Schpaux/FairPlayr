@@ -63,7 +63,6 @@
           "p \"Trykk en posisjon og velg spilleren som \"": 1,
           "span \"# / # plassert\"": 1,
           "span \"# av # valgt\"": 1,
-          "span \"# på banen\"": 5,
           "span \"#\"": 5,
           "span \"Plass\"": 5
         }
@@ -77,7 +76,6 @@
           "p \"Trykk en posisjon og velg spilleren som \"": 1,
           "span \"# / # plassert\"": 1,
           "span \"# av # valgt\"": 1,
-          "span \"# på banen\"": 5,
           "span \"#\"": 5,
           "span \"Plass\"": 5
         }
@@ -138,18 +136,8 @@
       "light": {}
     },
     "planner": {
-      "dark": {
-        "smallText": {
-          "div \"Planlegging, skysynk og Spond-import kre\"": 1,
-          "p \"Du kan gjennomføre hele kampflyten lokal\"": 1
-        }
-      },
-      "light": {
-        "smallText": {
-          "div \"Planlegging, skysynk og Spond-import kre\"": 1,
-          "p \"Du kan gjennomføre hele kampflyten lokal\"": 1
-        }
-      }
+      "dark": {},
+      "light": {}
     },
     "settings": {
       "dark": {
@@ -190,40 +178,8 @@
       }
     },
     "setup": {
-      "dark": {
-        "smallText": {
-          "div \"Aktivt lag: Lyn G#\"": 1,
-          "p \"# av # spillere valgt\"": 1,
-          "p \"Egendefinert totalvarighet\"": 1,
-          "p \"Formasjon\"": 1,
-          "p \"Hvem er med i dag?\"": 1,
-          "p \"Kampformat\"": 1,
-          "p \"Kampmodus\"": 1,
-          "p \"Kampoppsummering\"": 1,
-          "p \"Registrer målscorer og assist underveis,\"": 1,
-          "p \"Totalt: # min\"": 1,
-          "p \"Varighet\"": 1,
-          "p \"Velg hvem som faktisk er med i dag. Kun \"": 1,
-          "span \"# på banen\"": 5
-        }
-      },
-      "light": {
-        "smallText": {
-          "div \"Aktivt lag: Lyn G#\"": 1,
-          "p \"# av # spillere valgt\"": 1,
-          "p \"Egendefinert totalvarighet\"": 1,
-          "p \"Formasjon\"": 1,
-          "p \"Hvem er med i dag?\"": 1,
-          "p \"Kampformat\"": 1,
-          "p \"Kampmodus\"": 1,
-          "p \"Kampoppsummering\"": 1,
-          "p \"Registrer målscorer og assist underveis,\"": 1,
-          "p \"Totalt: # min\"": 1,
-          "p \"Varighet\"": 1,
-          "p \"Velg hvem som faktisk er med i dag. Kun \"": 1,
-          "span \"# på banen\"": 5
-        }
-      }
+      "dark": {},
+      "light": {}
     },
     "signin": {
       "dark": {

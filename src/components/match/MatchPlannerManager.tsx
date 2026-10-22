@@ -1,10 +1,10 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { CalendarClock, MapPin, ShieldAlert, PlusCircle, ExternalLink, Link2Off, RefreshCcw } from "lucide-react";
+import { FormEvent, useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
+import { CalendarClock, MapPin, Link2Off, RefreshCcw, Users } from "lucide-react";
 import { generateMatchName, isAutoMatchName } from "@/lib/utils/matchName";
 import { useLocale, useTranslations } from "next-intl";
-import { Link, useRouter } from "@/i18n/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
 import { useActiveMatch } from "@/components/providers/ActiveMatchProvider";
@@ -12,11 +12,20 @@ import { getStoredMatchSetup } from "@/lib/storage/matchStorage";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { AppCard } from "@/components/ui/AppCard";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { FpButton } from "@/components/ui/FpButton";
-import { Button, ButtonLink } from "@/components/ui/primitives";
+import {
+  Button,
+  ButtonLink,
+  EmptyState,
+  ListGroup,
+  ListRow,
+  Notice,
+  SegmentedChoice,
+} from "@/components/ui/primitives";
 import { teamTextInputClassName } from "@/components/team/styles";
 import { ActiveMatchCloseConfirm, useActiveMatchCloseConfirm } from "@/components/match/ActiveMatchCloseConfirm";
+
+/** A flat panel: surface on canvas, 1px rule, 14px radius (DESIGN.md §4). */
+const PANEL_CLASS = "space-y-3 rounded-[14px] border border-fp-rule bg-fp-surface p-4";
 
 interface MatchItem {
   id: string;
@@ -192,22 +201,6 @@ export function MatchPlannerManager() {
         return fallback;
     }
   }, [t]);
-
-  const formatStatus = (status: MatchItem["status"]) => {
-    if (status === "upcoming") {
-      return t("status.planned");
-    }
-
-    if (status === "live") {
-      return t("status.live");
-    }
-
-    if (status === "completed") {
-      return t("status.completed");
-    }
-
-    return t("status.planned");
-  };
 
   const formatSyncedAt = (value: string | null) => {
     if (!value) {
@@ -429,9 +422,9 @@ export function MatchPlannerManager() {
   if (isGuestMode && !team) {
     return (
       <PageShell className="space-y-4">
-        <SectionHeader title={t("title")} subtitle={t("subtitle")} />
+        <SectionHeader title={t("title")} />
         <EmptyState
-          icon={ShieldAlert}
+          icon={Users}
           title={t("noTeamTitle")}
           description={t("noTeamDescription")}
           action={
@@ -444,19 +437,26 @@ export function MatchPlannerManager() {
 
   if (isGuestMode) {
     return (
-      <PageShell className="space-y-4">
-        <SectionHeader title={t("title")} subtitle={t("subtitle")} />
-        <AppCard className="space-y-3 p-4">
-          <h3 className="text-sm font-semibold text-foreground">{t("guest.title")}</h3>
-          <p className="text-xs text-muted-foreground">{t("guest.description")}</p>
-          <div className="flex flex-wrap gap-2">
-            <ButtonLink href="/match/setup" variant="primary" size="sm">{t("guest.startCta")}</ButtonLink>
-            {hasActiveLocalMatch ? (
-              <ButtonLink href="/match/live" variant="secondary" size="sm">{t("guest.resumeCta")}</ButtonLink>
-            ) : null}
-          </div>
-        </AppCard>
-        <AppCard className="p-3 text-xs text-muted-foreground">{t("guest.cloudHint")}</AppCard>
+      <PageShell className="space-y-5">
+        <SectionHeader title={t("title")} />
+
+        {/* A match in progress comes first (C1). */}
+        {hasActiveLocalMatch ? (
+          <section aria-labelledby="planner-ongoing-title" className="space-y-2" data-testid="planner-ongoing">
+            <Kicker id="planner-ongoing-title">{t("ongoingTitle")}</Kicker>
+            <ButtonLink href="/match/live" variant="primary" block>{t("guest.resumeCta")}</ButtonLink>
+          </section>
+        ) : null}
+
+        <section aria-labelledby="planner-guest-title" className={PANEL_CLASS} data-testid="planner-new-match">
+          <h2 id="planner-guest-title" className="text-base font-semibold text-fp-ink">{t("guest.title")}</h2>
+          <p className="text-sm text-fp-ink-2">{t("guest.description")}</p>
+          <ButtonLink href="/match/setup" variant={hasActiveLocalMatch ? "secondary" : "primary"} block>
+            {t("guest.startCta")}
+          </ButtonLink>
+        </section>
+
+        <p className="px-1 text-sm text-fp-ink-2">{t("guest.cloudHint")}</p>
       </PageShell>
     );
   }
@@ -464,7 +464,7 @@ export function MatchPlannerManager() {
   if (workspace.error) {
     return (
       <PageShell>
-        <AppCard className="p-3 text-xs text-fp-danger-text">{workspace.error}</AppCard>
+        <Notice tone="error">{workspace.error}</Notice>
       </PageShell>
     );
   }
@@ -472,9 +472,9 @@ export function MatchPlannerManager() {
   if (!team) {
     return (
       <PageShell className="space-y-4">
-        <SectionHeader title={t("title")} subtitle={t("subtitle")} />
+        <SectionHeader title={t("title")} />
         <EmptyState
-          icon={ShieldAlert}
+          icon={Users}
           title={t("noTeamTitle")}
           description={t("noTeamDescription")}
           action={
@@ -485,361 +485,301 @@ export function MatchPlannerManager() {
     );
   }
 
+  const activeMatchTitle = activeMatch ? activeMatch.title || t("deviceMatchTitle") : "";
+  const hasOngoing = Boolean(activeMatch) || ongoingMatches.length > 0;
+  const refreshEvents = () => {
+    void loadEvents().catch((cause) => {
+      setError(cause instanceof Error ? cause.message : t("errors.generic"));
+    });
+  };
+
   return (
-    <PageShell className="space-y-5">
-      <SectionHeader title={t("title")} subtitle={t("subtitle")} />
+    <PageShell className="space-y-6">
+      <SectionHeader title={t("title")} />
 
-      <AppCard className="p-3 text-xs text-muted-foreground">
-        {t("activeTeam", { name: team.name })}
-      </AppCard>
+      {/* C1: a match in progress (this device's and other live matches)
+          comes first, directly under the title. Nothing ongoing, nothing shown. */}
+      {hasOngoing ? (
+        <section aria-labelledby="planner-ongoing-title" className="space-y-2" data-testid="planner-ongoing">
+          <Kicker id="planner-ongoing-title">{t("ongoingTitle")}</Kicker>
 
-      {notice ? (
-        <div className="rounded-2xl border border-fp-rule bg-fp-surface px-4 py-3 text-xs font-medium text-fp-ink">
-          {notice}
-        </div>
-      ) : null}
-      {error ? (
-        <div className="rounded-2xl border border-fp-danger/25 bg-fp-danger/8 px-4 py-3 text-xs font-medium text-fp-danger-text">
-          {error}
-        </div>
-      ) : null}
-
-      <AppCard className="space-y-3 p-4">
-        {isResolvingEntryMode ? (
-          <div className="rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-4 text-xs text-muted-foreground">
-            {common("loading")}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              className={
-                entryMode === "manual"
-                  ? "tap-target rounded-xl border border-fp-lime bg-fp-lime px-3 py-2.5 text-xs font-semibold text-fp-on-lime"
-                  : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2.5 text-xs font-semibold text-muted-foreground"
-              }
-              onClick={() => setEntryMode("manual")}
+          {activeMatch ? (
+            <div
+              role="group"
+              aria-labelledby="planner-device-match-title"
+              className={PANEL_CLASS}
+              data-testid="planner-device-match"
             >
-              {t("mode.manual")}
-            </button>
-            <button
-              type="button"
-              className={
-                entryMode === "spond"
-                  ? "tap-target rounded-xl border border-fp-spond-border bg-fp-spond-soft px-3 py-2.5 text-xs font-semibold text-fp-spond-foreground"
-                  : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2.5 text-xs font-semibold text-muted-foreground"
-              }
-              onClick={() => setEntryMode("spond")}
-            >
-              {t("mode.spond")}
-            </button>
-          </div>
-        )}
-
-        {isResolvingEntryMode ? (
-          <p className="text-xs text-muted-foreground">{common("loading")}</p>
-        ) : entryMode === "manual" ? (
-          <>
-            <div className="flex items-center gap-2">
-              <PlusCircle size={16} className="text-fp-ink" />
-              <h3 className="text-sm font-semibold text-foreground">{t("createTitle")}</h3>
-            </div>
-
-            <form onSubmit={handleCreateMatch} className="space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  className={
-                    manualStartMode === "now"
-                      ? "tap-target rounded-xl border border-fp-lime bg-fp-lime px-3 py-2 text-xs font-semibold text-fp-on-lime"
-                      : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-xs font-semibold text-muted-foreground"
-                  }
-                  onClick={() => setManualStartMode("now")}
-                >
-                  {t("manualStart.now")}
-                </button>
-                <button
-                  type="button"
-                  className={
-                    manualStartMode === "scheduled"
-                      ? "tap-target rounded-xl border border-fp-lime bg-fp-lime px-3 py-2 text-xs font-semibold text-fp-on-lime"
-                      : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-xs font-semibold text-muted-foreground"
-                  }
-                  onClick={() => setManualStartMode("scheduled")}
-                >
-                  {t("manualStart.scheduled")}
-                </button>
-              </div>
-
-              <input
-                value={opponentName}
-                onChange={(e) => setOpponentName(e.target.value)}
-                placeholder={t("fields.opponent")}
-                className={teamTextInputClassName}
-              />
-              <div className="space-y-1">
-                <input
-                  value={customTitle}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    // Stop auto-generating if user types; resume if they clear
-                    setCustomTitle(isAutoMatchName(val) || val === "" ? "" : val);
-                  }}
-                  placeholder={autoTitle}
-                  className={teamTextInputClassName}
-                />
-                <p className="px-1 text-[11px] text-muted-foreground">
-                  {customTitle ? t("fields.titleCustom") : t("fields.titleAuto")}
-                </p>
-              </div>
-              {manualStartMode === "scheduled" ? (
-                <input
-                  type="datetime-local"
-                  value={startsAt}
-                  onChange={(e) => setStartsAt(e.target.value)}
-                  className={teamTextInputClassName}
-                  required
-                />
-              ) : (
-                <p className="rounded-xl border border-fp-rule bg-fp-surface-2 px-3 py-2 text-xs text-fp-ink-2">
-                  {t("manualStart.nowHint")}
-                </p>
-              )}
-              <input
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder={t("fields.location")}
-                className={teamTextInputClassName}
-              />
-              <FpButton type="submit" variant="primary" size="md" disabled={isCreating}>
-                {isCreating ? t("creating") : t("createCta")}
-              </FpButton>
-            </form>
-          </>
-        ) : hasSpondLink ? (
-          /* Spond mode — show events or empty state */
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                {t("spondTitle")}
+              <p id="planner-device-match-title" className="text-base font-semibold leading-tight text-fp-ink">
+                {activeMatchTitle}
               </p>
-              <FpButton
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  void loadEvents().catch((cause) => {
-                    setError(cause instanceof Error ? cause.message : t("errors.generic"));
-                  });
-                }}
-                disabled={isLoadingEvents}
-              >
-                <RefreshCcw size={13} />
-                {isLoadingEvents ? t("syncEventsLoading") : t("syncEventsCta")}
-              </FpButton>
-            </div>
-
-            <p className="text-[11px] text-muted-foreground">
-              {t("lastEventsSync", { value: formatSyncedAt(eventsLastSyncedAt) })}
-            </p>
-
-            {isLoadingEvents ? (
-              <p className="text-xs text-muted-foreground">{common("loading")}</p>
-            ) : events.length === 0 ? (
-              <div className="rounded-xl border border-fp-border bg-fp-surface-2 p-4 text-center space-y-2">
-                <p className="text-sm font-semibold text-foreground">{t("mode.spondNoEventsTitle")}</p>
-                <p className="text-xs text-muted-foreground">{t("mode.spondNoEventsHint")}</p>
-                <FpButton
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    void loadEvents().catch((cause) => {
-                      setError(cause instanceof Error ? cause.message : t("errors.generic"));
-                    });
-                  }}
-                  disabled={isLoadingEvents}
-                >
-                  {t("syncEventsCta")}
-                </FpButton>
-              </div>
-            ) : (
-              <ul className="space-y-2">
-                {events.map((event) => (
-                  <li key={event.externalId} className="rounded-xl border border-fp-border bg-fp-surface-2 p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 space-y-1">
-                        <p className="text-sm font-semibold text-foreground truncate">{event.title}</p>
-                        <p className="text-xs text-muted-foreground">{formatDate(event.startsAt)}</p>
-                        {event.location ? (
-                          <p className="text-xs text-muted-foreground">{event.location}</p>
-                        ) : null}
-                      </div>
-                      {event.importedMatchId ? (
-                        <div className="flex flex-col items-end gap-1">
-                          <span className="rounded-full border border-fp-spond-border bg-fp-spond-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-spond-foreground">
-                            {t("alreadyImported")}
-                          </span>
-                          <Link href={`/match/${event.importedMatchId}`}>
-                            <span className="text-xs font-medium text-fp-ink underline decoration-fp-lime decoration-2 underline-offset-4">{t("openMatch")}</span>
-                          </Link>
-                        </div>
-                      ) : (
-                        <FpButton
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          disabled={loadingEventId === event.externalId}
-                          onClick={() => {
-                            void handleImportEvent(event.externalId);
-                          }}
-                        >
-                          {loadingEventId === event.externalId ? t("importing") : t("importCta")}
-                        </FpButton>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        ) : (
-          /* Spond mode selected, but no link configured */
-          <div className="rounded-xl border border-fp-border bg-fp-surface-2 p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <Link2Off size={16} className="text-muted-foreground shrink-0" />
-              <p className="text-sm font-semibold text-foreground">{t("mode.spondNotLinkedTitle")}</p>
-            </div>
-            <p className="text-xs text-muted-foreground">{t("mode.spondNotLinkedHint")}</p>
-            <ButtonLink href="/settings" variant="secondary" size="sm">{t("mode.spondGoToSettings")}</ButtonLink>
-          </div>
-        )}
-      </AppCard>
-
-      <AppCard className="space-y-3 p-4">
-        <h3 className="text-sm font-semibold text-foreground">{t("ongoingTitle")}</h3>
-
-        {activeMatch ? (
-          <div className="rounded-xl border border-fp-rule bg-fp-surface p-4 space-y-3">
-            <span className="inline-block rounded-full border border-fp-rule bg-fp-surface-2 text-fp-ink px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
-              {t("status.live")}
-            </span>
-            <p className="text-base font-bold text-foreground leading-tight">{activeMatch.title || t("deviceMatchTitle")}</p>
-            <div className="grid grid-cols-2 gap-2">
-              <ButtonLink href={activeMatchHref} variant="primary" size="sm" block>
+              <ButtonLink href={activeMatchHref} variant="primary" block>
                 {t("activeActions.continue")}
               </ButtonLink>
-              <Button
-                size="sm"
-                block
-                disabled={isResolvingActiveAction}
-                onClick={() => closeConfirm.request("end", activeMatch.title || t("deviceMatchTitle"))}
-              >
-                {t("activeActions.end")}
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  size="sm"
+                  block
+                  disabled={isResolvingActiveAction}
+                  onClick={() => closeConfirm.request("end", activeMatchTitle)}
+                >
+                  {t("activeActions.end")}
+                </Button>
+                {/* Destructive only inside its confirmation (DESIGN.md §5.7). */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  block
+                  disabled={isResolvingActiveAction}
+                  onClick={() => closeConfirm.request("discard", activeMatchTitle)}
+                >
+                  {t("activeActions.discard")}
+                </Button>
+              </div>
             </div>
-            {/* Destructive only inside its confirmation (DESIGN.md §5.7). */}
-            <Button
-              variant="ghost"
-              size="sm"
-              block
-              disabled={isResolvingActiveAction}
-              onClick={() => closeConfirm.request("discard", activeMatch.title || t("deviceMatchTitle"))}
-            >
-              {t("activeActions.discard")}
-            </Button>
-          </div>
-        ) : null}
-        <ActiveMatchCloseConfirm state={closeConfirm} />
+          ) : null}
 
-        {ongoingMatches.length === 0 ? (
-          <p className="text-xs text-muted-foreground">{t("ongoingEmpty")}</p>
-        ) : (
-          <ul className="space-y-2">
-            {ongoingMatches.map((match) => (
-              <li key={match.id} className="rounded-xl border border-fp-rule bg-fp-surface p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 space-y-1.5">
-                    <span className="inline-block rounded-full border border-fp-rule bg-fp-surface-2 text-fp-ink px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
-                      {t("status.live")}
-                    </span>
-                    <p className="text-sm font-bold text-foreground truncate">{match.title}</p>
-                    <p className="text-xs text-muted-foreground">{formatDate(match.startsAt)}</p>
+          {ongoingMatches.length > 0 ? (
+            <ListGroup aria-label={t("ongoingTitle")} testId="planner-ongoing-list">
+              {ongoingMatches.map((match) => (
+                <ListRow
+                  key={match.id}
+                  label={match.title}
+                  description={formatDate(match.startsAt)}
+                  trailing={
+                    /* The live screen always shows this device's match, so only
+                       that one continues there; any other opens its own page. */
+                    activeMatch?.serverMatchId === match.id ? (
+                      <ButtonLink href={activeMatchHref} variant="primary" size="sm">{t("activeActions.continue")}</ButtonLink>
+                    ) : (
+                      <ButtonLink href={`/match/${encodeURIComponent(match.id)}`} variant="secondary" size="sm">{t("ongoingResolve")}</ButtonLink>
+                    )
+                  }
+                />
+              ))}
+            </ListGroup>
+          ) : null}
+        </section>
+      ) : null}
+      {/* Outside the card: it must be able to slide out after the match closes. */}
+      <ActiveMatchCloseConfirm state={closeConfirm} />
+
+      {notice ? <Notice tone="success">{notice}</Notice> : null}
+      {error ? <Notice tone="error">{error}</Notice> : null}
+
+      <section aria-labelledby="planner-new-title" className="space-y-2" data-testid="planner-new-match">
+        <Kicker id="planner-new-title">{t("newMatchTitle")}</Kicker>
+        <div className={PANEL_CLASS}>
+          {isResolvingEntryMode || entryMode === null ? (
+            <p className="text-sm text-fp-ink-2">{common("loading")}</p>
+          ) : (
+            <>
+              <SegmentedChoice
+                label={t("mode.label")}
+                hideLabel
+                options={[
+                  { value: "manual", label: t("mode.manual") },
+                  { value: "spond", label: t("mode.spond") },
+                ]}
+                value={entryMode}
+                onValueChange={setEntryMode}
+              />
+
+              {entryMode === "manual" ? (
+                <form onSubmit={handleCreateMatch} className="space-y-3">
+                  <SegmentedChoice
+                    label={t("manualStart.label")}
+                    hideLabel
+                    options={[
+                      { value: "now", label: t("manualStart.now") },
+                      { value: "scheduled", label: t("manualStart.scheduled") },
+                    ]}
+                    value={manualStartMode}
+                    onValueChange={setManualStartMode}
+                  />
+
+                  <input
+                    value={opponentName}
+                    onChange={(e) => setOpponentName(e.target.value)}
+                    placeholder={t("fields.opponent")}
+                    aria-label={t("fields.opponent")}
+                    className={teamTextInputClassName}
+                  />
+                  <div className="space-y-1">
+                    <input
+                      value={customTitle}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        // Stop auto-generating if user types; resume if they clear
+                        setCustomTitle(isAutoMatchName(val) || val === "" ? "" : val);
+                      }}
+                      placeholder={autoTitle}
+                      aria-label={t("fields.title")}
+                      aria-describedby="planner-title-hint"
+                      className={teamTextInputClassName}
+                    />
+                    <p id="planner-title-hint" className="px-1 text-[13px] text-fp-ink-2">
+                      {customTitle ? t("fields.titleCustom") : t("fields.titleAuto")}
+                    </p>
                   </div>
-                  {/* The live screen always shows this device's match, so only
-                      that one continues there; any other opens its own page. */}
-                  {activeMatch?.serverMatchId === match.id ? (
-                    <ButtonLink href={activeMatchHref} variant="primary" size="sm">{t("activeActions.continue")}</ButtonLink>
+                  {manualStartMode === "scheduled" ? (
+                    <input
+                      type="datetime-local"
+                      value={startsAt}
+                      onChange={(e) => setStartsAt(e.target.value)}
+                      aria-label={t("fields.startsAt")}
+                      className={teamTextInputClassName}
+                      required
+                    />
                   ) : (
-                    <ButtonLink href={`/match/${encodeURIComponent(match.id)}`} variant="secondary" size="sm">{t("ongoingResolve")}</ButtonLink>
+                    <p className="px-1 text-sm text-fp-ink-2">{t("manualStart.nowHint")}</p>
+                  )}
+                  <input
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder={t("fields.location")}
+                    aria-label={t("fields.location")}
+                    className={teamTextInputClassName}
+                  />
+                  {/* Lime only when it is the next action: with a match in
+                      progress, continuing that one is (DESIGN.md §1). */}
+                  <Button type="submit" variant={activeMatch ? "secondary" : "primary"} block disabled={isCreating}>
+                    {isCreating ? t("creating") : t("createCta")}
+                  </Button>
+                </form>
+              ) : hasSpondLink ? (
+                /* Spond mode: events or empty state */
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-base font-semibold text-fp-ink">{t("spondTitle")}</h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={<RefreshCcw size={16} strokeWidth={1.75} />}
+                      onClick={refreshEvents}
+                      disabled={isLoadingEvents}
+                    >
+                      {isLoadingEvents ? t("syncEventsLoading") : t("syncEventsCta")}
+                    </Button>
+                  </div>
+
+                  <p className="text-[13px] text-fp-ink-2">
+                    {t("lastEventsSync", { value: formatSyncedAt(eventsLastSyncedAt) })}
+                  </p>
+
+                  {isLoadingEvents ? (
+                    <p className="text-sm text-fp-ink-2">{common("loading")}</p>
+                  ) : events.length === 0 ? (
+                    <EmptyState
+                      titleAs="h3"
+                      title={t("mode.spondNoEventsTitle")}
+                      description={t("mode.spondNoEventsHint")}
+                      action={
+                        <Button size="sm" onClick={refreshEvents} disabled={isLoadingEvents}>
+                          {t("syncEventsCta")}
+                        </Button>
+                      }
+                    />
+                  ) : (
+                    <ListGroup aria-label={t("spondTitle")} testId="planner-spond-events">
+                      {events.map((event) => (
+                        <ListRow
+                          key={event.externalId}
+                          label={event.title}
+                          description={
+                            <>
+                              {formatDate(event.startsAt)}
+                              {event.location ? <span className="block">{event.location}</span> : null}
+                              {event.importedMatchId ? <span className="block">{t("alreadyImported")}</span> : null}
+                            </>
+                          }
+                          trailing={
+                            event.importedMatchId ? (
+                              <ButtonLink href={`/match/${event.importedMatchId}`} variant="ghost" size="sm">
+                                {t("openMatch")}
+                              </ButtonLink>
+                            ) : (
+                              <Button
+                                size="sm"
+                                disabled={loadingEventId === event.externalId}
+                                onClick={() => {
+                                  void handleImportEvent(event.externalId);
+                                }}
+                              >
+                                {loadingEventId === event.externalId ? t("importing") : t("importCta")}
+                              </Button>
+                            )
+                          }
+                        />
+                      ))}
+                    </ListGroup>
                   )}
                 </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </AppCard>
+              ) : (
+                /* Spond mode selected, but no link configured */
+                <EmptyState
+                  icon={Link2Off}
+                  titleAs="h3"
+                  title={t("mode.spondNotLinkedTitle")}
+                  description={t("mode.spondNotLinkedHint")}
+                  action={<ButtonLink href="/settings" size="sm">{t("mode.spondGoToSettings")}</ButtonLink>}
+                />
+              )}
+            </>
+          )}
+        </div>
+      </section>
 
-      <AppCard className="space-y-3 p-4">
-        <h3 className="text-sm font-semibold text-foreground">{t("listTitle")}</h3>
-
+      <ListGroup title={t("listTitle")} testId="planner-planned">
         {isLoadingMatches ? (
-          <p className="text-xs text-muted-foreground">{common("loading")}</p>
+          <ListRow label={<span className="text-fp-ink-2">{common("loading")}</span>} />
         ) : plannedMatches.length === 0 ? (
-          <p className="text-xs text-muted-foreground">{t("empty")}</p>
+          <ListRow label={<span className="text-fp-ink-2">{t("empty")}</span>} />
         ) : (
-          <ul className="space-y-2">
-            {plannedMatches.map((match) => (
-              <li key={match.id} className="rounded-xl border border-fp-border bg-fp-surface-2 p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 space-y-1">
-                    <p className="text-sm font-semibold text-foreground truncate">{match.title}</p>
-                    {match.opponentName ? (
-                      <p className="text-xs text-muted-foreground">{t("vs", { opponent: match.opponentName })}</p>
-                    ) : null}
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <CalendarClock size={12} />
-                      {formatDate(match.startsAt)}
-                    </p>
-                    {match.location ? (
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <MapPin size={12} />
-                        {match.location}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    {match.source === "spond" ? (
-                      <span className="rounded-full border border-fp-spond-border bg-fp-spond-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-spond-foreground">
-                        {t("spondBadge")}
-                      </span>
-                    ) : null}
-                    <span className={
-                      match.status === "live"
-                        ? "rounded-full border border-fp-rule bg-fp-surface-2 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-ink"
-                        : match.status === "upcoming"
-                          ? "rounded-full border border-fp-border bg-fp-surface-3 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-foreground/70"
-                          : "rounded-full border border-dashed border-fp-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
-                    }>
-                      {formatStatus(match.status)}
+          plannedMatches.map((match) => (
+            <ListRow
+              key={match.id}
+              href={`/match/${match.id}`}
+              label={match.title}
+              description={
+                <>
+                  {match.opponentName ? <span className="block">{t("vs", { opponent: match.opponentName })}</span> : null}
+                  <span className="flex items-center gap-1">
+                    <CalendarClock size={14} strokeWidth={1.75} aria-hidden />
+                    {formatDate(match.startsAt)}
+                  </span>
+                  {match.location ? (
+                    <span className="flex items-center gap-1">
+                      <MapPin size={14} strokeWidth={1.75} aria-hidden />
+                      {match.location}
                     </span>
-                    <ButtonLink href={`/match/${match.id}`} variant="ghost" size="sm">
-                      {t("openMatch")}
-                      <ExternalLink size={12} />
-                    </ButtonLink>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
+                  ) : null}
+                </>
+              }
+              trailing={
+                match.source === "spond" ? (
+                  <span className="rounded-md border border-fp-spond-border bg-fp-spond-soft px-2 py-0.5 text-[13px] font-semibold text-fp-spond-foreground">
+                    {t("spondBadge")}
+                  </span>
+                ) : null
+              }
+            />
+          ))
         )}
-      </AppCard>
+      </ListGroup>
 
-      <AppCard className="p-3">
-        <ButtonLink href="/historikk" variant="secondary" size="sm" block>
-          {t("goToHistory")}
-        </ButtonLink>
-      </AppCard>
+      <ButtonLink href="/historikk" variant="secondary" block>
+        {t("goToHistory")}
+      </ButtonLink>
     </PageShell>
+  );
+}
+
+/** Section kicker: Inter 600 13, caps, +6 % (DESIGN.md §3 "Label"). */
+function Kicker({ id, children }: { id: string; children: ReactNode }) {
+  return (
+    <h2 id={id} className="px-1 text-[13px] font-semibold uppercase leading-tight tracking-[0.06em] text-fp-ink-2">
+      {children}
+    </h2>
   );
 }

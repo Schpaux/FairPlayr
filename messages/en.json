@@ -387,11 +387,11 @@
   },
   "matchSetup": {
     "title": "Match Setup",
-    "subtitle": "Configure your match before kick-off.",
-    "activeTeam": "Active team: {name}",
     "compact": {
       "title": "Match settings",
-      "edit": "Change settings"
+      "edit": "Change settings",
+      "durationHalves": "{halves}×{minutes} min",
+      "durationTotal": "{minutes} min"
     },
     "draft": {
       "resumed": "Continuing an unfinished match setup",
@@ -412,7 +412,6 @@
       "format": "Match Format",
       "formation": "Formation",
       "duration": "Duration",
-      "summary": "Match Summary",
       "squad": "Who's playing today?",
       "lineup": "Starting Lineup"
     },
@@ -436,11 +435,10 @@
       "totalLabel": "Total: {minutes} min"
     },
     "squad": {
-      "selectedCount": "{selected} of {total} players selected",
       "selectAll": "Select all",
       "clear": "Clear",
-      "hint": "Choose who is actually playing today. Only selected players appear in the lineup and live match.",
-      "selectHint": "Select players who are in the match"
+      "count": "{selected} of {total} here",
+      "absent": "Away"
     },
     "lineup": {
       "starterSlots": "{current} / {required}",
@@ -468,10 +466,6 @@
         "bench": "Bench"
       }
     },
-    "validation": {
-      "selectMoreStarters": "{needed, plural, one {# more starter needed} other {# more starters needed}}",
-      "ready": "Lineup complete"
-    },
     "actions": {
       "starting": "Starting..."
     },
@@ -492,10 +486,25 @@
       "discard": "Discard live match"
     },
     "startMatch": "Start Match",
-    "startMatchHint": "Select players and fill the starting lineup",
     "pitch": {
       "label": "Starting lineup",
-      "emptySlot": "Open position {label}"
+      "emptySlot": "Open position {label}",
+      "starters": "{current} / {required} on the pitch",
+      "autoFill": "Auto-fill",
+      "benchTitle": "Bench",
+      "benchEmpty": "Nobody on the bench",
+      "hintIdle": "Tap a player, then a position on the pitch",
+      "hintBench": "{name} selected – tap a position on the pitch",
+      "hintSlot": "{name} selected – tap another position to swap"
+    },
+    "footer": {
+      "squad": "{count} in squad",
+      "onPitch": "{current}/{required} on the pitch",
+      "ready": "Ready",
+      "notReady": "Not ready",
+      "blockedStarters": "Start match is not available yet. Place {count, plural, one {# more player} other {# more players}} on the pitch.",
+      "blockedDuration": "Start match is not available yet. Choose the match length.",
+      "blockedLineup": "Start match is not available yet. Complete the lineup."
     }
   },
   "matchLive": {
@@ -787,7 +796,8 @@
       "opponent": "Opponent (optional)",
       "location": "Location (optional)",
       "titleAuto": "Name is auto-generated from opponent and time",
-      "titleCustom": "Custom match name"
+      "titleCustom": "Custom match name",
+      "startsAt": "Kick-off"
     },
     "loginRequiredTitle": "Sign in to plan matches",
     "loginRequiredDescription": "You must sign in to plan matches and import from Spond.",
@@ -896,12 +906,14 @@
       "spondNotLinkedHint": "Connect FairPlayr to Spond and select a group in settings to import matches from here.",
       "spondGoToSettings": "Open settings",
       "spondNoEventsTitle": "No upcoming events",
-      "spondNoEventsHint": "No upcoming Spond events found. Try refreshing, or create the match manually."
+      "spondNoEventsHint": "No upcoming Spond events found. Try refreshing, or create the match manually.",
+      "label": "How do you want to add the match?"
     },
     "manualStart": {
       "now": "Now",
       "scheduled": "Scheduled",
-      "nowHint": "The match is created for setup now. The clock starts only when you press Start Match on the live screen."
+      "nowHint": "The match is created for setup now. The clock starts only when you press Start Match on the live screen.",
+      "label": "When is the match?"
     },
     "rsvpTitle": "Participation from Spond",
     "syncRsvpCta": "Update participation",
@@ -953,7 +965,8 @@
       "descriptionServerOnly": "This match isn't running on this device. It is marked as finished, and nothing on this device changes.",
       "confirm": "Yes, end the match",
       "changed": "The match changed on this device while you were confirming. Nothing was ended; check its status and try again."
-    }
+    },
+    "newMatchTitle": "New match"
   },
   "matchHistory": {
     "title": "History",

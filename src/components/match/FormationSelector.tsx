@@ -29,10 +29,11 @@ export function FormationSelector({
             onClick={() => onChange(formation.id)}
             aria-pressed={isSelected}
             className={cn(
-              "h-10 rounded-xl border px-4 text-sm font-semibold transition duration-150 tap-target",
+              "min-h-11 rounded-full border px-4 text-base font-semibold tap-target",
+              "transition-[transform,background-color,border-color,color] duration-(--fp-d-quick) ease-fp-out active:scale-[0.97]",
               isSelected
                 ? "border-fp-lime bg-fp-lime text-fp-on-lime"
-                : "border-fp-border bg-fp-surface-2 text-muted-foreground hover:text-foreground"
+                : "border-fp-control-line bg-fp-surface text-fp-ink"
             )}
           >
             {t("presetLabel", { shape: formation.shape })}

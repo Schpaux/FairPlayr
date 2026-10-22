@@ -387,11 +387,11 @@
   },
   "matchSetup": {
     "title": "Kampoppsett",
-    "subtitle": "Konfigurer kampen din før avspark.",
-    "activeTeam": "Aktivt lag: {name}",
     "compact": {
       "title": "Kampinnstillinger",
-      "edit": "Endre innstillinger"
+      "edit": "Endre innstillinger",
+      "durationHalves": "{halves}×{minutes} min",
+      "durationTotal": "{minutes} min"
     },
     "draft": {
       "resumed": "Fortsetter påbegynt kampoppsett",
@@ -412,7 +412,6 @@
       "format": "Kampformat",
       "formation": "Formasjon",
       "duration": "Varighet",
-      "summary": "Kampoppsummering",
       "squad": "Hvem er med i dag?",
       "lineup": "Startoppstilling"
     },
@@ -436,11 +435,10 @@
       "totalLabel": "Totalt: {minutes} min"
     },
     "squad": {
-      "selectedCount": "{selected} av {total} spillere valgt",
       "selectAll": "Velg alle",
       "clear": "Tøm",
-      "hint": "Velg hvem som faktisk er med i dag. Kun valgte spillere tas med i startoppstilling og live-kamp.",
-      "selectHint": "Velg spillere som er med i kampen"
+      "count": "{selected} av {total} med",
+      "absent": "Borte"
     },
     "lineup": {
       "starterSlots": "{current} / {required}",
@@ -468,10 +466,6 @@
         "bench": "Benk"
       }
     },
-    "validation": {
-      "selectMoreStarters": "{needed, plural, one {Trenger # starter til} other {Trenger # startere til}}",
-      "ready": "Startoppstilling klar"
-    },
     "actions": {
       "starting": "Starter..."
     },
@@ -492,10 +486,25 @@
       "discard": "Forkast pågående kamp"
     },
     "startMatch": "Start kamp",
-    "startMatchHint": "Velg spillere og fyll startoppstillingen",
     "pitch": {
       "label": "Startoppstilling",
-      "emptySlot": "Ledig plass {label}"
+      "emptySlot": "Ledig plass {label}",
+      "starters": "{current} / {required} på banen",
+      "autoFill": "Fyll automatisk",
+      "benchTitle": "Benk",
+      "benchEmpty": "Ingen på benken",
+      "hintIdle": "Trykk en spiller, så en plass på banen",
+      "hintBench": "{name} valgt – trykk en plass på banen",
+      "hintSlot": "{name} valgt – trykk en annen plass for å bytte"
+    },
+    "footer": {
+      "squad": "{count} i troppen",
+      "onPitch": "{current}/{required} på banen",
+      "ready": "Klar",
+      "notReady": "Ikke klar",
+      "blockedStarters": "Start kamp er ikke tilgjengelig ennå. Plasser {count, plural, one {# spiller} other {# spillere}} til på banen.",
+      "blockedDuration": "Start kamp er ikke tilgjengelig ennå. Velg kamplengde.",
+      "blockedLineup": "Start kamp er ikke tilgjengelig ennå. Fullfør oppstillingen."
     }
   },
   "matchLive": {
@@ -787,7 +796,8 @@
       "opponent": "Motstander (valgfritt)",
       "location": "Sted (valgfritt)",
       "titleAuto": "Navn genereres automatisk fra motstander og tidspunkt",
-      "titleCustom": "Egendefinert kampnavn"
+      "titleCustom": "Egendefinert kampnavn",
+      "startsAt": "Avspark"
     },
     "loginRequiredTitle": "Logg inn for kampplanlegging",
     "loginRequiredDescription": "Du må være logget inn for å planlegge kamper og importere fra Spond.",
@@ -896,13 +906,15 @@
       "spondNotLinkedHint": "Koble FairPlayr til Spond og velg en gruppe i innstillinger for å importere kamper herfra.",
       "spondGoToSettings": "Åpne innstillinger",
       "spondNoEventsTitle": "Ingen kommende arrangementer",
-      "spondNoEventsHint": "Ingen kommende Spond-arrangementer funnet. Prøv å oppdatere, eller opprett kampen manuelt."
+      "spondNoEventsHint": "Ingen kommende Spond-arrangementer funnet. Prøv å oppdatere, eller opprett kampen manuelt.",
+      "label": "Hvordan vil du legge inn kampen?"
     },
     "goToHistory": "Se kamphistorikk →",
     "manualStart": {
       "now": "Nå",
       "scheduled": "Planlagt",
-      "nowHint": "Kampen opprettes for oppsett nå. Klokka starter først når du trykker Start kamp i live-skjermen."
+      "nowHint": "Kampen opprettes for oppsett nå. Klokka starter først når du trykker Start kamp i live-skjermen.",
+      "label": "Når spilles kampen?"
     },
     "rsvpTitle": "Deltakelse fra Spond",
     "syncRsvpCta": "Oppdater deltakelse",
@@ -953,7 +965,8 @@
       "descriptionServerOnly": "Kampen kjører ikke på denne enheten. Den markeres som ferdig, og ingenting på enheten endres.",
       "confirm": "Ja, avslutt kampen",
       "changed": "Kampen ble endret på denne enheten mens du bekreftet. Ingenting er avsluttet; sjekk statusen og prøv igjen."
-    }
+    },
+    "newMatchTitle": "Ny kamp"
   },
   "matchHistory": {
     "title": "Historikk",

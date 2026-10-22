@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { useTranslations } from "next-intl";
 import {
   ALL_DURATION_PRESETS,
@@ -21,24 +22,26 @@ export function DurationPicker({
   onHalvesChange,
 }: DurationPickerProps) {
   const t = useTranslations("matchSetup.duration");
+  const uid = useId();
   const currentHalves = value.halves as 1 | 2;
 
   return (
     <div className="space-y-4">
       {/* Halves selector */}
       <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-fp-ink-2">
           {t("halvesTitle")}
         </p>
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
             className={cn(
-              "h-11 rounded-xl border px-3 text-sm font-semibold tap-target transition duration-150",
+              "min-h-11 rounded-full border px-3 text-base font-semibold tap-target transition-[transform,background-color,border-color,color] duration-(--fp-d-quick) ease-fp-out active:scale-[0.97]",
               currentHalves === 2
                 ? "border-fp-lime bg-fp-lime text-fp-on-lime"
-                : "border-fp-border bg-fp-surface-2 text-muted-foreground hover:text-foreground"
+                : "border-fp-control-line bg-fp-surface text-fp-ink"
             )}
+            aria-pressed={currentHalves === 2}
             onClick={() => onHalvesChange(2)}
           >
             {t("halvesOn")}
@@ -46,11 +49,12 @@ export function DurationPicker({
           <button
             type="button"
             className={cn(
-              "h-11 rounded-xl border px-3 text-sm font-semibold tap-target transition duration-150",
+              "min-h-11 rounded-full border px-3 text-base font-semibold tap-target transition-[transform,background-color,border-color,color] duration-(--fp-d-quick) ease-fp-out active:scale-[0.97]",
               currentHalves === 1
                 ? "border-fp-lime bg-fp-lime text-fp-on-lime"
-                : "border-fp-border bg-fp-surface-2 text-muted-foreground hover:text-foreground"
+                : "border-fp-control-line bg-fp-surface text-fp-ink"
             )}
+            aria-pressed={currentHalves === 1}
             onClick={() => onHalvesChange(1)}
           >
             {t("halvesOff")}
@@ -72,10 +76,10 @@ export function DurationPicker({
               onClick={() => onPresetChange(presetId)}
               aria-pressed={isSelected}
               className={cn(
-                "h-11 min-w-[72px] rounded-xl border px-3 text-sm font-semibold transition duration-150 tap-target",
+                "min-h-11 min-w-[72px] rounded-full border px-3 text-base font-semibold tap-target transition-[transform,background-color,border-color,color] duration-(--fp-d-quick) ease-fp-out active:scale-[0.97]",
                 isSelected
                   ? "border-fp-lime bg-fp-lime text-fp-on-lime"
-                  : "border-fp-border bg-fp-surface-2 text-muted-foreground hover:text-foreground"
+                  : "border-fp-control-line bg-fp-surface text-fp-ink"
               )}
             >
               {t("presetLabel", {
@@ -88,8 +92,8 @@ export function DurationPicker({
       </div>
 
       {/* Custom duration */}
-      <div className="space-y-2 rounded-2xl border border-fp-border bg-fp-surface-2 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <div className="space-y-2 rounded-[14px] border border-fp-rule bg-fp-surface p-4">
+        <p id={`${uid}-custom`} className="text-[13px] font-semibold uppercase tracking-[0.06em] text-fp-ink-2">
           {t("customTitle")}
         </p>
         <div className="flex items-center gap-3">
@@ -98,17 +102,19 @@ export function DurationPicker({
             min={5}
             max={240}
             step={1}
+            aria-labelledby={`${uid}-custom`}
+            aria-describedby={`${uid}-suffix`}
             value={value.totalMinutes}
             onChange={(event) => {
               const next = Number(event.target.value);
               if (Number.isNaN(next)) return;
               onCustomChange(next);
             }}
-            className="h-12 w-28 rounded-2xl border border-fp-border bg-fp-surface-2 px-4 text-sm font-medium text-foreground placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-transparent transition-colors"
+            className="h-12 w-28 rounded-[10px] border border-fp-rule bg-fp-surface px-4 text-base font-medium tabular-nums text-fp-ink transition-colors"
           />
-          <span className="text-sm text-muted-foreground">{t("customSuffix")}</span>
+          <span id={`${uid}-suffix`} className="text-sm text-fp-ink-2">{t("customSuffix")}</span>
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-fp-ink-2">
           {t("totalLabel", { minutes: value.totalMinutes })}
         </p>
       </div>

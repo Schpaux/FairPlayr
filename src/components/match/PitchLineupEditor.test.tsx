@@ -13,10 +13,14 @@ import {
 } from "@/domain/match";
 import type { Player } from "@/domain/team";
 import no from "../../../messages/no.json";
+import en from "../../../messages/en.json";
 
 // FP-PITCH-01: the setup pitch is the live pitch. Tokens sit where
 // `placeTokens` puts them on Live (own goal at the bottom, keeper lowest),
 // the shared markings are drawn, and tap-to-place still edits the lineup.
+
+// The primitives' ButtonLink imports the locale-aware Link; this editor never renders one.
+vi.mock("@/i18n/navigation", () => ({ Link: () => null }));
 
 const NOW = "2026-10-14T10:00:00.000Z";
 const players: Player[] = ["Frida", "Ida", "Selma", "Vilde", "Maja", "Nora", "Emma", "Thea", "Ingrid"].map(
@@ -41,10 +45,18 @@ function setupOf({ filled }: { filled: boolean }): MatchSetup {
   return filled ? autoFillLineup(base) : base;
 }
 
-function Harness({ initial, onChange }: { initial: MatchSetup; onChange?: (setup: MatchSetup) => void }) {
+function Harness({
+  initial,
+  onChange,
+  locale = "no",
+}: {
+  initial: MatchSetup;
+  onChange?: (setup: MatchSetup) => void;
+  locale?: "no" | "en";
+}) {
   const [setup, setSetup] = useState(initial);
   return (
-    <NextIntlClientProvider locale="no" messages={no}>
+    <NextIntlClientProvider locale={locale} messages={locale === "no" ? no : en}>
       <PitchLineupEditor
         setup={setup}
         players={players}
@@ -129,5 +141,58 @@ describe("PitchLineupEditor pitch (FP-PITCH-01)", () => {
     fireEvent.click(slot("7v7-4"));
     expect(changes.at(-1)!.slotAssignments["7v7-2"]).toBe(before["7v7-4"]);
     expect(changes.at(-1)!.slotAssignments["7v7-4"]).toBe(before["7v7-2"]);
+  });
+});
+
+// UI-PITCH-02: the same interactions, with every word from messages/*.json
+// and the bench in the live tile style.
+describe("PitchLineupEditor copy and bench (UI-PITCH-02)", () => {
+  it("shows the counter, auto-fill and bench through i18n (Norwegian)", () => {
+    render(<Harness initial={setupOf({ filled: false })} />);
+
+    expect(screen.getByText("0 / 7 på banen")).toBeTruthy();
+    expect(screen.getByText(no.matchSetup.pitch.hintIdle)).toBeTruthy();
+    expect(screen.getByText(no.matchSetup.pitch.benchTitle)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: no.matchSetup.pitch.autoFill }));
+
+    expect(screen.getByText("7 / 7 på banen")).toBeTruthy();
+    expect(document.querySelectorAll("[data-slot-id][data-player-id]")).toHaveLength(7);
+  });
+
+  it("has no hard-coded Norwegian in English", () => {
+    render(<Harness initial={setupOf({ filled: true })} locale="en" />);
+
+    expect(screen.getByRole("button", { name: en.matchSetup.pitch.autoFill })).toBeTruthy();
+    expect(screen.getByText("7 / 7 on the pitch")).toBeTruthy();
+    expect(screen.getByText(en.matchSetup.pitch.benchTitle)).toBeTruthy();
+    for (const word of ["Fyll automatisk", "startere", "Benk", "valgt"]) {
+      expect(document.body.textContent).not.toContain(word);
+    }
+  });
+
+  it("marks the selected bench tile as pressed and says what to tap next", () => {
+    render(<Harness initial={setupOf({ filled: true })} />);
+    const thea = screen.getByRole("button", { name: "Thea" });
+    expect(thea.getAttribute("aria-pressed")).toBe("false");
+
+    fireEvent.click(thea);
+
+    expect(thea.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByText("Thea valgt – trykk en plass på banen")).toBeTruthy();
+
+    fireEvent.click(thea);
+    expect(thea.getAttribute("aria-pressed")).toBe("false");
+    expect(screen.getByText(no.matchSetup.pitch.hintIdle)).toBeTruthy();
+  });
+
+  it("says when nobody is on the bench", () => {
+    const base = selectAllSquad(
+      createMatchSetupWithPrefs("team", { format: "7v7", formationId: "7v7-2-3-1" }),
+      players.slice(0, 7).map((player) => player.id)
+    );
+    render(<Harness initial={autoFillLineup(base)} />);
+
+    expect(screen.getByText(no.matchSetup.pitch.benchEmpty)).toBeTruthy();
   });
 });

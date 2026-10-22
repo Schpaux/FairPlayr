@@ -23,14 +23,17 @@
  * markings, orientation (own goal at the bottom), token placement
  * (`placeTokens`) and token, without minutes or ring, so every player stands
  * in the same spot in setup and in Live.
+ *
+ * UI-PITCH-02: every visible word comes from `matchSetup.pitch.*`, and the
+ * bench uses the live bench tile (14px names, at least 44 × 44). Only the
+ * presentation changed; the interaction model above is unchanged.
  */
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useId, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Users } from "lucide-react";
 import type { Player } from "@/domain/team";
 import type { MatchSetup } from "@/domain/match";
-import { FpButton } from "@/components/ui/FpButton";
+import { Button } from "@/components/ui/primitives";
 import {
   assignStarterToSlot,
   clearStarterSlot,
@@ -95,6 +98,7 @@ export function PitchLineupEditor({
   onAutoFill,
 }: PitchLineupEditorProps) {
   const t = useTranslations("matchSetup.pitch");
+  const benchHeadingId = useId();
   const tToken = useTranslations("matchLive.sideline.token");
   const slots = getFormationSlots(setup.format, setup.formationId);
   const placements = useMemo(() => placeTokens(slots), [slots]);
@@ -308,22 +312,27 @@ export function PitchLineupEditor({
       <div className="mb-2 flex items-center justify-between gap-2">
         <span
           className={cn(
-            "text-xs font-semibold tabular-nums",
-            current === required ? "text-fp-ok-text" : "text-muted-foreground"
+            "text-sm font-semibold tabular-nums",
+            current === required ? "text-fp-ok-text" : "text-fp-ink-2"
           )}
         >
-          {current} / {required} startere
+          {t("starters", { current, required })}
         </span>
-        <FpButton
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="tap-target"
-          onClick={onAutoFill}
-        >
-          Fyll automatisk
-        </FpButton>
+        <Button size="sm" onClick={onAutoFill}>
+          {t("autoFill")}
+        </Button>
       </div>
+
+      {/* What a tap does next. Room for two lines, so a long name never moves
+          the pitch; only a selection is announced, not the idle hint. */}
+      <p className="mb-2 min-h-10 text-[13px] leading-5 text-fp-ink-2">
+        <span aria-live="polite">
+          {tapSelected
+            ? t(tapSelected.kind === "bench" ? "hintBench" : "hintSlot", { name: getShort(tapSelected.playerId) })
+            : null}
+        </span>
+        {tapSelected ? null : t("hintIdle")}
+      </p>
 
       {/* ── Pitch ──────────────────────────────────────────────────────────── */}
       <div
@@ -427,23 +436,16 @@ export function PitchLineupEditor({
       </div>
 
       {/* ── Bench ──────────────────────────────────────────────────────────── */}
-      <div className="mt-4 rounded-xl border border-fp-border bg-fp-surface-2 p-3">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Benk
-          </p>
-          <span className="text-xs tabular-nums text-muted-foreground">
-            {benchIds.length}
-          </span>
-        </div>
+      <div className="mt-3" role="group" aria-labelledby={benchHeadingId}>
+        <h3 id={benchHeadingId} className="mb-2 flex items-center justify-between gap-2 text-[13px] font-semibold uppercase tracking-[0.06em] text-fp-ink-2">
+          <span>{t("benchTitle")}</span>
+          <span className="tabular-nums">{benchIds.length}</span>
+        </h3>
 
         {benchIds.length === 0 ? (
-          <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
-            <Users size={13} />
-            Ingen på benken
-          </div>
+          <p className="text-sm text-fp-ink-2">{t("benchEmpty")}</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className={styles.setupBench}>
             {benchIds.map((playerId) => {
               const selected = isTapSelected({ kind: "bench", playerId });
               const beingDragged = isDragSource(playerId);
@@ -452,14 +454,12 @@ export function PitchLineupEditor({
                 <button
                   key={playerId}
                   type="button"
+                  aria-pressed={selected}
                   className={cn(
-                    "tap-target rounded-full border px-3 py-1.5 text-xs font-semibold transition",
-                    beingDragged && "opacity-30",
-                    selected
-                      ? "border-fp-lime bg-fp-lime text-fp-on-lime scale-105"
-                      : "border-fp-border bg-fp-surface text-foreground"
+                    styles.setupBenchTile,
+                    selected && styles.setupBenchSelected,
+                    beingDragged && styles.setupBenchDragging
                   )}
-                  style={{ touchAction: "none" }}
                   onPointerDown={(e) =>
                     startDrag(e, { kind: "bench", playerId })
                   }
@@ -472,14 +472,6 @@ export function PitchLineupEditor({
               );
             })}
           </div>
-        )}
-
-        {tapSelected && (
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            {tapSelected.kind === "bench"
-              ? `"${getShort(tapSelected.playerId)}" valgt — trykk på en posisjon`
-              : `"${getShort(tapSelected.playerId)}" valgt — trykk på en annen posisjon`}
-          </p>
         )}
       </div>
 

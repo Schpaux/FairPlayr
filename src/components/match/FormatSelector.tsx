@@ -1,5 +1,4 @@
 import { useTranslations } from "next-intl";
-import { motion } from "framer-motion";
 import { ALL_FORMATS, FORMAT_FIELD_COUNT } from "@/domain/match";
 import type { MatchFormat } from "@/domain/match";
 import { cn } from "@/lib/utils";
@@ -24,33 +23,25 @@ export function FormatSelector({
         const fieldCount = FORMAT_FIELD_COUNT[format];
 
         return (
-          <motion.button
+          <button
             key={format}
+            type="button"
             onClick={() => onChange(format)}
-            whileTap={{ scale: 0.95 }}
-            transition={{ duration: 0.1 }}
             aria-pressed={isSelected}
             className={cn(
-              "relative flex flex-col items-center justify-center gap-1.5 rounded-2xl border py-4 px-2 text-center transition duration-150 tap-target",
+              "flex min-h-14 flex-col items-center justify-center gap-1 rounded-[10px] border px-2 py-2 text-center tap-target",
+              "transition-[transform,background-color,border-color,color] duration-(--fp-d-quick) ease-fp-out active:scale-[0.97]",
               isSelected
                 ? "border-fp-lime bg-fp-lime text-fp-on-lime"
-                : "border-fp-border bg-fp-surface-2 text-muted-foreground hover:border-fp-border hover:text-foreground"
+                : "border-fp-control-line bg-fp-surface text-fp-ink"
             )}
           >
-            <span className={cn("text-base font-bold leading-none tracking-tight", isSelected && "text-fp-on-lime")}>
-              {format}
-            </span>
-            <span className="text-[10px] font-medium leading-none opacity-70">
+            <span className="text-base font-bold leading-none tracking-tight">{format}</span>
+            {/* 13px is the type floor (DESIGN.md §3). */}
+            <span className={cn("text-[13px] font-medium leading-none", !isSelected && "text-fp-ink-2")}>
               {t("fieldCount", { count: fieldCount })}
             </span>
-            {isSelected && (
-              <motion.span
-                layoutId="format-dot"
-                className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-fp-on-lime"
-                transition={{ type: "spring", stiffness: 500, damping: 35 }}
-              />
-            )}
-          </motion.button>
+          </button>
         );
       })}
     </div>
