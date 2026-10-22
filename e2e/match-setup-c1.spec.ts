@@ -73,8 +73,12 @@ async function open(page: Page, { theme, setup }: { theme: "light" | "dark"; set
   return errors;
 }
 
+const squadList = (page: Page) => page.getByRole("list", { name: "Hvem er med i dag?" });
+// A present tile is named after the player; an absent one «Nora, borte» (C1-F6).
 const squadTile = (page: Page, name: string) =>
-  page.getByRole("list", { name: "Hvem er med i dag?" }).getByRole("button", { name, exact: true });
+  squadList(page).getByRole("button", {
+    name: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(, borte)?$`),
+  });
 const startButton = (page: Page) => page.getByRole("button", { name: "Start kamp" });
 const bar = (page: Page) => page.getByTestId("setup-start-bar");
 
@@ -121,6 +125,11 @@ for (const theme of ["light", "dark"] as const) {
       await squadTile(page, "Nora").click();
       await expect(squadTile(page, "Nora")).toHaveAttribute("aria-pressed", "false");
       await expect(squadTile(page, "Nora")).toContainText("Borte");
+      // The absent state is in the accessible name, not only on screen (C1-F6).
+      await expect(squadList(page).getByRole("button", { name: "Nora, borte", exact: true })).toHaveAttribute(
+        "aria-pressed",
+        "false"
+      );
       await expect(bar(page)).toContainText("8 i troppen");
 
       // Tap-to-place: a bench player, then a slot.

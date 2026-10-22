@@ -96,7 +96,8 @@
       "hint": "Pre-filled when creating a new match for this team.",
       "format": "Format",
       "formation": "Formation",
-      "duration": "Duration"
+      "duration": "Duration",
+      "durationTotal": "({minutes} min)"
     },
     "players": {
       "title": "Players",
@@ -105,7 +106,7 @@
       "emptyDescription": "Type the first player’s name in the field above. A first name is enough; add a surname if two players share a first name.",
       "spondSynced": "Synced via Spond",
       "spondConnect": "Connect Spond",
-      "spondSyncedInfo": "Players imported from Spond cannot be edited or deleted manually here. Manage them in Spond — FairPlayr will sync automatically.",
+      "spondSyncedInfo": "Spond players cannot be edited or deleted here. Names are changed in Spond and updated when you import the players again in Settings.",
       "reorder": "Reorder",
       "reorderDone": "Done",
       "reorderHint": "Move players with the arrows. Tap Done when the order is right.",
@@ -143,10 +144,10 @@
       "savingLink": "Saving...",
       "groupLinked": "Connection saved",
       "linkedGroupReady": "Players imported from Spond remain tagged and protected from manual deletion.",
-      "linkedGroupName": "Selected group: {value}",
+      "linkedGroupName": "Linked group: {value}",
       "neverSynced": "Not synced yet",
-      "lastMembersSync": "Last player sync: {value}",
-      "lastEventsSync": "Last event sync: {value}",
+      "lastMembersSync": "Players last imported: {value}",
+      "lastEventsSync": "Events last fetched: {value}",
       "syncMembersCta": "Import players",
       "syncMembersLoading": "Loading...",
       "preview": {
@@ -155,7 +156,7 @@
         "helperText": "We suggest who is likely a player, but you can change every selection.",
         "loading": "Loading...",
         "selectAll": "Select all",
-        "clearAll": "Clear all",
+        "clearAll": "Clear",
         "selectedCount": "{count} selected",
         "importSelected": "Import selected",
         "importing": "Importing...",
@@ -166,14 +167,16 @@
         "statusAlreadyImported": "Already imported",
         "statusExisting": "Already exists in team",
         "statusNew": "New",
-        "importSummary": "Players imported: {created} new, {reused} reused, {updated} updated, {reactivated} reactivated, {skipped} skipped, {total} selected."
+        "importSummary": "Players imported: {created} new, {reused} reused, {updated} updated, {reactivated} reactivated, {skipped} skipped, {total} selected.",
+        "listLabel": "People in the Spond group",
+        "importCount": "{count, plural, =0 {Import} one {Import # player} other {Import # players}}"
       },
       "syncEventsCta": "Fetch events",
       "syncEventsLoading": "Loading...",
       "syncEventsNoChanges": "No event changes found.",
       "syncEventsResult": "Events updated. Found {total} upcoming events.",
       "eventsTitle": "Events",
-      "eventsEmpty": "No events fetched yet.",
+      "eventsEmpty": "No events fetched yet. Tap “Fetch events”.",
       "eventUnknownDate": "Time missing",
       "eventImported": "Imported",
       "eventNotImported": "Not imported",
@@ -181,24 +184,23 @@
       "importing": "Importing...",
       "importResult": "Import completed: {created} new, {updated} updated, {total} members processed.",
       "syncMembersResult": "Players imported: {created} new, {updated} renamed, {reactivated} reactivated, {inactivated} marked inactive, {unchanged} unchanged, {total} total.",
-      "syncMembersInactiveNotice": "Players no longer found in Spond are kept in FairPlayr as inactive.",
       "cleanup": {
         "sectionTitle": "Danger zone",
-        "deleteImportedTitle": "Delete all imported Spond data",
-        "deleteImportedHelp": "Deletes players, events, and participation data imported from Spond for this team. You can always import the data again.",
+        "deleteImportedHelp": "Removes the Spond players from the team and deletes the matches imported from Spond, with their history. The connection is kept.",
         "deleteImportedCta": "Delete all imported Spond data",
-        "disconnectTitle": "Disconnect and delete data",
-        "disconnectHelp": "Removes the Spond link for this team and deletes all imported Spond data. You can reconnect later.",
+        "disconnectHelp": "Does the same, and also disconnects your Spond account from FairPlayr.",
         "disconnectCta": "Disconnect and delete data",
         "deleteImportedConfirmTitle": "Delete imported Spond data?",
-        "deleteImportedConfirmText": "This deletes all data imported from Spond for this team. The Spond connection is kept, and you can import again.",
+        "deleteImportedConfirmText": "{count, plural, =0 {There are no Spond players on the team now. All matches imported from Spond are deleted, with their history, report and sign-ups.} one {# Spond player is removed from the team, and all matches imported from Spond are deleted, with their history, report and sign-ups.} other {# Spond players are removed from the team, and all matches imported from Spond are deleted, with their history, report and sign-ups.}} The Spond connection is kept. Players can be imported again, but deleted match history cannot be restored.",
         "disconnectConfirmTitle": "Disconnect Spond and delete data?",
-        "disconnectConfirmText": "This removes the Spond link for this team and deletes all imported Spond data. You can reconnect later.",
+        "disconnectConfirmText": "{count, plural, =0 {There are no Spond players on the team now. All matches imported from Spond are deleted, with their history, report and sign-ups.} one {# Spond player is removed from the team, and all matches imported from Spond are deleted, with their history, report and sign-ups.} other {# Spond players are removed from the team, and all matches imported from Spond are deleted, with their history, report and sign-ups.}} The team is unlinked from the Spond group, and your Spond account is disconnected from FairPlayr, for your other teams too. Deleted match history cannot be restored.",
         "deleteImportedSuccess": "Imported Spond data was deleted.",
         "disconnectSuccess": "Spond was disconnected and data was deleted.",
         "running": "Working...",
         "deleteImportedConfirmCta": "Yes, delete Spond data",
-        "disconnectConfirmCta": "Yes, disconnect and delete"
+        "disconnectConfirmCta": "Yes, disconnect and delete",
+        "deleteImportedConfirmTextNoCount": "The Spond players are removed from the team, and all matches imported from Spond are deleted, with their history, report and sign-ups. The Spond connection is kept. Players can be imported again, but deleted match history cannot be restored.",
+        "disconnectConfirmTextNoCount": "The Spond players are removed from the team, and all matches imported from Spond are deleted, with their history, report and sign-ups. The team is unlinked from the Spond group, and your Spond account is disconnected from FairPlayr, for your other teams too. Deleted match history cannot be restored."
       },
       "errors": {
         "unauthorized": "You must be signed in.",
@@ -215,14 +217,25 @@
         "noSelectedMembers": "Choose at least one person.",
         "encryptionNotConfigured": "Server is missing Spond encryption key configuration.",
         "cleanupFailed": "Could not clean Spond data. Please try again.",
-        "generic": "Something went wrong"
-      }
+        "generic": "Something went wrong",
+        "unknown": "Unknown error."
+      },
+      "statusChecking": "Checking the connection…",
+      "statusUnavailable": "Could not check Spond",
+      "statusGroupLabel": "Spond status",
+      "accountValue": "Account: {value}",
+      "noLinkedGroup": "No group is linked to the team yet.",
+      "groupSectionTitle": "Spond group",
+      "fromSpondTitle": "From Spond",
+      "summaryCount": "{count, plural, =0 {No players have been imported from Spond yet.} one {# player has been imported from Spond.} other {# players have been imported from Spond.}}",
+      "summaryNoCount": "Players you import from Spond are marked “From Spond” on Players.",
+      "summaryReadOnly": "Names are changed in Spond and updated here when you import again. The players are read-only here."
     },
     "forms": {
       "teamNameLabel": "Team name",
       "teamNamePlaceholder": "Example: FairPlayr FC",
       "playerNameLabel": "Player name",
-      "playerNamePlaceholder": "Enter player name"
+      "playerNamePlaceholder": "e.g. Ida"
     },
     "validation": {
       "teamNameRequired": "Team name cannot be empty.",
@@ -257,7 +270,7 @@
       "title": "Edit player",
       "deleteLabel": "Delete player",
       "deleteGroup": "Remove from team",
-      "spondDescription": "{name} was imported from Spond. The name and deletion are managed in Spond, and FairPlayr updates the team automatically."
+      "spondDescription": "{name} was imported from Spond. The name is changed in Spond and updated here when you import the players again. The player cannot be deleted here."
     }
   },
   "auth": {
@@ -271,7 +284,7 @@
       "continueAsGuest": "Continue as guest",
       "goToSignUp": "Create an account",
       "goToSignIn": "Go to sign in",
-      "useMagicLinkInstead": "Use magic link instead",
+      "useMagicLinkInstead": "Use a sign-in link instead",
       "connecting": "Connecting...",
       "creatingAccount": "Creating account...",
       "signOut": "Sign out",
@@ -300,12 +313,12 @@
       "subtitle": "Pick up where you left off and sync your data across devices.",
       "emailLabel": "Email",
       "emailPlaceholder": "coach@example.com",
-      "submit": "Continue",
+      "submit": "Email me a sign-in link",
       "submitting": "Sending...",
       "helpText": "We will send you a sign-in link by email. No password needed.",
-      "separator": "OR",
       "alreadySignedIn": "You are already signed in.",
-      "goToTeam": "Go to Team"
+      "goToTeam": "Go to Team",
+      "noAccount": "No account yet?"
     },
     "signUp": {
       "title": "Create account",
@@ -336,6 +349,15 @@
       "passwordRequired": "Password is required.",
       "passwordTooShort": "Password must be at least 6 characters.",
       "passwordMismatch": "Passwords do not match."
+    },
+    "signOutConfirm": {
+      "title": "Sign out?",
+      "description": "You will be signed out on this device. Matches saved here are not deleted. Teams and players from your account appear again when you sign in.",
+      "confirm": "Sign out",
+      "cancel": "Cancel",
+      "blockedTitle": "A match is in progress",
+      "blockedDescription": "End the match in progress before you sign out.",
+      "blockedGoToMatch": "Go to the match"
     }
   },
   "matchSetup": {
@@ -391,7 +413,8 @@
       "selectAll": "Select all",
       "clear": "Clear",
       "count": "{selected} of {total} here",
-      "absent": "Away"
+      "absent": "Away",
+      "absentName": "{name}, away"
     },
     "lineup": {
       "starterSlots": "{current} / {required}",
@@ -916,7 +939,8 @@
       "eventMissingStart": "The event has no start time and cannot be imported.",
       "matchNotSpond": "This match is not linked to Spond.",
       "activeMatchExists": "Another match is already live for this team.",
-      "generic": "Something went wrong while planning matches."
+      "generic": "Something went wrong while planning matches.",
+      "unknown": "Unknown error."
     },
     "completedOfflineNotice": "Match finished on this device. It will be saved to the cloud when you are back online.",
     "otherMatchOnDevice": "Another match is running on this device. Finishing this one does not affect it.",
@@ -1020,23 +1044,22 @@
   },
   "settings": {
     "title": "Settings",
-    "subtitle": "Preferences and app configuration.",
     "account": "Account",
-    "storageSync": "Storage and sync",
-    "syncStatus": "Status",
-    "syncCloud": "Synced with cloud",
-    "syncLocal": "Working locally",
-    "syncAttention": "Sync needs attention",
-    "syncCloudHint": "Teams and players are saved in cloud storage for this account.",
-    "syncLocalHint": "You are in local mode. Sign in to sync across devices.",
-    "appearance": "Appearance",
     "theme": "Theme",
     "lightMode": "Light",
     "darkMode": "Dark",
     "systemMode": "System",
     "language": "Language",
     "integrations": "Integrations",
-    "noTeamForIntegrations": "Select or create a team to configure Spond integration."
+    "noTeamForIntegrations": "Select or create a team to configure Spond integration.",
+    "guestRow": "Guest · data is stored on this device only",
+    "team": "Team",
+    "activeTeam": "Active team",
+    "teamDefaults": "Team defaults",
+    "teamDefaultsHint": "Format, formation and match length for new matches. Edited under Players.",
+    "noTeam": "No team yet",
+    "noTeamHint": "Create your team under Players.",
+    "appearanceAndLanguage": "Appearance and language"
   },
   "teamSwitcher": {
     "label": "Active team",
@@ -1058,8 +1081,14 @@
       "attention": "Needs attention"
     },
     "title": "Profile",
-    "spondConnected": "Connected to Spond",
-    "spondNotConnected": "Not connected"
+    "accountGroup": "Account and status",
+    "spond": {
+      "title": "Spond",
+      "checking": "Checking …",
+      "connected": "Connected",
+      "disconnected": "Not connected",
+      "unavailable": "Couldn't check"
+    }
   },
   "activeMatchBanner": {
     "label": "Match in progress",

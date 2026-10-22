@@ -80,7 +80,7 @@ Destructive button fill: `#B3261E` with white text in light mode (6.5 : 1), and 
 ### 2.5 Rules
 - **Lime is never text on a light surface.** It is only a fill, a ring or an underline, always with `on-lime` ink on top.
 - **Never grey text on green.** Text on club green uses `on-club-2`.
-- **Status is never colour-only.** Fatigue uses arc length, selection uses scale and outline, and offline uses a glyph.
+- **Status is never colour-only.** Fatigue uses arc length, selection uses scale and outline, and offline uses a glyph. A selected choice chip (format, formation, duration) carries a check mark left of its label in `on-lime`, decorative (`aria-hidden`) next to `aria-pressed`; the chip is the same size in both states (C1-F3). An absent player in the attendance grid says «Borte» on screen and in its accessible name (C1-F6).
 - **No glow, gradients, blur or glass.** The legacy `.glow-*` utilities and `--glow-*` tokens were removed in UI-TOKENS-01 (B3). The one exception is functional: the bench rail's edge fade (`transparent` → `canvas`), which shows that players continue off-screen (§5.3).
 
 ### 2.6 Measured contrast (WCAG 2.x)
@@ -111,7 +111,9 @@ Non-text fatigue rings are at least 3.5 : 1 on grass.
 | Name | Inter 600 15/1.15 | Names on pitch and bench, up to 7v7 |
 | Name, compact | Inter 600 **14**/1.15 | 9v9 / 11v11. **This is the floor for names.** |
 | Meta | Inter 500 14 | Secondary info |
-| Label | Inter 600 13, caps, +6 % | Section kickers, score team codes (the only 13px text) |
+| Label | Inter 600 13, caps, +6 % | Section kickers, form-field labels, score team codes |
+| Tab label | Inter 600 13/1.25 (700 on the active tab), sentence case; wraps, never truncates | Bottom-nav tab names (C2-F1) |
+| Key figure | Inter 700 20/1.25, tabular | Season numbers on Home (Kamper, Balanse, Siste); a missing value is Inter 600 16 in `ink-2` (C2-F1) |
 | Minutes | Inter 700 15 (token) / 14 (bench), tabular | Total playing time |
 | Score | Barlow Condensed 600 50/0.9 (44 on short screens) | 2 – 1 |
 | Clock | Barlow Condensed 600 40/0.9 (34 on short screens) | 16:20 |
@@ -340,6 +342,8 @@ A 24 grid with 1.75 stroke and round caps and joins (lucide-compatible). Icons o
 | U5 | A small transient notice band under the scoreboard (§5.6); it never covers critical match controls. |
 | U8 | Four bottom-nav tabs; settings via the profile. |
 | U9 | Preselect the squad where it fits, without ever giving unintended players playing time. |
+| C2-F1 | Bottom-nav tab labels are 13px (600, 700 when active) and Home key figures are 20px 700 tabular; both are typography rows in §3, so 13px is no longer reserved for caps labels (2026-10-22). |
+| B5 | A selected choice chip shows a check mark as well as the lime fill, in setup, team defaults and `/lineup` alike (C1-F3, 2026-10-22). |
 | MATCH-09 | The suggestion never names the keeper and needs a 4′ gap between the pair (§6.2), 2026-10-20. Its button is **Velg** (selects the outgoing player), deliberately not a one-tap **Bytt**: the coach completes the substitution. |
 | B2 | Adaptive bench, Alternative C (FP-MS2.1-B2, §5.3): sorted least-played first by displayed whole minutes, ties in squad order, at every squad size; order held during interactions and re-sorted once after, with the rail back at its start; one row → two (three tall) → horizontal rail; "+N ›" / "‹ N" jump buttons with counts only; touch direction lock on the rail; tiles 44px tall (amends "≥ 60px"). |
 

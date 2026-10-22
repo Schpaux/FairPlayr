@@ -1,14 +1,19 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
+import { Button, ButtonLink } from "@/components/ui/primitives";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { SignOutConfirmSheet } from "@/components/auth/SignOutConfirmSheet";
 
+/**
+ * Compact sign-in / sign-out action. Not rendered anywhere today; signing
+ * out goes through the shared confirmation (owner decision B4).
+ */
 export function AuthActionButton() {
   const t = useTranslations("auth");
-  const { status, signOut } = useAuth();
-  const [isPending, startTransition] = useTransition();
+  const { status } = useAuth();
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
 
   if (status === "loading") {
     return null;
@@ -16,27 +21,18 @@ export function AuthActionButton() {
 
   if (status === "guest") {
     return (
-      <Link
-        href="/auth/sign-in"
-        className="h-9 px-3 rounded-xl surface-2 border border-fp-border flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors tap-target"
-      >
+      <ButtonLink href="/auth/sign-in" size="sm">
         {t("actions.signIn")}
-      </Link>
+      </ButtonLink>
     );
   }
 
   return (
-    <button
-      type="button"
-      onClick={() => {
-        startTransition(async () => {
-          await signOut();
-        });
-      }}
-      disabled={isPending}
-      className="h-9 px-3 rounded-xl surface-2 border border-fp-border flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors tap-target disabled:opacity-60"
-    >
-      {isPending ? t("actions.signingOut") : t("actions.signOut")}
-    </button>
+    <>
+      <Button size="sm" onClick={() => setConfirmSignOut(true)}>
+        {t("actions.signOut")}
+      </Button>
+      <SignOutConfirmSheet open={confirmSignOut} onOpenChange={setConfirmSignOut} />
+    </>
   );
 }

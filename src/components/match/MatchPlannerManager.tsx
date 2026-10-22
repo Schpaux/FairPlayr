@@ -54,16 +54,16 @@ interface SpondEventItem {
   importedMatchId: string | null;
 }
 
-function parseApiError(payload: unknown): { code: string; message: string } {
+function parseApiError(payload: unknown, unknownMessage: string): { code: string; message: string } {
   if (typeof payload !== "object" || payload === null) {
-    return { code: "UNKNOWN", message: "Ukjent feil." };
+    return { code: "UNKNOWN", message: unknownMessage };
   }
 
   const value = payload as Record<string, unknown>;
 
   return {
     code: typeof value.errorCode === "string" ? value.errorCode : "UNKNOWN",
-    message: typeof value.message === "string" ? value.message : "Ukjent feil.",
+    message: typeof value.message === "string" ? value.message : unknownMessage,
   };
 }
 
@@ -234,7 +234,7 @@ export function MatchPlannerManager() {
       const payload = (await response.json()) as unknown;
 
       if (!response.ok) {
-        const parsed = parseApiError(payload);
+        const parsed = parseApiError(payload, t("errors.unknown"));
         throw new Error(mapError(parsed.code, parsed.message));
       }
 
@@ -243,7 +243,7 @@ export function MatchPlannerManager() {
     } finally {
       setIsLoadingMatches(false);
     }
-  }, [mapError, team]);
+  }, [mapError, t, team]);
 
   const loadEvents = useCallback(async () => {
     if (!team) {
@@ -264,7 +264,7 @@ export function MatchPlannerManager() {
       const payload = (await response.json()) as unknown;
 
       if (!response.ok) {
-        const parsed = parseApiError(payload);
+        const parsed = parseApiError(payload, t("errors.unknown"));
         throw new Error(mapError(parsed.code, parsed.message));
       }
 
@@ -274,7 +274,7 @@ export function MatchPlannerManager() {
     } finally {
       setIsLoadingEvents(false);
     }
-  }, [mapError, team]);
+  }, [mapError, t, team]);
 
   useEffect(() => {
     if (auth.status !== "authenticated" || !team) {
@@ -348,7 +348,7 @@ export function MatchPlannerManager() {
       const payload = (await response.json()) as unknown;
 
       if (!response.ok) {
-        const parsed = parseApiError(payload);
+        const parsed = parseApiError(payload, t("errors.unknown"));
         throw new Error(mapError(parsed.code, parsed.message));
       }
 
@@ -396,7 +396,7 @@ export function MatchPlannerManager() {
       const payload = (await response.json()) as unknown;
 
       if (!response.ok) {
-        const parsed = parseApiError(payload);
+        const parsed = parseApiError(payload, t("errors.unknown"));
         throw new Error(mapError(parsed.code, parsed.message));
       }
 

@@ -1,163 +1,224 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useMemo, useRef, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
-import { useLocale } from "next-intl";
+import { Check, Users, UserRound } from "lucide-react";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
 import { routing } from "@/i18n/routing";
 import { localeConfig } from "@/lib/locales";
-import { Sun, Moon, Monitor, Globe, Cloud, Link2 } from "lucide-react";
-import { PageShell } from "@/components/ui/PageShell";
-import { SectionHeader } from "@/components/ui/SectionHeader";
-import { AppCard } from "@/components/ui/AppCard";
-import { AuthStatusCard } from "@/components/auth/AuthStatusCard";
-import { SpondIntegrationCard } from "@/components/team/SpondIntegrationCard";
+import { useMounted } from "@/lib/useMounted";
 import { cn } from "@/lib/utils";
+import { PageShell } from "@/components/ui/PageShell";
+import { ButtonLink, ListGroup, ListRow, SegmentedChoice, type SegmentedOption } from "@/components/ui/primitives";
+import { SyncStatusRow } from "@/components/layout/SyncStatusRow";
+import { UserAvatar } from "@/components/layout/UserAvatar";
+import { readProfileMetadata } from "@/components/layout/ProfileMenu";
+import { SignOutConfirmSheet } from "@/components/auth/SignOutConfirmSheet";
+import { SpondIntegrationCard } from "@/components/team/SpondIntegrationCard";
 
 type ThemeOption = "light" | "dark" | "system";
+// "" is "not known yet": before mount no theme segment is selected, so the
+// server HTML and the hydration render agree (FP-004 N-5).
+type ThemeChoice = ThemeOption | "";
 
-const themeIcons = { light: Sun, dark: Moon, system: Monitor } as const;
+const THEME_OPTIONS: readonly ThemeOption[] = ["light", "dark", "system"];
+
+function isThemeOption(value: string | undefined): value is ThemeOption {
+  return THEME_OPTIONS.includes(value as ThemeOption);
+}
+
+/** The 13px caps kicker, as `ListGroup` and `SegmentedChoice` draw it. */
+const kickerClassName = "mb-2 px-1 text-[13px] font-semibold uppercase leading-tight tracking-[0.06em] text-fp-ink-2";
 
 export default function SettingsPage() {
   const t = useTranslations("settings");
+  const authT = useTranslations("auth");
   const { theme, setTheme } = useTheme();
+  const mounted = useMounted();
   const auth = useAuth();
   const workspace = useTeamWorkspace();
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
 
-  const themeOptions: { value: ThemeOption; labelKey: "lightMode" | "darkMode" | "systemMode" }[] = [
-    { value: "light", labelKey: "lightMode" },
-    { value: "dark", labelKey: "darkMode" },
-    { value: "system", labelKey: "systemMode" },
+  const profile = useMemo(() => readProfileMetadata(auth.user), [auth.user]);
+  const isSignedIn = auth.status === "authenticated";
+  const isGuest = auth.status === "guest";
+  const activeTeam = workspace.activeTeam;
+
+  const themeValue: ThemeChoice = mounted && isThemeOption(theme) ? theme : "";
+  const themeOptions: SegmentedOption<ThemeChoice>[] = [
+    { value: "light", label: t("lightMode") },
+    { value: "dark", label: t("darkMode") },
+    { value: "system", label: t("systemMode") },
   ];
+  const languageOptions: SegmentedOption<string>[] = routing.locales.map((l) => ({
+    value: l,
+    // Locale names are always shown in their own language, never translated.
+    label: <span lang={l}>{localeConfig[l as keyof typeof localeConfig]?.full ?? l}</span>,
+  }));
 
   return (
-    <PageShell>
-      <SectionHeader title={t("title")} subtitle={t("subtitle")} />
+    // gap, not space-y: ListGroup resets its own margin, which beats space-y.
+    <PageShell className="flex flex-col gap-6">
+      <h1 ref={titleRef} tabIndex={-1} className="text-2xl font-bold tracking-tight text-fp-ink outline-none">
+        {t("title")}
+      </h1>
 
-      <section className="mb-6">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-          {t("account")}
-        </p>
-        <AuthStatusCard />
-      </section>
-
-      <section className="mb-6">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-          {t("storageSync")}
-        </p>
-        <AppCard className="space-y-2 p-4">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Cloud size={14} className="text-muted-foreground" />
-              <p className="text-sm font-medium text-foreground">{t("syncStatus")}</p>
-            </div>
-            <span className={workspace.mode === "cloud" ? "text-xs font-medium text-fp-ok-text" : "text-xs font-medium text-fp-warn-text"}>
-              {workspace.mode === "cloud" ? t("syncCloud") : t("syncLocal")}
-            </span>
-          </div>
-          {workspace.error ? (
-            <p className="text-xs text-fp-warn-text">{t("syncAttention")}</p>
+      {/* Konto */}
+      <div className="flex flex-col gap-3">
+        <ListGroup title={t("account")} testId="settings-account">
+          {auth.status === "loading" ? (
+            <ListRow label={authT("status.loading")} />
+          ) : isSignedIn ? (
+            <>
+              <ListRow
+                testId="settings-account-row"
+                leading={
+                  <UserAvatar
+                    name={profile.name}
+                    email={auth.user?.email ?? null}
+                    photoUrl={profile.photoUrl}
+                    isGuest={false}
+                  />
+                }
+                label={profile.name ?? auth.user?.email ?? "-"}
+                description={profile.name ? auth.user?.email ?? undefined : undefined}
+              />
+              <SyncStatusRow mode={workspace.mode} hasError={Boolean(workspace.error)} testId="settings-sync" />
+            </>
           ) : (
-            <p className="text-xs text-muted-foreground">
-              {workspace.mode === "cloud" ? t("syncCloudHint") : t("syncLocalHint")}
-            </p>
+            <ListRow
+              testId="settings-guest-row"
+              leading={<UserRound size={22} strokeWidth={1.75} />}
+              label={t("guestRow")}
+            />
           )}
-        </AppCard>
-      </section>
+        </ListGroup>
 
-      {/* Appearance */}
-      <section className="mb-6">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-          {t("appearance")}
-        </p>
-        <AppCard className="p-0 overflow-hidden">
-          <div className="px-4 py-3 border-b border-fp-border">
-            <p className="text-sm font-medium text-foreground">{t("theme")}</p>
-          </div>
-          <div className="p-3 grid grid-cols-3 gap-2">
-            {themeOptions.map(({ value, labelKey }) => {
-              const Icon = themeIcons[value];
-              return (
-                <button
-                  key={value}
-                  onClick={() => setTheme(value)}
-                  className={cn(
-                    "flex flex-col items-center gap-2 rounded-xl p-3 text-xs font-medium transition tap-target",
-                    theme === value
-                      ? "bg-fp-lime text-fp-on-lime border border-fp-lime"
-                      : "bg-fp-surface-2 text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <Icon size={18} />
-                  {t(labelKey)}
-                </button>
-              );
-            })}
-          </div>
-        </AppCard>
-      </section>
+        {isGuest ? (
+          <ButtonLink href="/auth/sign-in" variant="primary" block data-testid="settings-sign-in">
+            {authT("actions.signIn")}
+          </ButtonLink>
+        ) : null}
+      </div>
 
-      {/* Language */}
-      <section>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-          {t("language")}
-        </p>
-        <AppCard className="p-0 overflow-hidden">
-          <div className="px-4 py-3 border-b border-fp-border flex items-center gap-2">
-            <Globe size={14} className="text-muted-foreground" />
-            <p className="text-sm font-medium text-foreground">{t("language")}</p>
-          </div>
-          <div className="p-3 flex flex-col gap-1">
-            {routing.locales.map((l) => {
-              // Locale names always shown in their native language — not translated
-              const meta = localeConfig[l as keyof typeof localeConfig];
-              return (
-                <button
-                  key={l}
-                  onClick={() => router.replace(pathname, { locale: l })}
-                  className={cn(
-                    "flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition tap-target",
-                    l === locale
-                      ? "bg-fp-lime text-fp-on-lime font-semibold"
-                      : "text-muted-foreground hover:bg-fp-surface-2 hover:text-foreground"
-                  )}
-                >
-                  <span>{meta?.full ?? l}</span>
-                  {l === locale && <span className="text-xs">✓</span>}
-                </button>
-              );
-            })}
-          </div>
-        </AppCard>
-      </section>
+      {/* Lag: team defaults stay on Spillere (owner decision B1); this links there. */}
+      <ListGroup title={t("team")} testId="settings-team">
+        {activeTeam ? (
+          <>
+            <ListRow
+              testId="settings-active-team"
+              leading={<Users size={22} strokeWidth={1.75} />}
+              label={activeTeam.name}
+              description={t("activeTeam")}
+            />
+            <ListRow
+              testId="settings-team-defaults"
+              href={{ pathname: "/team", hash: "team-defaults" }}
+              label={t("teamDefaults")}
+              description={t("teamDefaultsHint")}
+            />
+          </>
+        ) : (
+          <ListRow testId="settings-no-team" href="/team" label={t("noTeam")} description={t("noTeamHint")} />
+        )}
+      </ListGroup>
 
-      {auth.status === "authenticated" && workspace.mode === "cloud" ? (
-        <section className="mt-6">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      {/* Integrasjoner: signed-in cloud only. The card shows its own status. */}
+      {isSignedIn && workspace.mode === "cloud" ? (
+        <section id="integrations" aria-labelledby="settings-integrations-title" className="scroll-mt-20">
+          <h2 id="settings-integrations-title" className={kickerClassName}>
             {t("integrations")}
-          </p>
-          {workspace.activeTeam ? (
+          </h2>
+          {activeTeam ? (
             <SpondIntegrationCard
-              teamId={workspace.activeTeam.id}
+              // A team switch starts a fresh card: no late status answer for
+              // the previous team can land in this one.
+              key={activeTeam.id}
+              teamId={activeTeam.id}
               mode={workspace.mode}
               onImported={workspace.refresh}
+              spondPlayerCount={activeTeam.players.filter((player) => player.source === "spond").length}
             />
           ) : (
-            <AppCard className="space-y-2 p-4">
-              <div className="flex items-center gap-2">
-                <Link2 size={14} className="text-fp-spond" />
-                <p className="text-sm font-medium text-foreground">{t("integrations")}</p>
-              </div>
-              <p className="text-xs text-muted-foreground">{t("noTeamForIntegrations")}</p>
-            </AppCard>
+            <ListGroup aria-label={t("integrations")}>
+              <ListRow label={t("noTeamForIntegrations")} />
+            </ListGroup>
           )}
         </section>
       ) : null}
+
+      {/* Utseende og språk */}
+      <section aria-labelledby="settings-appearance-title">
+        <h2 id="settings-appearance-title" className={kickerClassName}>
+          {t("appearanceAndLanguage")}
+        </h2>
+        <div className="space-y-6 rounded-[14px] border border-fp-rule bg-fp-surface p-4">
+          <SegmentedChoice<ThemeChoice>
+            label={t("theme")}
+            options={themeOptions}
+            value={themeValue}
+            onValueChange={(value) => {
+              if (value) setTheme(value);
+            }}
+            testId="settings-theme"
+          />
+          {/* Language switches the page, so it is buttons, not a radio group:
+              arrow keys in a radio group would switch it while reading the
+              options (WCAG 3.2.2). Same pill track as SegmentedChoice. */}
+          <div role="group" aria-labelledby="settings-language-label" data-testid="settings-language">
+            <p id="settings-language-label" className={kickerClassName}>
+              {t("language")}
+            </p>
+            <div className="flex gap-1 rounded-full bg-fp-surface-2 p-1">
+              {languageOptions.map((option) => {
+                const selected = option.value === locale;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => {
+                      if (!selected) router.replace(pathname, { locale: option.value });
+                    }}
+                    className={cn(
+                      "flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1 rounded-full px-3 py-1.5 text-[15px] [overflow-wrap:anywhere] transition-transform active:scale-[0.97]",
+                      selected ? "bg-fp-lime font-semibold text-fp-on-lime" : "font-medium text-fp-ink-2"
+                    )}
+                  >
+                    {selected ? <Check size={16} strokeWidth={2} aria-hidden className="flex-none" /> : null}
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Logg ut: a secondary row in its own group, last on the page. */}
+      {isSignedIn ? (
+        <ListGroup aria-label={authT("actions.signOut")} testId="settings-sign-out-group">
+          <ListRow
+            testId="settings-sign-out"
+            label={authT("actions.signOut")}
+            onClick={() => setConfirmSignOut(true)}
+          />
+        </ListGroup>
+      ) : null}
+
+      {/* Mounted outside the signed-in branch so it survives the switch to guest. */}
+      <SignOutConfirmSheet
+        open={confirmSignOut}
+        onOpenChange={setConfirmSignOut}
+        finalFocus={isSignedIn ? undefined : titleRef}
+      />
     </PageShell>
   );
 }

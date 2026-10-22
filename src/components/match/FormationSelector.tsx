@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import type { FormationPreset } from "@/domain/match";
 import { cn } from "@/lib/utils";
+import { SelectedLabel } from "@/components/match/SelectedLabel";
 
 interface FormationSelectorProps {
   formations: FormationPreset[];
@@ -29,14 +30,18 @@ export function FormationSelector({
             onClick={() => onChange(formation.id)}
             aria-pressed={isSelected}
             className={cn(
-              "min-h-11 rounded-full border px-4 text-base font-semibold tap-target",
+              // px-6 in both states leaves room for the check left of the
+              // label, so selecting never changes the chip size (C1-F3).
+              "min-h-11 rounded-full border px-6 text-base font-semibold tap-target",
               "transition-[transform,background-color,border-color,color] duration-(--fp-d-quick) ease-fp-out active:scale-[0.97]",
               isSelected
                 ? "border-fp-lime bg-fp-lime text-fp-on-lime"
                 : "border-fp-control-line bg-fp-surface text-fp-ink"
             )}
           >
-            {t("presetLabel", { shape: formation.shape })}
+            <SelectedLabel selected={isSelected}>
+              {t("presetLabel", { shape: formation.shape })}
+            </SelectedLabel>
           </button>
         );
       })}

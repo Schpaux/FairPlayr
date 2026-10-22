@@ -13,7 +13,8 @@ import { cn } from "@/lib/utils";
  * are not cut). The name ladder runs over the whole team, because every player
  * is listed here; the pitch, like live, runs it over the squad only. Present is a club disc with a lime check; absent is muted and says
  * «Borte» in words, so the state is never colour only. Each tile is a toggle
- * (`aria-pressed`) at least 44px tall.
+ * (`aria-pressed`) at least 44px tall; an absent tile is named «Ida, borte»,
+ * so a screen reader hears the state too (C1-F6).
  */
 
 interface SquadSelectorProps {
@@ -72,6 +73,9 @@ export function SquadSelector({
                 type="button"
                 onClick={() => onToggle(player.id)}
                 aria-pressed={isPresent}
+                // C1-F6: the absent state is in the accessible name
+                // («Ida, borte»), not only in the visible word.
+                aria-label={isPresent ? undefined : t("absentName", { name })}
                 className={cn(
                   "flex h-full min-h-12 w-full flex-col items-center gap-1 rounded-[10px] px-1.5 py-2 text-center",
                   "transition-[transform,background-color,box-shadow] duration-(--fp-d-quick) ease-fp-out active:scale-[0.97]",

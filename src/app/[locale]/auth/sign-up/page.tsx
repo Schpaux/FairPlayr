@@ -6,13 +6,15 @@ import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { AppCard } from "@/components/ui/AppCard";
-import { FpButton } from "@/components/ui/FpButton";
-import { ButtonLink } from "@/components/ui/primitives";
-import { teamTextInputClassName } from "@/components/team/styles";
+import { Button, ButtonLink, Notice } from "@/components/ui/primitives";
+import { authInputClassName } from "@/components/auth/authStyles";
 import { useAuth } from "@/components/providers/AuthProvider";
 
 type ActiveAction = "google" | "password" | null;
+
+/** A text link with a 44px touch area (DESIGN.md §4). */
+const linkClassName =
+  "inline-flex min-h-11 items-center font-medium text-fp-ink underline decoration-fp-lime decoration-2 underline-offset-4";
 
 function mapAuthError(message: string, t: ReturnType<typeof useTranslations>) {
   const normalized = message.toLowerCase();
@@ -131,127 +133,132 @@ export default function SignUpPage() {
   };
 
   return (
-    <PageShell className="space-y-4">
-      <SectionHeader title={t("signUp.title")} subtitle={t("signUp.subtitle")} />
+    <PageShell className="space-y-6">
+      <SectionHeader title={t("signUp.title")} subtitle={t("signUp.subtitle")} className="mb-0" />
 
       {status === "authenticated" ? (
-        <AppCard className="space-y-3 p-4">
-          <p className="text-sm font-semibold text-foreground">{t("signUp.alreadySignedIn")}</p>
-          <ButtonLink href="/team" variant="secondary" size="sm">
-            {t("signUp.goToTeam")}
-          </ButtonLink>
-        </AppCard>
+        <Notice
+          tone="success"
+          announce="off"
+          title={t("signUp.alreadySignedIn")}
+          action={
+            <ButtonLink href="/team" size="sm">
+              {t("signUp.goToTeam")}
+            </ButtonLink>
+          }
+        />
       ) : (
-        <AppCard className="space-y-4 p-4">
-          <p className="text-xs text-muted-foreground">{t("optional.subtitle")}</p>
+        <div className="space-y-5">
+          <p className="text-sm text-fp-ink-2">{t("optional.subtitle")}</p>
 
-          <FpButton
-            type="button"
-            variant="secondary"
-            size="lg"
-            fullWidth
-            className="tap-target"
-            disabled={isBusy}
-            onClick={handleGoogleSignUp}
-          >
-            {activeAction === "google" ? t("actions.connecting") : t("actions.continueWithGoogle")}
-          </FpButton>
+          <form onSubmit={handlePasswordSignUp} className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="email" className="block text-sm font-semibold text-fp-ink">
+                {t("fields.email")}
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  if (error) {
+                    setError(null);
+                  }
+                }}
+                placeholder={t("signUp.emailPlaceholder")}
+                className={authInputClassName}
+                autoComplete="email"
+                inputMode="email"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="password" className="block text-sm font-semibold text-fp-ink">
+                {t("fields.password")}
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  if (error) {
+                    setError(null);
+                  }
+                }}
+                placeholder={t("signUp.passwordPlaceholder")}
+                className={authInputClassName}
+                autoComplete="new-password"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="confirm-password" className="block text-sm font-semibold text-fp-ink">
+                {t("fields.confirmPassword")}
+              </label>
+              <input
+                id="confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(event) => {
+                  setConfirmPassword(event.target.value);
+                  if (error) {
+                    setError(null);
+                  }
+                }}
+                placeholder={t("signUp.confirmPasswordPlaceholder")}
+                className={authInputClassName}
+                autoComplete="new-password"
+              />
+            </div>
 
-          <div className="flex items-center gap-2">
-            <div className="h-px flex-1 bg-fp-border" />
-            <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              {t("common.or")}
-            </span>
-            <div className="h-px flex-1 bg-fp-border" />
-          </div>
-
-          <form onSubmit={handlePasswordSignUp} className="space-y-3">
-            <label htmlFor="email" className="text-xs font-medium text-muted-foreground">
-              {t("fields.email")}
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(event) => {
-                setEmail(event.target.value);
-                if (error) {
-                  setError(null);
-                }
-              }}
-              placeholder={t("signUp.emailPlaceholder")}
-              className={teamTextInputClassName}
-              autoComplete="email"
-              inputMode="email"
-            />
-
-            <label htmlFor="password" className="text-xs font-medium text-muted-foreground">
-              {t("fields.password")}
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(event) => {
-                setPassword(event.target.value);
-                if (error) {
-                  setError(null);
-                }
-              }}
-              placeholder={t("signUp.passwordPlaceholder")}
-              className={teamTextInputClassName}
-              autoComplete="new-password"
-            />
-
-            <label htmlFor="confirm-password" className="text-xs font-medium text-muted-foreground">
-              {t("fields.confirmPassword")}
-            </label>
-            <input
-              id="confirm-password"
-              type="password"
-              value={confirmPassword}
-              onChange={(event) => {
-                setConfirmPassword(event.target.value);
-                if (error) {
-                  setError(null);
-                }
-              }}
-              placeholder={t("signUp.confirmPasswordPlaceholder")}
-              className={teamTextInputClassName}
-              autoComplete="new-password"
-            />
-
-            <FpButton
-              type="submit"
-              variant="primary"
-              size="md"
-              className="tap-target"
-              fullWidth
-              disabled={isBusy}
-            >
+            <Button type="submit" variant="primary" block disabled={isBusy}>
               {activeAction === "password" ? t("actions.creatingAccount") : t("actions.signUpWithEmail")}
-            </FpButton>
+            </Button>
           </form>
 
-          <p className="text-xs text-muted-foreground">{t("signUp.magicAlternative")}</p>
-          <Link href={{ pathname: "/auth/sign-in", query: { next: nextPath } }} className="inline-flex min-h-11 items-center text-xs text-fp-ink underline decoration-fp-lime decoration-2 underline-offset-4">
-            {t("actions.useMagicLinkInstead")}
-          </Link>
+          {error ? (
+            <Notice tone="error" testId="sign-up-error">
+              {error}
+            </Notice>
+          ) : null}
+          {message ? (
+            <Notice tone="success" testId="sign-up-message">
+              {message}
+            </Notice>
+          ) : null}
 
-          {error ? <p className="text-xs text-fp-danger-text">{error}</p> : null}
-          {message ? <p className="text-xs text-fp-ok-text">{message}</p> : null}
-
-          <div className="space-y-2 text-xs text-muted-foreground">
-            <p>{t("signUp.haveAccount")}</p>
-            <Link href={{ pathname: "/auth/sign-in", query: { next: nextPath } }} className="inline-flex min-h-11 items-center text-fp-ink underline decoration-fp-lime decoration-2 underline-offset-4">
-              {t("actions.goToSignIn")}
-            </Link>
+          <div className="flex items-center gap-3" aria-hidden>
+            <div className="h-px flex-1 bg-fp-rule" />
+            <span className="text-[13px] font-semibold uppercase tracking-[0.06em] text-fp-ink-2">
+              {t("common.or")}
+            </span>
+            <div className="h-px flex-1 bg-fp-rule" />
           </div>
 
-          <Link href={nextPath} className="inline-flex min-h-11 items-center text-xs text-muted-foreground underline underline-offset-2">
-            {t("actions.continueAsGuest")}
-          </Link>
-        </AppCard>
+          <Button variant="secondary" block disabled={isBusy} onClick={handleGoogleSignUp}>
+            {activeAction === "google" ? t("actions.connecting") : t("actions.continueWithGoogle")}
+          </Button>
+
+          <ul role="list" className="space-y-1 text-sm text-fp-ink-2">
+            <li>
+              {t("signUp.magicAlternative")}{" "}
+              <Link href={{ pathname: "/auth/sign-in", query: { next: nextPath } }} className={linkClassName}>
+                {t("actions.useMagicLinkInstead")}
+              </Link>
+            </li>
+            <li>
+              {t("signUp.haveAccount")}{" "}
+              <Link href={{ pathname: "/auth/sign-in", query: { next: nextPath } }} className={linkClassName}>
+                {t("actions.goToSignIn")}
+              </Link>
+            </li>
+            <li>
+              <Link href={nextPath} className={linkClassName}>
+                {t("actions.continueAsGuest")}
+              </Link>
+            </li>
+          </ul>
+        </div>
       )}
     </PageShell>
   );

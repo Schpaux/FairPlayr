@@ -2,6 +2,7 @@ import { useTranslations } from "next-intl";
 import { ALL_FORMATS, FORMAT_FIELD_COUNT } from "@/domain/match";
 import type { MatchFormat } from "@/domain/match";
 import { cn } from "@/lib/utils";
+import { SelectedLabel } from "@/components/match/SelectedLabel";
 
 interface FormatSelectorProps {
   value: MatchFormat;
@@ -36,7 +37,13 @@ export function FormatSelector({
                 : "border-fp-control-line bg-fp-surface text-fp-ink"
             )}
           >
-            <span className="text-base font-bold leading-none tracking-tight">{format}</span>
+            {/* Check left of the label (C1-F3); the tile keeps its size. */}
+            <SelectedLabel
+              selected={isSelected}
+              className="text-base font-bold leading-none tracking-tight"
+            >
+              {format}
+            </SelectedLabel>
             {/* 13px is the type floor (DESIGN.md §3). */}
             <span className={cn("text-[13px] font-medium leading-none", !isSelected && "text-fp-ink-2")}>
               {t("fieldCount", { count: fieldCount })}

@@ -1,41 +1,49 @@
 "use client";
 
+import { Cloud, CloudOff, TriangleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { ListRow } from "@/components/ui/primitives";
+import { StatusValue } from "@/components/layout/StatusValue";
 
+export type SyncStatus = "cloud" | "local" | "attention";
+
+export function resolveSyncStatus(mode: "guest-local" | "cloud", hasError: boolean): SyncStatus {
+  if (hasError) return "attention";
+  return mode === "cloud" ? "cloud" : "local";
+}
+
+/**
+ * The one sync-status row (C5, UI-SETTINGS-01), used by the profile sheet and
+ * Settings. A `ListRow`, so it sits inside a `ListGroup`. The status is a
+ * glyph plus a word, never colour alone; working locally and errors use
+ * `warn-text`, synced is quiet `ink-2` (normal states are silent).
+ */
 export function SyncStatusRow({
   mode,
   hasError,
+  testId = "sync-status-row",
 }: {
   mode: "guest-local" | "cloud";
   hasError: boolean;
+  testId?: string;
 }) {
   const t = useTranslations("profileMenu.sync");
-
-  const status = hasError ? "attention" : mode === "cloud" ? "cloud" : "local";
+  const status = resolveSyncStatus(mode, hasError);
 
   return (
-    <div className="flex items-center justify-between rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2">
-      <span className="text-xs font-medium text-foreground">{t("title")}</span>
-      <span
-        className={
-          status === "cloud"
-            ? "inline-flex items-center gap-1 text-xs font-medium text-fp-ok-text"
-            : status === "attention"
-              ? "inline-flex items-center gap-1 text-xs font-medium text-fp-warn-text"
-              : "inline-flex items-center gap-1 text-xs font-medium text-fp-warn-text"
-        }
-      >
-        <span
-          className={
-            status === "cloud"
-              ? "h-1.5 w-1.5 rounded-full bg-fp-ok-text"
-              : status === "attention"
-                ? "h-1.5 w-1.5 rounded-full bg-fp-warn-text"
-                : "h-1.5 w-1.5 rounded-full bg-fp-warn-text"
-          }
-        />
-        {status === "cloud" ? t("cloud") : status === "attention" ? t("attention") : t("local")}
-      </span>
-    </div>
+    <ListRow
+      testId={testId}
+      label={t("title")}
+      trailing={
+        <StatusValue
+          tone={status === "cloud" ? "quiet" : "warn"}
+          icon={status === "cloud" ? Cloud : status === "attention" ? TriangleAlert : CloudOff}
+          testId={`${testId}-value`}
+          status={status}
+        >
+          {t(status)}
+        </StatusValue>
+      }
+    />
   );
 }

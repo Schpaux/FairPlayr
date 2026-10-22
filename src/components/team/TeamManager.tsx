@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowUpDown, CheckCircle2, ChevronDown, ChevronUp, Users } from "lucide-react";
 import { hasPlayerNameConflict } from "@/domain/team";
@@ -19,8 +19,12 @@ import { Link } from "@/i18n/navigation";
 import { useSpondStatus } from "@/components/team/useSpondStatus";
 import { MatchDefaultsEditor } from "@/components/team/MatchDefaultsEditor";
 
+/** Anchor for links to the team's match defaults (`/team#team-defaults`). */
+export const TEAM_DEFAULTS_ID = "team-defaults";
+
 export function TeamManager() {
   const t = useTranslations("team");
+  const tDefaults = useTranslations("team.matchDefaults");
   const common = useTranslations("common");
   const workspace = useTeamWorkspace();
 
@@ -58,6 +62,56 @@ export function TeamManager() {
   const [status, setStatus] = useState("");
 
   const spondConnected = useSpondStatus(workspace.activeTeam?.id ?? null, workspace.mode);
+
+  // B1 (C5): /team#team-defaults, from Settings, opens the team settings and
+  // brings the match defaults into view with focus on their heading. The hash
+  // is an external value, so it is read in the mount effect (after commit, when
+  // the router has updated the URL) and on every `hashchange`. A 0 ms timer here
+  // disturbed the edit sheet's focus order in tests.
+  const teamDefaultsRef = useRef<HTMLElement | null>(null);
+  const [teamDefaultsRequest, setTeamDefaultsRequest] = useState(0);
+  const handledTeamDefaultsRequest = useRef(0);
+
+  useEffect(() => {
+    const openFromHash = () => {
+      if (window.location.hash !== `#${TEAM_DEFAULTS_ID}`) return;
+      setShowTeamSettings(true);
+      setIsEditingTeamName(false);
+      setTeamDefaultsRequest((request) => request + 1);
+    };
+    openFromHash();
+    window.addEventListener("hashchange", openFromHash);
+    return () => {
+      window.removeEventListener("hashchange", openFromHash);
+    };
+  }, []);
+
+  // The panel animates its height open, so the section is only measured once
+  // that animation has settled (`onAnimationComplete` below); when the panel is
+  // already open the effect reveals it straight away. The effect runs after
+  // every render until the section exists (the team may still be loading when
+  // the hash arrives), then once per request.
+  const teamSettingsSettled = useRef(false);
+  const revealTeamDefaults = useCallback(() => {
+    const section = teamDefaultsRef.current;
+    if (teamDefaultsRequest === handledTeamDefaultsRequest.current || !section) return;
+    handledTeamDefaultsRequest.current = teamDefaultsRequest;
+
+    const reduceMotion =
+      typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (typeof section.scrollIntoView === "function") {
+      section.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    }
+    // The editor's own heading when it has one, otherwise the section itself.
+    const heading = section.querySelector<HTMLElement>("h2, h3, h4");
+    const target = heading ?? section;
+    if (heading && !heading.hasAttribute("tabindex")) heading.setAttribute("tabindex", "-1");
+    target.focus({ preventScroll: true });
+  }, [teamDefaultsRequest]);
+
+  useEffect(() => {
+    if (teamSettingsSettled.current) revealTeamDefaults();
+  });
 
   const team = workspace.activeTeam;
 
@@ -254,7 +308,7 @@ export function TeamManager() {
           <motion.div variants={variants.fadeInUp}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="mb-0.5 text-[13px] font-semibold uppercase tracking-[0.06em] text-fp-ink-2">
                   {t("activeTeamLabel")}
                 </p>
                 <h1 className="text-2xl font-bold tracking-tight text-foreground [overflow-wrap:anywhere]">
@@ -287,7 +341,7 @@ export function TeamManager() {
                       key={candidate.id}
                       type="button"
                       onClick={() => void workspace.setActiveTeam(candidate.id)}
-                      className={`tap-target rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                      className={`tap-target rounded-full border px-3 py-1 text-sm font-semibold transition ${
                         isActive
                           ? "border-fp-lime bg-fp-lime text-fp-on-lime"
                           : "border-fp-border bg-fp-surface-2 text-muted-foreground"
@@ -312,6 +366,13 @@ export function TeamManager() {
                 transition={{ duration: 0.2, ease: "easeInOut" }}
                 style={{ overflow: "hidden" }}
                 variants={variants.fadeInUp}
+                onAnimationStart={() => {
+                  teamSettingsSettled.current = false;
+                }}
+                onAnimationComplete={() => {
+                  teamSettingsSettled.current = true;
+                  revealTeamDefaults();
+                }}
               >
                 <AppCard className="divide-y divide-fp-border overflow-hidden p-0">
                   {/* Rename */}
@@ -331,7 +392,7 @@ export function TeamManager() {
                     ) : (
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-fp-ink-2">
                             {t("teamCard.label")}
                           </p>
                           <p className="text-sm font-medium text-foreground">{team.name}</p>
@@ -350,7 +411,7 @@ export function TeamManager() {
 
                   {/* Create new team */}
                   <div className="p-4">
-                    <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    <p className="mb-3 text-[13px] font-semibold uppercase tracking-[0.06em] text-fp-ink-2">
                       {t("actions.createTeam")}
                     </p>
                     <TeamNameForm
@@ -363,10 +424,16 @@ export function TeamManager() {
                     />
                   </div>
 
-                  {/* Match defaults */}
-                  <div className="p-4">
+                  {/* Match defaults. Settings links here (B1, C5). */}
+                  <section
+                    id={TEAM_DEFAULTS_ID}
+                    ref={teamDefaultsRef}
+                    tabIndex={-1}
+                    aria-label={tDefaults("title")}
+                    className="scroll-mt-20 p-4 outline-none"
+                  >
                     <MatchDefaultsEditor teamId={team.id} />
-                  </div>
+                  </section>
 
                   {/* Delete team – danger zone. Destructive only inside its
                       confirmation (DESIGN.md §5.7). */}
@@ -422,15 +489,15 @@ export function TeamManager() {
                         type="button"
                         onClick={() => setShowSpondInfo((s) => !s)}
                         aria-expanded={showSpondInfo}
-                        className="tap-target flex items-center gap-1.5 rounded-full border border-fp-spond-border/60 bg-fp-spond-soft px-2.5 py-1 text-[11px] font-semibold text-fp-spond-foreground transition-opacity hover:opacity-80"
+                        className="tap-target flex items-center gap-1.5 rounded-full border border-fp-spond-border/60 bg-fp-spond-soft px-3 py-1 text-[13px] font-semibold text-fp-spond-foreground transition-opacity hover:opacity-80"
                       >
-                        <CheckCircle2 size={11} className="shrink-0" />
+                        <CheckCircle2 size={16} strokeWidth={1.75} className="shrink-0" aria-hidden />
                         {t("players.spondSynced")}
                       </button>
                     ) : (
                       <Link
                         href="/settings"
-                        className="tap-target flex items-center gap-1.5 rounded-full border border-fp-border bg-fp-surface-2 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground"
+                        className="tap-target flex items-center gap-1.5 rounded-full border border-fp-border bg-fp-surface-2 px-3 py-1 text-[13px] font-semibold text-fp-ink-2"
                       >
                         {t("players.spondConnect")}
                       </Link>
@@ -450,7 +517,7 @@ export function TeamManager() {
                     transition={{ duration: 0.15, ease: "easeInOut" }}
                     style={{ overflow: "hidden" }}
                   >
-                    <p className="rounded-xl border border-fp-spond-border/40 bg-fp-spond-soft px-3 py-2.5 text-xs text-fp-spond-foreground">
+                    <p className="rounded-xl border border-fp-spond-border/40 bg-fp-spond-soft px-3 py-2.5 text-sm text-fp-spond-foreground">
                       {t("players.spondSyncedInfo")}
                     </p>
                   </motion.div>

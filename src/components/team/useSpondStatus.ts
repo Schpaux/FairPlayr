@@ -36,3 +36,54 @@ export function useSpondStatus(
 
   return connected;
 }
+
+/**
+ * UI-SPOND-01: the Spond connection as one of five states, so a status line
+ * never says "not connected" while it is still checking or when the check
+ * failed.
+ * - `guest`: not signed in to the cloud, or no team: there is nothing to check.
+ * - `checking`: the status request for this team is in flight.
+ * - `connected` / `disconnected`: the server's answer.
+ * - `unavailable`: the request failed (non-ok response, bad body or no network).
+ */
+export type SpondConnectionState = "checking" | "connected" | "disconnected" | "unavailable" | "guest";
+
+type ResolvedSpondState = Exclude<SpondConnectionState, "checking" | "guest">;
+
+export function useSpondConnection(teamId: string | null, mode: TeamStorageMode): SpondConnectionState {
+  // The answer is stored with the team it belongs to, so a team switch reads
+  // as "checking" until its own answer arrives (no state reset in the effect).
+  const [result, setResult] = useState<{ teamId: string; state: ResolvedSpondState } | null>(null);
+  const active = mode === "cloud" && !!teamId;
+
+  useEffect(() => {
+    if (!active || !teamId) return;
+
+    let cancelled = false;
+    void (async () => {
+      let state: ResolvedSpondState;
+      try {
+        const response = await fetch(`/api/integrations/spond/status?teamId=${encodeURIComponent(teamId)}`, {
+          method: "GET",
+        });
+        if (!response.ok) {
+          state = "unavailable";
+        } else {
+          const data = (await response.json()) as { connected?: boolean };
+          state = data.connected === true ? "connected" : "disconnected";
+        }
+      } catch {
+        state = "unavailable";
+      }
+      if (!cancelled) setResult({ teamId, state });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [active, teamId]);
+
+  if (!active) return "guest";
+  if (!result || result.teamId !== teamId) return "checking";
+  return result.state;
+}

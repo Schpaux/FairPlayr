@@ -64,7 +64,12 @@ export function PlayerQuickAddForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-2">
-      <label className="sr-only" htmlFor={inputId}>
+      {/* Visible Label (DESIGN.md §3, 13px caps), so the field keeps its name
+          while typing; the placeholder is only an example (C3-F2). */}
+      <label
+        className="block text-[13px] font-semibold uppercase tracking-[0.06em] text-fp-ink-2"
+        htmlFor={inputId}
+      >
         {label}
       </label>
       <div className="flex items-center gap-2">

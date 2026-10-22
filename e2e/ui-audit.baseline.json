@@ -116,104 +116,24 @@
       "light": {}
     },
     "settings": {
-      "dark": {
-        "console": {
-          "error: A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client": 1
-        },
-        "smallText": {
-          "button \"Lys\"": 1,
-          "button \"Mørk\"": 1,
-          "button \"System\"": 1,
-          "p \"Bruk FairPlayr uten innlogging, eller lo\"": 1,
-          "p \"Du er i lokal modus. Logg inn for synkro\"": 1,
-          "p \"Konto\"": 1,
-          "p \"Lagring og synkronisering\"": 1,
-          "p \"Språk\"": 1,
-          "p \"Utseende\"": 1,
-          "span \"✓\"": 1,
-          "span \"Jobber lokalt\"": 1
-        }
-      },
-      "light": {
-        "console": {
-          "error: A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client": 1
-        },
-        "smallText": {
-          "button \"Lys\"": 1,
-          "button \"Mørk\"": 1,
-          "button \"System\"": 1,
-          "p \"Bruk FairPlayr uten innlogging, eller lo\"": 1,
-          "p \"Du er i lokal modus. Logg inn for synkro\"": 1,
-          "p \"Konto\"": 1,
-          "p \"Lagring og synkronisering\"": 1,
-          "p \"Språk\"": 1,
-          "p \"Utseende\"": 1,
-          "span \"✓\"": 1,
-          "span \"Jobber lokalt\"": 1
-        }
-      }
+      "dark": {},
+      "light": {}
     },
     "setup": {
       "dark": {},
       "light": {}
     },
     "signin": {
-      "dark": {
-        "smallText": {
-          "label \"E-post\"": 1,
-          "p \"Vi sender deg en innloggingslenke på e-p\"": 1,
-          "span \"ELLER\"": 1
-        }
-      },
-      "light": {
-        "smallText": {
-          "label \"E-post\"": 1,
-          "p \"Vi sender deg en innloggingslenke på e-p\"": 1,
-          "span \"ELLER\"": 1
-        }
-      }
+      "dark": {},
+      "light": {}
     },
     "signup": {
-      "dark": {
-        "smallText": {
-          "a \"Bruk magisk lenke i stedet\"": 1,
-          "a \"Fortsett som gjest\"": 1,
-          "a \"Gå til innlogging\"": 1,
-          "label \"Bekreft passord\"": 1,
-          "label \"E-post\"": 1,
-          "label \"Passord\"": 1,
-          "p \"Har du allerede konto?\"": 1,
-          "p \"Logg inn for å synkronisere data på tver\"": 1,
-          "p \"Vil du heller slippe passord?\"": 1,
-          "span \"eller\"": 1
-        }
-      },
-      "light": {
-        "smallText": {
-          "a \"Bruk magisk lenke i stedet\"": 1,
-          "a \"Fortsett som gjest\"": 1,
-          "a \"Gå til innlogging\"": 1,
-          "label \"Bekreft passord\"": 1,
-          "label \"E-post\"": 1,
-          "label \"Passord\"": 1,
-          "p \"Har du allerede konto?\"": 1,
-          "p \"Logg inn for å synkronisere data på tver\"": 1,
-          "p \"Vil du heller slippe passord?\"": 1,
-          "span \"eller\"": 1
-        }
-      }
+      "dark": {},
+      "light": {}
     },
     "team": {
-      "dark": {
-        "smallText": {
-          "p \"Aktivt lag\"": 1
-        }
-      },
-      "light": {
-        "smallText": {
-          "p \"Aktivt lag\"": 1
-        }
-      }
+      "dark": {},
+      "light": {}
     }
   }
 }

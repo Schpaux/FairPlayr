@@ -7,6 +7,7 @@ import {
   type MatchDurationConfig,
 } from "@/domain/match";
 import { cn } from "@/lib/utils";
+import { SelectedLabel } from "@/components/match/SelectedLabel";
 
 interface DurationPickerProps {
   value: MatchDurationConfig;
@@ -36,7 +37,7 @@ export function DurationPicker({
           <button
             type="button"
             className={cn(
-              "min-h-11 rounded-full border px-3 text-base font-semibold tap-target transition-[transform,background-color,border-color,color] duration-(--fp-d-quick) ease-fp-out active:scale-[0.97]",
+              "min-h-11 rounded-full border px-6 text-base font-semibold tap-target transition-[transform,background-color,border-color,color] duration-(--fp-d-quick) ease-fp-out active:scale-[0.97]",
               currentHalves === 2
                 ? "border-fp-lime bg-fp-lime text-fp-on-lime"
                 : "border-fp-control-line bg-fp-surface text-fp-ink"
@@ -44,12 +45,12 @@ export function DurationPicker({
             aria-pressed={currentHalves === 2}
             onClick={() => onHalvesChange(2)}
           >
-            {t("halvesOn")}
+            <SelectedLabel selected={currentHalves === 2}>{t("halvesOn")}</SelectedLabel>
           </button>
           <button
             type="button"
             className={cn(
-              "min-h-11 rounded-full border px-3 text-base font-semibold tap-target transition-[transform,background-color,border-color,color] duration-(--fp-d-quick) ease-fp-out active:scale-[0.97]",
+              "min-h-11 rounded-full border px-6 text-base font-semibold tap-target transition-[transform,background-color,border-color,color] duration-(--fp-d-quick) ease-fp-out active:scale-[0.97]",
               currentHalves === 1
                 ? "border-fp-lime bg-fp-lime text-fp-on-lime"
                 : "border-fp-control-line bg-fp-surface text-fp-ink"
@@ -57,7 +58,7 @@ export function DurationPicker({
             aria-pressed={currentHalves === 1}
             onClick={() => onHalvesChange(1)}
           >
-            {t("halvesOff")}
+            <SelectedLabel selected={currentHalves === 1}>{t("halvesOff")}</SelectedLabel>
           </button>
         </div>
       </div>
@@ -76,16 +77,18 @@ export function DurationPicker({
               onClick={() => onPresetChange(presetId)}
               aria-pressed={isSelected}
               className={cn(
-                "min-h-11 min-w-[72px] rounded-full border px-3 text-base font-semibold tap-target transition-[transform,background-color,border-color,color] duration-(--fp-d-quick) ease-fp-out active:scale-[0.97]",
+                "min-h-11 min-w-[72px] rounded-full border px-6 text-base font-semibold tap-target transition-[transform,background-color,border-color,color] duration-(--fp-d-quick) ease-fp-out active:scale-[0.97]",
                 isSelected
                   ? "border-fp-lime bg-fp-lime text-fp-on-lime"
                   : "border-fp-control-line bg-fp-surface text-fp-ink"
               )}
             >
-              {t("presetLabel", {
-                halves: currentHalves,
-                minutes: minutesLabel,
-              })}
+              <SelectedLabel selected={isSelected}>
+                {t("presetLabel", {
+                  halves: currentHalves,
+                  minutes: minutesLabel,
+                })}
+              </SelectedLabel>
             </button>
           );
         })}

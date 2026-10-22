@@ -1,23 +1,24 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useId, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { AppCard } from "@/components/ui/AppCard";
-import { FpButton } from "@/components/ui/FpButton";
-import { ButtonLink } from "@/components/ui/primitives";
-import { teamTextInputClassName } from "@/components/team/styles";
+import { Button, ButtonLink, Notice } from "@/components/ui/primitives";
+import { authInputClassName } from "@/components/auth/authStyles";
 import { useAuth } from "@/components/providers/AuthProvider";
 
 type ActiveAction = "google" | "email" | null;
 
 function GoogleMark() {
   return (
+    // Google's own mark on a white disc (brand colours; the one allowed
+    // hard-coded colour, see designGuard.test.ts).
     <span
       aria-hidden
-      className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white"
+      className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white"
     >
       <svg viewBox="0 0 24 24" className="h-4 w-4" role="presentation">
         <path
@@ -65,6 +66,7 @@ export default function SignInPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeAction, setActiveAction] = useState<ActiveAction>(null);
+  const helpId = useId();
 
   const nextPath = useMemo(() => {
     const next = searchParams.get("next");
@@ -139,76 +141,93 @@ export default function SignInPage() {
   };
 
   return (
-    <PageShell className="space-y-4">
-      <SectionHeader title={t("signIn.title")} subtitle={t("signIn.subtitle")} />
+    <PageShell className="space-y-6">
+      <SectionHeader title={t("signIn.title")} subtitle={t("signIn.subtitle")} className="mb-0" />
 
       {status === "authenticated" ? (
-        <AppCard className="space-y-3 p-4">
-          <p className="text-sm font-semibold text-foreground">{t("signIn.alreadySignedIn")}</p>
-          <ButtonLink href="/team" variant="secondary" size="sm">
-            {t("signIn.goToTeam")}
-          </ButtonLink>
-        </AppCard>
+        <Notice
+          tone="success"
+          announce="off"
+          title={t("signIn.alreadySignedIn")}
+          action={
+            <ButtonLink href="/team" size="sm">
+              {t("signIn.goToTeam")}
+            </ButtonLink>
+          }
+        />
       ) : (
-        <AppCard className="space-y-4 p-4">
+        <div className="space-y-5">
           <form onSubmit={handleEmailSubmit} className="space-y-3">
-            <label htmlFor="magic-email" className="text-xs font-medium text-muted-foreground">
-              {t("signIn.emailLabel")}
-            </label>
-            <input
-              id="magic-email"
-              type="email"
-              value={email}
-              onChange={(event) => {
-                setEmail(event.target.value);
-                if (error) {
-                  setError(null);
-                }
-              }}
-              placeholder={t("signIn.emailPlaceholder")}
-              className={teamTextInputClassName}
-              autoComplete="email"
-              inputMode="email"
-            />
+            <div className="space-y-2">
+              <label htmlFor="magic-email" className="block text-sm font-semibold text-fp-ink">
+                {t("signIn.emailLabel")}
+              </label>
+              <input
+                id="magic-email"
+                type="email"
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  if (error) {
+                    setError(null);
+                  }
+                }}
+                placeholder={t("signIn.emailPlaceholder")}
+                className={authInputClassName}
+                autoComplete="email"
+                inputMode="email"
+                aria-describedby={helpId}
+                aria-invalid={error ? true : undefined}
+              />
+              <p id={helpId} className="text-sm text-fp-ink-2">
+                {t("signIn.helpText")}
+              </p>
+            </div>
 
-            <FpButton
-              type="submit"
-              variant="primary"
-              size="md"
-              className="tap-target"
-              fullWidth
-              disabled={!canSubmit}
-            >
+            <Button type="submit" variant="primary" block disabled={!canSubmit}>
               {activeAction === "email" ? t("signIn.submitting") : t("signIn.submit")}
-            </FpButton>
-
-            <p className="text-xs text-muted-foreground">{t("signIn.helpText")}</p>
+            </Button>
           </form>
 
-          <div className="flex items-center gap-2">
-            <div className="h-px flex-1 bg-fp-border" />
-            <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              {t("signIn.separator")}
+          {error ? (
+            <Notice tone="error" testId="sign-in-error">
+              {error}
+            </Notice>
+          ) : null}
+          {message ? (
+            <Notice tone="success" testId="sign-in-message">
+              {message}
+            </Notice>
+          ) : null}
+
+          <div className="flex items-center gap-3" aria-hidden>
+            <div className="h-px flex-1 bg-fp-rule" />
+            <span className="text-[13px] font-semibold uppercase tracking-[0.06em] text-fp-ink-2">
+              {t("common.or")}
             </span>
-            <div className="h-px flex-1 bg-fp-border" />
+            <div className="h-px flex-1 bg-fp-rule" />
           </div>
 
-          <FpButton
-            type="button"
+          <Button
             variant="secondary"
-            size="lg"
-            fullWidth
-            className="tap-target"
+            block
+            icon={<GoogleMark />}
             disabled={isBusy}
             onClick={handleGoogleSignIn}
           >
-            <GoogleMark />
             {activeAction === "google" ? t("actions.connecting") : t("actions.continueWithGoogle")}
-          </FpButton>
+          </Button>
 
-          {error ? <p className="text-xs text-fp-danger-text">{error}</p> : null}
-          {message ? <p className="text-xs text-fp-ok-text">{message}</p> : null}
-        </AppCard>
+          <p className="text-sm text-fp-ink-2">
+            {t("signIn.noAccount")}{" "}
+            <Link
+              href={{ pathname: "/auth/sign-up", query: { next: nextPath } }}
+              className="inline-flex min-h-11 items-center font-medium text-fp-ink underline decoration-fp-lime decoration-2 underline-offset-4"
+            >
+              {t("actions.goToSignUp")}
+            </Link>
+          </p>
+        </div>
       )}
     </PageShell>
   );

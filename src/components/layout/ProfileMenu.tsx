@@ -1,19 +1,19 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
-import { useTheme } from "next-themes";
-import { Link, usePathname, useRouter } from "@/i18n/navigation";
-import { routing } from "@/i18n/routing";
-import { localeConfig } from "@/lib/locales";
+import { useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
+import { CircleAlert, CircleCheck, CircleDashed, CircleOff } from "lucide-react";
+import { usePathname } from "@/i18n/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
 import { UserAvatar } from "@/components/layout/UserAvatar";
 import { SyncStatusRow } from "@/components/layout/SyncStatusRow";
-import { useSpondStatus } from "@/components/team/useSpondStatus";
-import { Button, ButtonLink, Sheet } from "@/components/ui/primitives";
+import { StatusValue } from "@/components/layout/StatusValue";
+import { useSpondConnection, type SpondConnectionState } from "@/components/team/useSpondStatus";
+import { SignOutConfirmSheet } from "@/components/auth/SignOutConfirmSheet";
+import { Button, ButtonLink, ListGroup, ListRow, Sheet } from "@/components/ui/primitives";
 
-function readProfileMetadata(user: ReturnType<typeof useAuth>["user"]) {
+export function readProfileMetadata(user: ReturnType<typeof useAuth>["user"]) {
   const metadata = user?.user_metadata as Record<string, unknown> | undefined;
   const name =
     (typeof metadata?.full_name === "string" ? metadata.full_name : null) ??
@@ -28,32 +28,73 @@ function readProfileMetadata(user: ReturnType<typeof useAuth>["user"]) {
   };
 }
 
+const SPOND_GLYPHS = {
+  checking: CircleDashed,
+  connected: CircleCheck,
+  disconnected: CircleOff,
+  unavailable: CircleAlert,
+} as const;
+
+/** Spond status as one row: checking, connected, not connected, could not check. */
+function SpondStatusRow({ state }: { state: Exclude<SpondConnectionState, "guest"> }) {
+  const t = useTranslations("profileMenu.spond");
+
+  return (
+    <ListRow
+      testId="spond-status-row"
+      label={t("title")}
+      trailing={
+        <StatusValue
+          icon={SPOND_GLYPHS[state]}
+          tone={state === "connected" ? "ok" : state === "unavailable" ? "warn" : "quiet"}
+          status={state}
+          testId="spond-status-value"
+        >
+          {t(state)}
+        </StatusValue>
+      }
+    />
+  );
+}
+
+/**
+ * The profile sheet (C5, owner decision B2): account, sync status, Spond
+ * status and the way to Settings, plus sign-in or sign-out. Theme and
+ * language are chosen in Settings only.
+ */
 export function ProfileMenu() {
   const t = useTranslations("profileMenu");
   const authT = useTranslations("auth.actions");
   const settingsT = useTranslations("settings");
-  const { status, user, signOut } = useAuth();
+  const { status, user } = useAuth();
   const workspace = useTeamWorkspace();
-  const locale = useLocale();
   const pathname = usePathname();
-  const router = useRouter();
-  const { theme, setTheme } = useTheme();
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
-  const [open, setOpen] = useState(false);
-  const languageLabelId = useId();
-  const themeLabelId = useId();
+  // The sheet is open for the page it was opened on: following a link in it
+  // (Settings, Logg inn) changes the path and so closes it, with no effect.
+  const [openOn, setOpenOn] = useState<string | null>(null);
+  // Forget it once the path has changed, so coming back to that page does not
+  // reopen the sheet by itself (state adjusted during render, no effect).
+  if (openOn !== null && openOn !== pathname) setOpenOn(null);
+  const open = openOn !== null && openOn === pathname;
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
 
   const profile = useMemo(() => readProfileMetadata(user), [user]);
   const isGuest = status !== "authenticated";
 
-  const spondConnected = useSpondStatus(workspace.activeTeamId, workspace.mode);
+  const spondState = useSpondConnection(workspace.activeTeamId, workspace.mode);
+
+  const displayName = profile.name ?? (isGuest ? t("guestName") : user?.email ?? "-");
+  const secondary = isGuest ? t("guestEmail") : profile.name ? user?.email ?? null : null;
 
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
         className="tap-target inline-flex h-10 w-10 items-center justify-center rounded-full border border-fp-border bg-fp-surface-2"
-        onClick={() => setOpen(true)}
+        onClick={() => setOpenOn(pathname)}
         aria-label={t("open")}
       >
         <UserAvatar
@@ -69,19 +110,21 @@ export function ProfileMenu() {
           the avatar button, page behind inert, Escape and the scrim close it. */}
       <Sheet
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(next) => setOpenOn(next ? pathname : null)}
         title={t("title")}
         testId="profile-menu"
         actions={
           isGuest ? (
-            <ButtonLink href="/auth/sign-in" variant="primary" block onClick={() => setOpen(false)}>
+            <ButtonLink href="/auth/sign-in" variant="primary" block onClick={() => setOpenOn(null)}>
               {authT("signIn")}
             </ButtonLink>
           ) : (
             <Button
               block
               onClick={() => {
-                void signOut().finally(() => setOpen(false));
+                // One sheet at a time: the confirmation replaces this one.
+                setOpenOn(null);
+                setConfirmSignOut(true);
               }}
             >
               {authT("signOut")}
@@ -89,121 +132,39 @@ export function ProfileMenu() {
           )
         }
       >
-        <div className="flex items-center gap-3 rounded-xl border border-fp-border bg-fp-surface-2 p-3">
-          <UserAvatar
-            name={profile.name}
-            email={user?.email ?? null}
-            photoUrl={profile.photoUrl}
-            isGuest={isGuest}
-          />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-foreground">
-              {profile.name ?? (isGuest ? t("guestName") : user?.email ?? "-")}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {isGuest ? t("guestEmail") : user?.email ?? "-"}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-3 space-y-2">
-          <SyncStatusRow mode={workspace.mode} hasError={Boolean(workspace.error)} />
-
-          {workspace.mode === "cloud" ? (
-            <div className="flex items-center justify-between rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2">
-              <span className="text-xs font-medium text-foreground">Spond</span>
-              <span
-                className={
-                  spondConnected
-                    ? "inline-flex items-center gap-1 text-xs font-medium text-fp-ok-text"
-                    : "inline-flex items-center gap-1 text-xs font-medium text-muted-foreground"
-                }
-              >
-                <span
-                  className={
-                    spondConnected
-                      ? "h-1.5 w-1.5 rounded-full bg-fp-ok-text"
-                      : "h-1.5 w-1.5 rounded-full bg-muted-foreground/40"
-                  }
+        <div className="space-y-4">
+          <ListGroup aria-label={t("accountGroup")} testId="profile-menu-status">
+            <ListRow
+              testId="profile-account-row"
+              leading={
+                <UserAvatar
+                  name={profile.name}
+                  email={user?.email ?? null}
+                  photoUrl={profile.photoUrl}
+                  isGuest={isGuest}
                 />
-                {spondConnected ? t("spondConnected") : t("spondNotConnected")}
-              </span>
-            </div>
+              }
+              label={displayName}
+              description={secondary ?? undefined}
+            />
+            <SyncStatusRow mode={workspace.mode} hasError={Boolean(workspace.error)} />
+            {spondState !== "guest" ? <SpondStatusRow state={spondState} /> : null}
+          </ListGroup>
+
+          {/* On Settings itself the link would go nowhere (and not close the sheet). */}
+          {pathname !== "/settings" ? (
+            <ListGroup aria-label={settingsT("title")}>
+              <ListRow href="/settings" label={settingsT("title")} testId="profile-settings-link" />
+            </ListGroup>
           ) : null}
-
-          <Link
-            href="/settings"
-            className="tap-target flex items-center justify-between rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-sm font-medium text-foreground"
-            onClick={() => setOpen(false)}
-          >
-            <span>{settingsT("title")}</span>
-            <span className="text-xs text-muted-foreground">›</span>
-          </Link>
-        </div>
-
-        <div className="mt-4 space-y-3">
-          <div>
-            <p id={languageLabelId} className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {settingsT("language")}
-            </p>
-            <div role="group" aria-labelledby={languageLabelId} className="grid grid-cols-2 gap-2">
-              {routing.locales.map((l) => {
-                const meta = localeConfig[l as keyof typeof localeConfig];
-                const active = l === locale;
-                return (
-                  <button
-                    key={l}
-                    type="button"
-                    aria-pressed={active}
-                    lang={l}
-                    className={
-                      active
-                        ? "tap-target rounded-xl border border-fp-lime bg-fp-lime px-3 py-2 text-sm font-medium text-fp-on-lime"
-                        : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-3 py-2 text-sm font-medium text-muted-foreground"
-                    }
-                    onClick={() => {
-                      router.replace(pathname, { locale: l });
-                      setOpen(false);
-                    }}
-                  >
-                    {meta?.full ?? l}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div>
-            <p id={themeLabelId} className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {settingsT("theme")}
-            </p>
-            <div role="group" aria-labelledby={themeLabelId} className="grid grid-cols-3 gap-2">
-              {[
-                { value: "light", label: settingsT("lightMode") },
-                { value: "dark", label: settingsT("darkMode") },
-                { value: "system", label: settingsT("systemMode") },
-              ].map((option) => {
-                const active = theme === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    aria-pressed={active}
-                    className={
-                      active
-                        ? "tap-target rounded-xl border border-fp-lime bg-fp-lime px-2 py-2 text-xs font-semibold text-fp-on-lime"
-                        : "tap-target rounded-xl border border-fp-border bg-fp-surface-2 px-2 py-2 text-xs font-semibold text-muted-foreground"
-                    }
-                    onClick={() => setTheme(option.value)}
-                  >
-                    {option.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
         </div>
       </Sheet>
+
+      <SignOutConfirmSheet
+        open={confirmSignOut}
+        onOpenChange={setConfirmSignOut}
+        finalFocus={triggerRef}
+      />
     </>
   );
 }

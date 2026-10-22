@@ -1,67 +1,54 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { Link2, RefreshCcw } from "lucide-react";
+import { FormEvent, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { CircleAlert, CircleCheck, CircleDashed, Link2, LoaderCircle, RefreshCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { AppCard } from "@/components/ui/AppCard";
-import { FpButton } from "@/components/ui/FpButton";
-import { Button, ConfirmSheet } from "@/components/ui/primitives";
+import { Button, ConfirmSheet, ListGroup, ListRow, Notice } from "@/components/ui/primitives";
 import { teamTextInputClassName } from "@/components/team/styles";
+import { SpondImportSheet } from "@/components/team/spond/SpondImportSheet";
+import {
+  parseApiError,
+  type SpondEventOption,
+  type SpondGroupOption,
+  type SpondImportPreviewCandidate,
+  type SpondResetAction,
+} from "@/components/team/spond/types";
 import type { TeamStorageMode } from "@/lib/teamData/types";
-
-type SpondResetAction = "delete-imported-data" | "disconnect-and-delete";
-
-interface SpondGroupOption {
-  id: string;
-  name: string;
-  memberCount: number;
-}
-
-interface SpondEventOption {
-  externalId: string;
-  title: string;
-  startsAt: string | null;
-  location: string | null;
-  importedMatchId: string | null;
-}
-
-type SpondImportPreviewStatus = "already-imported" | "existing-player" | "new";
-type SpondImportClassification = "likely_player" | "likely_staff" | "unknown";
-
-interface SpondImportPreviewCandidate {
-  externalId: string;
-  name: string;
-  email: string | null;
-  alreadyImported: boolean;
-  existingPlayerId: string | null;
-  existingPlayerName: string | null;
-  status: SpondImportPreviewStatus;
-  importClassification: SpondImportClassification;
-  recommendedSelected: boolean;
-  selectable: boolean;
-}
+import { cn } from "@/lib/utils";
 
 interface SpondIntegrationCardProps {
   teamId: string;
   mode: TeamStorageMode;
   onImported: () => Promise<void>;
+  /**
+   * Active players on the team that came from Spond (`source === "spond"`).
+   * Shown in the «Fra Spond» summary and the delete confirmations; without it
+   * the copy says the same thing without a number.
+   */
+  spondPlayerCount?: number;
+  /** Hide the «Spond» heading when the surrounding sheet or page already names it. */
+  showTitle?: boolean;
 }
 
-function parseApiError(payload: unknown): { code: string; message: string } {
-  if (typeof payload !== "object" || payload === null) {
-    return { code: "UNKNOWN", message: "Ukjent feil." };
-  }
+/**
+ * Where a message is shown: next to the action that caused it (UI-SPOND-01).
+ * Every handler below keeps its requests and order; the anchor is only set by
+ * the control that started it.
+ */
+type FeedbackAnchor = "status" | "connect" | "groups" | "link" | "import" | "events" | "reset";
+type FeedbackSlot = "status" | "connect" | "group" | "import" | "sheet" | "events" | "danger";
 
-  const value = payload as Record<string, unknown>;
+const SECTION_TITLE = "text-[13px] font-semibold uppercase leading-tight tracking-[0.06em] text-fp-ink-2";
 
-  return {
-    code: typeof value.errorCode === "string" ? value.errorCode : "UNKNOWN",
-    message: typeof value.message === "string" ? value.message : "Ukjent feil.",
-  };
-}
-
-export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrationCardProps) {
+export function SpondIntegrationCard({
+  teamId,
+  mode,
+  onImported,
+  spondPlayerCount,
+  showTitle = true,
+}: SpondIntegrationCardProps) {
   const t = useTranslations("team.spond");
+  const unknownError = t("errors.unknown");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -89,6 +76,13 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
   // action is kept after closing so the copy does not change on the way out.
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [resetConfirmAction, setResetConfirmAction] = useState<SpondResetAction>("delete-imported-data");
+
+  // Presentation only (UI-SPOND-01).
+  const [feedbackAnchor, setFeedbackAnchor] = useState<FeedbackAnchor>("status");
+  const [importSheetOpen, setImportSheetOpen] = useState(false);
+  // The first status check, per team: until it answers the card says
+  // "checking", and if it fails it says so instead of "not connected".
+  const [statusCheck, setStatusCheck] = useState<{ teamId: string; ok: boolean } | null>(null);
 
   const selectedGroup = useMemo(
     () => groups.find((group) => group.id === selectedGroupId) ?? null,
@@ -147,7 +141,7 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
     const payload = (await response.json()) as unknown;
 
     if (!response.ok) {
-      const parsed = parseApiError(payload);
+      const parsed = parseApiError(payload, unknownError);
       throw new Error(mapErrorMessage(parsed.code, parsed.message));
     }
 
@@ -171,7 +165,7 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
     if (!data.teamLink) {
       setEvents([]);
     }
-  }, [mapErrorMessage, teamId]);
+  }, [mapErrorMessage, teamId, unknownError]);
 
   const formatSyncedAt = (value: string | null) => {
     if (!value) {
@@ -216,7 +210,7 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
       const payload = (await response.json()) as unknown;
 
       if (!response.ok) {
-        const parsed = parseApiError(payload);
+        const parsed = parseApiError(payload, unknownError);
         throw new Error(mapErrorMessage(parsed.code, parsed.message));
       }
 
@@ -238,7 +232,7 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
     } finally {
       setIsLoadingGroups(false);
     }
-  }, [linkedGroupId, mapErrorMessage, t]);
+  }, [linkedGroupId, mapErrorMessage, t, unknownError]);
 
   useEffect(() => {
     if (mode !== "cloud") {
@@ -248,7 +242,10 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
     void (async () => {
       try {
         await loadStatus();
+        setStatusCheck({ teamId, ok: true });
       } catch (cause) {
+        setStatusCheck({ teamId, ok: false });
+        setFeedbackAnchor("status");
         setError(cause instanceof Error ? cause.message : t("errors.generic"));
       }
     })();
@@ -263,6 +260,9 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
       try {
         await loadGroups();
       } catch (cause) {
+        // Only a failure moves the feedback here; a reload must not pull a
+        // notice away from the action that caused it.
+        setFeedbackAnchor("groups");
         setError(cause instanceof Error ? cause.message : t("errors.generic"));
       }
     })();
@@ -287,7 +287,7 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
       const payload = (await response.json()) as unknown;
 
       if (!response.ok) {
-        const parsed = parseApiError(payload);
+        const parsed = parseApiError(payload, unknownError);
         throw new Error(mapErrorMessage(parsed.code, parsed.message));
       }
 
@@ -328,7 +328,7 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
       const payload = (await response.json()) as unknown;
 
       if (!response.ok) {
-        const parsed = parseApiError(payload);
+        const parsed = parseApiError(payload, unknownError);
         throw new Error(mapErrorMessage(parsed.code, parsed.message));
       }
 
@@ -355,7 +355,7 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
       const payload = (await response.json()) as unknown;
 
       if (!response.ok) {
-        const parsed = parseApiError(payload);
+        const parsed = parseApiError(payload, unknownError);
         throw new Error(mapErrorMessage(parsed.code, parsed.message));
       }
 
@@ -403,9 +403,10 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
     setSelectedCandidateExternalIds([]);
   };
 
-  const handleConfirmSelectedImport = async () => {
+  /** Resolves `true` when the import went through (the sheet then closes). */
+  const handleConfirmSelectedImport = async (): Promise<boolean> => {
     if (selectedCandidateExternalIds.length === 0) {
-      return;
+      return false;
     }
 
     setError(null);
@@ -427,7 +428,7 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
       const payload = (await response.json()) as unknown;
 
       if (!response.ok) {
-        const parsed = parseApiError(payload);
+        const parsed = parseApiError(payload, unknownError);
         throw new Error(mapErrorMessage(parsed.code, parsed.message));
       }
 
@@ -455,14 +456,14 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
           total: data.totalSelected,
         })
       );
+      return true;
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t("errors.generic"));
+      return false;
     } finally {
       setIsImporting(false);
     }
   };
-
-  const selectedCount = selectedCandidateExternalIds.length;
 
   const handleSyncEvents = async () => {
     setError(null);
@@ -481,7 +482,7 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
       const payload = (await response.json()) as unknown;
 
       if (!response.ok) {
-        const parsed = parseApiError(payload);
+        const parsed = parseApiError(payload, unknownError);
         throw new Error(mapErrorMessage(parsed.code, parsed.message));
       }
 
@@ -532,7 +533,7 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
       const payload = (await response.json()) as unknown;
 
       if (!response.ok) {
-        const parsed = parseApiError(payload);
+        const parsed = parseApiError(payload, unknownError);
         throw new Error(mapErrorMessage(parsed.code, parsed.message));
       }
 
@@ -559,111 +560,234 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
     }
   };
 
+  const titleNode = showTitle ? (
+    <div className="space-y-1">
+      <h3 className="text-base font-semibold text-foreground">{t("title")}</h3>
+      <p className="text-sm text-fp-ink-2">{t("subtitle")}</p>
+    </div>
+  ) : null;
+
   if (mode !== "cloud") {
     return (
-      <AppCard className="space-y-2 p-4">
-        <h3 className="text-base font-semibold text-foreground">{t("title")}</h3>
-        <p className="text-xs text-muted-foreground">{t("guestModeHint")}</p>
-      </AppCard>
+      <div className="space-y-2" data-testid="spond-card">
+        {titleNode}
+        <p className="text-sm text-fp-ink-2">{t("guestModeHint")}</p>
+      </div>
     );
   }
 
+  // ── Presentation state ──────────────────────────────────────────────
+  const statusState: "checking" | "connected" | "disconnected" | "unavailable" = connected
+    ? "connected"
+    : statusCheck?.teamId !== teamId
+      ? "checking"
+      : statusCheck.ok
+        ? "disconnected"
+        : "unavailable";
+  const linked = connected && !!linkedGroupId;
+
+  const slotForAnchor = (anchor: FeedbackAnchor): FeedbackSlot => {
+    if (!connected) return anchor === "status" ? "status" : "connect";
+    switch (anchor) {
+      case "status":
+      case "connect":
+        return "status";
+      case "groups":
+      case "link":
+        return "group";
+      case "import":
+        if (importSheetOpen) return "sheet";
+        return linked ? "import" : "group";
+      case "events":
+        return linked ? "events" : "group";
+      case "reset":
+        return "danger";
+    }
+  };
+  const activeSlot = slotForAnchor(feedbackAnchor);
+  // "Nothing found" answers are information, not a success.
+  const neutralNotices = [t("noGroups"), t("preview.empty"), t("syncEventsNoChanges")];
+
+  const feedbackFor = (slot: FeedbackSlot): ReactNode => {
+    if (slot !== activeSlot || (!notice && !error)) return null;
+    return (
+      <div className="space-y-2">
+        {notice ? (
+          <Notice tone={neutralNotices.includes(notice) ? "info" : "success"} testId="spond-notice">
+            {notice}
+          </Notice>
+        ) : null}
+        {error ? (
+          <Notice tone="error" testId="spond-error">
+            {error}
+          </Notice>
+        ) : null}
+      </div>
+    );
+  };
+
+  const StatusGlyph =
+    statusState === "connected"
+      ? CircleCheck
+      : statusState === "checking"
+        ? LoaderCircle
+        : statusState === "unavailable"
+          ? CircleAlert
+          : CircleDashed;
+  const statusWord =
+    statusState === "connected"
+      ? t("statusConnected")
+      : statusState === "checking"
+        ? t("statusChecking")
+        : statusState === "unavailable"
+          ? t("statusUnavailable")
+          : t("statusDisconnected");
+
+  const statusDetails = connected
+    ? [
+        accountLabel ? t("accountValue", { value: accountLabel }) : null,
+        linkedGroupName ? t("linkedGroupName", { value: linkedGroupName }) : t("noLinkedGroup"),
+        linkedGroupName ? t("lastMembersSync", { value: formatSyncedAt(membersLastSyncedAt) }) : null,
+        linkedGroupName ? t("lastEventsSync", { value: formatSyncedAt(eventsLastSyncedAt) }) : null,
+      ].filter((line): line is string => line !== null)
+    : [];
+
+  const resetCopy = (action: SpondResetAction) => {
+    const base = action === "delete-imported-data" ? "deleteImportedConfirmText" : "disconnectConfirmText";
+    return spondPlayerCount === undefined
+      ? t(`cleanup.${base}NoCount`)
+      : t(`cleanup.${base}`, { count: spondPlayerCount });
+  };
+
   return (
-    <AppCard className="divide-y divide-fp-border overflow-hidden p-0">
-
-      {/* ── Section 1: Status & auth ─────────────────────────────── */}
-      <div className="space-y-3 p-4">
-        <div className="space-y-0.5">
-          <h3 className="text-sm font-semibold text-foreground">{t("title")}</h3>
-          <p className="text-xs text-muted-foreground">{t("subtitle")}</p>
-        </div>
-
-        {/* Connection status pill */}
-        <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 ${
-          connected
-            ? "border-fp-spond-border bg-fp-spond-soft"
-            : "border-fp-border bg-fp-surface-2"
-        }`}>
-          <span className={`h-2 w-2 rounded-full ${connected ? "bg-fp-spond" : "bg-muted-foreground/40"}`} />
-          <p className="text-xs font-medium text-foreground">
-            {connected ? t("statusConnected") : t("statusDisconnected")}
+    <div className="space-y-6" data-testid="spond-card">
+      {/* ── Status ─────────────────────────────────────────────── */}
+      <div className="space-y-3">
+        {titleNode}
+        <div
+          role="group"
+          aria-label={t("statusGroupLabel")}
+          aria-busy={statusState === "checking" || undefined}
+          className="rounded-[14px] border border-fp-rule bg-fp-surface px-3.5 py-3"
+          data-testid="spond-status"
+          data-state={statusState}
+        >
+          <p role="status" className="flex items-center gap-2 text-base font-semibold text-foreground">
+            <StatusGlyph
+              size={20}
+              strokeWidth={1.75}
+              aria-hidden
+              className={cn(
+                "shrink-0",
+                statusState === "connected" && "text-fp-ok-text",
+                statusState === "unavailable" && "text-fp-warn-text",
+                (statusState === "checking" || statusState === "disconnected") && "text-fp-ink-2"
+              )}
+            />
+            {statusWord}
           </p>
-          {connected && accountLabel ? (
-            <p className="ml-auto text-[11px] text-muted-foreground truncate">{accountLabel}</p>
+          {statusDetails.length > 0 ? (
+            <ul role="list" className="mt-1.5 space-y-0.5 pl-7 text-sm font-medium text-fp-ink-2">
+              {statusDetails.map((line) => (
+                <li key={line} className="[overflow-wrap:anywhere]">
+                  {line}
+                </li>
+              ))}
+            </ul>
           ) : null}
         </div>
+        {feedbackFor("status")}
+      </div>
 
-        {/* Login form — only when disconnected */}
-        {!connected && (
-          <form onSubmit={handleConnect} className="space-y-2">
-            <label className="sr-only" htmlFor="spond-email">{t("emailLabel")}</label>
+      {/* ── Not connected: sign in to Spond ─────────────────────── */}
+      {statusState === "disconnected" ? (
+        <form
+          onSubmit={(event) => {
+            setFeedbackAnchor("connect");
+            void handleConnect(event);
+          }}
+          className="space-y-3"
+        >
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-fp-ink-2" htmlFor="spond-email">
+              {t("emailLabel")}
+            </label>
             <input
               id="spond-email"
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder={t("emailPlaceholder")}
-              className={teamTextInputClassName}
+              className={cn(teamTextInputClassName, "text-base")}
               autoComplete="username"
             />
-            <label className="sr-only" htmlFor="spond-password">{t("passwordLabel")}</label>
+          </div>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-fp-ink-2" htmlFor="spond-password">
+              {t("passwordLabel")}
+            </label>
             <input
               id="spond-password"
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder={t("passwordPlaceholder")}
-              className={teamTextInputClassName}
+              className={cn(teamTextInputClassName, "text-base")}
               autoComplete="current-password"
             />
-            <FpButton type="submit" variant="primary" size="md" disabled={isConnecting}>
-              <Link2 size={16} />
-              {isConnecting ? t("loading") : t("connectCta")}
-            </FpButton>
-          </form>
-        )}
-      </div>
-
-      {/* ── Section 2: Group link ─────────────────────────────────── */}
-      {connected && (
-        <div className="space-y-3 p-4">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {t("groupLabel")}
-            </p>
-            <FpButton
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                void loadGroups().catch((cause) => {
-                  setError(cause instanceof Error ? cause.message : t("errors.generic"));
-                });
-              }}
-              disabled={isLoadingGroups}
-            >
-              <RefreshCcw size={13} />
-              {isLoadingGroups ? t("loading") : t("refreshGroups")}
-            </FpButton>
           </div>
+          {feedbackFor("connect")}
+          <Button type="submit" variant="primary" block icon={<Link2 size={18} />} disabled={isConnecting}>
+            {isConnecting ? t("loading") : t("connectCta")}
+          </Button>
+        </form>
+      ) : null}
 
-          {linkedGroupId && linkedGroupName ? (
-            <div className="rounded-xl border border-fp-spond-border bg-fp-spond-soft px-3 py-2">
-              <p className="text-xs font-medium text-fp-spond-foreground">
-                {t("linkedGroupName", { value: linkedGroupName })}
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                {t("lastMembersSync", { value: formatSyncedAt(membersLastSyncedAt) })}
-                {" · "}
-                {t("lastEventsSync", { value: formatSyncedAt(eventsLastSyncedAt) })}
-              </p>
-            </div>
+      {/* ── From Spond: what is imported, and import more ───────── */}
+      {connected ? (
+        <section className="space-y-3" aria-labelledby="spond-from-title">
+          <h4 id="spond-from-title" className={SECTION_TITLE}>
+            {t("fromSpondTitle")}
+          </h4>
+          <div className="rounded-[14px] border border-fp-rule bg-fp-surface px-3.5 py-3 text-sm text-foreground">
+            <p className="font-semibold" data-testid="spond-summary">
+              {spondPlayerCount === undefined ? t("summaryNoCount") : t("summaryCount", { count: spondPlayerCount })}
+            </p>
+            <p className="mt-1 text-fp-ink-2">{t("summaryReadOnly")}</p>
+          </div>
+          {linked ? (
+            <Button
+              variant="primary"
+              block
+              // aria-disabled, not disabled: focus returns here when the sheet closes.
+              aria-disabled={isLoadingImportPreview || isImporting || undefined}
+              onClick={() => {
+                if (isLoadingImportPreview || isImporting) return;
+                setFeedbackAnchor("import");
+                setImportSheetOpen(true);
+                void handleImport();
+              }}
+            >
+              {t("syncMembersCta")}
+            </Button>
           ) : null}
+          {feedbackFor("import")}
+        </section>
+      ) : null}
 
-          <div className="space-y-2">
+      {/* ── Spond group ─────────────────────────────────────────── */}
+      {connected ? (
+        <section className="space-y-3" aria-labelledby="spond-group-title">
+          <h4 id="spond-group-title" className={SECTION_TITLE}>
+            {t("groupSectionTitle")}
+          </h4>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium text-fp-ink-2" htmlFor="spond-group">
+              {t("groupLabel")}
+            </label>
             <select
               id="spond-group"
-              className={teamTextInputClassName}
+              className={cn(teamTextInputClassName, "text-base")}
               value={selectedGroupId}
               onChange={(event) => setSelectedGroupId(event.target.value)}
               disabled={groups.length === 0}
@@ -675,210 +799,129 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
                 </option>
               ))}
             </select>
-            <FpButton
-              type="button"
-              variant="secondary"
-              size="md"
-              fullWidth
-              onClick={() => { void handleSaveLink(); }}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant={linkedGroupId ? "secondary" : "primary"}
+              className="flex-1"
+              onClick={() => {
+                setFeedbackAnchor("link");
+                void handleSaveLink();
+              }}
               disabled={!selectedGroupId || isSavingLink}
             >
               {isSavingLink ? t("savingLink") : t("saveLinkCta")}
-            </FpButton>
-          </div>
-        </div>
-      )}
-
-      {/* ── Section 3: Import members ─────────────────────────────── */}
-      {connected && linkedGroupId && (
-        <div className="space-y-3 p-4">
-          <div className="flex items-center justify-between gap-2">
-            <div className="space-y-0.5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {t("preview.title")}
-              </p>
-              <p className="text-[11px] text-muted-foreground">{t("preview.subtitle")}</p>
-            </div>
-            <FpButton
-              type="button"
-              variant="secondary"
+            </Button>
+            <Button
               size="sm"
-              onClick={() => { void handleImport(); }}
-              disabled={isLoadingImportPreview || isImporting}
-            >
-              {isLoadingImportPreview ? t("preview.loading") : t("syncMembersCta")}
-            </FpButton>
-          </div>
-
-          {importPreviewCandidates.length > 0 && (
-            <>
-              <div className="flex flex-wrap items-center gap-2">
-                <FpButton type="button" variant="ghost" size="sm" onClick={handleSelectAllCandidates} disabled={isImporting}>
-                  {t("preview.selectAll")}
-                </FpButton>
-                <FpButton type="button" variant="ghost" size="sm" onClick={handleClearAllCandidates} disabled={isImporting}>
-                  {t("preview.clearAll")}
-                </FpButton>
-                <p className="text-xs text-muted-foreground">
-                  {t("preview.selectedCount", { count: selectedCount })}
-                </p>
-              </div>
-
-              <ul className="max-h-52 space-y-1.5 overflow-y-auto">
-                {importPreviewCandidates.map((candidate) => (
-                  <li key={candidate.externalId} className="rounded-lg border border-fp-border bg-background px-3 py-2">
-                    <label className="flex items-start gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selectedCandidateExternalIds.includes(candidate.externalId)}
-                        onChange={() => handleToggleCandidate(candidate.externalId)}
-                        disabled={!candidate.selectable || isImporting}
-                        className="mt-0.5 h-4 w-4 rounded border-fp-border"
-                      />
-                      <span className="min-w-0 space-y-0.5">
-                        <span className="block truncate text-sm font-medium text-foreground">{candidate.name}</span>
-                        <span className="flex flex-wrap items-center gap-1 text-xs">
-                          <span className={
-                            candidate.importClassification === "likely_player"
-                              ? "rounded-full border border-fp-ok-text/40 bg-fp-ok-text/10 px-2 py-0.5 text-fp-ok-text"
-                              : candidate.importClassification === "likely_staff"
-                                ? "rounded-full border border-fp-warn-text/40 bg-fp-warn-text/10 px-2 py-0.5 text-fp-warn-text"
-                                : "rounded-full border border-fp-border bg-fp-surface-2 px-2 py-0.5 text-muted-foreground"
-                          }>
-                            {candidate.importClassification === "likely_player"
-                              ? t("preview.classificationPlayer")
-                              : candidate.importClassification === "likely_staff"
-                                ? t("preview.classificationStaff")
-                                : t("preview.classificationUnknown")}
-                          </span>
-                          <span className="text-muted-foreground">
-                            {candidate.status === "already-imported"
-                              ? t("preview.statusAlreadyImported")
-                              : candidate.status === "existing-player"
-                                ? t("preview.statusExisting")
-                                : t("preview.statusNew")}
-                          </span>
-                        </span>
-                      </span>
-                    </label>
-                  </li>
-                ))}
-              </ul>
-
-              <FpButton
-                type="button"
-                variant="primary"
-                size="md"
-                fullWidth
-                onClick={() => { void handleConfirmSelectedImport(); }}
-                disabled={selectedCount === 0 || isImporting}
-              >
-                {isImporting ? t("preview.importing") : t("preview.importSelected")}
-              </FpButton>
-            </>
-          )}
-          {importPreviewCandidates.length === 0 && !isLoadingImportPreview && (
-            <p className="text-xs text-muted-foreground">{t("preview.helperText")}</p>
-          )}
-          <p className="text-[11px] text-muted-foreground">{t("syncMembersInactiveNotice")}</p>
-        </div>
-      )}
-
-      {/* ── Section 4: Events ────────────────────────────────────── */}
-      {connected && linkedGroupId && (
-        <div className="space-y-3 p-4">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {t("eventsTitle")}
-            </p>
-            <FpButton
-              type="button"
               variant="ghost"
+              icon={<RefreshCcw size={18} />}
+              onClick={() => {
+                setFeedbackAnchor("groups");
+                void loadGroups().catch((cause) => {
+                  setError(cause instanceof Error ? cause.message : t("errors.generic"));
+                });
+              }}
+              disabled={isLoadingGroups}
+            >
+              {isLoadingGroups ? t("loading") : t("refreshGroups")}
+            </Button>
+          </div>
+          {feedbackFor("group")}
+        </section>
+      ) : null}
+
+      {/* ── Events ──────────────────────────────────────────────── */}
+      {linked ? (
+        <section className="space-y-3" aria-labelledby="spond-events-title">
+          <div className="flex items-center justify-between gap-2">
+            <h4 id="spond-events-title" className={SECTION_TITLE}>
+              {t("eventsTitle")}
+            </h4>
+            <Button
               size="sm"
-              onClick={() => { void handleSyncEvents(); }}
+              variant="ghost"
+              icon={<RefreshCcw size={18} />}
+              onClick={() => {
+                setFeedbackAnchor("events");
+                void handleSyncEvents();
+              }}
               disabled={isSyncingEvents}
             >
-              <RefreshCcw size={13} />
               {isSyncingEvents ? t("syncEventsLoading") : t("syncEventsCta")}
-            </FpButton>
+            </Button>
           </div>
-
+          {feedbackFor("events")}
           {events.length === 0 ? (
-            <p className="text-xs text-muted-foreground">{t("eventsEmpty")}</p>
+            <p className="text-sm text-fp-ink-2">{t("eventsEmpty")}</p>
           ) : (
-            <ul className="space-y-1.5">
+            <ListGroup aria-label={t("eventsTitle")} testId="spond-events">
               {events.map((eventItem) => (
-                <li key={eventItem.externalId} className="rounded-lg border border-fp-border bg-fp-surface-2 px-3 py-2.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-foreground">{eventItem.title}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {formatEventDate(eventItem.startsAt)}
-                        {eventItem.location ? ` · ${eventItem.location}` : ""}
-                      </p>
-                    </div>
-                    <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                      eventItem.importedMatchId
-                        ? "border-fp-spond-border bg-fp-spond-soft text-fp-spond-foreground"
-                        : "border-fp-border bg-background text-muted-foreground"
-                    }`}>
+                <ListRow
+                  key={eventItem.externalId}
+                  label={eventItem.title}
+                  description={`${formatEventDate(eventItem.startsAt)}${eventItem.location ? ` · ${eventItem.location}` : ""}`}
+                  trailing={
+                    <span
+                      className={cn(
+                        "rounded-full border px-2 py-0.5 text-[13px] font-semibold leading-tight",
+                        eventItem.importedMatchId
+                          ? "border-fp-spond-border bg-fp-spond-soft text-fp-spond-foreground"
+                          : "border-fp-rule bg-fp-surface-2 text-fp-ink-2"
+                      )}
+                    >
                       {eventItem.importedMatchId ? t("eventImported") : t("eventNotImported")}
                     </span>
-                  </div>
-                </li>
+                  }
+                />
               ))}
-            </ul>
+            </ListGroup>
           )}
-        </div>
-      )}
+        </section>
+      ) : null}
 
-      {/* ── Section 5: Danger zone ───────────────────────────────── */}
-      {connected && (
-        <div className="space-y-3 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-fp-danger-text">
-            {t("cleanup.sectionTitle")}
-          </p>
-
-          <div className="space-y-2">
-            <div className="space-y-0.5">
-              <p className="text-xs font-semibold text-foreground">{t("cleanup.deleteImportedTitle")}</p>
-              <p className="text-[11px] text-muted-foreground">{t("cleanup.deleteImportedHelp")}</p>
-            </div>
-            <Button
-              size="sm"
+      {/* ── Danger zone: its own group, last ────────────────────── */}
+      {connected ? (
+        <div className="space-y-3">
+          <ListGroup title={t("cleanup.sectionTitle")} titleAs="h4" testId="spond-danger-zone">
+            <ListRow
+              destructive
+              label={pendingResetAction === "delete-imported-data" ? t("cleanup.running") : t("cleanup.deleteImportedCta")}
+              description={t("cleanup.deleteImportedHelp")}
               onClick={() => requestResetAction("delete-imported-data")}
-              // aria-disabled, not disabled: focus returns here after the sheet.
-              aria-disabled={pendingResetAction !== null || undefined}
-            >
-              {pendingResetAction === "delete-imported-data" ? t("cleanup.running") : t("cleanup.deleteImportedCta")}
-            </Button>
-          </div>
-
-          <div className="h-px bg-fp-border" />
-
-          <div className="space-y-2">
-            <div className="space-y-0.5">
-              <p className="text-xs font-semibold text-foreground">{t("cleanup.disconnectTitle")}</p>
-              <p className="text-[11px] text-muted-foreground">{t("cleanup.disconnectHelp")}</p>
-            </div>
-            <Button
-              size="sm"
+              testId="spond-reset-delete"
+            />
+            <ListRow
+              destructive
+              label={pendingResetAction === "disconnect-and-delete" ? t("cleanup.running") : t("cleanup.disconnectCta")}
+              description={t("cleanup.disconnectHelp")}
               onClick={() => requestResetAction("disconnect-and-delete")}
-              aria-disabled={pendingResetAction !== null || undefined}
-            >
-              {pendingResetAction === "disconnect-and-delete" ? t("cleanup.running") : t("cleanup.disconnectCta")}
-            </Button>
-          </div>
+              testId="spond-reset-disconnect"
+            />
+          </ListGroup>
+          {feedbackFor("danger")}
         </div>
-      )}
+      ) : null}
 
-      {/* ── Feedback messages ────────────────────────────────────── */}
-      {(notice || error) && (
-        <div className="space-y-1 p-4">
-          {notice ? <p role="status" className="text-xs text-fp-spond-foreground">{notice}</p> : null}
-          {error ? <p role="alert" className="text-xs text-fp-danger-text">{error}</p> : null}
-        </div>
-      )}
+      <SpondImportSheet
+        open={importSheetOpen}
+        onOpenChange={setImportSheetOpen}
+        candidates={importPreviewCandidates}
+        selectedIds={selectedCandidateExternalIds}
+        loading={isLoadingImportPreview}
+        importing={isImporting}
+        onToggle={handleToggleCandidate}
+        onSelectAll={handleSelectAllCandidates}
+        onClearAll={handleClearAllCandidates}
+        onImport={() => {
+          setFeedbackAnchor("import");
+          void handleConfirmSelectedImport().then((imported) => {
+            if (imported) setImportSheetOpen(false);
+          });
+        }}
+        feedback={feedbackFor("sheet")}
+      />
 
       <ConfirmSheet
         open={resetConfirmOpen}
@@ -888,11 +931,7 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
             ? t("cleanup.deleteImportedConfirmTitle")
             : t("cleanup.disconnectConfirmTitle")
         }
-        description={
-          resetConfirmAction === "delete-imported-data"
-            ? t("cleanup.deleteImportedConfirmText")
-            : t("cleanup.disconnectConfirmText")
-        }
+        description={resetCopy(resetConfirmAction)}
         confirmLabel={
           resetConfirmAction === "delete-imported-data"
             ? t("cleanup.deleteImportedConfirmCta")
@@ -903,10 +942,11 @@ export function SpondIntegrationCard({ teamId, mode, onImported }: SpondIntegrat
           // Ignore a second press while the sheet slides out.
           if (!resetConfirmOpen) return;
           setResetConfirmOpen(false);
+          setFeedbackAnchor("reset");
           void handleResetAction(resetConfirmAction);
         }}
         testId="spond-reset-confirm"
       />
-    </AppCard>
+    </div>
   );
 }

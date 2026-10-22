@@ -16,6 +16,7 @@ import {
 import type { TeamMatchPrefs } from "@/lib/storage/teamPrefsStorage";
 import { FormatSelector } from "@/components/match/FormatSelector";
 import { FormationSelector } from "@/components/match/FormationSelector";
+import { SelectedLabel } from "@/components/match/SelectedLabel";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -63,22 +64,24 @@ export function MatchDefaultsEditor({ teamId }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* 13px is the type floor (DESIGN.md §3, C3-F3): Label for the
+          kicker, Meta for the hint, 14px for the field labels. */}
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-fp-ink-2">
           {t("title")}
         </p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{t("hint")}</p>
+        <p className="mt-0.5 text-sm text-fp-ink-2">{t("hint")}</p>
       </div>
 
       {/* Format */}
       <div className="space-y-2">
-        <p className="text-xs font-medium text-foreground">{t("format")}</p>
+        <p className="text-sm font-medium text-fp-ink">{t("format")}</p>
         <FormatSelector value={format} onChange={handleFormatChange} />
       </div>
 
       {/* Formation */}
       <div className="space-y-2">
-        <p className="text-xs font-medium text-foreground">{t("formation")}</p>
+        <p className="text-sm font-medium text-fp-ink">{t("formation")}</p>
         <FormationSelector
           formations={formations}
           value={formationId}
@@ -88,7 +91,7 @@ export function MatchDefaultsEditor({ teamId }: Props) {
 
       {/* Duration */}
       <div className="space-y-2">
-        <p className="text-xs font-medium text-foreground">{t("duration")}</p>
+        <p className="text-sm font-medium text-fp-ink">{t("duration")}</p>
         <div className="flex flex-wrap gap-2">
           {ALL_DURATION_PRESETS.map((presetId) => {
             const preset = MATCH_DURATION_PRESETS[presetId];
@@ -100,14 +103,19 @@ export function MatchDefaultsEditor({ teamId }: Props) {
                 onClick={() => handleDurationChange(presetId)}
                 aria-pressed={isSelected}
                 className={cn(
-                  "h-10 rounded-xl border px-3 text-sm font-medium transition duration-150 tap-target",
+                  // px-6 leaves room for the check in both states (C1-F3).
+                  "h-10 rounded-xl border px-6 text-sm font-medium transition duration-150 tap-target",
                   isSelected
                     ? "border-fp-lime bg-fp-lime text-fp-on-lime"
                     : "border-fp-border bg-fp-surface-2 text-muted-foreground hover:text-foreground"
                 )}
               >
-                {presetId}{" "}
-                <span className="text-xs opacity-60">({preset.totalMinutes}min)</span>
+                <SelectedLabel selected={isSelected}>
+                  {presetId}{" "}
+                  <span className="text-[13px]">
+                    {t("durationTotal", { minutes: preset.totalMinutes })}
+                  </span>
+                </SelectedLabel>
               </button>
             );
           })}

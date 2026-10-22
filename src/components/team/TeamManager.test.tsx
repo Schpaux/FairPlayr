@@ -266,6 +266,43 @@ describe("TeamManager player list (UI-TEAM-01)", () => {
     screen.getByLabelText(no.team.forms.playerNameLabel);
   });
 
+  it("opens the team settings at the match defaults for /team#team-defaults, also on a later hashchange", async () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    window.history.replaceState(null, "", "#team-defaults");
+    try {
+      renderWithIntl(<TeamManager />);
+
+      const section = await waitFor(() => {
+        const found = document.getElementById("team-defaults");
+        expect(found).not.toBeNull();
+        return found!;
+      });
+      expect(screen.getByRole("button", { name: no.team.teamSettings }).getAttribute("aria-expanded")).toBe("true");
+      await waitFor(() => expect(section.contains(document.activeElement)).toBe(true));
+      expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+
+      // Closed again, a new link to the hash opens it again.
+      fireEvent.click(screen.getByRole("button", { name: no.team.teamSettings }));
+      await waitFor(() => expect(document.getElementById("team-defaults")).toBeNull());
+      window.history.replaceState(null, "", "#");
+      window.history.replaceState(null, "", "#team-defaults");
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+      await waitFor(() => expect(document.getElementById("team-defaults")).not.toBeNull());
+      await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(2));
+    } finally {
+      window.history.replaceState(null, "", window.location.pathname);
+      delete (Element.prototype as Partial<Element>).scrollIntoView;
+    }
+  });
+
+  it("leaves the team settings closed without the hash", async () => {
+    renderWithIntl(<TeamManager />);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(screen.getByRole("button", { name: no.team.teamSettings }).getAttribute("aria-expanded")).toBe("false");
+    expect(document.getElementById("team-defaults")).toBeNull();
+  });
+
   it("gives every form field a unique id, also with both team-name forms open", async () => {
     renderWithIntl(<TeamManager />);
     fireEvent.click(screen.getByRole("button", { name: no.team.teamSettings }));

@@ -96,7 +96,8 @@
       "hint": "Forhåndsutfylles når du oppretter en ny kamp for dette laget.",
       "format": "Format",
       "formation": "Formasjon",
-      "duration": "Kampvarighet"
+      "duration": "Kampvarighet",
+      "durationTotal": "({minutes} min)"
     },
     "players": {
       "title": "Spillere",
@@ -105,7 +106,7 @@
       "emptyDescription": "Skriv navnet på første spiller i feltet over. Fornavn holder; legg til etternavn hvis to har samme fornavn.",
       "spondSynced": "Synkronisert fra Spond",
       "spondConnect": "Koble til Spond",
-      "spondSyncedInfo": "Spillere importert fra Spond kan ikke redigeres eller slettes manuelt her. Administrer dem i Spond — FairPlayr synkroniserer automatisk.",
+      "spondSyncedInfo": "Spillere fra Spond kan ikke endres eller slettes her. Navnet endres i Spond og oppdateres når du importerer spillerne på nytt under Innstillinger.",
       "reorder": "Endre rekkefølge",
       "reorderDone": "Ferdig",
       "reorderHint": "Flytt spillerne med pilene. Trykk Ferdig når rekkefølgen er riktig.",
@@ -127,13 +128,13 @@
       "subtitle": "Test-integrasjon for å koble lag, importere spillere og hente arrangementer.",
       "guestModeHint": "Spond-integrasjon krever at du er logget inn.",
       "statusConnected": "Tilkoblet",
-      "statusDisconnected": "Ikke koblet",
+      "statusDisconnected": "Ikke tilkoblet",
       "connectCta": "Koble til Spond",
       "connecting": "Laster...",
       "loading": "Laster...",
-      "emailLabel": "Spond e-post",
+      "emailLabel": "E-post i Spond",
       "emailPlaceholder": "epost@eksempel.no",
-      "passwordLabel": "Spond passord",
+      "passwordLabel": "Passord i Spond",
       "passwordPlaceholder": "Spond-passord",
       "connected": "Spond-konto koblet til.",
       "refreshGroups": "Hent grupper",
@@ -143,10 +144,10 @@
       "savingLink": "Lagrer...",
       "groupLinked": "Tilkobling lagret",
       "linkedGroupReady": "Spillere importert fra Spond blir merket og låst for manuell sletting.",
-      "linkedGroupName": "Valgt gruppe: {value}",
+      "linkedGroupName": "Koblet gruppe: {value}",
       "neverSynced": "Ikke oppdatert ennå",
-      "lastMembersSync": "Sist oppdatert spillere: {value}",
-      "lastEventsSync": "Sist oppdatert arrangementer: {value}",
+      "lastMembersSync": "Spillere sist importert: {value}",
+      "lastEventsSync": "Arrangementer sist hentet: {value}",
       "syncMembersCta": "Importer spillere",
       "syncMembersLoading": "Laster...",
       "preview": {
@@ -155,7 +156,7 @@
         "helperText": "Vi foreslår hvem som er spillere, men du kan endre valgene selv.",
         "loading": "Laster...",
         "selectAll": "Velg alle",
-        "clearAll": "Fjern alle",
+        "clearAll": "Tøm",
         "selectedCount": "{count} valgt",
         "importSelected": "Importer valgte",
         "importing": "Importerer...",
@@ -166,14 +167,16 @@
         "statusAlreadyImported": "Allerede importert",
         "statusExisting": "Finnes allerede i laget",
         "statusNew": "Ny",
-        "importSummary": "Spillere importert: {created} nye, {reused} gjenbrukt, {updated} oppdatert, {reactivated} reaktivert, {skipped} hoppet over, {total} valgt."
+        "importSummary": "Spillere importert: {created} nye, {reused} gjenbrukt, {updated} oppdatert, {reactivated} reaktivert, {skipped} hoppet over, {total} valgt.",
+        "listLabel": "Personer i Spond-gruppen",
+        "importCount": "{count, plural, =0 {Importer} one {Importer # spiller} other {Importer # spillere}}"
       },
       "syncEventsCta": "Hent arrangementer",
       "syncEventsLoading": "Laster...",
       "syncEventsNoChanges": "Ingen endringer funnet i arrangementer.",
       "syncEventsResult": "Arrangementene ble oppdatert. Fant {total} kommende arrangementer.",
       "eventsTitle": "Arrangementer",
-      "eventsEmpty": "Ingen arrangementer hentet ennå.",
+      "eventsEmpty": "Ingen arrangementer hentet ennå. Trykk «Hent arrangementer».",
       "eventUnknownDate": "Tidspunkt mangler",
       "eventImported": "Importert",
       "eventNotImported": "Ikke importert",
@@ -181,24 +184,23 @@
       "importing": "Importerer...",
       "importResult": "Import fullført: {created} nye, {updated} oppdaterte, {total} medlemmer behandlet.",
       "syncMembersResult": "Spillere importert: {created} nye, {updated} navneendringer, {reactivated} reaktivert, {inactivated} markert inaktive, {unchanged} uendret, {total} totalt.",
-      "syncMembersInactiveNotice": "Spillere som ikke lenger finnes i Spond er beholdt i FairPlayr som inaktive.",
       "cleanup": {
         "sectionTitle": "Faresone",
-        "deleteImportedTitle": "Slett alle importerte Spond-data",
-        "deleteImportedHelp": "Sletter spillere, arrangementer og deltakelsesdata som er importert fra Spond for dette laget. Du kan alltids importere dataen igjen.",
+        "deleteImportedHelp": "Fjerner spillerne fra Spond fra laget og sletter kampene som er importert fra Spond, med kamphistorikk. Koblingen beholdes.",
         "deleteImportedCta": "Slett alle importerte Spond-data",
-        "disconnectTitle": "Koble fra og slett data",
-        "disconnectHelp": "Fjerner Spond-koblingen for dette laget og sletter alle importerte Spond-data. Du kan koble til på nytt senere.",
+        "disconnectHelp": "Gjør det samme, og kobler i tillegg Spond-kontoen din fra FairPlayr.",
         "disconnectCta": "Koble fra og slett data",
         "deleteImportedConfirmTitle": "Slette importerte Spond-data?",
-        "deleteImportedConfirmText": "Dette sletter alle data som er importert fra Spond for dette laget. Spond-koblingen beholdes, og du kan importere dataen igjen.",
+        "deleteImportedConfirmText": "{count, plural, =0 {Ingen spillere fra Spond er på laget nå. Alle kamper som er importert fra Spond slettes, med kamphistorikk, rapport og påmeldinger.} one {# spiller fra Spond fjernes fra laget, og alle kamper som er importert fra Spond slettes, med kamphistorikk, rapport og påmeldinger.} other {# spillere fra Spond fjernes fra laget, og alle kamper som er importert fra Spond slettes, med kamphistorikk, rapport og påmeldinger.}} Spond-koblingen beholdes. Spillere kan importeres igjen, men slettet kamphistorikk kan ikke gjenopprettes.",
         "disconnectConfirmTitle": "Koble fra Spond og slette data?",
-        "disconnectConfirmText": "Dette fjerner Spond-koblingen for dette laget og sletter alle importerte Spond-data. Du kan koble til igjen senere.",
+        "disconnectConfirmText": "{count, plural, =0 {Ingen spillere fra Spond er på laget nå. Alle kamper som er importert fra Spond slettes, med kamphistorikk, rapport og påmeldinger.} one {# spiller fra Spond fjernes fra laget, og alle kamper som er importert fra Spond slettes, med kamphistorikk, rapport og påmeldinger.} other {# spillere fra Spond fjernes fra laget, og alle kamper som er importert fra Spond slettes, med kamphistorikk, rapport og påmeldinger.}} Laget kobles fra Spond-gruppen, og Spond-kontoen din kobles fra FairPlayr, også for andre lag. Slettet kamphistorikk kan ikke gjenopprettes.",
         "deleteImportedSuccess": "Importerte Spond-data ble slettet.",
         "disconnectSuccess": "Spond ble koblet fra og data ble slettet.",
         "running": "Utfører...",
         "deleteImportedConfirmCta": "Ja, slett Spond-data",
-        "disconnectConfirmCta": "Ja, koble fra og slett"
+        "disconnectConfirmCta": "Ja, koble fra og slett",
+        "deleteImportedConfirmTextNoCount": "Spillerne fra Spond fjernes fra laget, og alle kamper som er importert fra Spond slettes, med kamphistorikk, rapport og påmeldinger. Spond-koblingen beholdes. Spillere kan importeres igjen, men slettet kamphistorikk kan ikke gjenopprettes.",
+        "disconnectConfirmTextNoCount": "Spillerne fra Spond fjernes fra laget, og alle kamper som er importert fra Spond slettes, med kamphistorikk, rapport og påmeldinger. Laget kobles fra Spond-gruppen, og Spond-kontoen din kobles fra FairPlayr, også for andre lag. Slettet kamphistorikk kan ikke gjenopprettes."
       },
       "errors": {
         "unauthorized": "Du må være logget inn.",
@@ -215,14 +217,25 @@
         "noSelectedMembers": "Velg minst én person.",
         "encryptionNotConfigured": "Server mangler krypteringsnøkkel for Spond-tilkobling.",
         "cleanupFailed": "Kunne ikke rydde Spond-data. Prøv igjen.",
-        "generic": "Noe gikk galt"
-      }
+        "generic": "Noe gikk galt",
+        "unknown": "Ukjent feil."
+      },
+      "statusChecking": "Sjekker tilkoblingen …",
+      "statusUnavailable": "Kunne ikke sjekke Spond",
+      "statusGroupLabel": "Spond-status",
+      "accountValue": "Konto: {value}",
+      "noLinkedGroup": "Ingen gruppe er koblet til laget ennå.",
+      "groupSectionTitle": "Spond-gruppe",
+      "fromSpondTitle": "Fra Spond",
+      "summaryCount": "{count, plural, =0 {Ingen spillere er importert fra Spond ennå.} one {# spiller er importert fra Spond.} other {# spillere er importert fra Spond.}}",
+      "summaryNoCount": "Spillere du importerer fra Spond, får merket «Fra Spond» på Spillere.",
+      "summaryReadOnly": "Navnet endres i Spond og oppdateres her når du importerer på nytt. Spillerne er skrivebeskyttet her."
     },
     "forms": {
       "teamNameLabel": "Lagnavn",
       "teamNamePlaceholder": "Eksempel: FairPlayr FC",
       "playerNameLabel": "Spillernavn",
-      "playerNamePlaceholder": "Skriv inn spillernavn"
+      "playerNamePlaceholder": "F.eks. Ida"
     },
     "validation": {
       "teamNameRequired": "Lagnavn kan ikke være tomt.",
@@ -257,7 +270,7 @@
       "title": "Rediger spiller",
       "deleteLabel": "Slett spiller",
       "deleteGroup": "Fjern fra laget",
-      "spondDescription": "{name} er importert fra Spond. Navn og sletting styres i Spond, og FairPlayr oppdaterer laget automatisk."
+      "spondDescription": "{name} er importert fra Spond. Navnet endres i Spond og oppdateres her når du importerer spillerne på nytt. Spilleren kan ikke slettes her."
     }
   },
   "auth": {
@@ -271,7 +284,7 @@
       "continueAsGuest": "Fortsett som gjest",
       "goToSignUp": "Opprett konto",
       "goToSignIn": "Gå til innlogging",
-      "useMagicLinkInstead": "Bruk magisk lenke i stedet",
+      "useMagicLinkInstead": "Bruk innloggingslenke i stedet",
       "connecting": "Kobler til...",
       "creatingAccount": "Oppretter konto...",
       "signOut": "Logg ut",
@@ -300,12 +313,12 @@
       "subtitle": "Fortsett der du slapp og synkroniser data på tvers av enheter.",
       "emailLabel": "E-post",
       "emailPlaceholder": "trener@eksempel.no",
-      "submit": "Fortsett",
+      "submit": "Send innloggingslenke",
       "submitting": "Sender...",
       "helpText": "Vi sender deg en innloggingslenke på e-post. Ingen passord nødvendig.",
-      "separator": "ELLER",
       "alreadySignedIn": "Du er allerede logget inn.",
-      "goToTeam": "Gå til Lag"
+      "goToTeam": "Gå til Lag",
+      "noAccount": "Har du ikke konto?"
     },
     "signUp": {
       "title": "Opprett konto",
@@ -336,6 +349,15 @@
       "passwordRequired": "Passord er påkrevd.",
       "passwordTooShort": "Passord må ha minst 6 tegn.",
       "passwordMismatch": "Passordene er ikke like."
+    },
+    "signOutConfirm": {
+      "title": "Logge ut?",
+      "description": "Du logges ut på denne enheten. Kampene som er lagret her, slettes ikke. Lag og spillere fra kontoen din vises igjen når du logger inn.",
+      "confirm": "Logg ut",
+      "cancel": "Avbryt",
+      "blockedTitle": "Kampen pågår",
+      "blockedDescription": "Avslutt den pågående kampen før du logger ut.",
+      "blockedGoToMatch": "Gå til kampen"
     }
   },
   "matchSetup": {
@@ -391,7 +413,8 @@
       "selectAll": "Velg alle",
       "clear": "Tøm",
       "count": "{selected} av {total} med",
-      "absent": "Borte"
+      "absent": "Borte",
+      "absentName": "{name}, borte"
     },
     "lineup": {
       "starterSlots": "{current} / {required}",
@@ -916,7 +939,8 @@
       "eventMissingStart": "Hendelsen mangler starttidspunkt og kan ikke importeres.",
       "matchNotSpond": "Denne kampen er ikke koblet til Spond.",
       "activeMatchExists": "En annen kamp pågår allerede for dette laget.",
-      "generic": "Noe gikk galt under kampplanlegging."
+      "generic": "Noe gikk galt under kampplanlegging.",
+      "unknown": "Ukjent feil."
     },
     "completedOfflineNotice": "Kampen er avsluttet på enheten. Den lagres i skyen når du er på nett igjen.",
     "otherMatchOnDevice": "En annen kamp pågår på denne enheten. Å avslutte denne påvirker ikke den.",
@@ -1020,23 +1044,22 @@
   },
   "settings": {
     "title": "Innstillinger",
-    "subtitle": "Preferanser og appkonfigurasjon.",
     "account": "Konto",
-    "storageSync": "Lagring og synkronisering",
-    "syncStatus": "Status",
-    "syncCloud": "Synkronisert med skyen",
-    "syncLocal": "Jobber lokalt",
-    "syncAttention": "Synkronisering krever oppmerksomhet",
-    "syncCloudHint": "Lag og spillere lagres i skyen for denne kontoen.",
-    "syncLocalHint": "Du er i lokal modus. Logg inn for synkronisering på tvers av enheter.",
-    "appearance": "Utseende",
     "theme": "Tema",
     "lightMode": "Lys",
     "darkMode": "Mørk",
     "systemMode": "System",
     "language": "Språk",
     "integrations": "Integrasjoner",
-    "noTeamForIntegrations": "Velg eller opprett et lag for å konfigurere Spond-integrasjon."
+    "noTeamForIntegrations": "Velg eller opprett et lag for å konfigurere Spond-integrasjon.",
+    "guestRow": "Gjest · data lagres bare på denne enheten",
+    "team": "Lag",
+    "activeTeam": "Aktivt lag",
+    "teamDefaults": "Lagstandarder",
+    "teamDefaultsHint": "Format, formasjon og kampvarighet for nye kamper. Endres under Spillere.",
+    "noTeam": "Ingen lag ennå",
+    "noTeamHint": "Opprett laget under Spillere.",
+    "appearanceAndLanguage": "Utseende og språk"
   },
   "teamSwitcher": {
     "label": "Aktivt lag",
@@ -1058,8 +1081,14 @@
       "attention": "Krever oppmerksomhet"
     },
     "title": "Profil",
-    "spondConnected": "Tilkoblet Spond",
-    "spondNotConnected": "Ikke koblet til"
+    "accountGroup": "Konto og status",
+    "spond": {
+      "title": "Spond",
+      "checking": "Sjekker …",
+      "connected": "Tilkoblet",
+      "disconnected": "Ikke tilkoblet",
+      "unavailable": "Kunne ikke sjekke"
+    }
   },
   "activeMatchBanner": {
     "label": "Kamp pågår",
