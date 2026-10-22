@@ -1,18 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { ArrowLeftRight, Loader2, ShieldAlert, Sparkles } from "lucide-react";
+import { ChevronLeft, Loader2, Pencil, ShieldAlert } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useActiveMatch } from "@/components/providers/ActiveMatchProvider";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { AppCard } from "@/components/ui/AppCard";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { FpButton } from "@/components/ui/FpButton";
-import { Button, ButtonLink, ConfirmSheet } from "@/components/ui/primitives";
+import {
+  Button,
+  ButtonLink,
+  ConfirmSheet,
+  EmptyState,
+  ListGroup,
+  ListRow,
+  Notice,
+  Sheet,
+  SkeletonList,
+} from "@/components/ui/primitives";
 import { MatchPlayingTime } from "@/components/match/MatchPlayingTime";
 import { summarizeMatchPlayingTime } from "@/domain/matchPlayingTime";
 import type { Player } from "@/domain/team";
@@ -28,6 +35,12 @@ import { endLocalActiveMatch, liveHrefFor } from "@/lib/match/activeMatchRecover
 import { retryPendingMatchCompletion, submitMatchCompletion } from "@/lib/match/matchCompletion";
 import { getStoredMatchSetup } from "@/lib/storage/matchStorage";
 import { getPendingMatchCompletion } from "@/lib/storage/pendingMatchCompletionStorage";
+
+/** Section kicker (DESIGN.md §3 "Label"), as in `MatchPlayingTime`. */
+const KICKER = "px-1 text-[13px] font-semibold uppercase leading-tight tracking-[0.06em] text-fp-ink-2 outline-none";
+/** Form field in a sheet: 44px, 16px text (no iOS zoom), 10px radius (DESIGN.md §4). */
+const FIELD =
+  "block min-h-11 w-full rounded-[10px] border border-fp-rule bg-fp-surface px-3 text-base text-fp-ink outline-none focus-visible:ring-2 focus-visible:ring-fp-focus";
 
 interface MatchRuntimeState {
   initialOnFieldPlayerIds?: string[];
@@ -89,15 +102,15 @@ interface MatchEventItem {
   updatedAt: string;
 }
 
-function parseApiError(payload: unknown): { message: string } {
+function parseApiError(payload: unknown, fallback: string): { message: string } {
   if (typeof payload !== "object" || payload === null) {
-    return { message: "Ukjent feil." };
+    return { message: fallback };
   }
 
   const value = payload as Record<string, unknown>;
 
   return {
-    message: typeof value.message === "string" ? value.message : "Ukjent feil.",
+    message: typeof value.message === "string" ? value.message : fallback,
   };
 }
 
@@ -150,7 +163,17 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
   const [editScorerId, setEditScorerId] = useState<string>("");
   const [editAssistId, setEditAssistId] = useState<string>("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [deleteEventOpen, setDeleteEventOpen] = useState(false);
+  const [isDeletingEvent, setIsDeletingEvent] = useState(false);
+  // Shown inside the edit sheet: the page behind it is inert and hidden.
+  const [editError, setEditError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeletingMatch, setIsDeletingMatch] = useState(false);
+  // Shown beside the delete row, where the coach is when it fails.
+  const [deleteMatchError, setDeleteMatchError] = useState<string | null>(null);
+  // Bumped per message so a repeated one is announced again.
+  const [noticeKey, setNoticeKey] = useState(0);
   const [isRegeneratingReport, setIsRegeneratingReport] = useState(false);
   const [autoReportTriggeredFor, setAutoReportTriggeredFor] = useState<string | null>(null);
   const [deviceRelation, setDeviceRelation] = useState<DeviceRelation>("none");
@@ -161,6 +184,11 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
   // The Finish button is disabled and then gone once the match is completed,
   // so after confirming, focus goes to the page's first control instead.
   const finishFinalFocus = useRef<HTMLElement | null>(null);
+  // A deleted goal's row is gone, so focus returns to the timeline heading.
+  const timelineHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  // Where focus goes when the delete-goal confirmation closes: the goal's row
+  // on cancel, the timeline heading once the row is gone.
+  const deleteEventFinalFocus = useRef<HTMLElement | null>(null);
 
   const playerOptions = useMemo(() => {
     if (!match) {
@@ -360,12 +388,12 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
 
         const matchPayload = (await matchResponse.json()) as unknown;
         if (!matchResponse.ok) {
-          throw new Error(parseApiError(matchPayload).message);
+          throw new Error(parseApiError(matchPayload, t("errors.generic")).message);
         }
 
         const eventsPayload = (await eventsResponse.json()) as unknown;
         if (!eventsResponse.ok) {
-          throw new Error(parseApiError(eventsPayload).message);
+          throw new Error(parseApiError(eventsPayload, t("errors.generic")).message);
         }
 
         const matchData = matchPayload as { match: MatchDetails };
@@ -420,12 +448,12 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
           runtimeState: (pending.body.runtimeState as MatchRuntimeState | null | undefined) ?? match.runtimeState,
         });
         setDeviceRelation("none");
-        setNotice(t("completedNotice"));
+        showNotice(t("completedNotice"));
         await refreshActiveMatch();
       } else if (result?.status === "failed") {
         setError(result.message ?? t("errors.generic"));
       } else {
-        setNotice(t("completedOfflineNotice"));
+        showNotice(t("completedOfflineNotice"));
       }
 
       setIsUpdatingStatus(false);
@@ -457,7 +485,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
     setDeviceRelation(relation);
 
     if (relation !== shown) {
-      setNotice(t("finishConfirm.changed"));
+      showNotice(t("finishConfirm.changed"));
       return;
     }
 
@@ -492,9 +520,9 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
           );
 
           if (result.status === "completed") {
-            setNotice(t("completedNotice"));
+            showNotice(t("completedNotice"));
           } else if (result.status === "offline") {
-            setNotice(t("completedOfflineNotice"));
+            showNotice(t("completedOfflineNotice"));
           } else {
             setError(result.message ?? t("errors.generic"));
           }
@@ -525,7 +553,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
       }
 
       await refreshActiveMatch();
-      setNotice(t("completedNotice"));
+      showNotice(t("completedNotice"));
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : t("errors.generic");
       setError(message);
@@ -628,6 +656,13 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
     setEditMinute(event.minute === null ? "" : String(event.minute));
     setEditScorerId(event.primaryPlayerId ?? "");
     setEditAssistId(event.secondaryPlayerId ?? "");
+    setEditError(null);
+    setEditSheetOpen(true);
+  };
+
+  const showNotice = (message: string) => {
+    setNotice(message);
+    setNoticeKey((key) => key + 1);
   };
 
   const handleSaveEdit = async () => {
@@ -636,7 +671,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
     }
 
     setIsSavingEdit(true);
-    setError(null);
+    setEditError(null);
 
     try {
       const scorerName = editScorerId ? playerById.get(editScorerId)?.name ?? null : null;
@@ -660,26 +695,28 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
         }),
       });
 
-      const payload = (await response.json()) as { event?: MatchEventItem; message?: string };
+      const payload = (await response.json().catch(() => ({}))) as { event?: MatchEventItem; message?: string };
 
       if (!response.ok || !payload.event) {
         throw new Error(payload.message ?? t("errors.generic"));
       }
 
       setEvents((previous) => previous.map((event) => (event.id === payload.event?.id ? payload.event : event)));
-      setEditingEvent(null);
-      setNotice(t("event.editSaved"));
+      setEditSheetOpen(false);
+      showNotice(t("event.editSaved"));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t("errors.generic"));
+      setEditError(cause instanceof Error ? cause.message : t("errors.generic"));
     } finally {
       setIsSavingEdit(false);
     }
   };
 
   const handleDeleteEvent = async () => {
-    if (!match || !editingEvent) {
+    if (!match || !editingEvent || isDeletingEvent) {
       return;
     }
+
+    setIsDeletingEvent(true);
 
     try {
       const response = await fetch(`/api/matches/${encodeURIComponent(match.id)}/events/${encodeURIComponent(editingEvent.id)}`, {
@@ -687,23 +724,29 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
       });
 
       if (!response.ok && response.status !== 204) {
-        const payload = (await response.json()) as unknown;
-        throw new Error(parseApiError(payload).message);
+        const payload = (await response.json().catch(() => null)) as unknown;
+        throw new Error(parseApiError(payload, t("errors.generic")).message);
       }
 
+      deleteEventFinalFocus.current = timelineHeadingRef.current;
+      setDeleteEventOpen(false);
       setEvents((previous) => previous.filter((event) => event.id !== editingEvent.id));
-      setEditingEvent(null);
-      setNotice(t("event.deleted"));
+      showNotice(t("event.deleted"));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t("errors.generic"));
+      // Back to the goal, with the reason, so the coach can try again.
+      setDeleteEventOpen(false);
+      setEditError(cause instanceof Error ? cause.message : t("errors.generic"));
+      setEditSheetOpen(true);
+    } finally {
+      setIsDeletingEvent(false);
     }
   };
 
   const handleDeleteMatch = async () => {
-    if (!match) return;
+    if (!match || isDeletingMatch) return;
 
-    setError(null);
-    setShowDeleteConfirm(false);
+    setDeleteMatchError(null);
+    setIsDeletingMatch(true);
 
     try {
       const response = await fetch(`/api/matches/${encodeURIComponent(match.id)}`, {
@@ -711,168 +754,155 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
       });
 
       if (!response.ok && response.status !== 204) {
-        const payload = (await response.json()) as unknown;
-        throw new Error(parseApiError(payload).message);
+        const payload = (await response.json().catch(() => null)) as unknown;
+        throw new Error(parseApiError(payload, t("errors.generic")).message);
       }
 
+      setShowDeleteConfirm(false);
       router.push("/historikk");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t("errors.generic"));
+      setShowDeleteConfirm(false);
+      setDeleteMatchError(cause instanceof Error ? cause.message : t("errors.generic"));
+    } finally {
+      setIsDeletingMatch(false);
     }
   };
 
   if (isLoading || auth.status === "loading") {
     return (
       <PageShell>
-        <AppCard className="p-6 text-sm text-muted-foreground">{common("loading")}</AppCard>
+        <SkeletonList rows={5} withDescription label={common("loading")} />
       </PageShell>
     );
   }
 
   if (auth.status !== "authenticated") {
     return (
-      <PageShell className="space-y-4">
-        <SectionHeader title={t("detailsTitle")} subtitle={t("subtitle")} />
+      <PageShell>
+        <SectionHeader title={t("detailsTitle")} />
         <EmptyState
           icon={ShieldAlert}
           title={t("loginRequiredTitle")}
           description={t("loginRequiredDescription")}
-          action={
-            <ButtonLink href="/auth/sign-in" variant="primary" size="sm">{t("loginCta")}</ButtonLink>
-          }
+          action={<ButtonLink href="/auth/sign-in" variant="primary">{t("loginCta")}</ButtonLink>}
         />
       </PageShell>
     );
   }
 
-  if (error || !match) {
+  if (!match) {
     return (
-      <PageShell className="space-y-4">
-        <SectionHeader title={t("detailsTitle")} subtitle={t("subtitle")} />
-        <AppCard className="p-3 text-xs text-fp-danger-text">{error ?? t("errors.generic")}</AppCard>
+      <PageShell className="flex flex-col gap-4">
+        <ButtonLink href="/historikk" variant="ghost" size="sm" className="-ml-3 self-start">
+          <ChevronLeft size={20} strokeWidth={1.75} aria-hidden />
+          {t("backToHistory")}
+        </ButtonLink>
+        <SectionHeader title={t("detailsTitle")} className="mb-0" />
+        <Notice tone="error">{error ?? t("errors.generic")}</Notice>
       </PageShell>
     );
   }
 
   const isCompleted = match.status === "completed";
-  const resultBadge = isCompleted
+  const isPlanned = match.status === "upcoming" || match.status === "draft";
+  const resultLabel = isCompleted
     ? match.scoreFor > match.scoreAgainst
-      ? { label: t("result.win"), className: "bg-fp-ok-text/10 text-fp-ok-text" }
+      ? t("result.win")
       : match.scoreFor < match.scoreAgainst
-        ? { label: t("result.loss"), className: "bg-fp-danger/10 text-fp-danger-text" }
-        : { label: t("result.draw"), className: "bg-fp-surface text-muted-foreground" }
+        ? t("result.loss")
+        : t("result.draw")
     : null;
+  const statusLabel = t(`status.${isPlanned ? "planned" : match.status}`);
 
   const ownTeamName =
     workspace.teams.find((team) => team.id === match.teamId)?.name ?? match.title;
   const opponentDisplayName = match.opponentName?.trim() || t("defaultOpponent");
+  const meta = [formatDate(match.startsAt), match.location].filter(Boolean).join(" · ");
+
+  // C4: the timeline is goals and substitutions; kick-off and the final
+  // whistle are implied by the result above it.
+  const timelineRows = timelineEvents.filter((event) => event.type === "goal" || event.type === "substitution");
 
   return (
-    <PageShell className="space-y-4 pb-8">
-      <SectionHeader
-        title={t("detailsTitle")}
-        subtitle={match.title}
-        action={
-          <ButtonLink href="/match" variant="ghost" size="sm">{t("backToList")}</ButtonLink>
-        }
-      />
+    <PageShell className="flex flex-col gap-6 pb-8">
+      <ButtonLink href={isCompleted ? "/historikk" : "/match"} variant="ghost" size="sm" className="-ml-3 self-start">
+        <ChevronLeft size={20} strokeWidth={1.75} aria-hidden />
+        {isCompleted ? t("backToHistory") : t("backToPlanner")}
+      </ButtonLink>
 
-      {notice ? (
-        <AppCard className="p-3 text-xs text-fp-ok-text">
-          <p role="status">{notice}</p>
-        </AppCard>
-      ) : null}
-      {error ? (
-        <AppCard className="p-3 text-xs text-fp-danger-text">
-          <p role="alert">{error}</p>
-        </AppCard>
-      ) : null}
+      {notice ? <Notice key={noticeKey} tone="success">{notice}</Notice> : null}
+      {error ? <Notice tone="error">{error}</Notice> : null}
 
-      {/* Hero score card */}
-      <AppCard className="p-5">
-        <div className="flex flex-col items-center gap-2 text-center">
-          {/* Team names */}
-          <p className="text-sm font-semibold leading-snug text-foreground">
-            {ownTeamName}
-            <span className="mx-1.5 font-normal text-muted-foreground">—</span>
-            {opponentDisplayName}
-          </p>
-          <div className="flex items-center gap-4">
-            <span className="text-5xl font-black tabular-nums text-foreground">{match.scoreFor}</span>
-            <span className="text-2xl font-light text-muted-foreground">–</span>
-            <span className="text-5xl font-black tabular-nums text-foreground">{match.scoreAgainst}</span>
-          </div>
-          {resultBadge && (
-            <span className={`rounded-full px-3 py-0.5 text-xs font-semibold ${resultBadge.className}`}>
-              {resultBadge.label}
+      {/* Result first: the club-green scoreboard (DESIGN.md §2.2, §3). */}
+      <section className="rounded-[20px] bg-fp-club p-5 text-fp-on-club" data-testid="match-hero">
+        <p className="text-[13px] font-semibold uppercase leading-tight tracking-[0.06em] text-fp-on-club-2">
+          {[statusLabel, match.format].join(" · ")}
+        </p>
+        <h1 className="mt-2 text-[20px] font-semibold leading-[1.2] tracking-[-0.01em] [overflow-wrap:anywhere]">
+          {ownTeamName}
+          <span className="text-fp-on-club-2"> – </span>
+          {opponentDisplayName}
+        </h1>
+        {isPlanned ? null : (
+          <p className="mt-4 flex items-baseline gap-3" data-testid="match-score">
+            <span aria-hidden className="font-num text-[50px] leading-[0.9] [@media(max-height:700px)]:text-[44px]">
+              {match.scoreFor}
+              <span className="px-2 text-fp-on-club-2">–</span>
+              {match.scoreAgainst}
             </span>
-          )}
-          <div className="mt-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-            <span className="text-[11px] text-muted-foreground">{formatDate(match.startsAt)}</span>
-            {match.location && (
-              <span className="text-[11px] text-muted-foreground">· {match.location}</span>
-            )}
-            <span className="text-[11px] text-muted-foreground">· {match.format}</span>
-          </div>
-        </div>
-
-        {(match.status === "upcoming" || match.status === "draft" || match.status === "live") && (
-          <div className="mt-4 space-y-2">
-            {match.status === "live" && deviceRelation === "other" ? (
-              <p className="text-xs text-muted-foreground">{t("otherMatchOnDevice")}</p>
-            ) : null}
-            {match.status === "live" && deviceRelation === "closed" ? (
-              <p className="text-xs text-muted-foreground">{t("closedOnDevice")}</p>
-            ) : null}
-            <div className="flex flex-wrap gap-2">
-              {(match.status === "upcoming" || match.status === "draft") && (
-                <FpButton
-                  type="button"
-                  variant="primary"
-                  size="md"
-                  fullWidth
-                  onClick={handleStart}
-                >
-                  {t("startMatchCta")}
-                </FpButton>
-              )}
-              {match.status === "live" && (
-                <>
-                  {/* Only a link that opens this very match: the live screen
-                      always shows the match running on this device. */}
-                  {deviceRelation === "this" || (deviceRelation === "none" && match.runtimeState) ? (
-                    <ButtonLink
-                      href={deviceRelation === "this" ? liveHrefFor(match.id) : `/match/live?matchId=${encodeURIComponent(match.id)}`}
-                      variant="primary"
-                      size="sm"
-                      className="flex-1"
-                    >
-                      {t("continueMatchCta")}
-                    </ButtonLink>
-                  ) : deviceRelation === "none" ? (
-                    <FpButton type="button" variant="primary" size="md" className="flex-1" onClick={handleStart}>
-                      {t("startMatchCta")}
-                    </FpButton>
-                  ) : null}
-                  {/* Destructive only inside its confirmation (DESIGN.md §5.7). */}
-                  <Button
-                    size="sm"
-                    className={deviceRelation === "other" || deviceRelation === "closed" ? "flex-1" : undefined}
-                    disabled={isUpdatingStatus}
-                    onClick={() => { void handleFinish(); }}
-                  >
-                    {isUpdatingStatus
-                      ? t("statusUpdating")
-                      : deviceRelation === "closed"
-                        ? t("syncFinishCta")
-                        : t("finishMatchCta")}
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
+            <span className="sr-only">{t("scoreA11y", { scoreFor: match.scoreFor, scoreAgainst: match.scoreAgainst })}</span>
+            {resultLabel ? <span className="text-base font-semibold">{resultLabel}</span> : null}
+          </p>
         )}
-      </AppCard>
+        <p className="mt-3 text-[14px] font-medium text-fp-on-club-2">{meta}</p>
+      </section>
+
+      {isPlanned || match.status === "live" ? (
+        <div className="space-y-3">
+          {match.status === "live" && deviceRelation === "other" ? (
+            <p className="px-1 text-[14px] text-fp-ink-2">{t("otherMatchOnDevice")}</p>
+          ) : null}
+          {match.status === "live" && deviceRelation === "closed" ? (
+            <p className="px-1 text-[14px] text-fp-ink-2">{t("closedOnDevice")}</p>
+          ) : null}
+          {isPlanned ? (
+            <Button variant="primary" block onClick={handleStart}>
+              {t("startMatchCta")}
+            </Button>
+          ) : (
+            <div className="grid gap-2">
+              {/* Only a link that opens this very match: the live screen
+                  always shows the match running on this device. */}
+              {deviceRelation === "this" || (deviceRelation === "none" && match.runtimeState) ? (
+                <ButtonLink
+                  href={deviceRelation === "this" ? liveHrefFor(match.id) : `/match/live?matchId=${encodeURIComponent(match.id)}`}
+                  variant="primary"
+                  block
+                >
+                  {t("continueMatchCta")}
+                </ButtonLink>
+              ) : deviceRelation === "none" ? (
+                <Button variant="primary" block onClick={handleStart}>
+                  {t("startMatchCta")}
+                </Button>
+              ) : null}
+              {/* Destructive only inside its confirmation (DESIGN.md §5.7). */}
+              <Button
+                variant="secondary"
+                block
+                disabled={isUpdatingStatus}
+                onClick={() => { void handleFinish(); }}
+              >
+                {isUpdatingStatus
+                  ? t("statusUpdating")
+                  : deviceRelation === "closed"
+                    ? t("syncFinishCta")
+                    : t("finishMatchCta")}
+              </Button>
+            </div>
+          )}
+        </div>
+      ) : null}
 
       <ConfirmSheet
         open={finishConfirm.open}
@@ -888,269 +918,235 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
         testId="finish-match-confirm"
       />
 
-      {/* Timeline */}
-      <AppCard className="space-y-3 p-4">
-        <p className="text-sm font-semibold text-foreground">{t("timelineTitle")}</p>
-        {timelineEvents.length === 0 ? (
-          <p className="text-xs text-muted-foreground">{t("timelineEmpty")}</p>
-        ) : (
-          <ul className="space-y-1.5">
-            {timelineEvents.map((event) => {
-              const isOwnGoal = event.type === "goal" && event.teamSide === "own";
-              const isOpponentGoal = event.type === "goal" && event.teamSide === "opponent";
-              const isSub = event.type === "substitution";
-              const isStart = event.type === "match_started";
-              const isEnd = event.type === "match_ended";
-              const minuteStr = event.minute !== null ? `${event.minute}'` : "—";
-              const editableServerEvent =
-                isOwnGoal && event.source === "server" && event.serverEventId
-                  ? events.find((serverEvent) => serverEvent.id === event.serverEventId) ?? null
-                  : null;
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        {/* Timeline: hairline rows, the minute in front (DESIGN.md §7). */}
+        <section className="space-y-2" data-testid="match-timeline">
+          <h2 ref={timelineHeadingRef} tabIndex={-1} className={KICKER}>
+            {t("timelineTitle")}
+          </h2>
+          {timelineRows.length === 0 ? (
+            <p className="px-1 text-[14px] text-fp-ink-2">{t("timelineEmpty")}</p>
+          ) : (
+            <ListGroup aria-label={t("timelineTitle")}>
+              {timelineRows.map((event) => {
+                const editableServerEvent =
+                  event.type === "goal" && event.teamSide === "own" && event.source === "server" && event.serverEventId
+                    ? events.find((serverEvent) => serverEvent.id === event.serverEventId) ?? null
+                    : null;
+                const minute = (
+                  <span className="w-8 text-[14px] font-semibold tabular-nums">
+                    {event.minute !== null ? `${event.minute}′` : "—"}
+                  </span>
+                );
+                const spokenMinute =
+                  event.minute !== null ? (
+                    <span className="sr-only">{t("event.minuteA11y", { minute: event.minute })} </span>
+                  ) : null;
 
-              return (
-                <li key={event.id}>
-                  <button
-                    type="button"
-                    className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${
-                      isOwnGoal
-                        ? "border-fp-ok-text/20 bg-fp-ok-text/5 active:bg-fp-ok-text/10"
-                        : isOpponentGoal
-                          ? "border-fp-danger-text/20 bg-fp-danger/5 active:bg-fp-danger/10"
-                          : "border-fp-border bg-fp-surface-2 active:bg-fp-surface"
-                    }`}
+                let label: ReactNode;
+                let description: ReactNode = undefined;
+                if (event.type === "goal" && event.teamSide === "own") {
+                  label = event.scorerName ?? t("event.notRegistered");
+                  description = event.assistName
+                    ? t("event.ownGoalWithAssist", { assist: event.assistName })
+                    : t("event.ownGoal");
+                } else if (event.type === "goal") {
+                  label = t("event.opponentGoalNamed", { opponent: opponentDisplayName });
+                } else if (event.type === "substitution") {
+                  label = `${t("event.substitutionIn")}: ${event.inPlayerName ?? t("event.notRegistered")}`;
+                  description = `${t("event.substitutionOut")}: ${event.outPlayerName ?? t("event.notRegistered")}`;
+                }
+
+                const rowLabel = (
+                  <>
+                    {spokenMinute}
+                    {label}
+                  </>
+                );
+
+                return editableServerEvent ? (
+                  <ListRow
+                    key={event.id}
+                    leading={minute}
+                    label={rowLabel}
+                    description={description}
+                    trailing={
+                      <>
+                        <Pencil size={18} strokeWidth={1.75} aria-hidden />
+                        <span className="sr-only">{t("event.editA11y")}</span>
+                      </>
+                    }
                     onClick={() => {
-                      if (editableServerEvent) {
-                        openEditModal(editableServerEvent);
-                      }
+                      deleteEventFinalFocus.current = document.querySelector<HTMLElement>(`[data-testid="timeline-${event.id}"]`);
+                      openEditModal(editableServerEvent);
                     }}
-                  >
-                    {/* Opponent goals: reversed layout so minute is right, content is right-aligned */}
-                    <div className={`flex items-start gap-2.5 ${isOpponentGoal ? "flex-row-reverse" : ""}`}>
-                      <span className="mt-0.5 w-8 shrink-0 text-[11px] font-semibold tabular-nums text-muted-foreground">
-                        {minuteStr}
-                      </span>
-                      <div className={`flex-1 min-w-0 ${isOpponentGoal ? "text-right" : ""}`}>
-                        {isOwnGoal && (
-                          <>
-                            <p className="text-sm font-semibold text-foreground">
-                              ⚽ {event.scorerName ?? t("event.notRegistered")}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {t("event.assistLabel", { value: event.assistName ?? t("event.noAssist") })}
-                            </p>
-                          </>
-                        )}
-                        {isOpponentGoal && (
-                          <p className="text-sm font-semibold text-foreground">
-                            {t("event.opponentGoal")} ⚽
-                          </p>
-                        )}
-                        {isSub && (
-                          <div className="flex items-center gap-1.5">
-                            <ArrowLeftRight size={13} className="shrink-0 text-muted-foreground" />
-                            <div>
-                              <p className="text-xs text-foreground">
-                                <span className="text-fp-ok-text">
-                                  {t("event.substitutionIn")}: {event.inPlayerName ?? t("event.notRegistered")}
-                                </span>
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {t("event.substitutionOut")}: {event.outPlayerName ?? t("event.notRegistered")}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                        {isStart && (
-                          <p className="text-xs text-muted-foreground">{t("event.matchStarted")}</p>
-                        )}
-                        {isEnd && (
-                          <p className="text-xs text-muted-foreground">{t("event.matchEnded")}</p>
-                        )}
-                        {!isOwnGoal && !isOpponentGoal && !isSub && !isStart && !isEnd && (
-                          <p className="text-xs text-muted-foreground">{event.type}</p>
-                        )}
-                      </div>
-                      {editableServerEvent && (
-                        <span className="shrink-0 text-[10px] text-muted-foreground/60">{t("event.editTitle")} →</span>
-                      )}
-                    </div>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </AppCard>
+                    testId={`timeline-${event.id}`}
+                  />
+                ) : (
+                  <ListRow
+                    key={event.id}
+                    leading={minute}
+                    label={rowLabel}
+                    description={description}
+                    testId={`timeline-${event.id}`}
+                  />
+                );
+              })}
+            </ListGroup>
+          )}
+        </section>
 
-      {/* Playing time: shown whenever the match recorded it, and for every
-          completed match, which says so when it did not. */}
-      {playingTime || isCompleted ? (
-        <MatchPlayingTime summary={playingTime} names={playingTimeNames} isLive={match.status === "live"} />
-      ) : null}
+        {/* Playing time: shown whenever the match recorded it, and for every
+            completed match, which says so when it did not. */}
+        {playingTime || isCompleted ? (
+          <MatchPlayingTime summary={playingTime} names={playingTimeNames} isLive={match.status === "live"} />
+        ) : null}
+      </div>
 
-      {/* AI report */}
+      {/* The generated summary: its own calm section, text first. */}
       {match.reportEnabled ? (
-        <AppCard className="space-y-3 p-4">
-          <div className="flex items-center gap-2">
-            <Sparkles size={15} className="text-fp-ink-2" />
-            <p className="text-sm font-semibold text-foreground">{t("reportTitle")}</p>
-          </div>
-          {match.reportStatus === "pending" && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 size={14} className="animate-spin" />
-              {t("reportPending")}
-            </div>
-          )}
-          {match.reportStatus === "failed" && (
-            <p className="text-sm text-fp-danger-text">{t("reportFailed")}</p>
-          )}
-          {match.reportStatus === "ready" && match.reportText ? (
-            <div className="space-y-2">
-              <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/80">
-                {match.reportText}
+        <section className="space-y-2" data-testid="match-report">
+          <h2 className={KICKER}>{t("reportTitle")}</h2>
+          <div className="space-y-3 rounded-[14px] border border-fp-rule bg-fp-surface p-4">
+            {/* One live region that stays mounted, so a change of status is announced. */}
+            <p role="status" className="sr-only">
+              {match.reportStatus === "ready" ? t("reportReady") : match.reportStatus === "failed" ? t("reportFailed") : t("reportPending")}
+            </p>
+            {match.reportStatus === "pending" || match.reportStatus === "not_requested" ? (
+              <p aria-hidden className="flex items-center gap-2 text-base text-fp-ink-2">
+                {match.reportStatus === "pending" ? <Loader2 size={16} className="animate-spin" aria-hidden /> : null}
+                {t("reportPending")}
               </p>
-              <p className="text-[11px] text-muted-foreground">
-                {t("reportGeneratedAt", { value: formatDate(match.reportGeneratedAt ?? null) })}
-              </p>
-            </div>
-          ) : null}
-          {match.reportStatus === "not_requested" && (
-            <p className="text-xs text-muted-foreground">{t("reportPending")}</p>
-          )}
-          <FpButton
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              void triggerReportGeneration(match);
-            }}
-            disabled={isRegeneratingReport || match.reportStatus === "pending"}
-          >
-            {isRegeneratingReport || match.reportStatus === "pending"
-              ? t("reportRetrying")
-              : t("reportRegenerateCta")}
-          </FpButton>
-        </AppCard>
-      ) : null}
-
-      {/* Danger zone */}
-      <AppCard className="space-y-3 border-fp-danger/20 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-fp-danger-text">
-          {t("actionsTitle")}
-        </p>
-        <FpButton
-          type="button"
-          variant="danger"
-          size="md"
-          fullWidth
-          onClick={() => { setShowDeleteConfirm(true); }}
-        >
-          {t("delete.cta")}
-        </FpButton>
-      </AppCard>
-
-      {/* Goal edit modal */}
-      {editingEvent ? (
-        <div className="fixed inset-0 z-40 flex items-end bg-fp-scrim p-3">
-          <AppCard className="w-full space-y-3 p-4">
-            <p className="text-sm font-semibold text-foreground">{t("event.editTitle")}</p>
-
-            <label className="block space-y-1">
-              <span className="text-xs text-muted-foreground">{t("event.minute")}</span>
-              <input
-                type="number"
-                min={0}
-                value={editMinute}
-                onChange={(event) => { setEditMinute(event.target.value); }}
-                className="w-full rounded-lg border border-fp-border bg-fp-surface-2 px-3 py-2 text-sm text-foreground"
-              />
-            </label>
-
-            <label className="block space-y-1">
-              <span className="text-xs text-muted-foreground">{t("event.scorer")}</span>
-              <select
-                value={editScorerId}
-                onChange={(event) => { setEditScorerId(event.target.value); }}
-                className="w-full rounded-lg border border-fp-border bg-fp-surface-2 px-3 py-2 text-sm text-foreground"
-              >
-                <option value="">{t("event.notRegistered")}</option>
-                {playerOptions.map((player) => (
-                  <option key={player.id} value={player.id}>{player.name}</option>
-                ))}
-              </select>
-            </label>
-
-            <label className="block space-y-1">
-              <span className="text-xs text-muted-foreground">{t("event.assist")}</span>
-              <select
-                value={editAssistId}
-                onChange={(event) => { setEditAssistId(event.target.value); }}
-                className="w-full rounded-lg border border-fp-border bg-fp-surface-2 px-3 py-2 text-sm text-foreground"
-              >
-                <option value="">{t("event.noAssist")}</option>
-                {playerOptions.map((player) => (
-                  <option key={player.id} value={player.id}>{player.name}</option>
-                ))}
-              </select>
-            </label>
-
-            <div className="grid grid-cols-2 gap-2">
-              <FpButton
-                variant="secondary"
-                size="md"
-                onClick={() => { setEditingEvent(null); }}
-              >
-                {common("cancel")}
-              </FpButton>
-              <FpButton
-                variant="primary"
-                size="md"
-                onClick={() => { void handleSaveEdit(); }}
-                disabled={isSavingEdit}
-              >
-                {isSavingEdit ? t("event.saving") : t("event.save")}
-              </FpButton>
-            </div>
-
-            <FpButton
-              variant="danger"
-              size="md"
-              fullWidth
-              onClick={() => { void handleDeleteEvent(); }}
+            ) : null}
+            {match.reportStatus === "failed" ? (
+              <p aria-hidden className="text-base text-fp-ink">{t("reportFailed")}</p>
+            ) : null}
+            {match.reportStatus === "ready" && match.reportText ? (
+              <>
+                <p className="whitespace-pre-line text-base leading-relaxed text-fp-ink">{match.reportText}</p>
+                <p className="text-[14px] text-fp-ink-2">
+                  {t("reportGeneratedAt", { value: formatDate(match.reportGeneratedAt ?? null) })}
+                </p>
+              </>
+            ) : null}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                void triggerReportGeneration(match);
+              }}
+              disabled={isRegeneratingReport || match.reportStatus === "pending"}
             >
-              {t("event.delete")}
-            </FpButton>
-          </AppCard>
-        </div>
+              {isRegeneratingReport || match.reportStatus === "pending"
+                ? t("reportRetrying")
+                : t("reportRegenerateCta")}
+            </Button>
+          </div>
+        </section>
       ) : null}
 
-      {/* Delete confirmation modal */}
-      {showDeleteConfirm ? (
-        <div className="fixed inset-0 z-50 flex items-end bg-fp-scrim p-3">
-          <AppCard className="w-full space-y-4 p-5">
-            <div className="space-y-1.5">
-              <p className="text-base font-semibold text-foreground">{t("delete.title")}</p>
-              <p className="text-sm text-muted-foreground">{t("delete.description")}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <FpButton
-                variant="secondary"
-                size="md"
-                onClick={() => { setShowDeleteConfirm(false); }}
-              >
-                {common("cancel")}
-              </FpButton>
-              <FpButton
-                variant="danger"
-                size="md"
-                onClick={() => { void handleDeleteMatch(); }}
-              >
-                {t("delete.cta")}
-              </FpButton>
-            </div>
-          </AppCard>
+      {/* Destructive on its own, behind a confirmation (DESIGN.md §5.5). */}
+      {deleteMatchError ? <Notice tone="error">{deleteMatchError}</Notice> : null}
+      <ListGroup aria-label={t("deleteSectionLabel")} testId="match-delete">
+        <ListRow destructive label={t("delete.cta")} onClick={() => { setShowDeleteConfirm(true); }} />
+      </ListGroup>
+
+      {/* Goal edit sheet (C4: on the shared Sheet, UI-A11Y-03). */}
+      <Sheet
+        open={editSheetOpen}
+        onOpenChange={setEditSheetOpen}
+        title={t("event.editTitle")}
+        closeButton={common("cancel")}
+        testId="goal-edit-sheet"
+        actions={
+          <Button
+            variant="primary"
+            block
+            aria-disabled={isSavingEdit || undefined}
+            aria-busy={isSavingEdit || undefined}
+            onClick={() => {
+              if (!isSavingEdit) void handleSaveEdit();
+            }}
+          >
+            {isSavingEdit ? t("event.saving") : t("event.save")}
+          </Button>
+        }
+      >
+        <div className="space-y-4">
+          {editError ? <Notice tone="error">{editError}</Notice> : null}
+          <label className="block space-y-1.5">
+            <span className="text-[14px] font-medium text-fp-ink-2">{t("event.minute")}</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              value={editMinute}
+              onChange={(event) => { setEditMinute(event.target.value); }}
+              className={FIELD}
+            />
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="text-[14px] font-medium text-fp-ink-2">{t("event.scorer")}</span>
+            <select value={editScorerId} onChange={(event) => { setEditScorerId(event.target.value); }} className={FIELD}>
+              <option value="">{t("event.notRegistered")}</option>
+              {playerOptions.map((player) => (
+                <option key={player.id} value={player.id}>{player.name}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="text-[14px] font-medium text-fp-ink-2">{t("event.assist")}</span>
+            <select value={editAssistId} onChange={(event) => { setEditAssistId(event.target.value); }} className={FIELD}>
+              <option value="">{t("event.noAssist")}</option>
+              {playerOptions.map((player) => (
+                <option key={player.id} value={player.id}>{player.name}</option>
+              ))}
+            </select>
+          </label>
+
+          <ListGroup className="pt-4">
+            <ListRow
+              destructive
+              label={t("event.deleteGoal")}
+              onClick={() => {
+                setEditSheetOpen(false);
+                setDeleteEventOpen(true);
+              }}
+            />
+          </ListGroup>
         </div>
-      ) : null}
+      </Sheet>
+
+      <ConfirmSheet
+        open={deleteEventOpen}
+        onOpenChange={setDeleteEventOpen}
+        title={t("event.deleteConfirmTitle")}
+        description={
+          editingEvent?.minute != null
+            ? t("event.deleteConfirmDescription", { minute: editingEvent.minute })
+            : t("event.deleteConfirmDescriptionNoMinute")
+        }
+        confirmLabel={t("event.deleteConfirmCta")}
+        destructive
+        pending={isDeletingEvent}
+        onConfirm={() => { void handleDeleteEvent(); }}
+        finalFocus={deleteEventFinalFocus}
+        testId="goal-delete-confirm"
+      />
+
+      <ConfirmSheet
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title={t("delete.title")}
+        description={t("delete.description")}
+        confirmLabel={t("delete.confirmCta")}
+        destructive
+        pending={isDeletingMatch}
+        onConfirm={() => { void handleDeleteMatch(); }}
+        testId="delete-match-confirm"
+      />
     </PageShell>
   );
 }

@@ -803,7 +803,8 @@
         "openSpellsMissing": "The match clock was not saved. Minutes for players on the pitch at the end may be missing, and fair share cannot be calculated.",
         "legacyFormat": "This match was saved by an older version. Minutes are shown as they were recorded.",
         "clockNotStopped": "The match clock was not stopped. Minutes are counted up to the last save."
-      }
+      },
+      "barLegend": "The mark on each bar is the fair share."
     },
     "defaultOpponent": "Opponent",
     "lineupStarters": "Starting XI",
@@ -824,7 +825,8 @@
       "title": "Delete match?",
       "description": "This action cannot be undone. The match and report will be removed.",
       "confirm": "Are you sure you want to delete this match? This also deletes the timeline and summary.",
-      "success": "Match deleted."
+      "success": "Match deleted.",
+      "confirmCta": "Yes, delete the match"
     },
     "event": {
       "assistLabel": "Assist: {value}",
@@ -843,7 +845,17 @@
       "saving": "Saving...",
       "delete": "Delete event",
       "deleted": "Event deleted.",
-      "editSaved": "Event updated."
+      "editSaved": "Event updated.",
+      "ownGoal": "Goal",
+      "ownGoalWithAssist": "Goal · assist {assist}",
+      "opponentGoalNamed": "Goal for {opponent}",
+      "minuteA11y": "Minute {minute}:",
+      "editA11y": "Edit goal",
+      "deleteGoal": "Delete the goal",
+      "deleteConfirmTitle": "Delete the goal?",
+      "deleteConfirmDescription": "The goal in minute {minute} is removed from the match timeline.",
+      "deleteConfirmDescriptionNoMinute": "The goal is removed from the match timeline.",
+      "deleteConfirmCta": "Yes, delete the goal"
     },
     "status": {
       "planned": "Planned",
@@ -919,40 +931,38 @@
       "confirm": "Yes, end the match",
       "changed": "The match changed on this device while you were confirming. Nothing was ended; check its status and try again."
     },
-    "newMatchTitle": "New match"
+    "newMatchTitle": "New match",
+    "backToHistory": "History",
+    "backToPlanner": "Match",
+    "deleteSectionLabel": "Delete match",
+    "scoreA11y": "{scoreFor} to {scoreAgainst}",
+    "reportReady": "The match summary is ready."
   },
   "matchHistory": {
     "title": "History",
-    "subtitle": "All completed matches and match reports.",
-    "activeTeam": "Active team: {name}",
     "filterLabel": "Team",
     "filterAllTeams": "All teams",
-    "listTitle": "Completed matches",
-    "emptyTitle": "No completed matches yet",
-    "emptyDescription": "Complete your first match and it will appear here.",
-    "goToMatches": "Go to match planner",
+    "emptyTitle": "No matches yet",
+    "emptyDescription": "Matches you plan and play will appear here.",
+    "goToMatches": "Plan a match",
     "guestTitle": "Sign in to view history",
     "guestDescription": "Match history is stored in the cloud and requires sign in.",
     "guestCta": "Sign in",
     "noTeamTitle": "No active team",
     "noTeamDescription": "Select or create a team to view match history.",
     "goToTeam": "Go to team",
-    "reportBadge": "Report",
-    "openMatch": "View report",
-    "opponentLabel": "Opponent: {value}",
-    "locationLabel": "Location: {value}",
-    "formatLabel": "Format: {value}",
     "resultWon": "Win",
     "resultDraw": "Draw",
     "resultLost": "Loss",
-    "delete": {
-      "cta": "Delete",
-      "confirm": "Delete this match? This also deletes the event log and report.",
-      "success": "Match deleted."
-    },
     "errors": {
-      "generic": "Something went wrong. Try again."
-    }
+      "generic": "Could not load the matches. Check your connection and try again."
+    },
+    "groupLive": "Live",
+    "groupCompleted": "Completed matches",
+    "groupPlanned": "Planned",
+    "allPlanned": "All planned matches",
+    "retry": "Try again",
+    "scoreA11y": "{scoreFor} to {scoreAgainst}"
   },
   "lineup": {
     "title": "Lineup",

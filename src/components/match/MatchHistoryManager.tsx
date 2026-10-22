@@ -1,15 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { CalendarClock, MapPin, Trophy, ShieldAlert } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { History, ShieldAlert } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { AppCard } from "@/components/ui/AppCard";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { ButtonLink } from "@/components/ui/primitives";
+import { Button, ButtonLink, EmptyState, ListGroup, ListRow, Notice, SkeletonList } from "@/components/ui/primitives";
 
 interface MatchItem {
   id: string;
@@ -30,6 +28,14 @@ interface MatchItem {
   endedAt?: string | null;
 }
 
+/** Planned matches are a glance ahead here; the full list lives on Kamp. */
+const PLANNED_LIMIT = 3;
+
+function startsAtMs(match: MatchItem): number {
+  const time = new Date(match.startsAt).getTime();
+  return Number.isNaN(time) ? 0 : time;
+}
+
 export function MatchHistoryManager() {
   const t = useTranslations("matchHistory");
   const common = useTranslations("common");
@@ -44,7 +50,10 @@ export function MatchHistoryManager() {
   );
 
   const [matches, setMatches] = useState<MatchItem[]>([]);
-  const [isLoadingMatches, setIsLoadingMatches] = useState(false);
+  // Loading until the first answer, so the empty state never flashes first.
+  const [isLoadingMatches, setIsLoadingMatches] = useState(true);
+  // Only the latest load may write (a team change or retry mid-flight).
+  const loadId = useRef(0);
   const [error, setError] = useState<string | null>(null);
 
   // undefined = not yet chosen by user → falls back to workspace.activeTeamId
@@ -57,13 +66,26 @@ export function MatchHistoryManager() {
 
   const isGuestMode = workspace.mode === "guest-local" || auth.status !== "authenticated";
 
-  const historyMatches = useMemo(() => {
-    const completed = matches.filter((match) => match.status === "completed");
-    const filtered = effectiveTeamId
-      ? completed.filter((match) => match.teamId === effectiveTeamId)
-      : completed;
-    return filtered.sort((a, b) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime());
+  // C4 (UI-HIST-01): live first, then the next few planned matches, then
+  // results newest first (an unbounded list, so it goes last). Status is told
+  // by the group, not by colour.
+  const groups = useMemo(() => {
+    const visible = effectiveTeamId ? matches.filter((match) => match.teamId === effectiveTeamId) : matches;
+    return {
+      live: visible.filter((match) => match.status === "live").sort((a, b) => startsAtMs(b) - startsAtMs(a)),
+      completed: visible.filter((match) => match.status === "completed").sort((a, b) => startsAtMs(b) - startsAtMs(a)),
+      planned: visible
+        .filter((match) => match.status === "upcoming" || match.status === "draft")
+        .sort((a, b) => startsAtMs(a) - startsAtMs(b)),
+    };
   }, [matches, effectiveTeamId]);
+
+  const teamNameById = useMemo(
+    () => new Map(workspace.teams.map((team) => [team.id, team.name])),
+    [workspace.teams]
+  );
+  // The team is named on each row only when rows from several teams can mix.
+  const showTeamName = effectiveTeamId === null && workspace.teams.length > 1;
 
   const formatDate = (value: string | null) => {
     if (!value) return "—";
@@ -78,23 +100,24 @@ export function MatchHistoryManager() {
   const loadMatches = useCallback(async () => {
     if (workspace.teams.length === 0) return;
 
+    const id = ++loadId.current;
     setIsLoadingMatches(true);
     setError(null);
     try {
       const results = await Promise.all(
         workspace.teams.map(async (team) => {
           const response = await fetch(`/api/matches?teamId=${encodeURIComponent(team.id)}`);
-          const payload = (await response.json()) as unknown;
-          if (!response.ok) return [] as MatchItem[];
-          const data = payload as { matches: MatchItem[] };
+          // A team that fails is an error, not an empty history.
+          if (!response.ok) throw new Error(`matches ${response.status}`);
+          const data = (await response.json()) as { matches?: MatchItem[] };
           return data.matches ?? ([] as MatchItem[]);
         })
       );
-      setMatches(results.flat());
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t("errors.generic"));
+      if (id === loadId.current) setMatches(results.flat());
+    } catch {
+      if (id === loadId.current) setError(t("errors.generic"));
     } finally {
-      setIsLoadingMatches(false);
+      if (id === loadId.current) setIsLoadingMatches(false);
     }
   }, [workspace.teams, t]);
 
@@ -106,22 +129,21 @@ export function MatchHistoryManager() {
   if (!isHydrated || auth.status === "loading" || workspace.isLoading) {
     return (
       <PageShell>
-        <AppCard className="p-6 text-sm text-muted-foreground">{common("loading")}</AppCard>
+        <SectionHeader title={t("title")} />
+        <SkeletonList rows={4} withDescription label={common("loading")} />
       </PageShell>
     );
   }
 
   if (isGuestMode) {
     return (
-      <PageShell className="space-y-4">
-        <SectionHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageShell>
+        <SectionHeader title={t("title")} />
         <EmptyState
           icon={ShieldAlert}
           title={t("guestTitle")}
           description={t("guestDescription")}
-          action={
-            <ButtonLink href="/auth/sign-in" variant="primary" size="sm">{t("guestCta")}</ButtonLink>
-          }
+          action={<ButtonLink href="/auth/sign-in" variant="primary">{t("guestCta")}</ButtonLink>}
         />
       </PageShell>
     );
@@ -129,34 +151,46 @@ export function MatchHistoryManager() {
 
   if (workspace.teams.length === 0) {
     return (
-      <PageShell className="space-y-4">
-        <SectionHeader title={t("title")} subtitle={t("subtitle")} />
+      <PageShell>
+        <SectionHeader title={t("title")} />
         <EmptyState
           icon={ShieldAlert}
           title={t("noTeamTitle")}
           description={t("noTeamDescription")}
-          action={
-            <ButtonLink href="/team" variant="primary" size="sm">{t("goToTeam")}</ButtonLink>
-          }
+          action={<ButtonLink href="/team" variant="primary">{t("goToTeam")}</ButtonLink>}
         />
       </PageShell>
     );
   }
 
-  return (
-    <PageShell className="space-y-5">
-      <SectionHeader title={t("title")} subtitle={t("subtitle")} />
+  const describe = (match: MatchItem) =>
+    [
+      formatDate(match.startsAt),
+      match.location,
+      showTeamName ? teamNameById.get(match.teamId) : null,
+      match.source === "spond" ? "Spond" : null,
+    ]
+      .filter(Boolean)
+      .join(" · ");
 
-      {/* Team filter */}
-      <AppCard className="p-3">
-        <label className="flex items-center gap-2.5">
-          <span className="shrink-0 text-xs font-medium text-muted-foreground">
-            {t("filterLabel")}
-          </span>
+  const label = (match: MatchItem) => match.opponentName?.trim() || match.title;
+
+  const resultWord = (scoreFor: number, scoreAgainst: number) =>
+    scoreFor > scoreAgainst ? t("resultWon") : scoreFor < scoreAgainst ? t("resultLost") : t("resultDraw");
+
+  const isEmpty = groups.live.length + groups.completed.length + groups.planned.length === 0;
+
+  return (
+    <PageShell className="flex flex-col gap-6">
+      <SectionHeader title={t("title")} className="mb-0" />
+
+      {workspace.teams.length > 1 ? (
+        <label className="flex items-center gap-3">
+          <span className="shrink-0 text-[14px] font-medium text-fp-ink-2">{t("filterLabel")}</span>
           <select
             value={effectiveTeamId ?? ""}
             onChange={(e) => { setLocalFilterId(e.target.value || null); }}
-            className="min-w-0 flex-1 rounded-lg border border-fp-border bg-background px-3 py-1.5 text-sm font-medium text-foreground outline-none focus:border-transparent focus:ring-2 focus:ring-ring"
+            className="min-h-11 min-w-0 flex-1 rounded-[10px] border border-fp-rule bg-fp-surface px-3 text-base font-medium text-fp-ink outline-none focus-visible:ring-2 focus-visible:ring-fp-focus"
           >
             <option value="">{t("filterAllTeams")}</option>
             {workspace.teams.map((team) => (
@@ -166,98 +200,100 @@ export function MatchHistoryManager() {
             ))}
           </select>
         </label>
-      </AppCard>
+      ) : null}
 
-      {error ? <AppCard className="p-3 text-xs text-fp-danger-text">{error}</AppCard> : null}
+      {error ? (
+        <Notice
+          tone="error"
+          action={
+            <Button size="sm" onClick={() => { void loadMatches(); }}>
+              {t("retry")}
+            </Button>
+          }
+        >
+          {error}
+        </Notice>
+      ) : null}
 
-      <div className="space-y-3">
-        <h3 className="px-1 text-sm font-semibold text-foreground">{t("listTitle")}</h3>
+      {isLoadingMatches ? (
+        <SkeletonList rows={4} withDescription label={common("loading")} />
+      ) : error ? null : isEmpty ? (
+        <EmptyState
+          icon={History}
+          title={t("emptyTitle")}
+          description={t("emptyDescription")}
+          action={<ButtonLink href="/match" variant="primary">{t("goToMatches")}</ButtonLink>}
+          testId="history-empty"
+        />
+      ) : (
+        <>
+          {groups.live.length > 0 ? (
+            <ListGroup title={t("groupLive")} testId="history-live">
+              {groups.live.map((match) => (
+                <ListRow
+                  key={match.id}
+                  href={`/match/${match.id}`}
+                  label={label(match)}
+                  description={describe(match)}
+                  testId={`history-row-${match.id}`}
+                />
+              ))}
+            </ListGroup>
+          ) : null}
 
-        {isLoadingMatches ? (
-          <AppCard className="p-6">
-            <p className="text-center text-xs text-muted-foreground">{common("loading")}</p>
-          </AppCard>
-        ) : historyMatches.length === 0 ? (
-          <EmptyState
-            icon={Trophy}
-            title={t("emptyTitle")}
-            description={t("emptyDescription")}
-            action={
-              <ButtonLink href="/match" variant="secondary" size="sm">{t("goToMatches")}</ButtonLink>
-            }
-          />
-        ) : (
-          <ul className="space-y-3">
-            {historyMatches.map((match) => {
-              const scoreFor = match.scoreFor ?? 0;
-              const scoreAgainst = match.scoreAgainst ?? 0;
-              const won = scoreFor > scoreAgainst;
-              const draw = scoreFor === scoreAgainst;
+          {groups.planned.length > 0 ? (
+            <ListGroup title={t("groupPlanned")} testId="history-planned">
+              {groups.planned.slice(0, PLANNED_LIMIT).map((match) => (
+                <ListRow
+                  key={match.id}
+                  href={`/match/${match.id}`}
+                  label={label(match)}
+                  description={describe(match)}
+                  testId={`history-row-${match.id}`}
+                />
+              ))}
+              {groups.planned.length > PLANNED_LIMIT ? (
+                <ListRow
+                  href="/match"
+                  label={t("allPlanned")}
+                  trailing={<span className="text-[14px] font-medium tabular-nums text-fp-ink-2">{groups.planned.length}</span>}
+                  testId="history-all-planned"
+                />
+              ) : null}
+            </ListGroup>
+          ) : null}
+          {groups.completed.length > 0 ? (
+            <ListGroup title={t("groupCompleted")} testId="history-completed">
+              {groups.completed.map((match) => {
+                const scoreFor = match.scoreFor ?? 0;
+                const scoreAgainst = match.scoreAgainst ?? 0;
 
-              return (
-                <li key={match.id}>
-                  <AppCard className="space-y-3 p-4">
-                    {/* Title + Spond badge */}
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-semibold leading-snug text-foreground">
-                        {match.opponentName
-                          ? `${match.title} — ${match.opponentName}`
-                          : match.title}
-                      </p>
-                      {match.source === "spond" ? (
-                        <span className="shrink-0 rounded-full border border-fp-spond-border bg-fp-spond-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fp-spond-foreground">
-                          Spond
+                return (
+                  <ListRow
+                    key={match.id}
+                    href={`/match/${match.id}`}
+                    label={label(match)}
+                    description={describe(match)}
+                    trailing={
+                      <span className="flex flex-col items-end leading-none">
+                        <span aria-hidden className="font-num text-[28px] leading-none text-fp-ink">
+                          {scoreFor}–{scoreAgainst}
                         </span>
-                      ) : null}
-                    </div>
-
-                    {/* Score + result badge */}
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`text-2xl font-black leading-none tabular-nums ${
-                          won ? "text-fp-ok-text" : draw ? "text-foreground" : "text-fp-danger-text"
-                        }`}
-                      >
-                        {scoreFor} – {scoreAgainst}
+                        <span className="sr-only">{t("scoreA11y", { scoreFor, scoreAgainst })}</span>
+                        <span className="mt-1 text-[13px] font-medium text-fp-ink-2">
+                          {resultWord(scoreFor, scoreAgainst)}
+                        </span>
                       </span>
-                      <span
-                        className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
-                          won
-                            ? "border-fp-ok-text/25 bg-fp-ok-text/10 text-fp-ok-text"
-                            : draw
-                              ? "border-fp-border bg-fp-surface text-muted-foreground"
-                              : "border-fp-danger-text/25 bg-fp-danger/10 text-fp-danger-text"
-                        }`}
-                      >
-                        {won ? t("resultWon") : draw ? t("resultDraw") : t("resultLost")}
-                      </span>
-                    </div>
+                    }
+                    testId={`history-row-${match.id}`}
+                  />
+                );
+              })}
+            </ListGroup>
+          ) : null}
 
-                    {/* Metadata */}
-                    <div className="space-y-0.5">
-                      <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <CalendarClock size={11} />
-                        {formatDate(match.startsAt)}
-                      </p>
-                      {match.location ? (
-                        <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <MapPin size={11} />
-                          {match.location}
-                        </p>
-                      ) : null}
-                    </div>
-
-                    {/* Primary action */}
-                    <ButtonLink href={`/match/${match.id}`} variant="primary" size="sm" block>
-                      {t("openMatch")}
-                    </ButtonLink>
-                  </AppCard>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
+        </>
+      )}
     </PageShell>
   );
 }

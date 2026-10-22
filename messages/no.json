@@ -803,7 +803,8 @@
         "openSpellsMissing": "Kampklokken ble ikke lagret. Minutter for spillere som var på banen ved slutt kan mangle, og rettferdig andel kan ikke beregnes.",
         "legacyFormat": "Kampen ble lagret av en eldre versjon. Minuttene vises slik de ble registrert.",
         "clockNotStopped": "Kampklokken ble ikke stoppet. Minuttene er regnet frem til siste lagring."
-      }
+      },
+      "barLegend": "Streken på hver linje markerer rettferdig andel."
     },
     "defaultOpponent": "Motstander",
     "lineupStarters": "Startoppstilling",
@@ -824,7 +825,8 @@
       "title": "Slette kamp?",
       "description": "Denne handlingen kan ikke angres. Kampen og rapporten blir fjernet.",
       "confirm": "Er du sikker på at du vil slette kampen? Dette sletter også kampforløp og kampoppsummering.",
-      "success": "Kampen ble slettet."
+      "success": "Kampen ble slettet.",
+      "confirmCta": "Ja, slett kampen"
     },
     "event": {
       "assistLabel": "Assist: {value}",
@@ -843,7 +845,17 @@
       "saving": "Lagrer...",
       "delete": "Slett hendelse",
       "deleted": "Hendelsen ble slettet.",
-      "editSaved": "Hendelsen ble oppdatert."
+      "editSaved": "Hendelsen ble oppdatert.",
+      "ownGoal": "Mål",
+      "ownGoalWithAssist": "Mål · assist {assist}",
+      "opponentGoalNamed": "Mål for {opponent}",
+      "minuteA11y": "{minute}. minutt:",
+      "editA11y": "Rediger mål",
+      "deleteGoal": "Slett målet",
+      "deleteConfirmTitle": "Slette målet?",
+      "deleteConfirmDescription": "Målet i {minute}. minutt fjernes fra kampforløpet.",
+      "deleteConfirmDescriptionNoMinute": "Målet fjernes fra kampforløpet.",
+      "deleteConfirmCta": "Ja, slett målet"
     },
     "status": {
       "planned": "Planlagt",
@@ -919,40 +931,38 @@
       "confirm": "Ja, avslutt kampen",
       "changed": "Kampen ble endret på denne enheten mens du bekreftet. Ingenting er avsluttet; sjekk statusen og prøv igjen."
     },
-    "newMatchTitle": "Ny kamp"
+    "newMatchTitle": "Ny kamp",
+    "backToHistory": "Historikk",
+    "backToPlanner": "Kamp",
+    "deleteSectionLabel": "Slett kamp",
+    "scoreA11y": "{scoreFor} mot {scoreAgainst}",
+    "reportReady": "Kampoppsummeringen er klar."
   },
   "matchHistory": {
     "title": "Historikk",
-    "subtitle": "Alle ferdige kamper og kamprapporter.",
-    "activeTeam": "Aktivt lag: {name}",
     "filterLabel": "Lag",
     "filterAllTeams": "Alle lag",
-    "listTitle": "Ferdige kamper",
-    "emptyTitle": "Ingen ferdige kamper ennå",
-    "emptyDescription": "Fullfør din første kamp, så dukker den opp her.",
-    "goToMatches": "Gå til kampplanlegging",
+    "emptyTitle": "Ingen kamper ennå",
+    "emptyDescription": "Kamper du planlegger og spiller, dukker opp her.",
+    "goToMatches": "Planlegg en kamp",
     "guestTitle": "Logg inn for å se historikk",
     "guestDescription": "Kamphistorikk lagres i skyen og krever innlogging.",
     "guestCta": "Logg inn",
     "noTeamTitle": "Ingen aktivt lag",
     "noTeamDescription": "Velg eller opprett et lag for å se kamphistorikk.",
     "goToTeam": "Gå til lag",
-    "reportBadge": "Rapport",
-    "openMatch": "Se rapport",
-    "opponentLabel": "Motstander: {value}",
-    "locationLabel": "Sted: {value}",
-    "formatLabel": "Format: {value}",
     "resultWon": "Seier",
     "resultDraw": "Uavgjort",
     "resultLost": "Tap",
-    "delete": {
-      "cta": "Slett",
-      "confirm": "Slette denne kampen? Dette sletter også kampforløp og rapport.",
-      "success": "Kampen ble slettet."
-    },
     "errors": {
-      "generic": "Noe gikk galt. Prøv igjen."
-    }
+      "generic": "Kunne ikke hente kampene. Sjekk nettet og prøv igjen."
+    },
+    "groupLive": "Pågår",
+    "groupCompleted": "Ferdige kamper",
+    "groupPlanned": "Planlagt",
+    "allPlanned": "Alle planlagte kamper",
+    "retry": "Prøv igjen",
+    "scoreA11y": "{scoreFor} mot {scoreAgainst}"
   },
   "lineup": {
     "title": "Lagoppstilling",
