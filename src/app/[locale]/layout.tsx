@@ -111,7 +111,8 @@ export default async function LocaleLayout({ children, params }: Props) {
                       <div className="relative flex min-h-screen flex-col">
                         <Header />
                         <ActiveMatchBanner />
-                        <main className="flex-1 pb-20">{children}</main>
+                        {/* Clears the bottom nav (64px + safe area). */}
+                        <main className="flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))]">{children}</main>
                         <BottomNav />
                       </div>
                     </NativeAppShell>

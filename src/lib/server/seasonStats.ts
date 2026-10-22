@@ -37,6 +37,13 @@ export interface SeasonStats {
   spreadMinutes: number;
   totalMatches: number;
   matchesPlayed: number;
+  /**
+   * Completed matches whose playing time could be counted (UI-HOME-NODATA-01).
+   * The rest (no squad, the early format, an open spell without a clock) are
+   * left out of `balance`, `spreadMinutes` and `needsMinutes`. It is 0 when no
+   * match was counted or nobody played at all; those fields then say nothing.
+   */
+  timedMatches: number;
   needsMinutes: Array<{
     playerId: string;
     name: string;
@@ -93,6 +100,7 @@ export async function getSeasonStats(
       spreadMinutes: 0,
       totalMatches: 0,
       matchesPlayed: 0,
+      timedMatches: 0,
       needsMinutes: [],
       lastMatch: null,
     };
@@ -100,19 +108,23 @@ export async function getSeasonStats(
 
   // Playing time per player (in seconds) across the completed matches, with
   // the same per-match totals as the match details page (STATS-01).
-  const { seconds: playerSeconds } = sumSeasonPlayingTime(
+  const { seconds: playerSeconds, countedMatches } = sumSeasonPlayingTime(
     completed.map((row) => row.runtime_state),
     { nowMs: Date.now() }
   );
 
   const allSeconds = Array.from(playerSeconds.values());
+  // Counted matches where nobody played (ended at kick-off) measure nothing:
+  // they must not add up to a perfect balance (UI-HOME-NODATA-01).
+  const timedMatches = allSeconds.some((value) => value > 0) ? countedMatches : 0;
 
-  if (allSeconds.length === 0) {
+  if (timedMatches === 0) {
     return {
       balance: 100,
       spreadMinutes: 0,
       totalMatches: matchesPlayed,
       matchesPlayed,
+      timedMatches,
       needsMinutes: [],
       lastMatch: buildLastMatch(completed),
     };
@@ -168,6 +180,7 @@ export async function getSeasonStats(
     spreadMinutes,
     totalMatches: matchesPlayed,
     matchesPlayed,
+    timedMatches,
     needsMinutes,
     lastMatch: buildLastMatch(completed),
   };

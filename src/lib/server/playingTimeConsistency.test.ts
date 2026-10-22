@@ -137,6 +137,7 @@ describe("STATS-01: one match, the same minutes everywhere", () => {
       ["Fia", 12],
     ]);
     expect(stats.matchesPlayed).toBe(1);
+    expect(stats.timedMatches).toBe(1);
   });
 
   it("sends the AI provider the same names as before, with corrected minutes", async () => {
@@ -173,6 +174,18 @@ describe("STATS-01: one match, the same minutes everywhere", () => {
     const stats = await getSeasonStats(supabase, TEAM_ID);
     expect(stats.needsMinutes).toEqual([]);
     expect(stats.matchesPlayed).toBe(1);
+    // Home shows "no data" instead of a perfect balance (UI-HOME-NODATA-01).
+    expect(stats.timedMatches).toBe(0);
+  });
+
+  it("season stats report no measured time for a match ended at kick-off", async () => {
+    storeMatch(endLiveMatch(startLiveMatch(createLiveMatchFromSetup(setup()), T0), T0));
+
+    const stats = await getSeasonStats(supabase, TEAM_ID);
+    // Everyone has 0 s: no "100 % balance" (UI-HOME-NODATA-01).
+    expect(stats.matchesPlayed).toBe(1);
+    expect(stats.timedMatches).toBe(0);
+    expect(stats.needsMinutes).toEqual([]);
   });
 
   it("never tells the AI that a listed player played 0 minutes", async () => {

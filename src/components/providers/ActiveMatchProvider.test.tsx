@@ -86,7 +86,8 @@ function bannerLink(): HTMLAnchorElement | null {
 
 beforeEach(() => {
   window.localStorage.clear();
-  NAV.pathname = "/";
+  // Not Home: there the fixture panel shows this device's match (C2).
+  NAV.pathname = "/team";
   WORKSPACE.activeTeamId = "team-1";
   server = { activeMatch: null, online: true };
   setOnline(true);
@@ -127,6 +128,16 @@ describe("active-match banner identity", () => {
     expect(screen.getByText(en.activeMatchBanner.label)).toBeTruthy();
     expect(screen.queryByText("Kamp match-B")).toBeNull();
     expect(actions?.recoveryMatch?.id).toBe("match-B");
+  });
+
+  it("leaves this device's match to the fixture panel on Home", async () => {
+    runOnDevice("match-A");
+    NAV.pathname = "/";
+    renderShell();
+
+    await waitFor(() => expect(actions?.activeMatch?.id).toBe("match-A"));
+    expect(bannerLink()).toBeNull();
+    expect(screen.queryByText(en.activeMatchBanner.label)).toBeNull();
   });
 
   it("uses the server title when the live row is this device's own match", async () => {

@@ -14,113 +14,47 @@
   "nav": {
     "home": "Home",
     "team": "Players",
-    "match": "Matches",
+    "match": "Match",
     "historikk": "History",
-    "settings": "Settings"
+    "label": "Main menu"
   },
   "home": {
-    "hero": {
-      "eyebrow": "Your assistant coach in your pocket.",
-      "headline": "Every kid,\nevery match.",
-      "seasonLabel": "Spring season · 2026",
-      "subtitle": "Stay in control, make smart substitutions, and give every player the minutes they deserve - without sideline chaos.",
-      "ctaPrimary": "Get started for free",
-      "ctaSecondary": "See how it works",
-      "spondBadge": "Works with Spond",
-      "notificationsLabel": "Notifications"
+    "fixture": {
+      "nextLabel": "Next match",
+      "countdown": "{days, plural, =0 {{hours, plural, =0 {soon} one {in # hour} other {in # hours}}} one {in # day} other {in # days}}",
+      "versus": "vs {opponent}",
+      "unknownOpponent": "Opponent not set",
+      "noFixture": "No match planned",
+      "noFixtureHint": "Pick who is playing and start when the referee blows the whistle.",
+      "setup": "Set up match",
+      "liveLabel": "Match in progress",
+      "liveHint": "Score, substitutions and playing time are saved.",
+      "continue": "Continue match",
+      "noTeamTitle": "Get started",
+      "noTeamHint": "Add your players and you are ready for the first match.",
+      "noTeamAction": "Create your team",
+      "liveTitle": "Match on this device"
     },
     "summary": {
-      "loading": "Loading season summary…"
+      "loading": "Loading season summary…",
+      "title": "This season",
+      "played": "Matches",
+      "balance": "Balance",
+      "balanceValue": "{balance}%",
+      "noData": "No data",
+      "lastMatch": "Last",
+      "win": "Win",
+      "draw": "Draw",
+      "loss": "Loss",
+      "spread": "{minutes} min between the most and least playing time.",
+      "partial": "Balance is based on {timed} of {played} matches. The others have no measured playing time.",
+      "noDataHint": "None of the matches has measured playing time, so the balance cannot be worked out.",
+      "scoreSpoken": "{for} to {against}",
+      "noLastMatch": "No match yet"
     },
-    "nextMatch": {
-      "badge": "NEXT MATCH",
-      "countdown": "{days}D {hours}H",
-      "setup": "Set up next match"
-    },
-    "balance": {
-      "title": "Season balance",
-      "spread": "Spread {hours}h across {count} matches"
-    },
-    "lastMatch": {
-      "title": "Last · {when}",
-      "win": "W",
-      "draw": "D",
-      "loss": "L"
-    },
-    "played": "Played",
     "needsMinutes": {
-      "title": "Needs minutes",
-      "subtitle": "BELOW AVG",
-      "deficit": "−{hours}h"
-    },
-    "actions": {
-      "editSquad": "Edit squad",
-      "editSquadHint": "Availability & roster",
-      "history": "Match history",
-      "historyHint": "{count} matches this season",
-      "historyHintEmpty": "No matches yet"
-    },
-    "valueProps": {
-      "format": {
-        "value": "3-11 players",
-        "label": "All match formats"
-      },
-      "realtime": {
-        "value": "Real-time",
-        "label": "Full control during matches"
-      },
-      "fair": {
-        "value": "Fair",
-        "label": "Everyone gets to play"
-      }
-    },
-    "features": {
-      "items": {
-        "teamControl": {
-          "title": "Manage your squad",
-          "point1": "Set up your team in seconds",
-          "point2": "Drag players onto the pitch"
-        },
-        "liveControl": {
-          "title": "Full control live",
-          "point1": "See who is playing",
-          "point2": "Substitute with one tap"
-        },
-        "fairPlaytime": {
-          "title": "Fair playtime",
-          "point1": "See who has played the most",
-          "point2": "No more guessing"
-        },
-        "autoReport": {
-          "title": "Automatic match summary",
-          "point1": "Generated after the match",
-          "point2": "Ready to share"
-        }
-      }
-    },
-    "howItWorks": {
-      "title": "How it works",
-      "steps": {
-        "1": "Select team",
-        "2": "Set up your lineup",
-        "3": "Manage the match live",
-        "4": "Get the report"
-      }
-    },
-    "spond": {
-      "badge": "Integrates with Spond",
-      "title": "Use your players directly from Spond",
-      "benefit1": "Import players in seconds",
-      "benefit2": "No double work",
-      "benefit3": "Match-ready from the start"
-    },
-    "trust": {
-      "quote": "Finally an app that actually works during a match."
-    },
-    "finalCta": {
-      "title": "Ready for a simpler matchday?",
-      "subtitle": "Spend less time tracking details and more time coaching.",
-      "button": "Get started for free"
+      "title": "Needs more playing time",
+      "total": "{minutes} min"
     }
   },
   "team": {
@@ -1085,7 +1019,7 @@
     "switchLanguage": "Switch language"
   },
   "profileMenu": {
-    "open": "Open profile menu",
+    "open": "Open profile menu and settings",
     "guestName": "Guest",
     "guestEmail": "Not signed in",
     "sync": {

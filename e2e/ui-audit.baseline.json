@@ -3,22 +3,12 @@
   "chrome": {
     "dark": {
       "smallText": {
-        "span \"G\"": 1,
-        "span \"Historikk\"": 1,
-        "span \"Hjem\"": 1,
-        "span \"Innstillinger\"": 1,
-        "span \"Kamper\"": 1,
-        "span \"Spillere\"": 1
+        "span \"G\"": 1
       }
     },
     "light": {
       "smallText": {
-        "span \"G\"": 1,
-        "span \"Historikk\"": 1,
-        "span \"Hjem\"": 1,
-        "span \"Innstillinger\"": 1,
-        "span \"Kamper\"": 1,
-        "span \"Spillere\"": 1
+        "span \"G\"": 1
       }
     }
   },
@@ -36,22 +26,8 @@
       "light": {}
     },
     "home": {
-      "dark": {
-        "smallText": {
-          "p \"Ingen kamper ennå\"": 1,
-          "p \"Tilgjengelighet og spillere\"": 1,
-          "p \"Vårsesong · #\"": 1,
-          "span \"NESTE KAMP\"": 1
-        }
-      },
-      "light": {
-        "smallText": {
-          "p \"Ingen kamper ennå\"": 1,
-          "p \"Tilgjengelighet og spillere\"": 1,
-          "p \"Vårsesong · #\"": 1,
-          "span \"NESTE KAMP\"": 1
-        }
-      }
+      "dark": {},
+      "light": {}
     },
     "lineup": {
       "dark": {

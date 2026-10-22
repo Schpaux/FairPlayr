@@ -1,5 +1,6 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
+import type { ReactNode } from "react";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import no from "../../../messages/no.json";
@@ -13,8 +14,10 @@ let workspace: {
   isLoading: boolean;
   activeTeamId: string | null;
   activeTeam: { id: string; name: string } | null;
+  teams: Array<{ id: string; name: string }>;
 };
 let online: boolean;
+let activeMatch: { id: string; title: string; status: "live" | "completed" } | null;
 
 vi.mock("@/components/providers/AuthProvider", () => ({
   useAuth: () => ({ status: authStatus }),
@@ -25,10 +28,18 @@ vi.mock("@/components/providers/TeamWorkspaceProvider", () => ({
 vi.mock("@/hooks/useOnlineStatus", () => ({
   useOnlineStatus: () => online,
 }));
+vi.mock("@/components/providers/ActiveMatchProvider", () => ({
+  useActiveMatch: () => ({ activeMatch, activeMatchHref: "/match/live" }),
+}));
+vi.mock("@/i18n/navigation", () => ({
+  Link: ({ href, children, ...props }: { href: string; children: ReactNode }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
+}));
 
-const { HomeSummaryProvider, HomeSeasonSummary, HomeTeamName, HomeNextMatch, HomeHistoryHint } = await import(
-  "./HomeSeasonSummary"
-);
+const { HomeSummaryProvider, HomeSeasonSummary, HomeFixturePanel } = await import("./HomeSeasonSummary");
 
 const SUMMARY: HomeSummary = {
   teamId: TEAM_ID,
@@ -37,6 +48,7 @@ const SUMMARY: HomeSummary = {
     spreadMinutes: 12,
     totalMatches: 4,
     matchesPlayed: 4,
+    timedMatches: 4,
     needsMinutes: [
       { playerId: "p2", name: "Ida Ruud", number: 2, position: null, totalMinutes: 30, deficitMinutes: 18 },
     ],
@@ -56,10 +68,8 @@ function Home() {
   return (
     <NextIntlClientProvider locale="no" messages={no}>
       <HomeSummaryProvider>
-        <HomeTeamName />
-        <HomeNextMatch />
+        <HomeFixturePanel />
         <HomeSeasonSummary />
-        <HomeHistoryHint />
       </HomeSummaryProvider>
     </NextIntlClientProvider>
   );
@@ -84,8 +94,10 @@ beforeEach(() => {
     isLoading: false,
     activeTeamId: TEAM_ID,
     activeTeam: { id: TEAM_ID, name: "Lyn G12" },
+    teams: [{ id: TEAM_ID, name: "Lyn G12" }],
   };
   online = true;
+  activeMatch = null;
   fetchMock = vi.fn();
   respondWith(SUMMARY);
   vi.stubGlobal("fetch", fetchMock);
@@ -97,6 +109,84 @@ afterEach(() => {
 });
 
 describe("HomeSeasonSummary", () => {
+  it("shows 'no data' instead of a perfect balance when no match has measured playing time", async () => {
+    respondWith({
+      ...SUMMARY,
+      stats: { ...SUMMARY.stats!, balance: 100, spreadMinutes: 0, timedMatches: 0, needsMinutes: [] },
+    });
+    render(<Home />);
+    await flush();
+
+    expect(screen.getByTestId("home-stat-balance").textContent).toContain(no.home.summary.noData);
+    expect(screen.getByTestId("home-stat-balance").textContent).not.toContain("100");
+    expect(screen.getByTestId("home-season-hint").textContent).toBe(no.home.summary.noDataHint);
+    expect(screen.queryByTestId("home-needs-minutes")).toBeNull();
+    // The match count and the last result are still true.
+    expect(screen.getByTestId("home-stat-played").textContent).toContain("4");
+  });
+
+  it("hides 'needs minutes' without data, even if the server sent a list", async () => {
+    respondWith({ ...SUMMARY, stats: { ...SUMMARY.stats!, timedMatches: 0 } });
+    render(<Home />);
+    await flush();
+    expect(screen.queryByText("Ida Ruud")).toBeNull();
+    expect(screen.getByTestId("home-stat-balance").textContent).toContain(no.home.summary.noData);
+  });
+
+  it("says how many matches the balance is based on when some lack playing time", async () => {
+    respondWith({ ...SUMMARY, stats: { ...SUMMARY.stats!, timedMatches: 3 } });
+    render(<Home />);
+    await flush();
+    expect(screen.getByTestId("home-stat-balance").textContent).toContain("83\u00a0%");
+    expect(screen.getByTestId("home-season-hint").textContent).toContain("3 av 4 kamper");
+    expect(screen.getByText("Ida Ruud")).toBeTruthy();
+  });
+
+  it("shows nothing before the team's first completed match", async () => {
+    respondWith({
+      ...SUMMARY,
+      stats: { ...SUMMARY.stats!, matchesPlayed: 0, totalMatches: 0, timedMatches: 0, needsMinutes: [], lastMatch: null },
+    });
+    render(<Home />);
+    await flush();
+    expect(screen.queryByTestId("home-season-summary")).toBeNull();
+  });
+
+  it("turns the panel into the running match, with one action that opens it", async () => {
+    activeMatch = { id: "local-1", title: "Lyn G12 – Skeid", status: "live" };
+    render(<Home />);
+    await flush();
+
+    const panel = screen.getByTestId("home-fixture-panel");
+    expect(panel.getAttribute("data-state")).toBe("live");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Lyn G12 – Skeid");
+    expect(panel.textContent).toContain(no.home.fixture.liveLabel);
+    const action = screen.getByTestId("home-primary-action");
+    expect(action.getAttribute("href")).toBe("/match/live");
+    expect(action.textContent).toBe(no.home.fixture.continue);
+    // Found as "Kamp pågår" like the banner elsewhere, visible label first.
+    expect(action.getAttribute("aria-label")).toBe(`${no.home.fixture.continue} – ${no.home.fixture.liveLabel}`);
+    // One action only: the fixture's setup link is not offered alongside.
+    expect(screen.queryByText(no.home.fixture.setup)).toBeNull();
+  });
+
+  it("ignores an ended match", async () => {
+    activeMatch = { id: "local-1", title: "Lyn G12 – Skeid", status: "completed" };
+    render(<Home />);
+    await flush();
+    expect(screen.getByTestId("home-fixture-panel").getAttribute("data-state")).toBe("upcoming");
+  });
+
+  it("sends a workspace without a team to create one first", async () => {
+    authStatus = "guest";
+    workspace = { mode: "guest-local", isLoading: false, activeTeamId: null, activeTeam: null, teams: [] };
+    render(<Home />);
+    await flush();
+
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(no.home.fixture.noTeamTitle);
+    expect(screen.getByTestId("home-primary-action").getAttribute("href")).toBe("/team");
+  });
+
   it("shows stats, the fixture and the team name for a signed-in member online", async () => {
     render(<Home />);
     expect(screen.getByTestId("home-summary-loading")).toBeTruthy();
@@ -109,24 +199,37 @@ describe("HomeSeasonSummary", () => {
 
     expect(screen.getByTestId("home-season-summary")).toBeTruthy();
     expect(screen.getByText("Ida Ruud")).toBeTruthy();
-    expect(screen.getByText("vs Lyn")).toBeTruthy();
-    expect(screen.getByText("4 kamper denne sesongen")).toBeTruthy();
-    expect(screen.getByTestId("home-team-name").textContent).toBe("Lyn G12");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Mot Lyn");
+    expect(screen.getByTestId("home-stat-played").textContent).toContain("4");
+    expect(screen.getByTestId("home-stat-balance").textContent).toContain("83\u00a0%");
+    expect(screen.getByTestId("home-stat-last").textContent).toContain("3–1");
+    expect(screen.getByTestId("home-stat-last").textContent).toContain("Seier");
+    expect(screen.getByTestId("home-season-hint").textContent).toBe("12 min skiller mest og minst spilletid.");
+    // The countdown is in words ("om 26 663 dager"), not "D"/"T" abbreviations.
+    expect(screen.getByTestId("home-fixture-panel").textContent).toMatch(/Neste kamp · om [\d\s\u00a0]+ dager/);
+    // The score is spoken as words, not "2 dash 1".
+    expect(screen.getByTestId("home-stat-last").textContent).toContain("3 mot 1");
+    expect(screen.getByTestId("home-primary-action").getAttribute("href")).toBe("/match/setup");
     expect(screen.queryByTestId("home-summary-loading")).toBeNull();
   });
 
-  it("is hidden for guests and never calls the API, but shows the local team name", async () => {
+  it("is hidden for guests and never calls the API, but still offers a new match", async () => {
     authStatus = "guest";
-    workspace = { ...workspace, mode: "guest-local", activeTeamId: "team-local", activeTeam: { id: "team-local", name: "Lokalt lag" } };
+    workspace = {
+      ...workspace,
+      mode: "guest-local",
+      activeTeamId: "team-local",
+      activeTeam: { id: "team-local", name: "Lokalt lag" },
+      teams: [{ id: "team-local", name: "Lokalt lag" }],
+    };
     render(<Home />);
     await flush();
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(screen.queryByTestId("home-season-summary")).toBeNull();
     expect(screen.queryByTestId("home-summary-loading")).toBeNull();
-    expect(screen.getByTestId("home-team-name").textContent).toBe("Lokalt lag");
-    expect(screen.getByText(no.home.nextMatch.setup)).toBeTruthy();
-    expect(screen.getByText(no.home.actions.historyHintEmpty)).toBeTruthy();
+    expect(screen.getByText(no.home.fixture.noFixture)).toBeTruthy();
+    expect(screen.getByText(no.home.fixture.setup)).toBeTruthy();
   });
 
   it("is hidden offline and does not fetch (D2: nothing cached on the device)", async () => {
@@ -137,7 +240,7 @@ describe("HomeSeasonSummary", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(screen.queryByTestId("home-season-summary")).toBeNull();
     expect(screen.queryByTestId("home-summary-loading")).toBeNull();
-    expect(screen.getByText(no.home.nextMatch.setup)).toBeTruthy();
+    expect(screen.getByText(no.home.fixture.setup)).toBeTruthy();
   });
 
   it("hides loaded stats when the device goes offline", async () => {
@@ -149,7 +252,7 @@ describe("HomeSeasonSummary", () => {
     rerender(<Home />);
     expect(screen.queryByTestId("home-season-summary")).toBeNull();
     expect(screen.queryByText("Ida Ruud")).toBeNull();
-    expect(screen.getByText(no.home.nextMatch.setup)).toBeTruthy();
+    expect(screen.getByText(no.home.fixture.setup)).toBeTruthy();
   });
 
   it("shows nothing when the API refuses (401/403) or fails", async () => {
@@ -171,8 +274,12 @@ describe("HomeSeasonSummary", () => {
   });
 
   it("server-renders the same static HTML for every user, even with providers ready", () => {
+    activeMatch = { id: "local-1", title: "Lyn G12 – Skeid", status: "live" };
     const signedIn = renderToString(<Home />);
     expect(signedIn).not.toContain("Ida Ruud");
+    expect(signedIn).not.toContain("Skeid");
+    // No action until hydrated: a running match must not be offered "set up" first.
+    expect(signedIn).not.toContain("home-primary-action");
     expect(signedIn).not.toContain("Lyn G12");
     expect(signedIn).not.toContain("home-summary-loading");
 

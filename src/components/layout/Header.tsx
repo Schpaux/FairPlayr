@@ -11,8 +11,9 @@ export function Header() {
       <div className="mx-auto flex h-14 max-w-screen-lg items-center justify-between gap-2 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:pl-[max(1.25rem,env(safe-area-inset-left))] sm:pr-[max(1.25rem,env(safe-area-inset-right))]">
         {/* Logo / Wordmark (44px tall hit area, DESIGN.md §4) */}
         <Link href="/" className="flex min-h-11 min-w-0 items-center gap-2.5 group shrink-0">
-          {/* Icon mark — pitch field */}
-          <div className="relative h-8 w-8 rounded-xl bg-fp-lime flex items-center justify-center overflow-hidden text-fp-on-lime">
+          {/* Icon mark — pitch field. Club green is identity; lime is kept for
+              the next action (DESIGN.md §1). */}
+          <div className="relative h-8 w-8 rounded-xl bg-fp-club flex items-center justify-center overflow-hidden text-fp-on-club">
             <svg
               viewBox="0 0 24 24"
               fill="none"
