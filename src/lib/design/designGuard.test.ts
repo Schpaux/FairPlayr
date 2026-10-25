@@ -43,13 +43,8 @@ const EXCEPTIONS: GuardException[] = [
     count: 1,
     reason: "The Google 'G' mark sits on a white disc (Google sign-in branding), in both themes.",
   },
-  {
-    file: "src/components/live/LiveScreen.module.css",
-    rule: "limeText",
-    match: "color: var(--fp-lime)",
-    count: 1,
-    reason: "DESIGN.md §5.1: when the half's time is up the clock digits turn lime, on club green (not a light surface).",
-  },
+  // The lime "time up" digits on live were removed in C6 (UI-LIVE-04/05): the
+  // scoreboard is on canvas and stoppage is written as "30+2:13".
 ];
 
 

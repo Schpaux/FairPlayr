@@ -66,13 +66,24 @@ export function Scoreboard({
         ? t("meta.running", { phase: phaseLabel, minutes: model.halfMinutes })
         : t("meta.paused", { phase: phaseLabel });
 
+  // Stoppage is said in words ("30 minutter pluss 2 minutter 13 sekunder
+  // overtid"), not read out as "30+2:13" (DESIGN.md §5.1).
+  const stoppage = model.clockDisplay?.stoppageSeconds ?? 0;
+  const spokenClock =
+    stoppage > 0
+      ? t("clock.stoppage", {
+          regular: Math.floor((model.clockDisplay?.regularSeconds ?? 0) / 60),
+          minutes: Math.floor(stoppage / 60),
+          seconds: stoppage % 60,
+        })
+      : model.clock;
   const baseClockLabel = isDone
-    ? t("clock.done", { phase: phaseLabel, clock: model.clock })
+    ? t("clock.done", { phase: phaseLabel, clock: spokenClock })
     : model.status === "not_started"
       ? t("clock.kickoff")
       : isRunning
-        ? t("clock.pause", { clock: model.clock })
-        : t("clock.resume", { clock: model.clock });
+        ? t("clock.pause", { clock: spokenClock })
+        : t("clock.resume", { clock: spokenClock });
   // The meta line sits inside the clock button, whose label replaces its
   // content for assistive tech: say "not saved" there too.
   const clockLabel = saveFailed ? `${baseClockLabel}, ${tRestore("short")}` : baseClockLabel;
@@ -85,8 +96,7 @@ export function Scoreboard({
           className={cn(
             styles.clockKey,
             isPaused && styles.clockPaused,
-            isDone && styles.clockDone,
-            model.inStoppage && inPlay && styles.clockOver
+            isDone && styles.clockDone
           )}
           aria-label={clockLabel}
           aria-disabled={isDone || undefined}
@@ -135,6 +145,11 @@ export function Scoreboard({
           <span />
           <small className={styles.scoreLabel}>{t("score.them")}</small>
         </div>
+        {/* UI-A11Y-03: a score change (a goal, or a removed goal) is said once,
+            politely. Mounted with the board, so opening Live says nothing. */}
+        <span className="sr-only" aria-live="polite" aria-atomic="true" data-testid="live-score-announcer">
+          {t("score.label", { us: model.teamScore, them: model.opponentScore })}
+        </span>
 
         <button
           type="button"

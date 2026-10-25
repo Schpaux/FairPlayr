@@ -65,9 +65,13 @@
   color: var(--fp-on-lime);
 }
 
+/* UI-BORDER-01: the 1.5px outline is an inset ring. Chromium snaps border
+   widths to whole CSS pixels (a 1.5px border renders 1px at every density),
+   a ring does not. The transparent border stays, so forced-colors mode still
+   draws an outline. Same technique as the live buttons and attendance chips. */
 .secondary {
   background: transparent;
-  border-color: var(--fp-control-line);
+  box-shadow: inset 0 0 0 1.5px var(--fp-control-line);
   color: var(--fp-ink);
 }
 
@@ -85,6 +89,7 @@
 .button[aria-disabled="true"] {
   background: var(--fp-surface-2);
   border-color: transparent;
+  box-shadow: none;
   color: var(--fp-ink-2);
 }
 

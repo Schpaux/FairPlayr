@@ -7,7 +7,7 @@
  */
 export const localeConfig = {
   en: { short: "EN", full: "English" },
-  no: { short: "NO", full: "Norsk (Bokmål)" },
+  no: { short: "NO", full: "Norsk" },
 } as const satisfies Record<string, { short: string; full: string }>;
 
 export type SupportedLocale = keyof typeof localeConfig;

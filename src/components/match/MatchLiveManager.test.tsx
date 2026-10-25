@@ -970,10 +970,15 @@ describe("MatchLiveManager match completion", () => {
       expect(getStoredLiveMatch()?.onFieldPlayerIds).not.toContain("p6");
       expect(getStoredLiveMatch()?.events.filter((event) => event.type === "substitution")).toHaveLength(0);
 
-      // End match from the menu uses the existing confirmed end flow.
+      // End match from the menu asks in the live sheet with score and clock,
+      // never the browser dialog (UI-A11Y-02), then runs the existing flow.
       fireEvent.click(screen.getByRole("button", { name: sideline.menu.open }));
       fireEvent.click(screen.getByRole("button", { name: sideline.menu.endMatch }));
-      expect(window.confirm).toHaveBeenCalledWith(en.matchLive.actions.confirmEnd);
+      const endSheet = await screen.findByTestId("live-confirm");
+      expect(endSheet.textContent).toContain("The score is 1–1 at");
+      expect(getStoredLiveMatch()?.status).not.toBe("ended");
+      fireEvent.click(screen.getByRole("button", { name: sideline.confirm.endMatchConfirm }));
+      expect(window.confirm).not.toHaveBeenCalled();
 
       expect(await screen.findByText(en.matchLive.pendingSync.title)).toBeTruthy();
       const stored = getStoredLiveMatch();

@@ -106,6 +106,10 @@ export function TeamManager() {
     const heading = section.querySelector<HTMLElement>("h2, h3, h4");
     const target = heading ?? section;
     if (heading && !heading.hasAttribute("tabindex")) heading.setAttribute("tabindex", "-1");
+    // C5-F1: the focused target shows the focus ring, also after a mouse or
+    // touch on the Settings link (it stays until focus moves on).
+    target.setAttribute("data-reveal-target", "");
+    target.addEventListener("blur", () => target.removeAttribute("data-reveal-target"), { once: true });
     target.focus({ preventScroll: true });
   }, [teamDefaultsRequest]);
 
@@ -430,7 +434,7 @@ export function TeamManager() {
                     ref={teamDefaultsRef}
                     tabIndex={-1}
                     aria-label={tDefaults("title")}
-                    className="scroll-mt-20 p-4 outline-none"
+                    className="scroll-mt-20 p-4 outline-none [&_[data-reveal-target]]:rounded-[6px] [&_[data-reveal-target]]:outline-2 [&_[data-reveal-target]]:outline-offset-4 [&_[data-reveal-target]]:outline-fp-focus [&_[data-reveal-target]]:outline-solid data-[reveal-target]:outline-2 data-[reveal-target]:outline-fp-focus data-[reveal-target]:outline-solid"
                   >
                     <MatchDefaultsEditor teamId={team.id} />
                   </section>

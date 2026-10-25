@@ -221,8 +221,13 @@ export default function SignUpPage() {
               {error}
             </Notice>
           ) : null}
+          {/* C5-F1: a status region that is always mounted, so «sendt» is
+              announced in every screen reader; the notice itself is silent. */}
+          <p role="status" className="sr-only">
+            {message ?? ""}
+          </p>
           {message ? (
-            <Notice tone="success" testId="sign-up-message">
+            <Notice tone="success" announce="off" testId="sign-up-message">
               {message}
             </Notice>
           ) : null}

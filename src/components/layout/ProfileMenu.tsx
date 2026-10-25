@@ -12,21 +12,8 @@ import { StatusValue } from "@/components/layout/StatusValue";
 import { useSpondConnection, type SpondConnectionState } from "@/components/team/useSpondStatus";
 import { SignOutConfirmSheet } from "@/components/auth/SignOutConfirmSheet";
 import { Button, ButtonLink, ListGroup, ListRow, Sheet } from "@/components/ui/primitives";
+import { readProfileMetadata } from "@/lib/utils/profileMetadata";
 
-export function readProfileMetadata(user: ReturnType<typeof useAuth>["user"]) {
-  const metadata = user?.user_metadata as Record<string, unknown> | undefined;
-  const name =
-    (typeof metadata?.full_name === "string" ? metadata.full_name : null) ??
-    (typeof metadata?.name === "string" ? metadata.name : null);
-  const photoUrl =
-    (typeof metadata?.avatar_url === "string" ? metadata.avatar_url : null) ??
-    (typeof metadata?.picture === "string" ? metadata.picture : null);
-
-  return {
-    name,
-    photoUrl,
-  };
-}
 
 const SPOND_GLYPHS = {
   checking: CircleDashed,

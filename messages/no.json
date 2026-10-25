@@ -363,10 +363,12 @@
   "matchSetup": {
     "title": "Kampoppsett",
     "compact": {
-      "title": "Kampinnstillinger",
-      "edit": "Endre innstillinger",
+      "title": "Kamp",
+      "edit": "Endre",
       "durationHalves": "{halves}×{minutes} min",
-      "durationTotal": "{minutes} min"
+      "durationTotal": "{minutes} min",
+      "reportOn": "Oppsummering på",
+      "reportOff": "Oppsummering av"
     },
     "draft": {
       "resumed": "Fortsetter påbegynt kampoppsett",
@@ -405,9 +407,13 @@
       "halvesTitle": "Kampmodus",
       "halvesOn": "2 omganger",
       "halvesOff": "1 omgang",
-      "customTitle": "Egendefinert totalvarighet",
-      "customSuffix": "minutter totalt",
-      "totalLabel": "Totalt: {minutes} min"
+      "customTitle": "Egendefinert varighet",
+      "customSuffix": "min",
+      "totalLabel": "Totalt: {minutes} min",
+      "customPerHalf": "Minutter per omgang",
+      "customTotal": "Minutter",
+      "customError": "Skriv et helt tall fra {min} til {max}.",
+      "totalHalves": "Totalt {minutes} min (2 × {perHalf})"
     },
     "squad": {
       "selectAll": "Velg alle",
@@ -480,7 +486,8 @@
       "notReady": "Ikke klar",
       "blockedStarters": "Start kamp er ikke tilgjengelig ennå. Plasser {count, plural, one {# spiller} other {# spillere}} til på banen.",
       "blockedDuration": "Start kamp er ikke tilgjengelig ennå. Velg kamplengde.",
-      "blockedLineup": "Start kamp er ikke tilgjengelig ennå. Fullfør oppstillingen."
+      "blockedLineup": "Start kamp er ikke tilgjengelig ennå. Fullfør oppstillingen.",
+      "starting": "Starter kampen …"
     }
   },
   "matchLive": {
@@ -577,7 +584,8 @@
       "startSecondHalf": "Start 2. omgang",
       "confirmEnd": "Avslutte kampen nå?",
       "toSetup": "Gå til kampoppsett",
-      "setupNext": "Sett opp neste kamp"
+      "setupNext": "Sett opp neste kamp",
+      "toHome": "Til forsiden"
     },
     "recovery": {
       "title": "Vi fant en pågående kamp.",
@@ -628,7 +636,8 @@
         "kickoff": "Start klokka ved avspark",
         "pause": "Stopp klokka, {clock}",
         "resume": "Start klokka, {clock}",
-        "done": "{phase}, {clock}"
+        "done": "{phase}, {clock}",
+        "stoppage": "{regular} minutter pluss {minutes} minutter {seconds} sekunder overtid"
       },
       "score": {
         "label": "Stilling: oss {us}, dem {them}",
@@ -659,7 +668,10 @@
         "removeGoalThemTitle": "Fjerne siste mål for dem?",
         "removeGoalBody": "Stillingen blir {us}–{them}.",
         "removeGoalConfirm": "Ja, fjern målet",
-        "keepPlaying": "Fortsett å spille"
+        "keepPlaying": "Fortsett å spille",
+        "endMatchTitle": "Avslutte kampen?",
+        "endMatchBody": "Stillingen er {us}–{them} ved {clock}. Spilletiden stopper, og kampen lagres.",
+        "endMatchConfirm": "Ja, avslutt kampen"
       },
       "events": {
         "title": "Hendelser",
@@ -733,7 +745,8 @@
       "pitch": {
         "label": "Banen"
       }
-    }
+    },
+    "loadErrorTitle": "Kunne ikke laste laget"
   },
   "matchPlanner": {
     "title": "Kampplanlegging",
@@ -878,7 +891,8 @@
       "deleteConfirmTitle": "Slette målet?",
       "deleteConfirmDescription": "Målet i {minute}. minutt fjernes fra kampforløpet.",
       "deleteConfirmDescriptionNoMinute": "Målet fjernes fra kampforløpet.",
-      "deleteConfirmCta": "Ja, slett målet"
+      "deleteConfirmCta": "Ja, slett målet",
+      "minuteError": "Skriv minuttet som et helt tall, 0 eller høyere, eller la feltet stå tomt."
     },
     "status": {
       "planned": "Planlagt",
@@ -1225,5 +1239,27 @@
       "setup": "Kampoppsett",
       "team": "Laget"
     }
+  },
+  "eventTimeline": {
+    "minute": "{minute}′",
+    "goal": "Mål",
+    "assist": "assist {name}",
+    "subIn": "{name} inn",
+    "subOut": "{name} ut",
+    "unknownPlayer": "ukjent",
+    "edit": "Rediger",
+    "a11y": {
+      "minute": "{minute}. minutt, ",
+      "ownGoal": "mål for oss: {scorer}",
+      "ownGoalAssist": "mål for oss: {scorer}, assist {assist}",
+      "ownGoalUnknown": "mål for oss, målscorer ikke registrert",
+      "opponentGoal": "mål for {opponent}",
+      "substitution": "bytte: {in} inn, {out} ut"
+    }
+  },
+  "appShellError": {
+    "title": "Noe gikk galt",
+    "body": "Appen kunne ikke lastes. Prøv å starte på nytt.",
+    "retry": "Prøv igjen"
   }
 }

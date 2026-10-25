@@ -12,6 +12,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import type { LiveEventView } from "@/components/live/liveScreenModel";
+import { EventTimeline, type TimelineEntry } from "@/components/match/EventTimeline";
 import styles from "@/components/live/LiveScreen.module.css";
 
 const ICON = { strokeWidth: 1.75, "aria-hidden": true } as const;
@@ -56,6 +57,7 @@ function Sheet({ title, lede, dismissible = true, onClose, children, testId }: S
         aria-labelledby={titleId}
         data-testid={testId}
         onClick={(event) => event.stopPropagation()}
+        onKeyDown={trapFocus}
       >
         <div className={styles.grab} aria-hidden />
         <h2 id={titleId} ref={titleRef} tabIndex={-1} className={styles.sheetTitle}>
@@ -66,6 +68,30 @@ function Sheet({ title, lede, dismissible = true, onClose, children, testId }: S
       </div>
     </div>
   );
+}
+
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * UI-A11Y-03: Tab and Shift+Tab stay inside the open sheet. The live screen
+ * behind it is not made inert, because the announcer lives there and must keep
+ * speaking while a sheet is open.
+ */
+function trapFocus(event: React.KeyboardEvent<HTMLDivElement>) {
+  if (event.key !== "Tab") return;
+  const focusable = [...event.currentTarget.querySelectorAll<HTMLElement>(FOCUSABLE)];
+  if (focusable.length === 0) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  const active = document.activeElement;
+  const inside = active instanceof Node && event.currentTarget.contains(active);
+  if (event.shiftKey && (active === first || !inside || active === event.currentTarget.querySelector("h2"))) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && (active === last || !inside)) {
+    event.preventDefault();
+    first.focus();
+  }
 }
 
 /** A passive line at the top of the menu (DESIGN.md §5.6: "moves into the menu"). */
@@ -216,38 +242,30 @@ export function ConfirmSheet({ title, lede, confirmLabel, destructive, onConfirm
 
 export function EventsSheet({ events, onClose }: { events: LiveEventView[]; onClose: () => void }) {
   const t = useTranslations("matchLive.sideline.events");
+  const tScore = useTranslations("matchLive.sideline.score");
   const close = useTranslations("matchLive.sideline.menu");
+
+  // The event timeline (DESIGN.md §7.2), newest first: the latest goal is the
+  // one most often corrected.
+  const entries: TimelineEntry[] = [...events].reverse().map((event) => ({
+    id: event.id,
+    minute: event.minute,
+    side: event.kind === "goalThem" ? "opponent" : "own",
+    kind: event.kind === "substitution" ? "substitution" : "goal",
+    primary: event.primary,
+    secondary: event.secondary,
+  }));
 
   return (
     <Sheet title={t("title")} lede={events.length === 0 ? t("empty") : undefined} onClose={onClose} testId="live-events">
-      {events.length > 0 ? (
-        <ul className={cn(styles.menuGroup, styles.eventList)}>
-          {[...events].reverse().map((event) => (
-            <li key={event.id} className={styles.eventRow}>
-              <span className={styles.eventMinute}>
-                {event.minute !== null ? t("minute", { minute: event.minute }) : ""}
-              </span>
-              <span>
-                {event.kind === "substitution"
-                  ? t("substitution")
-                  : event.kind === "goalUs"
-                    ? t("goalUs")
-                    : t("goalThem")}
-                {event.kind === "substitution" && (event.primary || event.secondary) ? (
-                  <span className={styles.eventDetail}>
-                    {t("swap", { in: event.primary ?? "–", out: event.secondary ?? "–" })}
-                  </span>
-                ) : null}
-                {event.kind !== "substitution" && event.primary ? (
-                  <span className={styles.eventDetail}>
-                    {event.primary}
-                    {event.secondary ? ` · ${t("assist", { name: event.secondary })}` : ""}
-                  </span>
-                ) : null}
-              </span>
-            </li>
-          ))}
-        </ul>
+      {entries.length > 0 ? (
+        <EventTimeline
+          entries={entries}
+          opponentName={tScore("them")}
+          label={t("title")}
+          className={styles.eventTimeline}
+          rowTestIdPrefix="live-event-"
+        />
       ) : null}
       <button type="button" className={cn(styles.btn, styles.btnSecondary, styles.btnBlock)} onClick={onClose}>
         {close("close")}

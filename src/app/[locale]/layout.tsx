@@ -60,8 +60,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // UI-A11Y-01 (WCAG 1.4.4): pinch zoom is allowed. Text fields are 16px, so
+  // iOS does not zoom on focus (UI-VIEWPORT-01).
+  // The on-screen keyboard resizes the layout, so sticky bars stay above it.
+  interactiveWidget: "resizes-content",
   // viewport-fit=cover is required so env(safe-area-inset-*) works correctly
   // inside a Capacitor WKWebView and as a PWA on iOS.
   viewportFit: "cover",
@@ -108,7 +110,7 @@ export default async function LocaleLayout({ children, params }: Props) {
                   <PwaRoot />
                   <AppShellErrorBoundary>
                     <NativeAppShell>
-                      <div className="relative flex min-h-screen flex-col">
+                      <div className="relative flex min-h-dvh flex-col">
                         <Header />
                         <ActiveMatchBanner />
                         {/* Clears the bottom nav (64px + safe area). */}

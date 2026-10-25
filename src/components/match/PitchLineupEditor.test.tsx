@@ -147,16 +147,17 @@ describe("PitchLineupEditor pitch (FP-PITCH-01)", () => {
 // UI-PITCH-02: the same interactions, with every word from messages/*.json
 // and the bench in the live tile style.
 describe("PitchLineupEditor copy and bench (UI-PITCH-02)", () => {
+  // The counter is for screen readers here; the sticky bar shows it (C1-F1).
   it("shows the counter, auto-fill and bench through i18n (Norwegian)", () => {
     render(<Harness initial={setupOf({ filled: false })} />);
 
-    expect(screen.getByText("0 / 7 på banen")).toBeTruthy();
+    expect(screen.getByText(/^0 \/ 7 på banen/)).toBeTruthy();
     expect(screen.getByText(no.matchSetup.pitch.hintIdle)).toBeTruthy();
     expect(screen.getByText(no.matchSetup.pitch.benchTitle)).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: no.matchSetup.pitch.autoFill }));
 
-    expect(screen.getByText("7 / 7 på banen")).toBeTruthy();
+    expect(screen.getByText(/^7 \/ 7 på banen/)).toBeTruthy();
     expect(document.querySelectorAll("[data-slot-id][data-player-id]")).toHaveLength(7);
   });
 
@@ -164,7 +165,7 @@ describe("PitchLineupEditor copy and bench (UI-PITCH-02)", () => {
     render(<Harness initial={setupOf({ filled: true })} locale="en" />);
 
     expect(screen.getByRole("button", { name: en.matchSetup.pitch.autoFill })).toBeTruthy();
-    expect(screen.getByText("7 / 7 on the pitch")).toBeTruthy();
+    expect(screen.getByText(/^7 \/ 7 on the pitch/)).toBeTruthy();
     expect(screen.getByText(en.matchSetup.pitch.benchTitle)).toBeTruthy();
     for (const word of ["Fyll automatisk", "startere", "Benk", "valgt"]) {
       expect(document.body.textContent).not.toContain(word);

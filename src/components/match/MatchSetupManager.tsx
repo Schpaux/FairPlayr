@@ -1,14 +1,15 @@
 "use client";
 
 /**
- * Match setup (/match/setup), Modern Sideline (UI-MS-01a, DESIGN.md §7).
+ * Match setup (/match/setup), Modern Sideline (DESIGN.md §7.1).
  *
- * The order follows what the coach needs on the sideline: who is here today
- * (attendance), the starting lineup on the pitch, the match settings
- * (collapsed to one summary row) and a sticky bar with the squad count,
- * readiness and Start kamp. A new setup starts with the whole squad present
- * (U9) but nobody on the pitch, so the match cannot start until the coach
- * fills the lineup.
+ * The order is what the coach decides first (UI-MS-01d): the match (format,
+ * formation, duration and the report switch, as one summary row until opened),
+ * then who is here today (compact attendance chips), then the starting lineup
+ * on the pitch with the bench right under it, and a one-row sticky bar with
+ * the counts and Start kamp (C1-F1). A new setup starts with the whole squad
+ * present (U9) but nobody on the pitch, so the match cannot start until the
+ * coach fills the lineup.
  */
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
@@ -18,7 +19,7 @@ import { useRouter } from "@/i18n/navigation";
 import { ShieldAlert, Users, CheckCircle2, CircleDashed, PlayCircle } from "lucide-react";
 import {
   setMatchFormat,
-  setMatchDuration,
+  setMatchCustomPeriodDuration,
   setMatchHalves,
   setMatchDurationPreset,
   setReportEnabled,
@@ -217,8 +218,8 @@ export function MatchSetupManager() {
 
   const handleDurationChange: React.ComponentProps<
     typeof DurationPicker
-  >["onCustomChange"] = (minutes) => {
-    editSetup((prev) => setMatchDuration(prev, minutes));
+  >["onCustomChange"] = (halves, minutes) => {
+    editSetup((prev) => setMatchCustomPeriodDuration(prev, halves, minutes));
   };
 
   const handleDurationPresetChange: React.ComponentProps<
@@ -261,6 +262,22 @@ export function MatchSetupManager() {
   const [startError, setStartError] = useState<string | null>(null);
   const [showStartGuard, setShowStartGuard] = useState(false);
   const startNoticesRef = useRef<HTMLDivElement>(null);
+  // C1-F2: Start is disabled while the match starts, so focus moves to the
+  // bar's status line instead of falling to the page, and back to Start if
+  // starting fails.
+  const startingStatusRef = useRef<HTMLParagraphElement>(null);
+  const startButtonRef = useRef<HTMLButtonElement>(null);
+  const startFocusRef = useRef(false);
+  const restoreStartFocus = () => {
+    if (!startFocusRef.current) return;
+    startFocusRef.current = false;
+    startButtonRef.current?.focus({ preventScroll: true });
+  };
+  // A failure after an await re-enables Start in a later render; a failure
+  // before it is batched with the start, so it restores focus itself.
+  useEffect(() => {
+    if (!isStarting) restoreStartFocus();
+  }, [isStarting]);
 
   // The guard opens above the sticky bar; bring it into view, wherever the
   // coach had scrolled to.
@@ -289,6 +306,10 @@ export function MatchSetupManager() {
     }
 
     setStartError(null);
+    // The status line is always mounted, so it can take focus before Start
+    // becomes disabled.
+    startFocusRef.current = document.activeElement === startButtonRef.current;
+    if (startFocusRef.current) startingStatusRef.current?.focus({ preventScroll: true });
     setIsStarting(true);
 
     let started: ReturnType<typeof startLocalMatch>;
@@ -299,6 +320,7 @@ export function MatchSetupManager() {
       // must not start without being stored.
       setStartError(t("errors.startFailed"));
       setIsStarting(false);
+      restoreStartFocus();
       return;
     }
     if (!started.ok) {
@@ -306,6 +328,7 @@ export function MatchSetupManager() {
       // way back to it instead of starting over it.
       setActiveLiveHref(liveHrefFor(getStoredMatchSetup()?.serverMatchId));
       setIsStarting(false);
+      restoreStartFocus();
       return;
     }
 
@@ -329,16 +352,15 @@ export function MatchSetupManager() {
         return;
       }
 
+      // Like a server match: «Starter …» stays until Live opens, so Start
+      // cannot be pressed twice during the navigation.
       router.push("/match/live");
     } catch (cause) {
       setStartError(
         cause instanceof Error ? cause.message : t("errors.startFailed")
       );
       setIsStarting(false);
-      return;
     }
-
-    setIsStarting(false);
   };
 
   // ── Validation ─────────────────────────────────────────────────────────────
@@ -430,7 +452,7 @@ export function MatchSetupManager() {
   const conflictTitle = conflictMatch?.title || t("startGuard.unknownMatch");
 
   return (
-    <PageShell className="space-y-8 pb-0">
+    <PageShell className="space-y-6 pb-0">
       <SectionHeader title={t("title")} className="mb-0" />
 
       {isResumedDraft ? (
@@ -447,40 +469,12 @@ export function MatchSetupManager() {
         </Notice>
       ) : null}
 
-      {/* 1. Who is here today (attendance) */}
-      <SetupSection id={`${uid}-squad`} title={t("sections.squad")}>
-        <SquadSelector
-          players={team.players}
-          selectedIds={setup.selectedPlayerIds}
-          onToggle={handleToggleSquadPlayer}
-          onSelectAll={handleSelectAllSquad}
-          onClearSelection={handleClearSquad}
-          selectAllLabel={t("squad.selectAll")}
-          clearLabel={t("squad.clear")}
-          labelledBy={`${uid}-squad`}
-        />
-      </SetupSection>
-
-      {/* 2. Starting lineup: pitch and bench, once anyone is in the squad */}
-      {squadCount > 0 ? (
-        <SetupSection id={`${uid}-lineup`} title={t("sections.lineup")}>
-          <PitchLineupEditor
-            setup={setup}
-            players={team.players.filter((p) =>
-              setup.selectedPlayerIds.includes(p.id)
-            )}
-            onSetupChange={(next) => editSetup(() => next)}
-            onAutoFill={() => editSetup(autoFillLineup)}
-          />
-        </SetupSection>
-      ) : null}
-
-      {/* 3. Match settings: one summary row, collapsed by default */}
+      {/* 1. The match first (UI-MS-01d): one summary row until opened. */}
       <section
         aria-labelledby={`${uid}-settings`}
         className="overflow-hidden rounded-[14px] border border-fp-rule bg-fp-surface"
       >
-        <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+        <div className="flex items-center justify-between gap-3 p-4">
           <div className="min-w-0">
             <h2 id={`${uid}-settings`} className="text-base font-semibold text-fp-ink">
               {t("compact.title")}
@@ -492,7 +486,12 @@ export function MatchSetupManager() {
               <span>{formationShape}</span>
               <span aria-hidden> · </span>
               <span className="sr-only">, </span>
-              <span>{durationSummary}</span>
+              <span className="whitespace-nowrap">{durationSummary}</span>
+              <span aria-hidden> · </span>
+              <span className="sr-only">, </span>
+              <span className="whitespace-nowrap">
+                {setup.reportEnabled ? t("compact.reportOn") : t("compact.reportOff")}
+              </span>
             </p>
           </div>
           <Button
@@ -507,67 +506,97 @@ export function MatchSetupManager() {
         </div>
 
         {settingsOpen ? (
-          <div id={`${uid}-settings-panel`} className="space-y-5 border-t border-fp-rule p-4">
-            <div>
-              <SettingLabel>{t("sections.format")}</SettingLabel>
-              <FormatSelector value={setup.format} onChange={handleFormatChange} />
+          <div id={`${uid}-settings-panel`} className="border-t border-fp-rule">
+            <div className="space-y-5 p-4">
+              <div>
+                <SettingLabel>{t("sections.format")}</SettingLabel>
+                <FormatSelector value={setup.format} onChange={handleFormatChange} />
+              </div>
+              <div>
+                <SettingLabel>{t("sections.formation")}</SettingLabel>
+                <FormationSelector
+                  formations={getFormationPresets(setup.format)}
+                  value={setup.formationId}
+                  onChange={handleFormationChange}
+                />
+              </div>
+              <div>
+                <SettingLabel>{t("sections.duration")}</SettingLabel>
+                <DurationPicker
+                  value={setup.duration}
+                  onPresetChange={handleDurationPresetChange}
+                  onCustomChange={handleDurationChange}
+                  onHalvesChange={handleHalvesChange}
+                />
+              </div>
             </div>
-            <div>
-              <SettingLabel>{t("sections.formation")}</SettingLabel>
-              <FormationSelector
-                formations={getFormationPresets(setup.format)}
-                value={setup.formationId}
-                onChange={handleFormationChange}
-              />
-            </div>
-            <div>
-              <SettingLabel>{t("sections.duration")}</SettingLabel>
-              <DurationPicker
-                value={setup.duration}
-                onPresetChange={handleDurationPresetChange}
-                onCustomChange={handleDurationChange}
-                onHalvesChange={handleHalvesChange}
-              />
-            </div>
+
+            {/* The whole row is the switch's target (DESIGN.md §4). */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={setup.reportEnabled}
+              aria-labelledby={`${uid}-report-label`}
+              aria-describedby={`${uid}-report-help`}
+              onClick={() => handleReportToggle(!setup.reportEnabled)}
+              className="flex min-h-16 w-full items-center gap-4 border-t border-fp-rule p-4 text-left transition-colors duration-(--fp-d-quick) focus-visible:ring-inset focus-visible:ring-offset-0 active:bg-fp-surface-2"
+            >
+              <span className="min-w-0 flex-1">
+                <span id={`${uid}-report-label`} className="block text-base font-semibold text-fp-ink">
+                  {t("reportToggle.label")}
+                </span>
+                <span id={`${uid}-report-help`} className="mt-1 block text-sm text-fp-ink-2">
+                  {t("reportToggle.help")}
+                </span>
+              </span>
+              <span
+                aria-hidden
+                className={cn(
+                  "relative h-7 w-12 shrink-0 rounded-full border transition-colors duration-(--fp-d-quick)",
+                  setup.reportEnabled
+                    ? "border-fp-control-line bg-fp-lime"
+                    : "border-fp-control-line bg-fp-surface-2"
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute top-[3px] left-[3px] h-5 w-5 rounded-full transition-transform duration-(--fp-d-base) ease-fp-out",
+                    setup.reportEnabled ? "translate-x-5 bg-fp-on-lime" : "translate-x-0 bg-fp-ink-2"
+                  )}
+                />
+              </span>
+            </button>
           </div>
         ) : null}
-
-        {/* The whole row is the switch's target (DESIGN.md §4). */}
-        <button
-          type="button"
-          role="switch"
-          aria-checked={setup.reportEnabled}
-          aria-labelledby={`${uid}-report-label`}
-          aria-describedby={`${uid}-report-help`}
-          onClick={() => handleReportToggle(!setup.reportEnabled)}
-          className="flex min-h-16 w-full items-center gap-4 border-t border-fp-rule p-4 text-left transition-colors duration-(--fp-d-quick) focus-visible:ring-inset focus-visible:ring-offset-0 active:bg-fp-surface-2"
-        >
-          <span className="min-w-0 flex-1">
-            <span id={`${uid}-report-label`} className="block text-base font-semibold text-fp-ink">
-              {t("reportToggle.label")}
-            </span>
-            <span id={`${uid}-report-help`} className="mt-1 block text-sm text-fp-ink-2">
-              {t("reportToggle.help")}
-            </span>
-          </span>
-          <span
-            aria-hidden
-            className={cn(
-              "relative h-7 w-12 shrink-0 rounded-full border transition-colors duration-(--fp-d-quick)",
-              setup.reportEnabled
-                ? "border-fp-control-line bg-fp-lime"
-                : "border-fp-control-line bg-fp-surface-2"
-            )}
-          >
-            <span
-              className={cn(
-                "absolute top-[3px] left-[3px] h-5 w-5 rounded-full transition-transform duration-(--fp-d-base) ease-fp-out",
-                setup.reportEnabled ? "translate-x-5 bg-fp-on-lime" : "translate-x-0 bg-fp-ink-2"
-              )}
-            />
-          </span>
-        </button>
       </section>
+
+      {/* 2. Who is here today: compact attendance chips. */}
+      <SetupSection id={`${uid}-squad`} title={t("sections.squad")}>
+        <SquadSelector
+          players={team.players}
+          selectedIds={setup.selectedPlayerIds}
+          onToggle={handleToggleSquadPlayer}
+          onSelectAll={handleSelectAllSquad}
+          onClearSelection={handleClearSquad}
+          selectAllLabel={t("squad.selectAll")}
+          clearLabel={t("squad.clear")}
+          labelledBy={`${uid}-squad`}
+        />
+      </SetupSection>
+
+      {/* 3. Starting lineup: pitch with the bench right under it. */}
+      {squadCount > 0 ? (
+        <SetupSection id={`${uid}-lineup`} title={t("sections.lineup")}>
+          <PitchLineupEditor
+            setup={setup}
+            players={team.players.filter((p) =>
+              setup.selectedPlayerIds.includes(p.id)
+            )}
+            onSetupChange={(next) => editSetup(() => next)}
+            onAutoFill={() => editSetup(autoFillLineup)}
+          />
+        </SetupSection>
+      ) : null}
 
       {/* 4. Start guard and start errors, right above the bar: kept out of
           the sticky bar so they never cover the squad or the pitch. */}
@@ -610,32 +639,44 @@ export function MatchSetupManager() {
         <ActiveMatchCloseConfirm state={closeConfirm} />
       </div>
 
-      {/* 5. Sticky bar above the bottom nav and the safe area: squad, pitch,
-          readiness and Start kamp. */}
+      {/* 5. Sticky bar above the bottom nav and the safe area: one row with
+          the counts and readiness on the left, Start kamp on the right. */}
       <div
         data-testid="setup-start-bar"
-        className={cn(styles.setupStartBar, "z-40 -mx-4 space-y-3 border-t border-fp-rule bg-fp-canvas px-4 pt-3 pb-4")}
+        className={cn(styles.setupStartBar, "z-40 -mx-4 flex items-center gap-3 border-t border-fp-rule bg-fp-canvas px-4 py-3")}
       >
-        <div className="flex items-center justify-between gap-3 text-sm font-medium">
-          <p className="min-w-0 tabular-nums text-fp-ink">
-            <span>{t("footer.squad", { count: squadCount })}</span>
-            <span aria-hidden className="text-fp-ink-2"> · </span>
-            <span>{t("footer.onPitch", { current: setup.startingPlayerIds.length, required })}</span>
-          </p>
+        <div className="min-w-0 flex-1 text-sm font-medium leading-5">
+          {/* Always mounted, so it can take focus before Start is disabled. */}
           <p
-            id={`${uid}-ready`}
-            className={cn(
-              "flex shrink-0 items-center gap-1.5",
-              matchReady ? "text-fp-ok-text" : "text-fp-ink-2"
-            )}
+            ref={startingStatusRef}
+            tabIndex={-1}
+            role="status"
+            className={cn("outline-none", isStarting ? "text-fp-ink" : "sr-only")}
           >
-            {matchReady ? (
-              <CheckCircle2 size={16} aria-hidden />
-            ) : (
-              <CircleDashed size={16} aria-hidden />
-            )}
-            {matchReady ? t("footer.ready") : t("footer.notReady")}
+            {isStarting ? t("footer.starting") : ""}
           </p>
+          {isStarting ? null : (
+            <>
+              <p className="tabular-nums text-fp-ink">{t("footer.squad", { count: squadCount })}</p>
+              <p
+                className={cn(
+                  "flex flex-wrap items-center gap-x-1.5 text-[13px] tabular-nums",
+                  matchReady ? "text-fp-ok-text" : "text-fp-ink-2"
+                )}
+              >
+                <span>{t("footer.onPitch", { current: setup.startingPlayerIds.length, required })}</span>
+                <span aria-hidden>·</span>
+                <span id={`${uid}-ready`} className="inline-flex items-center gap-1">
+                  {matchReady ? (
+                    <CheckCircle2 size={16} aria-hidden />
+                  ) : (
+                    <CircleDashed size={16} aria-hidden />
+                  )}
+                  {matchReady ? t("footer.ready") : t("footer.notReady")}
+                </span>
+              </p>
+            </>
+          )}
         </div>
 
         {/* A disabled button can't take focus, so the reason it is locked sits
@@ -647,9 +688,10 @@ export function MatchSetupManager() {
         ) : null}
 
         <Button
+          ref={startButtonRef}
           variant="primary"
-          block
-          aria-describedby={blockedReason ? `${uid}-blocked` : `${uid}-ready`}
+          className="shrink-0"
+          aria-describedby={isStarting ? undefined : blockedReason ? `${uid}-blocked` : `${uid}-ready`}
           disabled={!matchReady || isStarting}
           onClick={() => {
             void handleStartMatch();

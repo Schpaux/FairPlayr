@@ -286,13 +286,12 @@ export async function openLive(page: Page, url = "/no/match/live") {
   return response;
 }
 
-/** ⋯ → «Avslutt kampen nå» (ends at once, as in e2e/match-lifecycle.spec.ts). */
+/** ⋯ → «Avslutt kampen nå» → «Ja, avslutt kampen» (as in e2e/match-lifecycle.spec.ts). */
 export async function endMatch(page: Page) {
-  // Live still ends with a native confirm (UI-A11Y-02 rest); Playwright
-  // dismisses dialogs by default, which would cancel the end.
-  page.once("dialog", (dialog) => void dialog.accept());
   await live.button(page, "Kampmeny").click();
   await page.getByRole("button", { name: "Avslutt kampen nå" }).click();
+  // The live confirmation sheet (UI-A11Y-02), not a browser dialog.
+  await page.getByRole("button", { name: "Ja, avslutt kampen" }).click();
 }
 
 export async function storedSetupStatus(page: Page): Promise<string | null> {

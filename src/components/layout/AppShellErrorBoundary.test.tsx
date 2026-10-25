@@ -2,7 +2,10 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { notFound, redirect } from "next/navigation";
 import { Component, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { NextIntlClientProvider } from "next-intl";
 import { AppShellErrorBoundary } from "@/components/layout/AppShellErrorBoundary";
+import en from "../../../messages/en.json";
+import no from "../../../messages/no.json";
 
 // Stands in for the Next.js boundaries (not-found, redirect) that sit above the
 // app shell: it records whatever reaches it.
@@ -29,13 +32,15 @@ function Throws({ error }: { error: () => never }): ReactNode {
   return error();
 }
 
-function renderInShell(error: () => never) {
+function renderInShell(error: () => never, locale: "en" | "no" = "en") {
   return render(
-    <OuterBoundary>
-      <AppShellErrorBoundary>
-        <Throws error={error} />
-      </AppShellErrorBoundary>
-    </OuterBoundary>,
+    <NextIntlClientProvider locale={locale} messages={locale === "en" ? en : no}>
+      <OuterBoundary>
+        <AppShellErrorBoundary>
+          <Throws error={error} />
+        </AppShellErrorBoundary>
+      </OuterBoundary>
+    </NextIntlClientProvider>,
   );
 }
 
@@ -56,6 +61,15 @@ describe("AppShellErrorBoundary", () => {
 
     expect(screen.getByText("Something went wrong")).toBeTruthy();
     expect(screen.queryByTestId("outer")).toBeNull();
+  });
+
+  it("speaks Norwegian in Norwegian (UI-I18N-01)", () => {
+    renderInShell(() => {
+      throw new Error("boom");
+    }, "no");
+
+    expect(screen.getByRole("heading", { name: "Noe gikk galt" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Prøv igjen" })).toBeTruthy();
   });
 
   // STAB-09: notFound() from a page under [locale] must reach the Next.js

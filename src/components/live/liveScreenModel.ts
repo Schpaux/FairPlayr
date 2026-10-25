@@ -17,6 +17,7 @@ import type { SubInteractionState } from "@/domain/liveSubInteraction";
 import type { Player } from "@/domain/team";
 import { isKeeperSlot, placeTokens, tokenDensity, type TokenPlacement } from "@/components/live/placeTokens";
 import { resolveStripKind, type StripKind } from "@/components/live/stripModel";
+import { getClockDisplay, type ClockDisplay } from "@/components/live/clockDisplay";
 
 export interface LiveTokenView {
   playerId: string;
@@ -66,7 +67,10 @@ export interface LiveScreenModel {
   phase: LiveMatchState["phase"];
   halves: 1 | 2;
   halfMinutes: number;
+  /** The display clock (DESIGN.md §5.1): "16:20", or "30+2:13" in stoppage. */
   clock: string;
+  /** The same time in parts, for the spoken label. */
+  clockDisplay: ClockDisplay;
   inStoppage: boolean;
   teamScore: number;
   opponentScore: number;
@@ -104,7 +108,6 @@ export interface LiveScreenModel {
 export interface BuildLiveScreenModelInput {
   liveMatch: LiveMatchState;
   nowMs: number;
-  clock: string;
   inStoppage: boolean;
   playersById: Map<string, Player>;
   getShortName: (playerId: string) => string;
@@ -137,13 +140,13 @@ function wholeMinutes(seconds: number): number {
 export function buildLiveScreenModel({
   liveMatch,
   nowMs,
-  clock,
   inStoppage,
   playersById,
   getShortName,
   suggestion,
   interaction,
 }: BuildLiveScreenModelInput): LiveScreenModel {
+  const clockDisplay = getClockDisplay(liveMatch, nowMs);
   const slots = getFormationSlots(liveMatch.format, liveMatch.formationId);
   const placements = placeTokens(slots);
   const onField = new Set(liveMatch.onFieldPlayerIds);
@@ -267,7 +270,8 @@ export function buildLiveScreenModel({
     phase: liveMatch.phase,
     halves: liveMatch.halves,
     halfMinutes: Math.round(halfSeconds / 60),
-    clock,
+    clock: clockDisplay.text,
+    clockDisplay,
     inStoppage,
     teamScore: liveMatch.teamScore,
     opponentScore: liveMatch.opponentScore,

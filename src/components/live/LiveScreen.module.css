@@ -43,10 +43,6 @@
   outline-offset: 2px;
 }
 
-.board :focus-visible {
-  outline-color: var(--fp-lime);
-}
-
 /* ── Buttons (every button is a pill) ─────────────────────────────────── */
 .btn {
   height: 52px;
@@ -81,8 +77,10 @@
   color: var(--fp-on-lime);
 }
 
+/* A control's outline is control-line (≥ 3 : 1, DESIGN.md §2.1), not the
+   decorative rule-strong (UI-BORDER-01). */
 .btnSecondary {
-  box-shadow: inset 0 0 0 1.5px var(--fp-rule-strong);
+  box-shadow: inset 0 0 0 1.5px var(--fp-control-line);
   color: var(--fp-ink);
 }
 
@@ -121,17 +119,20 @@
 
   .board .iconButton:hover,
   .goalThem:hover:not(:disabled) {
-    background: var(--fp-club-tint);
+    background: var(--fp-surface-2);
   }
 }
 
 /* ── Scoreboard ───────────────────────────────────────────────────────── */
+/* On canvas like the dugout, in both themes (DESIGN.md §5.1, UI-LIVE-05):
+   ink text, the normal focus ring, and a hairline above the grass. */
 .board {
   flex: none;
   position: relative;
   z-index: 2;
-  background: var(--fp-club);
-  color: var(--fp-on-club);
+  background: var(--fp-canvas);
+  color: var(--fp-ink);
+  box-shadow: inset 0 -1px 0 var(--fp-rule);
   padding: calc(env(safe-area-inset-top) + 6px) calc(env(safe-area-inset-right) + 8px) 12px
     calc(env(safe-area-inset-left) + 8px);
 }
@@ -159,7 +160,7 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: var(--fp-club-tint);
+  background: var(--fp-surface-2);
   display: grid;
   place-items: center;
   flex: none;
@@ -194,7 +195,7 @@
   font-weight: 500;
   font-size: 13px;
   line-height: 1.1;
-  color: var(--fp-on-club-2);
+  color: var(--fp-ink-2);
   white-space: nowrap;
   overflow: hidden;
 }
@@ -203,35 +204,33 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--fp-lime);
+  /* Lime in dark, green in light: never lime on a light surface. */
+  background: var(--fp-ok-text);
   flex: none;
 }
 
 .offline {
   display: inline-flex;
   align-items: center;
-  color: var(--fp-ring-watch);
+  color: var(--fp-warn-text);
   flex: none;
 }
 
-/* «Ikke lagret» (DESIGN.md §5.6). On club green in both themes, so the glyph
-   uses the act ring red (same value in both modes, readable on green) rather
-   than danger-text, whose light value is dark red and unreadable on green;
-   the words stay chalk (never grey on green). */
+/* «Ikke lagret» (DESIGN.md §5.6): danger glyph, words in ink. */
 .saveFailed {
   display: inline-flex;
   align-items: center;
-  color: var(--fp-ring-act);
+  color: var(--fp-danger-text);
   flex: none;
 }
 
 .saveFailedText {
-  color: var(--fp-on-club);
+  color: var(--fp-ink);
   font-weight: 600;
 }
 
 .clockPaused .clockDigits {
-  color: var(--fp-on-club-2);
+  color: var(--fp-ink-2);
 }
 
 .clockPaused .clockDisc {
@@ -241,11 +240,7 @@
 
 .clockPaused .statusDot {
   background: transparent;
-  box-shadow: inset 0 0 0 1.5px var(--fp-on-club-2);
-}
-
-.clockOver .clockDigits {
-  color: var(--fp-lime);
+  box-shadow: inset 0 0 0 1.5px var(--fp-ink-2);
 }
 
 .clockDone {
@@ -254,17 +249,17 @@
 
 .clockDone .clockDisc {
   background: transparent;
-  box-shadow: inset 0 0 0 1.5px var(--fp-club-tint);
-  color: var(--fp-on-club-2);
+  box-shadow: inset 0 0 0 1.5px var(--fp-control-line);
+  color: var(--fp-ink-2);
 }
 
 .clockDone .statusDot {
   background: transparent;
-  box-shadow: inset 0 0 0 1.5px var(--fp-on-club-2);
+  box-shadow: inset 0 0 0 1.5px var(--fp-ink-2);
 }
 
 .clockDone .clockDigits {
-  color: var(--fp-on-club-2);
+  color: var(--fp-ink-2);
 }
 
 .score {
@@ -293,7 +288,7 @@
   width: 12px;
   height: 3px;
   border-radius: 2px;
-  background: var(--fp-on-club-2);
+  background: var(--fp-ink-2);
 }
 
 .scoreLabel {
@@ -302,15 +297,15 @@
   line-height: 1;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--fp-on-club-2);
+  color: var(--fp-ink-2);
 }
 
 .board .iconButton {
-  color: var(--fp-on-club);
+  color: var(--fp-ink);
 }
 
 .board .iconButton:active {
-  background: var(--fp-club-tint);
+  background: var(--fp-surface-2);
 }
 
 .goals {
@@ -327,13 +322,13 @@
 }
 
 .goalUs {
-  background: var(--fp-on-club);
-  color: var(--fp-club);
+  background: var(--fp-ink);
+  color: var(--fp-canvas);
 }
 
 .goalThem {
-  box-shadow: inset 0 0 0 1.5px var(--fp-on-club-line);
-  color: var(--fp-on-club);
+  box-shadow: inset 0 0 0 1.5px var(--fp-control-line);
+  color: var(--fp-ink);
 }
 
 .goals .btn:disabled {
@@ -1306,37 +1301,9 @@
   color: var(--fp-ink-2);
 }
 
-.eventList {
-  list-style: none;
-  margin: 0 0 12px;
-  padding: 0;
-}
-
-.eventRow {
-  display: grid;
-  grid-template-columns: 44px 1fr;
-  gap: 10px;
-  align-items: baseline;
-  min-height: 48px;
-  padding: 12px 14px;
-  font-size: 16px;
-  line-height: 1.3;
-}
-
-.eventRow + .eventRow {
-  box-shadow: inset 0 1px 0 var(--fp-rule);
-}
-
-.eventMinute {
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.eventDetail {
-  display: block;
-  font-weight: 500;
-  font-size: 14px;
-  color: var(--fp-ink-2);
+/* The event timeline (DESIGN.md §7.2) inside the events sheet. */
+.eventTimeline {
+  margin-bottom: 12px;
 }
 
 .buttonStack {
@@ -1556,4 +1523,74 @@
   .live .sheetDrain::after {
     animation-duration: 10000ms !important;
   }
+}
+
+/* ── State screens (UI-LIVE-03, DESIGN.md §7): full-screen canvas like Live,
+   no header or bottom nav; a centred column. ─────────────────────────── */
+.stateScreen {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  padding: calc(env(safe-area-inset-top) + 24px) calc(env(safe-area-inset-right) + 16px)
+    calc(env(safe-area-inset-bottom) + 24px) calc(env(safe-area-inset-left) + 16px);
+  background: var(--fp-canvas);
+  color: var(--fp-ink);
+}
+
+.stateColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+}
+
+.stateIcon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--fp-surface-2);
+  color: var(--fp-ink);
+}
+
+.stateTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.stateBody {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--fp-ink-2);
+}
+
+.stateError {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.4;
+  font-weight: 500;
+  color: var(--fp-danger-text);
+  text-align: left;
+}
+
+.stateActions {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  margin-top: 8px;
 }

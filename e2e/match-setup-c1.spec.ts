@@ -112,10 +112,41 @@ for (const theme of ["light", "dark"] as const) {
       await expectInViewport(page);
 
       // Settings are collapsed by default.
-      await expect(page.getByRole("button", { name: "Endre innstillinger" })).toHaveAttribute("aria-expanded", "false");
+      await expect(page.getByRole("button", { name: "Endre", exact: true })).toHaveAttribute("aria-expanded", "false");
 
       // A suggestion is not a decision: nothing is stored before the coach acts.
       expect(await page.evaluate((key) => localStorage.getItem(key), SETUP_KEY)).toBeNull();
+      expect(errors).toEqual([]);
+    });
+
+    test("the match comes first, and a custom 2 × 18 can be typed and kept (UI-MS-01d, UI-DURATION-01)", async ({ page }) => {
+      const errors = await open(page, { theme });
+
+      // Match card, then attendance, then the lineup.
+      await expect(page.getByRole("heading", { level: 2, name: "Startoppstilling" })).toBeVisible({ timeout: 30_000 });
+      const order = await page.getByRole("heading", { level: 2 }).allInnerTexts();
+      expect(order.slice(0, 3)).toEqual(["Kamp", "Hvem er med i dag?", "Startoppstilling"]);
+
+      await page.getByRole("button", { name: "Endre", exact: true }).click();
+      const field = page.getByRole("textbox", { name: "Minutter per omgang" });
+      // Clear and type like a coach: the field never jumps to 5 or 240.
+      await field.click();
+      await field.press("ControlOrMeta+a");
+      await field.press("Backspace");
+      await expect(field).toHaveValue("");
+      await expect(page.getByText("Skriv et helt tall fra 3 til 120.")).toBeVisible();
+      await field.pressSequentially("18");
+      await expect(field).toHaveValue("18");
+      await field.blur();
+      await expect(field).toHaveValue("18");
+      await expect(page.getByText("Totalt 36 min (2 × 18)")).toBeVisible();
+
+      const stored = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "null"), SETUP_KEY);
+      expect(stored.config.duration).toMatchObject({ mode: "custom", halves: 2, minutesPerHalf: 18, totalMinutes: 36 });
+
+      // Kept after a reload.
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await expect(page.getByText(/2×18 min/)).toBeVisible({ timeout: 30_000 });
       expect(errors).toEqual([]);
     });
 

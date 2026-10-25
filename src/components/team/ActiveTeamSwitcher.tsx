@@ -15,6 +15,17 @@ export function ActiveTeamSwitcher() {
     return null;
   }
 
+  // C2-F2: with one team there is nothing to choose, so the header shows its
+  // name as text, wrapping rather than cut; the picker appears from two teams.
+  if (teams.length === 1) {
+    return (
+      <p className="min-w-0 max-w-[10rem] text-right text-sm font-semibold leading-tight text-fp-ink [overflow-wrap:anywhere] sm:max-w-[14rem]">
+        <span className="sr-only">{t("label")}: </span>
+        {teams[0].name}
+      </p>
+    );
+  }
+
   return (
     // The select itself is the 44px pill (DESIGN.md §4); 16px text, so iOS
     // does not zoom when it opens (UI-VIEWPORT-01).

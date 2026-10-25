@@ -76,6 +76,9 @@ function toLocalDateTimeInputValue(date: Date): string {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
+/** Visible field label (DESIGN.md §3 Label: 13px caps), as in PlayerQuickAddForm. */
+const PLANNER_LABEL = "block px-1 text-[13px] font-semibold uppercase tracking-[0.06em] text-fp-ink-2";
+
 export function MatchPlannerManager() {
   const t = useTranslations("matchPlanner");
   const common = useTranslations("common");
@@ -598,15 +601,27 @@ export function MatchPlannerManager() {
                     onValueChange={setManualStartMode}
                   />
 
-                  <input
-                    value={opponentName}
-                    onChange={(e) => setOpponentName(e.target.value)}
-                    placeholder={t("fields.opponent")}
-                    aria-label={t("fields.opponent")}
-                    className={teamTextInputClassName}
-                  />
-                  <div className="space-y-1">
+                  {/* C1-F4: visible labels (DESIGN.md §7.1), so a field keeps
+                      its name while typing. */}
+                  <div className="space-y-1.5">
+                    <label htmlFor="planner-opponent" className={PLANNER_LABEL}>
+                      {t("fields.opponent")}
+                    </label>
                     <input
+                      id="planner-opponent"
+                      value={opponentName}
+                      onChange={(e) => setOpponentName(e.target.value)}
+                      autoComplete="off"
+                      className={teamTextInputClassName}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="planner-title" className={PLANNER_LABEL}>
+                      {t("fields.title")}
+                    </label>
+                    <input
+                      id="planner-title"
+                      autoComplete="off"
                       value={customTitle}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -614,7 +629,6 @@ export function MatchPlannerManager() {
                         setCustomTitle(isAutoMatchName(val) || val === "" ? "" : val);
                       }}
                       placeholder={autoTitle}
-                      aria-label={t("fields.title")}
                       aria-describedby="planner-title-hint"
                       className={teamTextInputClassName}
                     />
@@ -623,24 +637,33 @@ export function MatchPlannerManager() {
                     </p>
                   </div>
                   {manualStartMode === "scheduled" ? (
-                    <input
-                      type="datetime-local"
-                      value={startsAt}
-                      onChange={(e) => setStartsAt(e.target.value)}
-                      aria-label={t("fields.startsAt")}
-                      className={teamTextInputClassName}
-                      required
-                    />
+                    <div className="space-y-1.5">
+                      <label htmlFor="planner-starts-at" className={PLANNER_LABEL}>
+                        {t("fields.startsAt")}
+                      </label>
+                      <input
+                        id="planner-starts-at"
+                        type="datetime-local"
+                        value={startsAt}
+                        onChange={(e) => setStartsAt(e.target.value)}
+                        className={teamTextInputClassName}
+                        required
+                      />
+                    </div>
                   ) : (
                     <p className="px-1 text-sm text-fp-ink-2">{t("manualStart.nowHint")}</p>
                   )}
-                  <input
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder={t("fields.location")}
-                    aria-label={t("fields.location")}
-                    className={teamTextInputClassName}
-                  />
+                  <div className="space-y-1.5">
+                    <label htmlFor="planner-location" className={PLANNER_LABEL}>
+                      {t("fields.location")}
+                    </label>
+                    <input
+                      id="planner-location"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      className={teamTextInputClassName}
+                    />
+                  </div>
                   {/* Lime only when it is the next action: with a match in
                       progress, continuing that one is (DESIGN.md §1). */}
                   <Button type="submit" variant={activeMatch ? "secondary" : "primary"} block disabled={isCreating}>

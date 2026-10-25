@@ -1,6 +1,6 @@
 # FairPlayr design system: Modern Sideline
 
-**Status:** approved visual direction, authoritative. **Version:** 1.4 (2026-10-20): dark is the default theme (U4), notice band (§5.6, U5), name ladder for identical names (§5.2), the suggestion gap defined and its button kept as «Velg» (§6.2), four tabs with settings under the profile (§7, U8), squad preselection (§7, U9).
+**Status:** approved visual direction, authoritative. **Version:** 1.5 (2026-10-25, C6): match settings before players and a shorter setup (§7.1, UI-MS-01d, C1-F1), per-half custom duration (§7.1, UI-DURATION-01), sided event timeline with icons (§7.2, §8, UI-EVENTS-01), ordinary time + stoppage on the live clock (§5.1, §6.4, UI-LIVE-04), and a dark (canvas) live scoreboard (§5, §5.1, UI-LIVE-05). Version 1.4 (2026-10-20): dark is the default theme (U4), notice band (§5.6, U5), name ladder for identical names (§5.2), the suggestion gap defined and its button kept as «Velg» (§6.2), four tabs with settings under the profile (§7, U8), squad preselection (§7, U9).
 This document is the single source of truth for FairPlayr's visual and interaction design. Where it conflicts with older notes, prototypes, skills or generic design advice, this document wins. Tokens live in [`src/app/globals.css`](src/app/globals.css); design context for agents lives in [`.impeccable.md`](.impeccable.md).
 
 Background and evidence: `design-exploration/modern-sideline/` (prototype v1.1, `FINAL-VALIDATION.md`, `IMPLEMENTATION-PLAN.md`). The prototype is reference material, not spec: where it differs from this document (for example its chalk canvas), this document is correct.
@@ -10,7 +10,7 @@ Background and evidence: `design-exploration/modern-sideline/` (prototype v1.1, 
 ## 1. Direction
 
 **"Grass, a club scoreboard and nothing else."** Modern Sideline combines:
-- **Football identity on the match surfaces only:** a grass pitch, shirt-number discs and a club-green scoreboard, on Live and in the Setup lineup.
+- **Football identity on the match surfaces only:** a grass pitch and shirt-number discs on Live and in the Setup lineup, and a club-green panel for the fixture (Home) and the result (match details). On Live the scoreboard sits on the same canvas as the dugout (UI-LIVE-05, 2026-10-25), so the grass is the only colour field on the match screen.
 - **Quiet utility everywhere else:** Inter, hairline lists, white surfaces on a near-white canvas, and no decoration.
 - **One fixed "what now" slot:** the action strip between pitch and bench always says what happens next.
 
@@ -19,7 +19,7 @@ The user is a volunteer coach on a sideline, outdoors, often one-handed and unde
 ### Principles
 1. **Readability first.** Outdoor light, arm's length, one hand. Text on the live screen is never under 13px, and names are never under 14px.
 2. **Lime means "your next action".** If it is lime, it is the thing to tap now. Nothing else is lime.
-3. **Club green is identity, not action.** It is used for the scoreboard, the fixture panel and shirt discs, and is never a button fill.
+3. **Club green is identity, not action.** It is used for the fixture panel, the result panel in match details and shirt discs, and is never a button fill.
 4. **Calm through hierarchy.** Normal states are silent ("saved" has no indicator). Only exceptions speak.
 5. **Predictable placement.** Controls do not move, and the pitch and bench never shift when the strip changes.
 6. **Honest structure.** There is no decorative chrome, glow, gradient, glass or ambient motion.
@@ -28,7 +28,7 @@ The user is a volunteer coach on a sideline, outdoors, often one-handed and unde
 
 ## 2. Colour
 
-**Dark is the default theme** (decision U4, 2026-10-20; the app ships with `defaultTheme="dark"`). Light is fully supported and can be chosen in settings; it suits bright daylight. The scoreboard, grass, lime and club green are identical in both modes; only the surfaces change.
+**Dark is the default theme** (decision U4, 2026-10-20; the app ships with `defaultTheme="dark"`). Light is fully supported and can be chosen in settings; it suits bright daylight. The grass, lime and club green are identical in both modes; only the surfaces change. The live scoreboard is a surface (canvas), so it follows the theme like the dugout.
 
 ### 2.1 Surfaces and text
 
@@ -50,7 +50,7 @@ The user is a volunteer coach on a sideline, outdoors, often one-handed and unde
 
 | Token | Value (both modes unless noted) | Role |
 |---|---|---|
-| `club` | `#0E4D33` | Scoreboard, fixture panel. Never a button fill. |
+| `club` | `#0E4D33` | Fixture panel (Home), result panel (match details). Never a button fill. Not used on the live scoreboard since UI-LIVE-05. |
 | `on-club` / `on-club-2` | `#F2EFE7` / `#B7CCBE` | Text on club green (primary / secondary; never grey) |
 | `club-disc` | `#0E4D33` · dark `#1D6345` | Shirt discs off the pitch |
 | `lime` / `on-lime` | `#9FE870` / `#0B2E1A` | Next action: primary button, selection, suggestion, undo countdown |
@@ -116,7 +116,7 @@ Non-text fatigue rings are at least 3.5 : 1 on grass.
 | Key figure | Inter 700 20/1.25, tabular | Season numbers on Home (Kamper, Balanse, Siste); a missing value is Inter 600 16 in `ink-2` (C2-F1) |
 | Minutes | Inter 700 15 (token) / 14 (bench), tabular | Total playing time |
 | Score | Barlow Condensed 600 50/0.9 (44 on short screens) | 2 – 1 |
-| Clock | Barlow Condensed 600 40/0.9 (34 on short screens) | 16:20 |
+| Clock | Barlow Condensed 600 40/0.9 (34 on short screens) | 16:20; in stoppage `30+2:13` (§5.1) |
 | Shirt number | Barlow Condensed 600 22 (19 compact) | Discs |
 
 Implementation:
@@ -153,7 +153,7 @@ Implementation:
 Full screen, with no global header or bottom nav and no scrolling. It is portrait-first. Landscape is a two-column fallback (pitch left, board and dugout right), not a design target.
 
 ```
-┌ Scoreboard (club green, runs under the status bar) ┐  ~140px (~120 short)
+┌ Scoreboard (canvas, runs under the status bar) ────┐  ~140px (~120 short)
 │ (⏸) 16:20             2 – 1              ⋯          │
 │     ● 1. omgang · av 25:00   BK    LYN              │
 │ [ + Mål for oss ]  [ + Mål for Lyn ]                │
@@ -165,10 +165,18 @@ Full screen, with no global header or bottom nav and no scrolling. It is portrai
 ```
 
 ### 5.1 Scoreboard
-- **Clock key** (left): a 44px play/pause disc plus the clock, as one button. When paused, the disc is lime, the digits are dimmed and the status dot is hollow. At half-time and full-time it shows a flag outline and is inert. When the half's time is up the digits turn lime. The clock keeps running, because **the referee ends the half, not the app**.
+- **Surface (UI-LIVE-05, 2026-10-25):** `canvas`, the same background as the dugout, in both themes (dark by default, near-white in light). Text is `ink`, secondary text `ink-2`, the focus ring is `focus` (as everywhere else). This replaces the earlier club-green scoreboard; club green stays on Home's fixture panel and the match-details result panel. A 1px `rule` under the goal keys separates the board from the grass.
+- **Clock key** (left): a 44px play/pause disc plus the clock, as one button. When paused, the disc is lime, the digits are dimmed (`ink-2`) and the status dot is hollow. At half-time and full-time it shows a flag outline and is inert. The clock keeps running past the half's length, because **the referee ends the half, not the app**.
+- **Display clock (UI-LIVE-04):** the clock follows the match's ordinary timeline, half by half, and never shows stoppage as ordinary time:
+  - First half (or a one-period match) from `00:00` up to the half length (`15:00` in 2 × 15).
+  - Second half from the half length (`15:00`) up to the full length (`30:00`), however much stoppage the first half had (§6.4).
+  - **Stoppage:** after the half's ordinary end the clock shows the ordinary end in whole minutes, a plus and the stoppage as `m:ss`: `15+2:13` in the first half, `30+10:00` ten minutes after full length. The ordinary part never grows; the stoppage part counts on. There is no space around the plus, so it fits 360px at 40px Barlow.
+  - Half-time and full-time freeze the clock where the half ended (`15+2:13`, `30:00`).
+  - Accessible name: the clock button says the time in words, «15 minutter pluss 2 minutter 13 sekunder overtid» (`matchLive.sideline.clock.stoppage`); the digits are hidden from assistive tech.
+  - Presentation only. Elapsed time, playing time, stint rings, the time-up strip (§5.4 row 6) and the minute stored on events are unchanged.
 - **Meta line:** phase and length ("1. omgang · av 25:00"). When offline, an amber wifi-off glyph replaces the status dot. "Saved" is silent.
-- **Score:** condensed numerals over 13px caps team codes. It is a display, not a control.
-- **Goal keys:** two equal 48px pills with words ("Mål for oss", "Mål for Lyn"). Ours is chalk-filled and theirs is outlined. They are **never lime**, because a goal is not a suggestion. They are real `disabled` buttons outside `first_half`/`second_half`.
+- **Score:** condensed numerals over 13px caps team codes, in `ink`. It is a display, not a control.
+- **Goal keys:** two equal 48px pills with words ("Mål for oss", "Mål for Lyn"). Ours is filled (`ink` with `canvas` text) and theirs is outlined (`control-line`, `ink` text). They are **never lime**, because a goal is not a suggestion. They are real `disabled` buttons outside `first_half`/`second_half`.
 - **Menu ⋯:** a 44px icon button. It is the only route to the event history and goal correction, end half, leave, and end match.
 
 ### 5.2 Player token (one spec in setup and live)
@@ -235,7 +243,8 @@ With an empty bench, the idle line reads "Ingen innbyttere".
 ### 5.5 Sheets
 - They slide up with a `canvas` fill, a 20px top radius, a grab handle and a 20/600 title. They are `role="dialog"`, labelled, take focus, and return focus to the invoking control.
 - Menu rows are 54px in **three separated groups**: match actions; leaving; and the dangerous "end match now". Destructive actions never sit next to routine ones.
-- **Confirmation:** the primary action states the outcome ("Ja, avslutt omgangen"), and the secondary is always "Fortsett å spille".
+- **Confirmation:** the primary action states the outcome ("Ja, avslutt omgangen"), and the secondary is always "Fortsett å spille". **Ending the match** (from the menu, or from the strip in the last half) uses the same sheet with the score and the clock in the lede ("Stillingen er 2–1 ved 30+1:05. Spilletiden stopper og kampen lagres."), a destructive "Ja, avslutt kampen" and "Fortsett å spille"; it is never a native browser dialog (UI-A11Y-02).
+- **Event history** (⋯ → Hendelser) uses the event timeline (§7.2), newest first.
 - **Scorer sheet:** the existing production rules apply (only when reports are enabled; scorer, then assist; auto-advance after 10 s, shown with the same drain bar as undo). Two columns of 52px pills, outfield first and the keeper last, plus "Hopp over". Tapping the scrim does not dismiss it.
 
 ### 5.6 Notice band (U5, transient)
@@ -247,7 +256,7 @@ A small, discreet, temporary message for exceptions that the coach should know a
 - A condition that must keep speaking until it is resolved (for example a failed save) also keeps a glyph in the scoreboard meta line and an explanation in the menu after the coach has dismissed the band.
 
 ### 5.7 Buttons
-- Pills, 52px (or 44px small). **Primary:** lime fill with `on-lime`. **Secondary:** 1.5px `control-line` outline with ink text. **Destructive:** red fill with white text, only inside its confirmation.
+- Pills, 52px (or 44px small). **Primary:** lime fill with `on-lime`. **Secondary:** 1.5px `control-line` outline with ink text, drawn as an inset ring (`box-shadow`) over a transparent border: Chromium snaps border widths to whole CSS pixels, so a 1.5px border renders 1px at every density, and the transparent border keeps an outline in forced-colors mode (UI-BORDER-01). **Destructive:** red fill with white text, only inside its confirmation.
 - **Disabled:** `surface-2` fill with `ink-2` text, and a real `disabled` attribute.
 - Pressed state: `scale(.97)` for 90ms. Hover applies only on pointer devices and is a fill shift, never a scale-up.
 
@@ -295,7 +304,7 @@ The scoreboard, goal attribution, stored match events and cloud sync must agree 
 ### 6.4 Clock and halves
 - Pre-kickoff is a state: the clock waits, the goal keys are disabled, and the strip offers **Avspark**.
 - End half: ⋯ or the strip → confirmation → half-time. The clock freezes, the goal keys are disabled, substitutions still work, and the strip offers **Start 2. omgang**.
-- The second-half display clock starts at the half length (20:00 for 2 × 20). This is presentation only; accounting is unchanged.
+- The second-half display clock starts at the half length (20:00 for 2 × 20), even when the first half had stoppage, and stoppage shows as ordinary time plus stoppage (§5.1). This is presentation only; accounting is unchanged.
 - One-period matches are supported.
 
 ### 6.5 Offline
@@ -305,22 +314,44 @@ The live screen behaves identically offline. The only visible change is the ambe
 
 ## 7. Other screens
 - **Home:** quiet lists plus **one** club-green fixture panel (with a faint centre-circle arc at 14 % stroke, the only decorative geometry in the system) and a lime CTA. Season stats are inline numbers, not hero-metric cards.
-- **Setup:** an attendance grid of shirt discs (lime check = present; "Borte" = absent) and the setup pitch, which reuses the live token without minutes or ring and uses the same tap–tap model. A sticky footer shows squad count, readiness and **Start kamp**.
-  - **Squad preselection (U9):** when appropriate (for example a new setup for the active team), the whole squad starts as present, so the coach only removes who is absent. Attendance stays visible and editable until **Start kamp**; nobody accrues playing time before the match is started, and only the players in the started squad are in it. A preselected player who is absent must never get minutes by accident.
+- **Setup:** see §7.1.
 - **Lists:** hairline-separated rows on `surface`, with no nested cards.
 - **Bottom nav:** four tabs (Hjem, Spillere, Kamp, Historikk) with a lime pill on the active one. **Settings live under the profile menu**, not in a tab (U8). It is absent on Live.
+- **Team in the header (C2-F2):** with one team the header shows the team name as plain text (no picker); the picker appears from two teams.
+- **Live state screens (UI-LIVE-03):** loading, error, recovery and "no match" on `/match/live` use the same full-screen canvas as Live (no header, no bottom nav), a centred column, 20/600 title, 16px body in `ink-2`, errors at 16px in `danger-text` with a glyph, and pill buttons (§5.7). Loading is a quiet skeleton, never a spinner over the pitch.
+
+### 7.1 Setup (UI-MS-01a, revised by UI-MS-01d and C1-F1, 2026-10-25)
+The order is what the coach decides first: **the match, then who is here, then the lineup.**
+1. **Kamp** card: one summary line ("7v7 · 2-3-1 · 2 × 18 min · Oppsummering på") with **Endre**. Opened, it shows format, formation, halves and duration, and the report switch. Team defaults fill it, so most matches never open it.
+2. **Hvem er med i dag?** compact attendance: one 44px name chip per player, wrapping several per row (no disc, so 11 players fit in about three rows at 375px). Present: `surface`, 1.5px inset `control-line` outline, a lime check disc before the name. Absent: `surface-2`, name in `ink-2` followed by «Borte» in words; the accessible name is «Ida, borte» (C1-F6). The name ladder runs over the whole team. «Velg alle» and «Tøm» stay.
+3. **Startoppstilling:** the setup pitch (same token, markings and orientation as Live, FP-PITCH-01) and the bench of present players who are not on the pitch, right under it, so a tap on the bench and a tap on the pitch are on one screen.
+4. **Sticky bar:** one row above the bottom nav: squad and pitch count (two short lines, with "Klar"/"Ikke klar" as glyph plus word) on the left and **Start kamp** (52px pill) on the right. The reason Start is locked is its description; while the match starts, focus moves to the bar's status line ("Starter kampen …") so it never falls to the page (C1-F2).
+- **Squad preselection (U9):** when appropriate (for example a new setup for the active team), the whole squad starts as present, so the coach only removes who is absent. Attendance stays visible and editable until **Start kamp**; nobody accrues playing time before the match is started, and only the players in the started squad are in it. A preselected player who is absent must never get minutes by accident.
+- **Duration (UI-DURATION-01):** "Omganger" (2 omganger / 1 periode), preset chips, and a custom field with a visible label: **«Minutter per omgang»** with two halves (2 × 18 is typed as 18) or **«Minutter»** with one period. The field keeps exactly what the coach types; a whole number in range (3–120 per half, 5–240 for one period; the match is always 5–240 minutes) is applied at once, anything else shows an inline error under the field and is not applied. Leaving the field with an invalid entry restores the last applied value. Switching halves keeps the total.
+- **Planner fields (C1-F4):** every text field has a visible 13px caps label above it; placeholders are examples only.
+
+### 7.2 Event timeline (UI-EVENTS-01, 2026-10-25)
+One presentation for the live event history (§5.5) and the match-details timeline. It replaces the neutral, icon-free rows from C4.
+- **Sides:** the minute leads every row (Inter 600 14 tabular, "17′", a 44px column); our events follow it on the left, start-aligned, and the opponent's sit at the right edge, end-aligned. A centred minute was tried and rejected: at 360px it left about 105px per side and broke long names mid-word. Substitutions are always ours.
+- **Icons and words:** a 20px glyph (§8) before the words: a goal net for goals, a two-way arrow for substitutions. The words carry the meaning; the icon only speeds up scanning.
+- **Weight:** goals are Inter 700 15 (`ink`); substitutions are Inter 400 14 (`ink-2`). A goal without a registered scorer says "Mål" in the same weight.
+- **Scorer and assist on one line:** "**Frida** · assist Ida". The opponent's goal says "**Mål** · Lyn". A substitution puts "Thea inn" and "Maja ut" on two lines, so a long name wraps within its own line.
+- **Long names wrap** at word boundaries inside their side (`overflow-wrap: anywhere` only as a last resort); they are never truncated, ellipsised or allowed to overflow at 360px. Names use the ladder (§5.2) where the squad is known.
+- **Order:** chronological. Live lists newest first (the latest goal is the one most often corrected); match details lists from kick-off.
+- **Accessibility:** each row has one text alternative in reading order ("17. minutt, mål for oss: Frida, assist Ida"); the visual columns are hidden from assistive tech. An editable row (our goals in match details) is one button with the pencil glyph on the free side and the label "Rediger".
+- **Goal minute (C4-F5):** editing a goal accepts an empty minute or a whole number from 0 up; there is no upper limit, because stoppage is legitimate. Anything else is an inline error, and nothing is saved.
 
 ---
 
 ## 8. Iconography
-A 24 grid with 1.75 stroke and round caps and joins (lucide-compatible). Icons only appear next to a word, except ⋯, play/pause and the offline glyph, which have `aria-label`s.
+A 24 grid with 1.75 stroke and round caps and joins (lucide-compatible). Icons only appear next to a word, except ⋯, play/pause and the offline glyph, which have `aria-label`s. In the event timeline (§7.2) a type glyph sits before the names (lucide `Goal` for a goal, `ArrowLeftRight` for a substitution); the row's text alternative names the type in words.
 
 ---
 
 ## 9. Accessibility and viewports
 - **Validated live viewport: 375 × 667 portrait (D6).** 390 × 844 is the reference design size. **360 × 640 Android is an explicit follow-up that must pass before broad release.** Below 360 wide is best-effort.
 - Hit areas are at least 44px, live text is at least 13px and names at least 14px, with no horizontal overflow at any supported size.
-- One persistent `aria-live="polite"` announcer gets one message per action. Token labels include name, keeper status, total minutes, stint minutes and a fatigue word. Bench tiles include the fair-share gap.
+- One persistent `aria-live="polite"` announcer gets one message per action. The score has its own polite region in the scoreboard, so a goal or a removed goal is said as the new score ("Stilling: oss 2, dem 1"), UI-A11Y-03. Token labels include name, keeper status, total minutes, stint minutes and a fatigue word. Bench tiles include the fair-share gap.
 - Not yet validated: real sunlight, VoiceOver order, Dynamic Type and Bold Text, real devices. This needs a device pass before the live UI flag flips.
 
 ---
@@ -345,6 +376,11 @@ A 24 grid with 1.75 stroke and round caps and joins (lucide-compatible). Icons o
 | C2-F1 | Bottom-nav tab labels are 13px (600, 700 when active) and Home key figures are 20px 700 tabular; both are typography rows in §3, so 13px is no longer reserved for caps labels (2026-10-22). |
 | B5 | A selected choice chip shows a check mark as well as the lime fill, in setup, team defaults and `/lineup` alike (C1-F3, 2026-10-22). |
 | MATCH-09 | The suggestion never names the keeper and needs a 4′ gap between the pair (§6.2), 2026-10-20. Its button is **Velg** (selects the outgoing player), deliberately not a one-tap **Bytt**: the coach completes the substitution. |
+| UI-MS-01d | Setup order is match settings, attendance, lineup (§7.1); supersedes "attendance first" from UI-MS-01a. Attendance is compact name chips, and the report switch moves into the match card (C1-F1), 2026-10-25. |
+| UI-DURATION-01 | Custom duration is typed per half with two halves; the field keeps the typed text and applies only valid values. Domain limits (5–240 min) are unchanged (2026-10-25). |
+| UI-EVENTS-01 | Sided event timeline with type icons, scorer and assist on one line and bold goals, in Live and match details (§7.2); supersedes C4's neutral timeline without icons (2026-10-25). |
+| UI-LIVE-04 | The live clock shows ordinary time plus stoppage (`30+10:00`) and the second half starts at the half length (§5.1, §6.4). Presentation only (2026-10-25). |
+| UI-LIVE-05 | The live scoreboard uses `canvas` like the dugout, in both themes; club green stays on Home and match details (2026-10-25). Lime digits for "time up" are replaced by the stoppage notation. |
 | B2 | Adaptive bench, Alternative C (FP-MS2.1-B2, §5.3): sorted least-played first by displayed whole minutes, ties in squad order, at every squad size; order held during interactions and re-sorted once after, with the rail back at its start; one row → two (three tall) → horizontal rail; "+N ›" / "‹ N" jump buttons with counts only; touch direction lock on the rail; tiles 44px tall (amends "≥ 60px"). |
 
 ## 11. Implementation status
@@ -353,8 +389,8 @@ A 24 grid with 1.75 stroke and round caps and joins (lucide-compatible). Icons o
 |---|---|
 | Tokens (§2) | **In `globals.css`, used app-wide** (UI-TOKENS-01, B3). Every §2 token is a Tailwind colour (`bg-fp-club`, `text-fp-warn-text`, `border-fp-control-line`, `bg-fp-scrim`, …). The off-spec `fp-cta`, `fp-accent`, `danger` and `fp-warning` tokens are gone; lime is never text (`text-primary`/`text-accent` are not used). `src/lib/design/designGuard.test.ts` fails on glow, lime text, blur, hover scale/translate, retired tokens and hard-coded colours, with explicit, documented exceptions only. |
 | Typography (§3) | **Done.** Inter everywhere (Urbanist removed); Barlow Condensed bundled and available via `.font-num`. |
-| Legacy tokens | `--fp-pitch-*` and `src/lib/tokens.ts` `colors` are legacy (C6). Remove them as the live UI and setup are rebuilt. `.glow-*` is removed. |
-| Live screen, setup, home (§5–7) | Not started. Follow `design-exploration/modern-sideline/IMPLEMENTATION-PLAN.md`, behind `NEXT_PUBLIC_LIVE_UI=sideline`. |
+| Legacy tokens | `--fp-pitch-*` (legacy live view and `/lineup`) and `src/lib/tokens.ts` (`colors` unused; `variants` still imported by 3 files) are legacy. Removal waits for UI-MS-01c and the `/lineup` decision (C6 report). `.glow-*` is removed. |
+| Live screen, setup, home (§5–7) | **Done.** Live is the Modern Sideline view behind `NEXT_PUBLIC_LIVE_UI=sideline` (set in production web; verified in the production bundle 2026-10-25). Setup (C1, revised in C6) and Home (C2) follow §7. The legacy live view stays in code until UI-MS-01c. |
 | Goal correction (§6.3) | Blocked on server event reconciliation. |
 | Position swap (§6.1.1) | **Done in the Modern Sideline view** (FP-MS2.1-B1). The legacy live view (flag off) does not offer it. |
 | Fairness suggestion (§6.2) | **Keeper exclusion and 4′ gap implemented** (MATCH-09, A1 patch, not yet committed) in both live views. The strip button is **Velg** (selects the outgoing player; the coach then taps the bench), a deliberate choice over a one-tap **Bytt** (§6.2, decided 2026-10-20). |

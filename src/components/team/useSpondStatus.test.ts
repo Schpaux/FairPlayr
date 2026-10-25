@@ -4,6 +4,8 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useSpondConnection, useSpondStatus } from "@/components/team/useSpondStatus";
 import type { TeamStorageMode } from "@/lib/teamData/types";
+import { notifySpondStatusChanged } from "@/lib/spondStatusEvents";
+import { act } from "react";
 
 const json = (body: unknown, ok = true) => Promise.resolve({ ok, json: () => Promise.resolve(body) } as Response);
 
@@ -38,6 +40,24 @@ describe("useSpondConnection", () => {
     vi.stubGlobal("fetch", vi.fn(() => json({ connected: false })));
     const { result } = renderHook(() => useSpondConnection("team-1", "cloud"));
     await waitFor(() => expect(result.current).toBe("disconnected"));
+  });
+
+  it("checks again when Settings connects or disconnects this team (C5-F2)", async () => {
+    const fetchMock = vi.fn(() => json({ connected: false }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { result } = renderHook(() => useSpondConnection("team-1", "cloud"));
+    await waitFor(() => expect(result.current).toBe("disconnected"));
+
+    // Another team's change is not ours.
+    act(() => notifySpondStatusChanged("team-2"));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    fetchMock.mockImplementation(() => json({ connected: true }));
+    act(() => notifySpondStatusChanged("team-1"));
+    // The previous answer stays while it checks; then the new one.
+    expect(result.current).toBe("disconnected");
+    await waitFor(() => expect(result.current).toBe("connected"));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("is unavailable on a non-ok response and on a network error", async () => {

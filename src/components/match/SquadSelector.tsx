@@ -3,18 +3,18 @@ import { useTranslations } from "next-intl";
 import { Check } from "lucide-react";
 import type { Player } from "@/domain/team";
 import { Button } from "@/components/ui/primitives";
-import { discLabel, hasShirtNumber } from "@/components/live/liveScreenModel";
 import { buildDisplayNameMap } from "@/lib/utils/playerName";
 import { cn } from "@/lib/utils";
 
 /**
- * Attendance grid (UI-MS-01a, DESIGN.md §7): who is here today. One tile per
- * player with the shirt disc above the name (14px, full tile width so names
- * are not cut). The name ladder runs over the whole team, because every player
- * is listed here; the pitch, like live, runs it over the squad only. Present is a club disc with a lime check; absent is muted and says
- * «Borte» in words, so the state is never colour only. Each tile is a toggle
- * (`aria-pressed`) at least 44px tall; an absent tile is named «Ida, borte»,
- * so a screen reader hears the state too (C1-F6).
+ * Attendance (DESIGN.md §7.1, UI-MS-01a revised by C1-F1): who is here today.
+ * One 44px name chip per player, several per row, so the pitch follows soon
+ * after. The name ladder runs over the whole team, because every player is
+ * listed here; the pitch, like live, runs it over the squad only. Present is
+ * an outlined chip with a lime check; absent is muted and says «Borte» in
+ * words, so the state is never colour only. Each chip is a toggle
+ * (`aria-pressed`); an absent chip is named «Ida, borte», so a screen reader
+ * hears the state too (C1-F6). Names wrap rather than truncate.
  */
 
 interface SquadSelectorProps {
@@ -59,16 +59,12 @@ export function SquadSelector({
         </div>
       </div>
 
-      <ul
-        role="list"
-        aria-labelledby={labelledBy}
-        className="grid grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-2"
-      >
+      <ul role="list" aria-labelledby={labelledBy} className="flex flex-wrap gap-2">
         {players.map((player) => {
           const isPresent = selected.has(player.id);
           const name = names.get(player.id) ?? player.name;
           return (
-            <li key={player.id} className="min-w-0">
+            <li key={player.id} className="max-w-full min-w-0">
               <button
                 type="button"
                 onClick={() => onToggle(player.id)}
@@ -77,41 +73,31 @@ export function SquadSelector({
                 // («Ida, borte»), not only in the visible word.
                 aria-label={isPresent ? undefined : t("absentName", { name })}
                 className={cn(
-                  "flex h-full min-h-12 w-full flex-col items-center gap-1 rounded-[10px] px-1.5 py-2 text-center",
+                  "flex min-h-11 max-w-full items-center gap-2 rounded-full py-1.5 pr-4 pl-2 text-left",
                   "transition-[transform,background-color,box-shadow] duration-(--fp-d-quick) ease-fp-out active:scale-[0.97]",
                   isPresent
                     ? "bg-fp-surface shadow-[inset_0_0_0_1.5px_var(--fp-control-line)]"
-                    : "bg-fp-surface-2 shadow-[inset_0_0_0_1px_var(--fp-rule)]"
+                    : "bg-fp-surface-2 pl-4 shadow-[inset_0_0_0_1px_var(--fp-rule)]"
                 )}
               >
+                {isPresent ? (
+                  <span
+                    aria-hidden
+                    className="flex size-6 shrink-0 items-center justify-center rounded-full bg-fp-lime text-fp-on-lime"
+                  >
+                    <Check size={14} strokeWidth={3} />
+                  </span>
+                ) : null}
                 <span
-                  aria-hidden
                   className={cn(
-                    "relative flex size-8 shrink-0 items-center justify-center rounded-full leading-none",
-                    hasShirtNumber(player) ? "font-num text-[17px]" : "text-[13px] font-semibold",
-                    isPresent
-                      ? "bg-fp-club-disc text-fp-on-club"
-                      : "bg-fp-surface-3 text-fp-ink-2"
+                    "min-w-0 text-sm leading-[17px] font-semibold [overflow-wrap:break-word]",
+                    isPresent ? "text-fp-ink" : "text-fp-ink-2"
                   )}
                 >
-                  {discLabel(player)}
-                  {isPresent ? (
-                    <span className="absolute -right-1 -bottom-1 flex size-4 items-center justify-center rounded-full bg-fp-lime text-fp-on-lime">
-                      <Check size={11} strokeWidth={3} />
-                    </span>
-                  ) : null}
-                </span>
-                <span className="flex w-full min-w-0 flex-col items-center">
-                  <span
-                    className={cn(
-                      "break-words text-sm leading-[17px] font-semibold",
-                      isPresent ? "text-fp-ink" : "text-fp-ink-2"
-                    )}
-                  >
-                    {name}
-                  </span>
+                  {name}
                   {isPresent ? null : (
-                    <span aria-hidden className="text-[13px] leading-4 font-medium text-fp-ink-2">
+                    <span aria-hidden className="font-medium">
+                      {" · "}
                       {t("absent")}
                     </span>
                   )}

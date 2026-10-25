@@ -167,13 +167,21 @@ describe("MatchDetailsManager (C4)", () => {
     renderDetails(serverMatch({ runtimeState: playedMatch() }));
 
     const timeline = await screen.findByRole("list", { name: no.matchPlanner.timelineTitle });
-    const rows = within(timeline).getAllByRole("listitem").map((row) => row.textContent);
-    expect(rows).toEqual([
-      "4′4. minutt: FridaMål · assist Ida",
-      "10′10. minutt: Inn: TheaUt: Maja",
-      "12′12. minutt: Mål for Skeid",
-      "25′25. minutt: SelmaMål",
+    const items = within(timeline).getAllByRole("listitem");
+    // One text alternative per row, in reading order (DESIGN.md §7.2).
+    expect(items.map((row) => row.querySelector(".sr-only")?.textContent)).toEqual([
+      "4. minutt, mål for oss: Frida, assist Ida",
+      "10. minutt, bytte: Thea inn, Maja ut",
+      "12. minutt, mål for Skeid",
+      "25. minutt, mål for oss: Selma",
     ]);
+    // Our events on the left, the opponent's on the right; goals bold.
+    expect(items.map((row) => row.getAttribute("data-side"))).toEqual(["own", "own", "opponent", "own"]);
+    expect(items.map((row) => row.getAttribute("data-kind"))).toEqual(["goal", "substitution", "goal", "goal"]);
+    expect(items[0].querySelector("strong")?.textContent).toBe("Frida");
+    expect(items[0].textContent).toContain("Frida · assist Ida");
+    expect(items[1].querySelector("strong")).toBeNull();
+    expect(items[2].textContent).toContain("Mål · Skeid");
     // Runtime events are not editable here.
     expect(within(timeline).queryByRole("button")).toBeNull();
   });
@@ -213,6 +221,32 @@ describe("MatchDetailsManager (C4)", () => {
     const [url, init] = calls("PATCH")[0];
     expect(String(url)).toBe("/api/matches/match-1/events/ev-1");
     expect(JSON.parse(String(init?.body))).toMatchObject({ minute: 17, primaryPlayerId: "p1", secondaryPlayerId: "p2" });
+  });
+
+  it("refuses an invalid goal minute with a reason and saves nothing (C4-F5)", async () => {
+    renderDetails(serverMatch(), [SERVER_GOAL]);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Rediger mål/ }));
+    const sheet = within(await screen.findByTestId("goal-edit-sheet"));
+    const minute = sheet.getByRole("textbox", { name: no.matchPlanner.event.minute });
+    for (const bad of ["-3", "abc", "12.5", "1e3", "9007199254740992"]) {
+      fireEvent.change(minute, { target: { value: bad } });
+      fireEvent.click(sheet.getByRole("button", { name: no.matchPlanner.event.save }));
+      expect(minute.getAttribute("aria-invalid")).toBe("true");
+      expect(sheet.getByText(no.matchPlanner.event.minuteError)).toBeTruthy();
+    }
+    expect(calls("PATCH")).toHaveLength(0);
+
+    // Stoppage is legitimate: no match-minute limit, only the safe-integer range.
+    for (const ok of ["", "0", "12345", "9007199254740991"]) {
+      fireEvent.change(minute, { target: { value: ok } });
+      expect(minute.getAttribute("aria-invalid")).toBeNull();
+    }
+    fireEvent.change(minute, { target: { value: "93" } });
+    expect(minute.getAttribute("aria-invalid")).toBeNull();
+    fireEvent.click(sheet.getByRole("button", { name: no.matchPlanner.event.save }));
+    await screen.findByText(no.matchPlanner.event.editSaved);
+    expect(JSON.parse(String(calls("PATCH")[0][1]?.body))).toMatchObject({ minute: 93 });
   });
 
   it("deletes a goal only after its own confirmation", async () => {

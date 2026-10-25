@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { onSpondStatusChanged } from "@/lib/spondStatusEvents";
 import type { TeamStorageMode } from "@/lib/teamData/types";
 
 /**
@@ -55,6 +56,16 @@ export function useSpondConnection(teamId: string | null, mode: TeamStorageMode)
   // as "checking" until its own answer arrives (no state reset in the effect).
   const [result, setResult] = useState<{ teamId: string; state: ResolvedSpondState } | null>(null);
   const active = mode === "cloud" && !!teamId;
+  // C5-F2: bumped when Settings connects or disconnects this team, so the
+  // status is checked again; the last answer stays shown meanwhile.
+  const [revision, setRevision] = useState(0);
+
+  useEffect(() => {
+    if (!active || !teamId) return;
+    return onSpondStatusChanged((changedTeamId) => {
+      if (changedTeamId === teamId) setRevision((value) => value + 1);
+    });
+  }, [active, teamId]);
 
   useEffect(() => {
     if (!active || !teamId) return;
@@ -81,7 +92,7 @@ export function useSpondConnection(teamId: string | null, mode: TeamStorageMode)
     return () => {
       cancelled = true;
     };
-  }, [active, teamId]);
+  }, [active, teamId, revision]);
 
   if (!active) return "guest";
   if (!result || result.teamId !== teamId) return "checking";

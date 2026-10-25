@@ -104,6 +104,8 @@ async function leaveToHome(page: Page) {
 async function endViaMenu(page: Page) {
   await page.getByRole("button", { name: "Kampmeny" }).click();
   await page.getByRole("button", { name: "Avslutt kampen nå" }).click();
+  // The live confirmation sheet (UI-A11Y-02), not a browser dialog.
+  await page.getByRole("button", { name: "Ja, avslutt kampen" }).click();
 }
 
 const banner = (page: Page) => page.getByRole("link", { name: /Kamp pågår/ });

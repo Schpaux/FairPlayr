@@ -122,3 +122,49 @@ describe("Menu rows for persistent and passive conditions", () => {
     fireEvent.keyDown(window, { key: "Escape" });
   });
 });
+
+describe("Scoreboard display clock (UI-LIVE-04)", () => {
+  it("shows ordinary time plus stoppage and says it in words", () => {
+    const model = {
+      ...MODEL,
+      clock: "30+10:05",
+      clockDisplay: { text: "30+10:05", regularSeconds: 1800, stoppageSeconds: 605 },
+      inStoppage: true,
+    } as unknown as LiveScreenModel;
+    render(
+      <NextIntlClientProvider locale="no" messages={no}>
+        <Scoreboard
+          model={model}
+          isOnline
+          menuOpen={false}
+          onClockPress={() => undefined}
+          onGoalUs={() => undefined}
+          onGoalThem={() => undefined}
+          onOpenMenu={() => undefined}
+        />
+      </NextIntlClientProvider>
+    );
+    const clock = screen.getByTestId("live-clock");
+    expect(clock.textContent).toContain("30+10:05");
+    expect(clock.getAttribute("aria-label")).toBe("Stopp klokka, 30 minutter pluss 10 minutter 5 sekunder overtid");
+  });
+});
+
+describe("Live sheets keep focus inside (UI-A11Y-03)", () => {
+  afterEach(cleanup);
+
+  it("Tab from the last control goes to the first, Shift+Tab from the first to the last", () => {
+    renderMenu({});
+    const dialog = screen.getByRole("dialog");
+    const controls = [...dialog.querySelectorAll<HTMLElement>("a[href], button:not([disabled])")];
+    const first = controls[0];
+    const last = controls[controls.length - 1];
+
+    last.focus();
+    fireEvent.keyDown(last, { key: "Tab" });
+    expect(document.activeElement).toBe(first);
+
+    fireEvent.keyDown(first, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(last);
+  });
+});

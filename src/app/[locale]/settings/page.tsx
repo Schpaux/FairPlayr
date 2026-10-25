@@ -15,7 +15,7 @@ import { PageShell } from "@/components/ui/PageShell";
 import { ButtonLink, ListGroup, ListRow, SegmentedChoice, type SegmentedOption } from "@/components/ui/primitives";
 import { SyncStatusRow } from "@/components/layout/SyncStatusRow";
 import { UserAvatar } from "@/components/layout/UserAvatar";
-import { readProfileMetadata } from "@/components/layout/ProfileMenu";
+import { readProfileMetadata } from "@/lib/utils/profileMetadata";
 import { SignOutConfirmSheet } from "@/components/auth/SignOutConfirmSheet";
 import { SpondIntegrationCard } from "@/components/team/SpondIntegrationCard";
 

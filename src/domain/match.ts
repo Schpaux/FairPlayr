@@ -288,6 +288,32 @@ export function createCustomDuration(totalMinutes: number): MatchDurationConfig 
   };
 }
 
+/**
+ * The minutes one period may have in a custom duration, so the match stays
+ * within the same 5–240 minutes as `createCustomDuration` (UI-DURATION-01).
+ */
+export function getCustomPeriodBounds(halves: 1 | 2): { min: number; max: number } {
+  return halves === 2 ? { min: 3, max: 120 } : { min: 5, max: 240 };
+}
+
+/**
+ * A custom duration given as halves and minutes per period ("2 × 18"), so the
+ * coach types what the cup says. Unlike `createCustomDuration`, it keeps the
+ * chosen number of halves.
+ */
+export function createCustomPeriodDuration(halves: 1 | 2, minutesPerPeriod: number): MatchDurationConfig {
+  const safeHalves: 1 | 2 = halves === 2 ? 2 : 1;
+  const { min, max } = getCustomPeriodBounds(safeHalves);
+  const minutes = Math.max(min, Math.min(max, Math.round(minutesPerPeriod)));
+  return {
+    mode: "custom",
+    presetId: null,
+    halves: safeHalves,
+    minutesPerHalf: minutes,
+    totalMinutes: minutes * safeHalves,
+  };
+}
+
 function withUpdatedConfig(config: MatchConfig, patch: Partial<MatchConfig>): MatchConfig {
   return {
     ...config,
@@ -453,6 +479,16 @@ export function setMatchFormat(setup: MatchConfig, format: MatchFormat): MatchCo
 export function setMatchDuration(setup: MatchConfig, durationMinutes: number): MatchConfig {
   return withUpdatedConfig(setup, {
     duration: createCustomDuration(durationMinutes),
+  });
+}
+
+export function setMatchCustomPeriodDuration(
+  setup: MatchConfig,
+  halves: 1 | 2,
+  minutesPerPeriod: number
+): MatchConfig {
+  return withUpdatedConfig(setup, {
+    duration: createCustomPeriodDuration(halves, minutesPerPeriod),
   });
 }
 

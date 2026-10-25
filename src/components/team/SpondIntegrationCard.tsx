@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { notifySpondStatusChanged } from "@/lib/spondStatusEvents";
 import { CircleAlert, CircleCheck, CircleDashed, Link2, LoaderCircle, RefreshCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button, ConfirmSheet, ListGroup, ListRow, Notice } from "@/components/ui/primitives";
@@ -294,6 +295,7 @@ export function SpondIntegrationCard({
       const data = payload as { accountLabel: string | null };
       setConnected(true);
       setAccountLabel(data.accountLabel ?? null);
+      notifySpondStatusChanged(teamId);
       setNotice(t("connected"));
       await loadGroups();
     } catch (cause) {
@@ -345,6 +347,10 @@ export function SpondIntegrationCard({
   const handleImport = async () => {
     setError(null);
     setNotice(null);
+    // A new preview starts empty (C5-F5): the previous list is kept until
+    // here, so the sheet does not empty while it slides out after an import.
+    setImportPreviewCandidates([]);
+    setSelectedCandidateExternalIds([]);
     setIsLoadingImportPreview(true);
 
     try {
@@ -444,8 +450,6 @@ export function SpondIntegrationCard({
 
       await onImported();
       setMembersLastSyncedAt(data.syncedAt ?? new Date().toISOString());
-      setImportPreviewCandidates([]);
-      setSelectedCandidateExternalIds([]);
       setNotice(
         t("preview.importSummary", {
           created: data.created,
@@ -539,6 +543,7 @@ export function SpondIntegrationCard({
 
       await onImported();
       await loadStatus();
+      notifySpondStatusChanged(teamId);
 
       if (action === "disconnect-and-delete") {
         setEvents([]);
@@ -610,15 +615,18 @@ export function SpondIntegrationCard({
 
   const feedbackFor = (slot: FeedbackSlot): ReactNode => {
     if (slot !== activeSlot || (!notice && !error)) return null;
+    // The import sheet is modal (the card behind it is inert), so feedback
+    // there announces itself.
+    const inSheet = slot === "sheet";
     return (
       <div className="space-y-2">
         {notice ? (
-          <Notice tone={neutralNotices.includes(notice) ? "info" : "success"} testId="spond-notice">
+          <Notice tone={neutralNotices.includes(notice) ? "info" : "success"} announce={inSheet ? undefined : "off"} testId="spond-notice">
             {notice}
           </Notice>
         ) : null}
         {error ? (
-          <Notice tone="error" testId="spond-error">
+          <Notice tone="error" announce={inSheet ? undefined : "off"} testId="spond-error">
             {error}
           </Notice>
         ) : null}
@@ -661,6 +669,15 @@ export function SpondIntegrationCard({
 
   return (
     <div className="space-y-6" data-testid="spond-card">
+      {/* C5-F1: the feedback is announced from here, once. The visible notice
+          follows the section it is about and is silent, so moving it never
+          reads it out again. */}
+      <p role="status" className="sr-only" data-testid="spond-live-status">
+        {activeSlot === "sheet" ? "" : notice ?? ""}
+      </p>
+      <p role="alert" className="sr-only" data-testid="spond-live-alert">
+        {activeSlot === "sheet" ? "" : error ?? ""}
+      </p>
       {/* ── Status ─────────────────────────────────────────────── */}
       <div className="space-y-3">
         {titleNode}
@@ -804,7 +821,8 @@ export function SpondIntegrationCard({
             <Button
               size="sm"
               variant={linkedGroupId ? "secondary" : "primary"}
-              className="flex-1"
+              // C5-F5: one line at 360px; the refresh button wraps instead.
+              className="flex-1 whitespace-nowrap"
               onClick={() => {
                 setFeedbackAnchor("link");
                 void handleSaveLink();
@@ -835,7 +853,7 @@ export function SpondIntegrationCard({
       {/* ── Events ──────────────────────────────────────────────── */}
       {linked ? (
         <section className="space-y-3" aria-labelledby="spond-events-title">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h4 id="spond-events-title" className={SECTION_TITLE}>
               {t("eventsTitle")}
             </h4>
@@ -848,6 +866,7 @@ export function SpondIntegrationCard({
                 void handleSyncEvents();
               }}
               disabled={isSyncingEvents}
+              className="whitespace-nowrap"
             >
               {isSyncingEvents ? t("syncEventsLoading") : t("syncEventsCta")}
             </Button>

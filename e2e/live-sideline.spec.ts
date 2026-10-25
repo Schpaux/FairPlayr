@@ -320,6 +320,40 @@ for (const format of Object.keys(FORMATS) as Format[]) {
   }
 }
 
+test("the clock shows ordinary time plus stoppage, and ending the match asks in the sheet (UI-LIVE-04, UI-A11Y-02)", async ({ page }) => {
+  const { errors } = await openLive(page, "7v7", "dark");
+  const clock = page.getByTestId("live-clock");
+  const half = FORMATS["7v7"].minutesPerHalf;
+  // The board sits on the canvas like the dugout (UI-LIVE-05).
+  const boardBg = await page.locator("[data-testid=live-sideline] header").evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(boardBg).toBe(THEMES.dark.canvas);
+
+  await page.getByRole("button", { name: "Avspark", exact: true }).click();
+  await page.clock.fastForward(`${half + 2}:13`);
+  await expect(clock).toContainText(`${half}+2:1`);
+  await expect(clock).toHaveAttribute("aria-label", new RegExp(`${half} minutter pluss 2 minutter 1\\d sekunder overtid`));
+
+  // The referee ends the half; the second half starts at the half length.
+  await page.getByRole("button", { name: "Avslutt omgang", exact: true }).click();
+  await page.getByRole("button", { name: "Ja, avslutt omgangen", exact: true }).click();
+  await page.getByRole("button", { name: "Start 2. omgang", exact: true }).click();
+  await expect(clock).toContainText(`${half}:0`);
+
+  await page.clock.fastForward(`${half + 1}:00`);
+  await expect(clock).toContainText(`${half * 2}+1:0`);
+
+  // The last half's end asks with the score and the clock, never a browser dialog.
+  let dialogs = 0;
+  page.on("dialog", (dialog) => { dialogs += 1; void dialog.dismiss(); });
+  await page.getByRole("button", { name: "Avslutt kampen", exact: true }).click();
+  const sheet = page.getByTestId("live-confirm");
+  await expect(sheet).toContainText("Stillingen er 0–0 ved");
+  await sheet.getByRole("button", { name: "Ja, avslutt kampen", exact: true }).click();
+  await expect(page.getByTestId("live-strip")).toHaveAttribute("data-strip", "fullTime");
+  expect(dialogs).toBe(0);
+  expect(errors).toEqual([]);
+});
+
 test("reduced motion keeps the undo countdown and collapses other motion", async ({ page }) => {
   await openLive(page, "7v7", "light");
   await page.getByRole("button", { name: "Avspark", exact: true }).click();

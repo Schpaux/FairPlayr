@@ -2,7 +2,7 @@
 
 import { useEffect, useEffectEvent, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Minus, Plus, ChevronLeft } from "lucide-react";
+import { Play, Minus, Plus, ChevronLeft, ShieldAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -95,9 +95,11 @@ import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
 import { useActiveMatch } from "@/components/providers/ActiveMatchProvider";
 import { PageShell } from "@/components/ui/PageShell";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { AppCard } from "@/components/ui/AppCard";
 import { FpButton } from "@/components/ui/FpButton";
+import { Button, ButtonLink } from "@/components/ui/primitives";
+import { ActiveMatchCloseConfirm, useActiveMatchCloseConfirm } from "@/components/match/ActiveMatchCloseConfirm";
+import { LiveStateScreen } from "@/components/live/LiveStateScreen";
 import { MatchTimerPanel } from "@/components/match/MatchTimerPanel";
 import { LivePitchView } from "@/components/match/LivePitchView";
 import { LiveBenchStrip } from "@/components/match/LiveBenchStrip";
@@ -222,6 +224,22 @@ export function MatchLiveManager() {
   const [reportEnabled, setReportEnabled] = useState(false);
   const [promptQueue, setPromptQueue] = useState<GoalPromptState[]>([]);
   const [isResolvingRecoveryAction, setIsResolvingRecoveryAction] = useState(false);
+  // MATCH-03: ending or discarding a match from the recovery screen goes
+  // through the same confirmation as everywhere else outside Live.
+  const recoveryConfirm = useActiveMatchCloseConfirm(async (action) => {
+    setError(null);
+    setIsResolvingRecoveryAction(true);
+    // No `finally`: the React Compiler (and its lint) skip a component that
+    // uses one.
+    try {
+      await (action === "end" ? forceCloseActiveMatch() : discardActiveMatch());
+      router.push("/match");
+    } catch {
+      setError(t(action === "end" ? "recovery.endFailed" : "recovery.discardFailed"));
+    }
+    setIsResolvingRecoveryAction(false);
+  });
+
   const [isEndingMatch, setIsEndingMatch] = useState(false);
   const [endMatchDone, setEndMatchDone] = useState(false);
   // Server match whose completion was confirmed after a deferred sync (or
@@ -802,11 +820,7 @@ export function MatchLiveManager() {
     };
   }, [hasUnpersistedCompletion]);
 
-  const handleEnd = () => {
-    if (!window.confirm(t("actions.confirmEnd"))) {
-      return;
-    }
-
+  const endMatchNow = () => {
     setError(null);
     setIsEndingMatch(true);
 
@@ -880,6 +894,16 @@ export function MatchLiveManager() {
       setIsEndingMatch(false);
     })();
 
+  };
+
+  // The legacy view still asks with the browser dialog; the Sideline view
+  // confirms in its own sheet first and calls `endMatchNow` (UI-A11Y-02).
+  const handleEnd = () => {
+    if (!window.confirm(t("actions.confirmEnd"))) {
+      return;
+    }
+
+    endMatchNow();
   };
 
   // The name stored in events and sent to the server: the real name only,
@@ -1288,29 +1312,29 @@ export function MatchLiveManager() {
     }
   };
 
+  // UI-LIVE-03: every state screen uses the full-screen canvas of Live.
   if (!isHydrated) {
-    return (
-      <PageShell>
-        <AppCard className="p-6 text-sm text-muted-foreground">{common("loading")}</AppCard>
-      </PageShell>
-    );
+    return <LiveStateScreen loading label={common("loading")} />;
   }
 
   // A restored match stays on screen while the team list reloads or fails
   // (offline, deferred session): the match never waits for the network.
   if (workspace.isLoading && !liveMatch) {
-    return (
-      <PageShell>
-        <AppCard className="p-6 text-sm text-muted-foreground">{common("loading")}</AppCard>
-      </PageShell>
-    );
+    return <LiveStateScreen loading label={common("loading")} />;
   }
 
   if (workspace.error && !liveMatch) {
     return (
-      <PageShell>
-        <AppCard className="p-3 text-xs text-fp-danger-text">{workspace.error}</AppCard>
-      </PageShell>
+      <LiveStateScreen
+        icon={ShieldAlert}
+        title={t("loadErrorTitle")}
+        error={workspace.error}
+        actions={
+          <ButtonLink href="/" variant="secondary" block>
+            {t("actions.toHome")}
+          </ButtonLink>
+        }
+      />
     );
   }
 
@@ -1323,80 +1347,56 @@ export function MatchLiveManager() {
       : canContinueRecovery && recoveryMatch
         ? `/match/live?matchId=${encodeURIComponent(recoveryMatch.id)}`
         : null;
+    const recoveryTitle = activeMatch?.title || recoveryMatch?.title || t("recovery.title");
 
-    return (
-      <PageShell>
-        {showRecovery ? (
-          <AppCard className="space-y-3 p-4">
-            <p className="text-base font-semibold text-foreground">{t("recovery.title")}</p>
-            <p className="text-xs text-muted-foreground">{t("recovery.description")}</p>
-            <div className="grid gap-2">
+    return showRecovery ? (
+      <>
+        <LiveStateScreen
+          icon={Play}
+          title={t("recovery.title")}
+          body={t("recovery.description")}
+          error={error}
+          testId="live-recovery"
+          actions={
+            <>
               {recoveryContinueHref ? (
-                <Link href={recoveryContinueHref}>
-                  <FpButton variant="primary" size="md" fullWidth>
-                    {t("recovery.continue")}
-                  </FpButton>
-                </Link>
+                <ButtonLink href={recoveryContinueHref} variant="primary" block>
+                  {t("recovery.continue")}
+                </ButtonLink>
               ) : null}
-              <FpButton
-                variant="danger"
-                size="md"
-                fullWidth
+              {/* MATCH-03: never on one tap; destructive only inside its
+                  confirmation (DESIGN.md §5.7). */}
+              <Button
+                block
                 disabled={isResolvingRecoveryAction}
-                onClick={() => {
-                  setIsResolvingRecoveryAction(true);
-                  void forceCloseActiveMatch()
-                    .then(() => {
-                      router.push("/match");
-                    })
-                    .catch(() => {
-                      setError(t("recovery.endFailed"));
-                    })
-                    .finally(() => {
-                      setIsResolvingRecoveryAction(false);
-                    });
-                }}
+                onClick={() => recoveryConfirm.request("end", recoveryTitle)}
               >
                 {t("recovery.end")}
-              </FpButton>
-              <FpButton
-                variant="danger"
-                size="md"
-                fullWidth
+              </Button>
+              <Button
+                variant="ghost"
+                block
                 disabled={isResolvingRecoveryAction}
-                onClick={() => {
-                  setIsResolvingRecoveryAction(true);
-                  void discardActiveMatch()
-                    .then(() => {
-                      router.push("/match");
-                    })
-                    .catch(() => {
-                      setError(t("recovery.discardFailed"));
-                    })
-                    .finally(() => {
-                      setIsResolvingRecoveryAction(false);
-                    });
-                }}
+                onClick={() => recoveryConfirm.request("discard", recoveryTitle)}
               >
                 {t("recovery.discard")}
-              </FpButton>
-            </div>
-          </AppCard>
-        ) : (
-          <EmptyState
-            icon={Play}
-            title={t("empty")}
-            description={t("emptyDescription")}
-            action={
-              <Link href="/match/setup">
-                <FpButton variant="primary" size="md">
-                  {t("actions.toSetup")}
-                </FpButton>
-              </Link>
-            }
-          />
-        )}
-      </PageShell>
+              </Button>
+            </>
+          }
+        />
+        <ActiveMatchCloseConfirm state={recoveryConfirm} />
+      </>
+    ) : (
+      <LiveStateScreen
+        icon={Play}
+        title={t("empty")}
+        body={t("emptyDescription")}
+        actions={
+          <ButtonLink href="/match/setup" variant="primary" block>
+            {t("actions.toSetup")}
+          </ButtonLink>
+        }
+      />
     );
   }
 
@@ -1465,7 +1465,6 @@ export function MatchLiveManager() {
         model={buildLiveScreenModel({
           liveMatch,
           nowMs: matchClock.nowMs,
-          clock: elapsedClock,
           inStoppage,
           playersById,
           getShortName,
@@ -1544,7 +1543,8 @@ export function MatchLiveManager() {
           onPause: handlePause,
           onResume: handleResume,
           onEndHalf: handleEndHalf,
-          onEndMatch: handleEnd,
+          // LiveScreen confirms in its own sheet (UI-A11Y-02).
+          onEndMatch: endMatchNow,
           onGoalUs: () => handleTeamScore(1),
           onGoalThem: () => handleOpponentScore(1),
           onRemoveGoalUs: () => handleTeamScore(-1),

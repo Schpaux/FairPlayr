@@ -37,7 +37,7 @@ export interface LiveScreenHandlers {
   onPause: () => void;
   onResume: () => void;
   onEndHalf: () => void;
-  /** The existing end-match flow (it asks for confirmation itself). */
+  /** Ends the match at once; LiveScreen asks for confirmation first. */
   onEndMatch: () => void;
   onGoalUs: () => void;
   onGoalThem: () => void;
@@ -80,7 +80,7 @@ export interface LiveScreenProps {
   ending: { done: boolean } | null;
 }
 
-type OpenSheet = "menu" | "events" | "confirmEndHalf" | "confirmRemoveGoalUs" | "confirmRemoveGoalThem";
+type OpenSheet = "menu" | "events" | "confirmEndHalf" | "confirmEndMatch" | "confirmRemoveGoalUs" | "confirmRemoveGoalThem";
 
 export function LiveScreen({
   model,
@@ -192,7 +192,7 @@ export function LiveScreen({
         onKickoff={handlers.onStart}
         onStartSecondHalf={handlers.onStart}
         onSetupNext={handlers.onSetupNext}
-        onRequestEndPhase={() => (isLastPhase(model) ? handlers.onEndMatch() : openSheet("confirmEndHalf"))}
+        onRequestEndPhase={() => openSheet(isLastPhase(model) ? "confirmEndMatch" : "confirmEndHalf")}
         onSelectSuggestion={() => {
           if (model.suggestion) handlers.onTapFieldPlayer(model.suggestion.outgoingPlayerId);
         }}
@@ -221,7 +221,7 @@ export function LiveScreen({
           onEndHalf={() => setSheet("confirmEndHalf")}
           onRemoveGoalUs={() => setSheet("confirmRemoveGoalUs")}
           onRemoveGoalThem={() => setSheet("confirmRemoveGoalThem")}
-          onEndMatch={runAndClose(handlers.onEndMatch)}
+          onEndMatch={() => setSheet("confirmEndMatch")}
         />
       ) : null}
 
@@ -233,6 +233,23 @@ export function LiveScreen({
           lede={t("sideline.confirm.endHalfBody")}
           confirmLabel={t("sideline.confirm.endHalfConfirm")}
           onConfirm={runAndClose(handlers.onEndHalf)}
+          onClose={closeSheet}
+        />
+      ) : null}
+
+      {/* Ending the match states the score and the clock, never a browser
+          dialog (DESIGN.md §5.5, UI-A11Y-02). */}
+      {sheet === "confirmEndMatch" ? (
+        <ConfirmSheet
+          title={t("sideline.confirm.endMatchTitle")}
+          lede={t("sideline.confirm.endMatchBody", {
+            us: model.teamScore,
+            them: model.opponentScore,
+            clock: model.clock,
+          })}
+          confirmLabel={t("sideline.confirm.endMatchConfirm")}
+          destructive
+          onConfirm={runAndClose(handlers.onEndMatch)}
           onClose={closeSheet}
         />
       ) : null}

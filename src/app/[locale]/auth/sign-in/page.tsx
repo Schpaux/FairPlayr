@@ -65,6 +65,9 @@ export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // C5-F1: only a problem with the address marks the field invalid; a Google
+  // or network failure is not the field's fault.
+  const [fieldInvalid, setFieldInvalid] = useState(false);
   const [activeAction, setActiveAction] = useState<ActiveAction>(null);
   const helpId = useId();
 
@@ -111,11 +114,13 @@ export default function SignInPage() {
 
     if (!normalizedEmail) {
       setError(t("validation.emailRequired"));
+      setFieldInvalid(true);
       return;
     }
 
     if (!isValidEmail(normalizedEmail)) {
       setError(t("validation.emailInvalid"));
+      setFieldInvalid(true);
       return;
     }
 
@@ -170,6 +175,7 @@ export default function SignInPage() {
                   setEmail(event.target.value);
                   if (error) {
                     setError(null);
+                    setFieldInvalid(false);
                   }
                 }}
                 placeholder={t("signIn.emailPlaceholder")}
@@ -177,7 +183,7 @@ export default function SignInPage() {
                 autoComplete="email"
                 inputMode="email"
                 aria-describedby={helpId}
-                aria-invalid={error ? true : undefined}
+                aria-invalid={fieldInvalid && error ? true : undefined}
               />
               <p id={helpId} className="text-sm text-fp-ink-2">
                 {t("signIn.helpText")}
@@ -194,8 +200,13 @@ export default function SignInPage() {
               {error}
             </Notice>
           ) : null}
+          {/* C5-F1: a status region that is always mounted, so «sendt» is
+              announced in every screen reader; the notice itself is silent. */}
+          <p role="status" className="sr-only">
+            {message ?? ""}
+          </p>
           {message ? (
-            <Notice tone="success" testId="sign-in-message">
+            <Notice tone="success" announce="off" testId="sign-in-message">
               {message}
             </Notice>
           ) : null}

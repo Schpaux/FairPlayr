@@ -33,7 +33,6 @@ function tokenFor(liveMatch: LiveMatchState, playerId: string, nowMs: number) {
   const model = buildLiveScreenModel({
     liveMatch,
     nowMs,
-    clock: "00:00",
     inStoppage: false,
     playersById: new Map(),
     getShortName: (id) => id,
@@ -130,7 +129,6 @@ describe("buildLiveScreenModel — event names (FEAT-NAME-01)", () => {
     const model = buildLiveScreenModel({
       liveMatch: state,
       nowMs: at(7),
-      clock: "07:00",
       inStoppage: false,
       playersById: new Map([
         ["p2", player("p2", "Emma Haugen")],

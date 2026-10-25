@@ -31,13 +31,9 @@ import { startMatchFromSetup, waitForUndoToClose } from "./support/flows";
 const USER = STUB_USER;
 const TEAM_NAME = STUB_TEAM_NAME;
 
-/** The header's team switcher shows the cloud team. */
+/** The header shows the cloud team; with one team it is text, not a picker (C2-F2). */
 async function expectActiveTeam(page: Page) {
-  await expect
-    .poll(() => page.locator("header select").first().evaluate((select: HTMLSelectElement) => select.selectedOptions[0]?.text ?? ""), {
-      timeout: 30_000,
-    })
-    .toBe(TEAM_NAME);
+  await expect(page.locator("header").first()).toContainText(TEAM_NAME, { timeout: 30_000 });
 }
 
 async function expectSignedIn(page: Page) {

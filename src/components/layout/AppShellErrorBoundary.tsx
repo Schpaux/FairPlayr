@@ -3,9 +3,17 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { unstable_rethrow } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
+import { useTranslations } from "next-intl";
+
+interface Labels {
+  title: string;
+  body: string;
+  retry: string;
+}
 
 interface Props {
   children: ReactNode;
+  labels: Labels;
 }
 
 interface State {
@@ -19,12 +27,22 @@ interface State {
  * typically errors in layout-level providers or the shell itself. Renders a
  * minimal recovery screen rather than a blank or broken page.
  *
- * Strings are hardcoded because next-intl translations may not be available
- * during a catastrophic shell render failure.
+ * The boundary sits inside NextIntlClientProvider, so its words come from
+ * `messages/*.json` like everything else (UI-I18N-01): the wrapper below reads
+ * them while the shell is healthy and hands them to the class component.
  *
  * Class component — required by React's error boundary API.
  */
-export class AppShellErrorBoundary extends Component<Props, State> {
+export function AppShellErrorBoundary({ children }: { children: ReactNode }) {
+  const t = useTranslations("appShellError");
+  return (
+    <ShellErrorBoundary labels={{ title: t("title"), body: t("body"), retry: t("retry") }}>
+      {children}
+    </ShellErrorBoundary>
+  );
+}
+
+class ShellErrorBoundary extends Component<Props, State> {
   override state: State = { hasError: false };
 
   static getDerivedStateFromError(error: unknown): State {
@@ -49,10 +67,10 @@ export class AppShellErrorBoundary extends Component<Props, State> {
             </div>
             <div className="flex flex-col gap-2">
               <h1 className="text-xl font-semibold text-foreground">
-                Something went wrong
+                {this.props.labels.title}
               </h1>
               <p className="text-sm leading-relaxed text-muted-foreground">
-                The app failed to load. Try restarting.
+                {this.props.labels.body}
               </p>
             </div>
             <button
@@ -63,7 +81,7 @@ export class AppShellErrorBoundary extends Component<Props, State> {
               }}
               className="tap-target inline-flex items-center justify-center rounded-full bg-fp-lime px-6 py-3 text-sm font-semibold text-fp-on-lime transition active:scale-95"
             >
-              Try again
+              {this.props.labels.retry}
             </button>
           </div>
         </div>

@@ -308,31 +308,23 @@ export function PitchLineupEditor({
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}
     >
-      {/* ── Progress indicator ─────────────────────────────────────────────── */}
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <span
-          className={cn(
-            "text-sm font-semibold tabular-nums",
-            current === required ? "text-fp-ok-text" : "text-fp-ink-2"
-          )}
-        >
-          {t("starters", { current, required })}
-        </span>
-        <Button size="sm" onClick={onAutoFill}>
+      {/* What a tap does next, beside «Fyll automatisk». The squad and pitch
+          counts live in the sticky bar (C1-F1). Room for two lines, so a long
+          name never moves the pitch; only a selection is announced. */}
+      <div className="mb-2 flex items-start justify-between gap-3">
+        <p className="min-h-10 min-w-0 flex-1 text-[13px] leading-5 text-fp-ink-2">
+          <span className="sr-only">{t("starters", { current, required })}. </span>
+          <span aria-live="polite">
+            {tapSelected
+              ? t(tapSelected.kind === "bench" ? "hintBench" : "hintSlot", { name: getShort(tapSelected.playerId) })
+              : null}
+          </span>
+          {tapSelected ? null : t("hintIdle")}
+        </p>
+        <Button size="sm" className="shrink-0" onClick={onAutoFill}>
           {t("autoFill")}
         </Button>
       </div>
-
-      {/* What a tap does next. Room for two lines, so a long name never moves
-          the pitch; only a selection is announced, not the idle hint. */}
-      <p className="mb-2 min-h-10 text-[13px] leading-5 text-fp-ink-2">
-        <span aria-live="polite">
-          {tapSelected
-            ? t(tapSelected.kind === "bench" ? "hintBench" : "hintSlot", { name: getShort(tapSelected.playerId) })
-            : null}
-        </span>
-        {tapSelected ? null : t("hintIdle")}
-      </p>
 
       {/* ── Pitch ──────────────────────────────────────────────────────────── */}
       <div

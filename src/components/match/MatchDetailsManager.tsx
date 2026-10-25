@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { ChevronLeft, Loader2, Pencil, ShieldAlert } from "lucide-react";
+import { ChevronLeft, Loader2, ShieldAlert } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useActiveMatch } from "@/components/providers/ActiveMatchProvider";
@@ -35,6 +35,8 @@ import { endLocalActiveMatch, liveHrefFor } from "@/lib/match/activeMatchRecover
 import { retryPendingMatchCompletion, submitMatchCompletion } from "@/lib/match/matchCompletion";
 import { getStoredMatchSetup } from "@/lib/storage/matchStorage";
 import { getPendingMatchCompletion } from "@/lib/storage/pendingMatchCompletionStorage";
+import { cn } from "@/lib/utils";
+import { EventTimeline } from "@/components/match/EventTimeline";
 
 /** Section kicker (DESIGN.md §3 "Label"), as in `MatchPlayingTime`. */
 const KICKER = "px-1 text-[13px] font-semibold uppercase leading-tight tracking-[0.06em] text-fp-ink-2 outline-none";
@@ -102,6 +104,15 @@ interface MatchEventItem {
   updatedAt: string;
 }
 
+/**
+ * A goal minute is empty (unknown) or a whole number from 0; stoppage has no
+ * match-minute limit, only JavaScript's safe-integer range (C4-F5).
+ */
+export function isValidGoalMinute(value: string): boolean {
+  const trimmed = value.trim();
+  return trimmed === "" || (/^\d+$/.test(trimmed) && Number.isSafeInteger(Number(trimmed)));
+}
+
 function parseApiError(payload: unknown, fallback: string): { message: string } {
   if (typeof payload !== "object" || payload === null) {
     return { message: fallback };
@@ -160,6 +171,9 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [editingEvent, setEditingEvent] = useState<MatchEventItem | null>(null);
   const [editMinute, setEditMinute] = useState<string>("");
+  // Shows the minute error once the coach has left the field or tried to save.
+  const [editMinuteTouched, setEditMinuteTouched] = useState(false);
+  const editMinuteRef = useRef<HTMLInputElement | null>(null);
   const [editScorerId, setEditScorerId] = useState<string>("");
   const [editAssistId, setEditAssistId] = useState<string>("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
@@ -654,6 +668,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
   const openEditModal = (event: MatchEventItem) => {
     setEditingEvent(event);
     setEditMinute(event.minute === null ? "" : String(event.minute));
+    setEditMinuteTouched(false);
     setEditScorerId(event.primaryPlayerId ?? "");
     setEditAssistId(event.secondaryPlayerId ?? "");
     setEditError(null);
@@ -667,6 +682,12 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
 
   const handleSaveEdit = async () => {
     if (!match || !editingEvent) {
+      return;
+    }
+    // C4-F5: empty or a whole number from 0, no upper limit (stoppage).
+    if (!isValidGoalMinute(editMinute)) {
+      setEditMinuteTouched(true);
+      editMinuteRef.current?.focus();
       return;
     }
 
@@ -688,7 +709,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          minute: editMinute ? Number(editMinute) : null,
+          minute: editMinute.trim() ? Number(editMinute.trim()) : null,
           primaryPlayerId: editScorerId || null,
           secondaryPlayerId: editAssistId || null,
           payload: mergedPayload,
@@ -822,6 +843,15 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
   // C4: the timeline is goals and substitutions; kick-off and the final
   // whistle are implied by the result above it.
   const timelineRows = timelineEvents.filter((event) => event.type === "goal" || event.type === "substitution");
+  const minuteInvalid = editMinuteTouched && !isValidGoalMinute(editMinute);
+
+  // Only our own goals stored on the server can be corrected here.
+  const editableServerEvent = (rowId: string): MatchEventItem | null => {
+    const event = timelineRows.find((row) => row.id === rowId);
+    return event && event.type === "goal" && event.teamSide === "own" && event.source === "server" && event.serverEventId
+      ? events.find((serverEvent) => serverEvent.id === event.serverEventId) ?? null
+      : null;
+  };
 
   return (
     <PageShell className="flex flex-col gap-6 pb-8">
@@ -927,72 +957,29 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
           {timelineRows.length === 0 ? (
             <p className="px-1 text-[14px] text-fp-ink-2">{t("timelineEmpty")}</p>
           ) : (
-            <ListGroup aria-label={t("timelineTitle")}>
-              {timelineRows.map((event) => {
-                const editableServerEvent =
-                  event.type === "goal" && event.teamSide === "own" && event.source === "server" && event.serverEventId
-                    ? events.find((serverEvent) => serverEvent.id === event.serverEventId) ?? null
-                    : null;
-                const minute = (
-                  <span className="w-8 text-[14px] font-semibold tabular-nums">
-                    {event.minute !== null ? `${event.minute}′` : "—"}
-                  </span>
-                );
-                const spokenMinute =
-                  event.minute !== null ? (
-                    <span className="sr-only">{t("event.minuteA11y", { minute: event.minute })} </span>
-                  ) : null;
-
-                let label: ReactNode;
-                let description: ReactNode = undefined;
-                if (event.type === "goal" && event.teamSide === "own") {
-                  label = event.scorerName ?? t("event.notRegistered");
-                  description = event.assistName
-                    ? t("event.ownGoalWithAssist", { assist: event.assistName })
-                    : t("event.ownGoal");
-                } else if (event.type === "goal") {
-                  label = t("event.opponentGoalNamed", { opponent: opponentDisplayName });
-                } else if (event.type === "substitution") {
-                  label = `${t("event.substitutionIn")}: ${event.inPlayerName ?? t("event.notRegistered")}`;
-                  description = `${t("event.substitutionOut")}: ${event.outPlayerName ?? t("event.notRegistered")}`;
-                }
-
-                const rowLabel = (
-                  <>
-                    {spokenMinute}
-                    {label}
-                  </>
-                );
-
-                return editableServerEvent ? (
-                  <ListRow
-                    key={event.id}
-                    leading={minute}
-                    label={rowLabel}
-                    description={description}
-                    trailing={
-                      <>
-                        <Pencil size={18} strokeWidth={1.75} aria-hidden />
-                        <span className="sr-only">{t("event.editA11y")}</span>
-                      </>
-                    }
-                    onClick={() => {
-                      deleteEventFinalFocus.current = document.querySelector<HTMLElement>(`[data-testid="timeline-${event.id}"]`);
-                      openEditModal(editableServerEvent);
-                    }}
-                    testId={`timeline-${event.id}`}
-                  />
-                ) : (
-                  <ListRow
-                    key={event.id}
-                    leading={minute}
-                    label={rowLabel}
-                    description={description}
-                    testId={`timeline-${event.id}`}
-                  />
-                );
-              })}
-            </ListGroup>
+            // The event timeline (DESIGN.md §7.2), from kick-off. Our goals
+            // stored on the server open the edit sheet.
+            <EventTimeline
+              label={t("timelineTitle")}
+              opponentName={opponentDisplayName}
+              entries={timelineRows.map((event) => ({
+                id: event.id,
+                minute: event.minute,
+                side: event.type === "substitution" || event.teamSide === "own" ? "own" : "opponent",
+                kind: event.type === "substitution" ? "substitution" : "goal",
+                primary: event.type === "substitution" ? event.inPlayerName : event.scorerName,
+                secondary: event.type === "substitution" ? event.outPlayerName : event.assistName,
+              }))}
+              canEdit={(entry) => editableServerEvent(entry.id) !== null}
+              onEdit={(entry) => {
+                const serverEvent = editableServerEvent(entry.id);
+                if (!serverEvent) return;
+                deleteEventFinalFocus.current = document.querySelector<HTMLElement>(`[data-testid="timeline-${entry.id}"]`);
+                openEditModal(serverEvent);
+              }}
+              editLabel={t("event.editA11y")}
+              rowTestIdPrefix="timeline-"
+            />
           )}
         </section>
 
@@ -1074,17 +1061,30 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
       >
         <div className="space-y-4">
           {editError ? <Notice tone="error">{editError}</Notice> : null}
-          <label className="block space-y-1.5">
-            <span className="text-[14px] font-medium text-fp-ink-2">{t("event.minute")}</span>
+          <div className="space-y-1.5">
+            <label htmlFor="goal-edit-minute" className="block text-[14px] font-medium text-fp-ink-2">
+              {t("event.minute")}
+            </label>
             <input
-              type="number"
+              id="goal-edit-minute"
+              ref={editMinuteRef}
+              type="text"
               inputMode="numeric"
-              min={0}
+              pattern="[0-9]*"
+              autoComplete="off"
               value={editMinute}
+              aria-invalid={minuteInvalid || undefined}
+              aria-describedby={minuteInvalid ? "goal-edit-minute-error" : undefined}
               onChange={(event) => { setEditMinute(event.target.value); }}
-              className={FIELD}
+              onBlur={() => setEditMinuteTouched(true)}
+              className={cn(FIELD, minuteInvalid && "border-fp-danger-text")}
             />
-          </label>
+            {minuteInvalid ? (
+              <p id="goal-edit-minute-error" className="text-sm font-medium text-fp-danger-text">
+                {t("event.minuteError")}
+              </p>
+            ) : null}
+          </div>
 
           <label className="block space-y-1.5">
             <span className="text-[14px] font-medium text-fp-ink-2">{t("event.scorer")}</span>

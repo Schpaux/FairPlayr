@@ -80,7 +80,7 @@ const stored = (page: Page, key: string) => page.evaluate((k) => localStorage.ge
 
 /** Formation shape shown in setup's compact settings card. */
 async function expectSetupFormation(page: Page, shape: string) {
-  const card = page.getByText("Kampinnstillinger").locator("..");
+  const card = page.getByRole("heading", { name: "Kamp", exact: true }).locator("..");
   await expect(card).toBeVisible({ timeout: 30_000 });
   await expect(card.getByText(shape, { exact: true })).toBeVisible();
   for (const other of ["2-3-1", "3-2-1", "2-2-2"].filter((s) => s !== shape)) {
@@ -156,7 +156,7 @@ test.describe("formation defaults and match setup", () => {
     await expectSetupFormation(page, "3-2-1");
     const prefsBefore = await stored(page, PREFS_KEY);
 
-    await page.getByRole("button", { name: "Endre innstillinger" }).click();
+    await page.getByRole("button", { name: "Endre", exact: true }).click();
     await page.getByRole("button", { name: "2-2-2", exact: true }).click();
     await expect
       .poll(async () => JSON.parse((await stored(page, SETUP_KEY)) ?? "null")?.config?.formationId)

@@ -363,10 +363,12 @@
   "matchSetup": {
     "title": "Match Setup",
     "compact": {
-      "title": "Match settings",
-      "edit": "Change settings",
+      "title": "Match",
+      "edit": "Change",
       "durationHalves": "{halves}×{minutes} min",
-      "durationTotal": "{minutes} min"
+      "durationTotal": "{minutes} min",
+      "reportOn": "Summary on",
+      "reportOff": "Summary off"
     },
     "draft": {
       "resumed": "Continuing an unfinished match setup",
@@ -405,9 +407,13 @@
       "halvesTitle": "Match mode",
       "halvesOn": "2 halves",
       "halvesOff": "1 half",
-      "customTitle": "Custom total duration",
-      "customSuffix": "minutes total",
-      "totalLabel": "Total: {minutes} min"
+      "customTitle": "Custom duration",
+      "customSuffix": "min",
+      "totalLabel": "Total: {minutes} min",
+      "customPerHalf": "Minutes per half",
+      "customTotal": "Minutes",
+      "customError": "Enter a whole number from {min} to {max}.",
+      "totalHalves": "Total {minutes} min (2 × {perHalf})"
     },
     "squad": {
       "selectAll": "Select all",
@@ -480,7 +486,8 @@
       "notReady": "Not ready",
       "blockedStarters": "Start match is not available yet. Place {count, plural, one {# more player} other {# more players}} on the pitch.",
       "blockedDuration": "Start match is not available yet. Choose the match length.",
-      "blockedLineup": "Start match is not available yet. Complete the lineup."
+      "blockedLineup": "Start match is not available yet. Complete the lineup.",
+      "starting": "Starting the match …"
     }
   },
   "matchLive": {
@@ -577,7 +584,8 @@
       "startSecondHalf": "Start 2nd half",
       "confirmEnd": "End this match now?",
       "toSetup": "Go to Match Setup",
-      "setupNext": "Set Up Next Match"
+      "setupNext": "Set Up Next Match",
+      "toHome": "Go to Home"
     },
     "recovery": {
       "title": "We found an ongoing match.",
@@ -628,7 +636,8 @@
         "kickoff": "Start the clock at kick-off",
         "pause": "Stop the clock, {clock}",
         "resume": "Start the clock, {clock}",
-        "done": "{phase}, {clock}"
+        "done": "{phase}, {clock}",
+        "stoppage": "{regular} minutes plus {minutes} minutes {seconds} seconds of stoppage time"
       },
       "score": {
         "label": "Score: us {us}, them {them}",
@@ -659,7 +668,10 @@
         "removeGoalThemTitle": "Remove their last goal?",
         "removeGoalBody": "The score becomes {us}–{them}.",
         "removeGoalConfirm": "Yes, remove the goal",
-        "keepPlaying": "Keep playing"
+        "keepPlaying": "Keep playing",
+        "endMatchTitle": "End the match?",
+        "endMatchBody": "The score is {us}–{them} at {clock}. Playing time stops, and the match is saved.",
+        "endMatchConfirm": "Yes, end the match"
       },
       "events": {
         "title": "Events",
@@ -733,7 +745,8 @@
       "pitch": {
         "label": "Pitch"
       }
-    }
+    },
+    "loadErrorTitle": "Couldn't load the team"
   },
   "matchPlanner": {
     "title": "Match Planner",
@@ -878,7 +891,8 @@
       "deleteConfirmTitle": "Delete the goal?",
       "deleteConfirmDescription": "The goal in minute {minute} is removed from the match timeline.",
       "deleteConfirmDescriptionNoMinute": "The goal is removed from the match timeline.",
-      "deleteConfirmCta": "Yes, delete the goal"
+      "deleteConfirmCta": "Yes, delete the goal",
+      "minuteError": "Enter the minute as a whole number, 0 or more, or leave it empty."
     },
     "status": {
       "planned": "Planned",
@@ -1225,5 +1239,27 @@
       "setup": "Match setup",
       "team": "Team"
     }
+  },
+  "eventTimeline": {
+    "minute": "{minute}′",
+    "goal": "Goal",
+    "assist": "assist {name}",
+    "subIn": "{name} on",
+    "subOut": "{name} off",
+    "unknownPlayer": "unknown",
+    "edit": "Edit",
+    "a11y": {
+      "minute": "Minute {minute}, ",
+      "ownGoal": "goal for us: {scorer}",
+      "ownGoalAssist": "goal for us: {scorer}, assist {assist}",
+      "ownGoalUnknown": "goal for us, scorer not recorded",
+      "opponentGoal": "goal for {opponent}",
+      "substitution": "substitution: {in} on, {out} off"
+    }
+  },
+  "appShellError": {
+    "title": "Something went wrong",
+    "body": "The app failed to load. Try restarting.",
+    "retry": "Try again"
   }
 }

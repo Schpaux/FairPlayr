@@ -441,6 +441,39 @@ describe("MatchSetupManager attendance and preselection (U9)", () => {
     expect(getStoredMatchSetup()).toMatchObject({ status: "draft" });
   });
 
+  it("keeps focus in the bar while the match starts (C1-F2)", async () => {
+    renderManager();
+    await screen.findByText(en.matchSetup.sections.squad);
+    fireEvent.click(screen.getByRole("button", { name: en.matchSetup.pitch.autoFill }));
+    await waitFor(() => expect(startButton().disabled).toBe(false));
+
+    startButton().focus();
+    fireEvent.click(startButton());
+
+    const status = await screen.findByText(en.matchSetup.footer.starting);
+    expect(document.activeElement).toBe(status);
+    expect(status.getAttribute("role")).toBe("status");
+  });
+
+  it("returns focus to Start when starting fails before any request (C1-F2)", async () => {
+    renderManager();
+    await screen.findByText(en.matchSetup.sections.squad);
+    fireEvent.click(screen.getByRole("button", { name: en.matchSetup.pitch.autoFill }));
+    await waitFor(() => expect(startButton().disabled).toBe(false));
+
+    // The device cannot store the match: it must not start.
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("full", "QuotaExceededError");
+    });
+    startButton().focus();
+    fireEvent.click(startButton());
+    setItem.mockRestore();
+
+    expect(await screen.findByText(en.matchSetup.errors.startFailed)).toBeTruthy();
+    expect(routerPush).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(startButton());
+  });
+
   it("deselecting a player marks them away and removes them from the squad and the pitch", async () => {
     renderManager();
     await screen.findByText(en.matchSetup.sections.squad);
@@ -512,13 +545,71 @@ describe("MatchSetupManager attendance and preselection (U9)", () => {
   it("the report row is one switch that toggles and is saved with the draft", async () => {
     renderManager();
 
-    const toggle = await screen.findByRole("switch", { name: en.matchSetup.reportToggle.label });
+    // The switch sits inside the match card (DESIGN.md §7.1).
+    fireEvent.click(await screen.findByRole("button", { name: en.matchSetup.compact.edit }));
+    const toggle = screen.getByRole("switch", { name: en.matchSetup.reportToggle.label });
     const before = toggle.getAttribute("aria-checked");
 
     fireEvent.click(toggle);
 
     await waitFor(() => expect(toggle.getAttribute("aria-checked")).not.toBe(before));
     expect(getStoredMatchSetup()?.config.reportEnabled).toBe(before !== "true");
+  });
+
+  it("puts the match first, then attendance, then the lineup (UI-MS-01d)", async () => {
+    renderManager();
+
+    const match = await screen.findByRole("heading", { name: en.matchSetup.compact.title });
+    const squad = screen.getByRole("heading", { name: en.matchSetup.sections.squad });
+    const lineup = screen.getByRole("heading", { name: en.matchSetup.sections.lineup });
+    expect(match.compareDocumentPosition(squad) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(squad.compareDocumentPosition(lineup) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // The report state is in the summary while the card is closed.
+    expect(screen.getByText(/^Summary (on|off)$/)).toBeTruthy();
+  });
+
+  it("lets the coach clear the custom field and type 2 × 18, and keeps it (UI-DURATION-01)", async () => {
+    renderManager();
+    fireEvent.click(await screen.findByRole("button", { name: en.matchSetup.compact.edit }));
+
+    const field = screen.getByRole("textbox", { name: en.matchSetup.duration.customPerHalf });
+    fireEvent.change(field, { target: { value: "" } });
+    // Empty is not applied and says why, but the field stays empty.
+    expect((field as HTMLInputElement).value).toBe("");
+    expect(field.getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByText("Enter a whole number from 3 to 120.")).toBeTruthy();
+
+    fireEvent.change(field, { target: { value: "1" } });
+    expect((field as HTMLInputElement).value).toBe("1");
+    fireEvent.change(field, { target: { value: "18" } });
+    expect((field as HTMLInputElement).value).toBe("18");
+    expect(field.getAttribute("aria-invalid")).toBeNull();
+
+    await waitFor(() =>
+      expect(getStoredMatchSetup()?.config.duration).toMatchObject({
+        mode: "custom",
+        halves: 2,
+        minutesPerHalf: 18,
+        totalMinutes: 36,
+      })
+    );
+
+    fireEvent.blur(field);
+    expect((field as HTMLInputElement).value).toBe("18");
+    expect(screen.getAllByText(/2×18 min/).length).toBeGreaterThan(0);
+  });
+
+  it("restores the applied value when the coach leaves an invalid custom entry", async () => {
+    renderManager();
+    fireEvent.click(await screen.findByRole("button", { name: en.matchSetup.compact.edit }));
+
+    const field = screen.getByRole("textbox", { name: en.matchSetup.duration.customPerHalf }) as HTMLInputElement;
+    const applied = field.value;
+    fireEvent.change(field, { target: { value: "500" } });
+    expect(field.getAttribute("aria-invalid")).toBe("true");
+    fireEvent.blur(field);
+    expect(field.value).toBe(applied);
+    expect(window.localStorage.getItem(SETUP_KEY)).toBeNull();
   });
 
   it("has every matchSetup string in both English and Norwegian", () => {

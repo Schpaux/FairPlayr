@@ -69,8 +69,9 @@ for (const theme of THEMES) {
       // Event history matches the scoreboard: one goal, two kept substitutions.
       const history = await eventHistory(page);
       expect(history).toEqual(historyBefore);
-      expect(history.filter((row) => /Mål for oss/.test(row))).toHaveLength(1);
-      expect(history.filter((row) => /inn ·/.test(row))).toHaveLength(2);
+      // Rows carry the spoken text (C6 EventTimeline): "mål for oss: …", "bytte: … inn, … ut".
+      expect(history.filter((row) => /mål for oss/.test(row))).toHaveLength(1);
+      expect(history.filter((row) => /bytte: .+ inn, .+ ut/.test(row))).toHaveLength(2);
 
       // Second half starts offline too.
       await live.button(page, "Start 2. omgang").click();
