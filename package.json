@@ -61,5 +61,10 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "@serwist/turbopack": {
+      "zod": "4.6.6"
+    }
   }
 }
