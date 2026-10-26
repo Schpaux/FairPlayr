@@ -15,6 +15,7 @@ import type {
   UpdateMatchStatusInput,
 } from "@/lib/server/matches/types";
 import { isCompletionReplay, planMatchUpdate, resolveCompletionEndedAt } from "@/domain/matchLifecycle";
+import { ALL_FORMATS } from "@/domain/match";
 
 const MATCH_SELECT_LEGACY = "id, team_id, title, opponent_name, starts_at, location, status, runtime_state, created_by, created_at, updated_at";
 const MATCH_SELECT_ENHANCED = `${MATCH_SELECT_LEGACY}, started_at, ended_at, format, report_enabled, report_status, report_text, report_generated_at, score_for, score_against`;
@@ -524,6 +525,14 @@ export async function updateMatchStatus(
 
   if (plan.writeRuntimeState && input.runtimeState !== undefined) {
     updatePayload.runtime_state = input.runtimeState;
+
+    // MATCH-14: the format the match was played in is the one in its own
+    // state. A planned or Spond row was created with the column default
+    // ("5v5"), so it follows the state; a state without one changes nothing.
+    const playedFormat = ALL_FORMATS.find((format) => format === input.runtimeState?.format);
+    if (playedFormat) {
+      updatePayload.format = playedFormat;
+    }
   }
 
   // A write that is not itself a completion only applies while the row is

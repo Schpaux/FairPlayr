@@ -407,3 +407,35 @@ describe("updateMatchStatus under concurrent completions", () => {
     expect(row).toMatchObject({ status: "completed", runtime_state: FINAL_STATE, score_for: 2, score_against: 1 });
   });
 });
+
+// MATCH-14: a planned (or Spond) row is created with the column default
+// "5v5"; the format the match was played in comes with its state.
+describe("updateMatchStatus keeps the played format", () => {
+  beforeEach(() => {
+    summaryMock.mockReset();
+  });
+
+  it("stores the state's format when a planned 5v5 row is completed as 7v7", async () => {
+    const row = matchRow({ status: "live", ended_at: null, runtime_state: null, format: "5v5" });
+    const { client } = setup(row);
+
+    const match = await updateMatchStatus(client, "user-1", {
+      matchId: "match-1",
+      status: "completed",
+      runtimeState: { ...FINAL_STATE, format: "7v7" },
+    });
+
+    expect(row.format).toBe("7v7");
+    expect(match.format).toBe("7v7");
+  });
+
+  it("leaves the stored format alone when the state has none (older matches)", async () => {
+    const row = matchRow({ status: "live", ended_at: null, runtime_state: null, format: "9v9" });
+    const { client, writes } = setup(row);
+
+    await updateMatchStatus(client, "user-1", { matchId: "match-1", status: "completed", runtimeState: FINAL_STATE });
+
+    expect(row.format).toBe("9v9");
+    expect(writes.some((write) => "format" in write)).toBe(false);
+  });
+});
