@@ -14,6 +14,12 @@ import { createLiveMatchFromSetup, startLiveMatch, updateScore } from "@/domain/
 import { activateMatch, endMatch, getStoredMatchSetup, saveMatchSetupDraft } from "@/lib/storage/matchStorage";
 import { getStoredLiveMatch, saveStoredLiveMatch } from "@/lib/storage/liveMatchStorage";
 import { getTeamMatchPrefs, saveTeamMatchPrefs } from "@/lib/storage/teamPrefsStorage";
+import {
+  getQueuedShareRevocations,
+  getStoredMatchShare,
+  saveStoredMatchShare,
+  type StoredMatchShare,
+} from "@/lib/storage/matchShareStorage";
 import en from "../../../messages/en.json";
 import no from "../../../messages/no.json";
 
@@ -704,5 +710,95 @@ describe("MatchSetupManager attendance and preselection (U9)", () => {
     for (const key of ["squad.absent", "footer.squad", "footer.ready", "compact.edit", "pitch.autoFill", "pitch.benchTitle"]) {
       expect(keys(en.matchSetup)).toContain(key);
     }
+  });
+});
+
+// FEAT-SHARE-01 v1 follow-ups: a discarded setup revokes its link, leaving
+// setup does not, and a planned match started offline turns live later.
+describe("MatchSetupManager share discard and offline start", () => {
+  const SHARE_MATCH = "11111111-1111-4111-8111-111111111111";
+
+  function storeShare(overrides: Partial<StoredMatchShare> = {}) {
+    saveStoredMatchShare({
+      matchId: SHARE_MATCH,
+      teamId: "team-1",
+      ownerUserId: "user-1",
+      token: "T".repeat(43),
+      settings: { live: true, summary: false, detailLevel: "status", ageGroup: "unknown" },
+      revision: 1,
+      syncedRevision: 1,
+      matchCreated: true,
+      started: false,
+      plannedMatch: false,
+      kickoffAt: null,
+      ...overrides,
+    });
+  }
+
+  beforeEach(() => {
+    window.localStorage.clear();
+    routerPush.mockReset();
+    searchParams = new URLSearchParams();
+    AUTH.status = "authenticated";
+    AUTH.user = { id: "user-1" };
+    WORKSPACE.mode = "cloud";
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+    AUTH.status = "unauthenticated";
+    AUTH.user = null;
+    delete WORKSPACE.mode;
+  });
+
+  it("discarding the setup turns its share off (queued offline); leaving setup keeps it", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))));
+    saveMatchSetupDraft({ ...SETUP, id: "setup-draft" });
+    storeShare();
+
+    const first = renderManager();
+    expect(await screen.findByText(en.matchSetup.draft.resumed)).toBeTruthy();
+    // Leaving setup (unmount) is not a discard.
+    first.unmount();
+    expect(getStoredMatchShare()).not.toBeNull();
+    expect(getQueuedShareRevocations()).toEqual([]);
+
+    renderManager();
+    fireEvent.click(await screen.findByRole("button", { name: en.matchSetup.draft.startFromDefaults }));
+
+    await waitFor(() => expect(getStoredMatchShare()).toBeNull());
+    expect(getQueuedShareRevocations()).toEqual([{ matchId: SHARE_MATCH, ownerUserId: "user-1", discardPlaceholder: true }]);
+  });
+
+  it("a planned match started offline keeps its start for the next sync", async () => {
+    searchParams = new URLSearchParams("matchId=match-1");
+    saveMatchSetupDraft(SETUP);
+    vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))));
+    renderManager();
+
+    fireEvent.click(await screen.findByRole("button", { name: en.matchSetup.startMatch }));
+
+    await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/match/live?matchId=match-1"));
+    expect(getStoredMatchSetup()?.serverLink).toMatchObject({
+      ownerUserId: "user-1",
+      pendingCreate: null,
+      pendingStart: { startedAt: expect.any(String), reportEnabled: false },
+    });
+  });
+
+  it("a planned match started online sends its start time and leaves nothing pending", async () => {
+    searchParams = new URLSearchParams("matchId=match-1");
+    saveMatchSetupDraft(SETUP);
+    const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(new Response("{}", { status: 200 })));
+    vi.stubGlobal("fetch", fetchMock);
+    renderManager();
+
+    fireEvent.click(await screen.findByRole("button", { name: en.matchSetup.startMatch }));
+
+    await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/match/live?matchId=match-1"));
+    const start = fetchMock.mock.calls.find(([url, init]) => String(url) === "/api/matches/match-1" && init?.method === "PATCH");
+    expect(JSON.parse(String(start?.[1]?.body))).toMatchObject({ status: "live", startedAt: expect.any(String) });
+    expect(getStoredMatchSetup()?.serverLink?.pendingStart).toBeFalsy();
   });
 });

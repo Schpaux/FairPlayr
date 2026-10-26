@@ -221,15 +221,22 @@ export async function getUpcomingMatch(
   supabase: SupabaseClient,
   teamId: string
 ): Promise<UpcomingMatch | null> {
-  const { data } = await supabase
-    .from("matches")
-    .select("id, opponent_name, starts_at, location")
-    .eq("team_id", teamId)
-    .in("status", ["upcoming", "draft"])
-    .gte("starts_at", new Date().toISOString())
-    .order("starts_at", { ascending: true })
-    .limit(1)
-    .returns<UpcomingMatchRow[]>();
+  const query = (withoutDiscarded: boolean) => {
+    let builder = supabase
+      .from("matches")
+      .select("id, opponent_name, starts_at, location")
+      .eq("team_id", teamId)
+      .in("status", ["upcoming", "draft"])
+      .gte("starts_at", new Date().toISOString());
+    // FEAT-SHARE-01: a placeholder discarded in setup is not a coming match.
+    if (withoutDiscarded) builder = builder.is("discarded_at", null);
+    return builder.order("starts_at", { ascending: true }).limit(1).returns<UpcomingMatchRow[]>();
+  };
+
+  const first = await query(true);
+  // The column comes with the share migration; before it, nothing is discarded.
+  const missingColumn = first.error?.code === "42703" || first.error?.code === "PGRST204";
+  const { data } = missingColumn ? await query(false) : first;
 
   const row = data?.[0];
   if (!row) return null;

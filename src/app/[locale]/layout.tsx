@@ -6,16 +6,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
-import { AuthProvider } from "@/components/providers/AuthProvider";
-import { TeamWorkspaceProvider } from "@/components/providers/TeamWorkspaceProvider";
-import { ActiveMatchProvider } from "@/components/providers/ActiveMatchProvider";
-import { Header } from "@/components/layout/Header";
-import { BottomNav } from "@/components/layout/BottomNav";
-import { ActiveMatchBanner } from "@/components/layout/ActiveMatchBanner";
-import { NativeAppShell } from "@/components/layout/NativeAppShell";
-import { AppShellErrorBoundary } from "@/components/layout/AppShellErrorBoundary";
 import { ThemeColorSync } from "@/components/layout/ThemeColorSync";
-import { PwaRoot } from "@/components/pwa/PwaRoot";
 import "../globals.css";
 
 // Inter is the only UI typeface (DESIGN.md §3). latin-ext covers player names
@@ -104,24 +95,9 @@ export default async function LocaleLayout({ children, params }: Props) {
             disableTransitionOnChange={false}
           >
             <ThemeColorSync />
-            <AuthProvider>
-              <TeamWorkspaceProvider>
-                <ActiveMatchProvider>
-                  <PwaRoot />
-                  <AppShellErrorBoundary>
-                    <NativeAppShell>
-                      <div className="relative flex min-h-dvh flex-col">
-                        <Header />
-                        <ActiveMatchBanner />
-                        {/* Clears the bottom nav (64px + safe area). */}
-                        <main className="flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))]">{children}</main>
-                        <BottomNav />
-                      </div>
-                    </NativeAppShell>
-                  </AppShellErrorBoundary>
-                </ActiveMatchProvider>
-              </TeamWorkspaceProvider>
-            </AuthProvider>
+            {/* The app shell is in (app)/layout.tsx; the public match page
+                (FEAT-SHARE-01, (public)/s/[token]) has none of it. */}
+            {children}
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>

@@ -4,6 +4,7 @@ import {
   isEndedRuntimeState,
   planMatchUpdate,
   resolveCompletionEndedAt,
+  resolveStartStartedAt,
   type ServerMatchStatus,
 } from "@/domain/matchLifecycle";
 
@@ -259,3 +260,25 @@ describe("isCompletionReplay", () => {
     expect(isCompletionReplay(COMPLETED, { runtimeState: ENDED, hasScore: true })).toBe(false);
   });
 });
+
+describe("resolveStartStartedAt", () => {
+  const NOW = Date.parse("2026-10-26T18:00:00.000Z");
+
+  it("a start synced later keeps the coach's start time on the device", () => {
+    expect(resolveStartStartedAt({ requestedStartedAt: "2026-10-26T17:31:00.000Z", nowMs: NOW })).toBe(
+      "2026-10-26T17:31:00.000Z"
+    );
+  });
+
+  it("without a usable device time it is the server's now; slightly ahead is pulled back, far ahead is not trusted", () => {
+    expect(resolveStartStartedAt({ nowMs: NOW })).toBe("2026-10-26T18:00:00.000Z");
+    expect(resolveStartStartedAt({ requestedStartedAt: "nonsense", nowMs: NOW })).toBe("2026-10-26T18:00:00.000Z");
+    expect(resolveStartStartedAt({ requestedStartedAt: "2026-10-26T18:02:00.000Z", nowMs: NOW })).toBe(
+      "2026-10-26T18:00:00.000Z"
+    );
+    expect(resolveStartStartedAt({ requestedStartedAt: "2026-10-27T18:00:00.000Z", nowMs: NOW })).toBe(
+      "2026-10-26T18:00:00.000Z"
+    );
+  });
+});
+

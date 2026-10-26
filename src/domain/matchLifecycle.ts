@@ -158,6 +158,23 @@ export function resolveCompletionEndedAt(input: {
   return new Date(endedMs).toISOString();
 }
 
+/**
+ * The started_at a start request writes: the coach's start time on the
+ * device when it sends one (a match started offline and synced later), else
+ * the server's now. A time ahead of the server by more than the allowed skew
+ * is not trusted; one slightly ahead is pulled back to now. A repeated start
+ * with the same device time therefore writes the same value.
+ */
+export function resolveStartStartedAt(input: { requestedStartedAt?: string | null; nowMs: number }): string {
+  const deviceMs = parseIsoMs(input.requestedStartedAt);
+
+  if (deviceMs === null || deviceMs > input.nowMs + MAX_FUTURE_SKEW_MS) {
+    return new Date(input.nowMs).toISOString();
+  }
+
+  return new Date(Math.min(input.nowMs, deviceMs)).toISOString();
+}
+
 export type MatchReportStatusValue = "not_requested" | "pending" | "ready" | "failed";
 
 /**

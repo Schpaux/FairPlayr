@@ -1,6 +1,7 @@
 import { fetchOrNull, readErrorMessage } from "@/lib/utils/fetchOrNull";
-import { getStoredMatchSetup, markServerMatchCreated } from "@/lib/storage/matchStorage";
+import { getStoredMatchSetup, markServerMatchCreated, markServerMatchStarted } from "@/lib/storage/matchStorage";
 import type { PendingMatchInfo } from "@/lib/storage/pendingMatchCompletionStorage";
+import { syncStoredMatchShare } from "@/lib/match/matchShareSync";
 
 /**
  * MATCH-13: the server row for a signed-in coach's match started without a
@@ -105,7 +106,77 @@ export async function syncActiveMatchCreate(userId: string): Promise<ServerMatch
 
   if (result.status === "created") {
     markServerMatchCreated(setupId, serverMatchId);
+    // FEAT-SHARE-01: a share made before the row existed can go now.
+    void syncStoredMatchShare(userId);
   }
 
   return result;
+}
+
+/**
+ * - "started": the server has the match as live.
+ * - "offline" / "failed": not now; the mark stays and the start is sent again.
+ * - "refused": the server will not take it (completed or discarded, another
+ *   match live, no such match): sending again cannot help, so the mark is
+ *   cleared.
+ */
+export type ServerMatchStartResult = "started" | "offline" | "failed" | "refused";
+
+const startsInFlight = new Map<string, Promise<ServerMatchStartResult>>();
+
+/**
+ * FEAT-SHARE-01 / OFF-01b: a planned match started here without network is
+ * still "upcoming" on the server until its start arrives. This sends that
+ * start (with the device's start time) once the network allows: on
+ * reconnect, when the app comes back and before a live state is sent. Only
+ * while the match still runs on this device, so an ended or discarded match
+ * is never sent as live again; the server refuses to reopen a completed one
+ * anyway. Resolves to null when there is nothing to send.
+ */
+export async function syncActiveMatchStart(userId: string): Promise<ServerMatchStartResult | null> {
+  const stored = getStoredMatchSetup();
+  const pendingStart = stored?.serverLink?.pendingStart;
+
+  if (
+    !stored ||
+    stored.status !== "active" ||
+    !stored.serverMatchId ||
+    !pendingStart ||
+    stored.serverLink?.pendingCreate ||
+    stored.serverLink?.ownerUserId !== userId
+  ) {
+    return null;
+  }
+
+  const setupId = stored.config.id;
+  const serverMatchId = stored.serverMatchId;
+  const existing = startsInFlight.get(serverMatchId);
+  if (existing) return existing;
+
+  const request = (async (): Promise<ServerMatchStartResult> => {
+    const response = await fetchOrNull(`/api/matches/${encodeURIComponent(serverMatchId)}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        status: "live",
+        startedAt: pendingStart.startedAt,
+        reportEnabled: pendingStart.reportEnabled,
+      }),
+    });
+
+    if (!response) return "offline";
+    // Completed or discarded, another match live, or no such match: the
+    // server's answer will not change. Anything else (a lapsed session, a
+    // server error) is tried again.
+    const refused = response.status === 400 || response.status === 404 || response.status === 409;
+    if (!response.ok && !refused) return "failed";
+
+    markServerMatchStarted(setupId, serverMatchId);
+    return response.ok ? "started" : "refused";
+  })().finally(() => {
+    startsInFlight.delete(serverMatchId);
+  });
+
+  startsInFlight.set(serverMatchId, request);
+  return request;
 }

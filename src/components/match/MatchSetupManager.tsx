@@ -39,10 +39,18 @@ import styles from "@/components/live/LiveScreen.module.css";
 import {
   discardMatchSetupDraft,
   getStoredMatchSetup,
+  markServerMatchStarted,
   saveMatchSetupDraft,
 } from "@/lib/storage/matchStorage";
 import { liveHrefFor, startLocalMatch } from "@/lib/match/activeMatchRecovery";
 import { newServerMatchId, syncActiveMatchCreate } from "@/lib/match/matchServerCreate";
+import {
+  markStoredShareStarted,
+  revokeDiscardedSetupShare,
+  shareMatchForStart,
+  syncStoredMatchShare,
+} from "@/lib/match/matchShareSync";
+import { SetupSharePanel } from "@/components/share/SetupSharePanel";
 import {
   hasUnsavedMatchCompletion,
   retrySavingUnsavedMatchCompletions,
@@ -215,6 +223,13 @@ export function MatchSetupManager() {
       setSetup(null);
       return;
     }
+    // FEAT-SHARE-01: a discarded setup's link stops working. Only here, on
+    // the coach's explicit discard; leaving setup keeps the share.
+    if (revokeDiscardedSetupShare(team.id)) {
+      const ownerUserId =
+        auth.status === "authenticated" && workspace.mode === "cloud" ? auth.user?.id ?? null : null;
+      void syncStoredMatchShare(ownerUserId);
+    }
     // The same fresh start as opening setup: team defaults, whole squad,
     // empty pitch. Nothing is stored until the coach changes something.
     const initial = chooseInitialSetup(
@@ -321,7 +336,17 @@ export function MatchSetupManager() {
   const handleStartMatch = async () => {
     if (!setup || !canStartMatch(setup)) return;
 
-    if (hasActiveConflict(matchId)) {
+    // MATCH-13: a signed-in coach's match always has a server identity. A
+    // planned match keeps its own; a new one gets an id chosen here, and its
+    // row is created with that id (now, or later when the network allows).
+    // FEAT-SHARE-01: a match shared before kick-off keeps the link's match:
+    // planned when its row was created already, otherwise new with that id.
+    const ownerUserId =
+      auth.status === "authenticated" && workspace.mode === "cloud" ? auth.user?.id ?? null : null;
+    const sharedMatch = team ? shareMatchForStart({ teamId: team.id, ownerUserId, plannedMatchId: matchId }) : null;
+    const plannedMatchId = matchId ?? (sharedMatch?.created ? sharedMatch.matchId : null);
+
+    if (hasActiveConflict(plannedMatchId)) {
       setShowStartGuard(true);
       return;
     }
@@ -333,19 +358,19 @@ export function MatchSetupManager() {
     if (startFocusRef.current) startingStatusRef.current?.focus({ preventScroll: true });
     setIsStarting(true);
 
-    // MATCH-13: a signed-in coach's match always has a server identity. A
-    // planned match keeps its own; a new one gets an id chosen here, and its
-    // row is created with that id (now, or later when the network allows).
-    const ownerUserId =
-      auth.status === "authenticated" && workspace.mode === "cloud" ? auth.user?.id ?? null : null;
-    const newMatchId = !matchId && ownerUserId ? newServerMatchId() : null;
-    const serverMatchId = matchId ?? newMatchId;
+    const newMatchId = !plannedMatchId && ownerUserId ? sharedMatch?.matchId ?? newServerMatchId() : null;
+    const serverMatchId = plannedMatchId ?? newMatchId;
     const startedAt = new Date();
     const serverLink: StoredMatchServerLink | null = ownerUserId
       ? {
           ownerUserId,
           pendingCreate: newMatchId
             ? { title: generateMatchName(null, startedAt), startsAt: startedAt.toISOString() }
+            : null,
+          // A planned match's start is kept until the server has it, so one
+          // started offline still turns live there when the network is back.
+          pendingStart: plannedMatchId
+            ? { startedAt: startedAt.toISOString(), reportEnabled: setup.reportEnabled }
             : null,
         }
       : null;
@@ -376,25 +401,38 @@ export function MatchSetupManager() {
       return;
     }
 
+    if (sharedMatch && serverMatchId === sharedMatch.matchId) {
+      markStoredShareStarted(sharedMatch.matchId);
+      if (plannedMatchId) void syncStoredMatchShare(ownerUserId);
+    }
+
     try {
-      if (matchId) {
-        const response = await fetchOrNull(`/api/matches/${encodeURIComponent(matchId)}`, {
+      if (plannedMatchId) {
+        const response = await fetchOrNull(`/api/matches/${encodeURIComponent(plannedMatchId)}`, {
           method: "PATCH",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             status: "live",
+            startedAt: startedAt.toISOString(),
             reportEnabled: setup.reportEnabled,
           }),
         });
 
-        // No network: the match is already started and stored here, and its
-        // completion reaches the server later (AGENTS.md §3). A server that
-        // answers with an error (e.g. another match is live) still stops here.
+        // The server has the start (or refused it): nothing to send again.
+        if (response && (response.ok || [400, 404, 409].includes(response.status))) {
+          markServerMatchStarted(setup.id, plannedMatchId);
+        }
+
+        // No network: the match is already started and stored here; its start
+        // is sent again on reconnect or when the app comes back
+        // (syncActiveMatchStart), and its completion later (AGENTS.md §3). A
+        // server that answers with an error (e.g. another match is live)
+        // still stops here.
         if (response && !response.ok) {
           throw new Error((await readErrorMessage(response)) ?? t("errors.startFailed"));
         }
 
-        router.push(`/match/live?matchId=${encodeURIComponent(matchId)}`);
+        router.push(`/match/live?matchId=${encodeURIComponent(plannedMatchId)}`);
         return;
       }
 
@@ -624,6 +662,13 @@ export function MatchSetupManager() {
           </div>
         ) : null}
       </section>
+
+      {/* FEAT-SHARE-01: the public match link, its own card (not the report). */}
+      <SetupSharePanel
+        teamId={team.id}
+        ownerUserId={auth.status === "authenticated" && workspace.mode === "cloud" ? auth.user?.id ?? null : null}
+        plannedMatchId={matchId}
+      />
 
       {/* 2. Who is here today: compact attendance chips. */}
       <SetupSection id={`${uid}-squad`} title={t("sections.squad")}>

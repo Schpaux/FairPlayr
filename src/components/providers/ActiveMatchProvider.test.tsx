@@ -388,6 +388,12 @@ describe("scoped close actions", () => {
     });
 
     expect(patches().map((patch) => patch.url)).toEqual(["/api/matches/match-B"]);
+    // Only the discarded match's link is turned off.
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === "PUT").map(([input]) => String(input))
+      ).toEqual(["/api/matches/match-B/share"])
+    );
     expect(getStoredMatchSetup()).toMatchObject({ status: "active", serverMatchId: "match-C", config: { id: setupC.id } });
     expect(getStoredLiveMatch()?.clock.isRunning).toBe(true);
   });
@@ -443,8 +449,9 @@ describe("scoped close actions", () => {
     const methods = fetchMock.mock.calls
       .map(([input, init]) => `${(init as RequestInit | undefined)?.method ?? "GET"} ${String(input)}`)
       .filter((line) => !line.startsWith("GET "));
-    // One create (the discard joined it), then the discard of that row; nothing after.
-    expect(methods).toEqual(["POST /api/matches", "PATCH /api/matches/match-N"]);
+    // One create (the discard joined it), then the discard of that row, then
+    // its public link is turned off (FEAT-SHARE-01, a durable queue); nothing after.
+    expect(methods).toEqual(["POST /api/matches", "PATCH /api/matches/match-N", "PUT /api/matches/match-N/share"]);
     expect(patches()[0].body).toEqual({ status: "completed", runtimeState: null, reportStatus: "failed" });
     expect(getStoredMatchSetup()?.status).not.toBe("active");
   });

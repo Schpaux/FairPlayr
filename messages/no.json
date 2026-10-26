@@ -1267,5 +1267,113 @@
     "title": "Noe gikk galt",
     "body": "Appen kunne ikke lastes. Prøv å starte på nytt.",
     "retry": "Prøv igjen"
+  },
+  "publicMatch": {
+    "metaTitle": "{team} – {opponent}",
+    "metaTitleFallback": "Kamp",
+    "brand": "FairPlayr",
+    "opponentFallback": "Motstander",
+    "status": {
+      "upcoming": "Ikke startet",
+      "live": "LIVE",
+      "inProgress": "Pågår",
+      "completed": "Ferdig"
+    },
+    "kickoff": "Avspark {time}",
+    "countdownLabel": "Avspark om",
+    "countdown": {
+      "days": "{days} d {hours} t",
+      "hours": "{hours} t {minutes} min",
+      "minutes": "{minutes} min",
+      "lessThanMinute": "under 1 min"
+    },
+    "waitingForKickoff": "Venter på avspark",
+    "waitingForKickoffHelp": "Kampen vises som live når treneren starter den.",
+    "inProgress": "Kampen pågår",
+    "inProgressSummaryOnly": "Oppsummeringen kommer her når kampen er ferdig.",
+    "inProgressStatusOnly": "Resultat og hendelser deles ikke for denne kampen.",
+    "completed": "Ferdigspilt",
+    "phase": {
+      "first_half": "1. omgang",
+      "half_time": "Pause",
+      "second_half": "2. omgang",
+      "full_time": "Slutt",
+      "not_started": "Ikke startet"
+    },
+    "minute": "{minute}′",
+    "scoreA11y": "Stilling: {team} {scoreFor}, {opponent} {scoreAgainst}",
+    "result": {
+      "win": "Seier",
+      "draw": "Uavgjort",
+      "loss": "Tap"
+    },
+    "goalsTitle": "Mål",
+    "goalsLabel": "Mål i kampen",
+    "noGoals": "Ingen mål ennå.",
+    "noGoalsFinal": "Ingen mål i kampen.",
+    "freshness": {
+      "lastChange": "Siste oppdatering fra treneren kl. {time}",
+      "lastChangeAgo": "Siste oppdatering fra treneren for {minutes} min siden (kl. {time})",
+      "checked": "Sjekket kl. {time}",
+      "stale": "Ingen nye oppdateringer på {minutes} min. Stillingen kan ha endret seg.",
+      "fetchFailed": "Får ikke kontakt. Viser det vi hadde kl. {time}.",
+      "autoRefresh": "Siden oppdateres automatisk."
+    },
+    "summaryTitle": "Kampoppsummering",
+    "summaryPending": "Oppsummeringen er ikke klar ennå. Siden oppdateres av seg selv.",
+    "finalStatusTitle": "Sluttstatus",
+    "unavailableTitle": "Lenken er ikke aktiv",
+    "unavailableBody": "Denne kampen deles ikke lenger, eller lenken er feil. Spør treneren om en ny lenke.",
+    "footer": "Delt fra FairPlayr. Spilletid, oppmøte og andre trenerdata deles ikke."
+  },
+  "matchShare": {
+    "title": "Del kampen",
+    "intro": "Én lenke for foreldre og andre: nedtelling før kamp, live under kampen og oppsummering etterpå.",
+    "liveToggle": "Del live",
+    "liveHelp": "Følg kampen mens den pågår.",
+    "summaryToggle": "Del oppsummering",
+    "summaryHelp": "Kort, offentlig oppsummering etter kampen. Egen tekst, ikke den interne AI-rapporten.",
+    "ageGroup": "Aldersklasse",
+    "ageGroups": {
+      "child": "Til og med 12 år",
+      "youth": "13 år og eldre",
+      "unknown": "Ukjent"
+    },
+    "detailLevel": "Hva deles",
+    "levels": {
+      "status": "Kampstatus",
+      "statusHelp": "Lag, tidspunkt, pågår eller ferdig. Ingen resultat.",
+      "result": "Resultat uten navn",
+      "resultHelp": "Stilling og når målene kom. Ingen spillernavn.",
+      "detailed": "Detaljert",
+      "detailedHelp": "Resultat, målscorere og assist med navn.",
+      "detailedLocked": "Spillernavn deles ikke offentlig for barn 12 år og yngre eller ukjent alder."
+    },
+    "nffGuidance": "NFF anbefaler tilbakeholdenhet med å dele resultater for barn til og med 12 år. Kampstatus er derfor standard.",
+    "linkLabel": "Delingslenke",
+    "copy": "Kopier lenke",
+    "copied": "Lenken er kopiert.",
+    "share": "Del lenke",
+    "shareText": "Følg kampen her",
+    "pendingOffline": "Lenken venter på opprettelse. Den virker når du har nett igjen. Du kan starte kampen som vanlig.",
+    "pending": "Oppretter lenken …",
+    "ready": "Lenken er aktiv.",
+    "failed": "Kunne ikke lagre delingen. Prøver igjen.",
+    "unavailable": "Deling er ikke tilgjengelig ennå.",
+    "signInRequired": "Logg inn for å dele kampen.",
+    "offNotice": "Deling er av. En gammel lenke virker ikke lenger.",
+    "summaryOn": "Deling på",
+    "summaryOff": "Deling av",
+    "open": "Åpne kampsiden",
+    "ageGroupHelp": "Brukes til veiledning, ikke kampformatet.",
+    "compactOff": "Av",
+    "compactOn": "{what} · {level}",
+    "compactLive": "Live",
+    "compactSummary": "Oppsummering",
+    "compactBoth": "Live og oppsummering",
+    "edit": "Endre",
+    "detailsOffline": "Ingen nett. Delingen kan endres når du er på nett igjen.",
+    "kickoffLabel": "Avspark (valgfritt)",
+    "kickoffHelp": "Gir nedtelling på kampsiden. Uten tidspunkt står det «Venter på avspark» til du starter kampen."
   }
 }

@@ -1,7 +1,7 @@
 import type { LiveMatchState } from "@/domain/liveMatch";
 import { fetchOrNull } from "@/lib/utils/fetchOrNull";
 import { getStoredMatchSetup } from "@/lib/storage/matchStorage";
-import { syncActiveMatchCreate } from "@/lib/match/matchServerCreate";
+import { syncActiveMatchCreate, syncActiveMatchStart } from "@/lib/match/matchServerCreate";
 
 /**
  * MATCH-02a / OFF-01b: the live screen's state (clock, score, goals with
@@ -64,6 +64,13 @@ async function send({
     if (created?.status !== "created") {
       return "retry";
     }
+  }
+
+  // A planned match started offline: its start goes first, so the server
+  // (and a shared public page) has it as live, not only its state. Its own
+  // mark keeps it pending when this fails; the state is sent regardless.
+  if (serverLink?.pendingStart && userId) {
+    await syncActiveMatchStart(userId);
   }
 
   const response = await fetchOrNull(`/api/matches/${encodeURIComponent(matchId)}`, {

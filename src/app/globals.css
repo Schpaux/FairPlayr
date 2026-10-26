@@ -420,6 +420,23 @@ textarea {
   font-size: 16px;
 }
 
+/* FEAT-SHARE-01: the LIVE dot on the public match page, its only motion: a
+   slow, quiet opacity pulse: the documented exception to "no ambient motion"
+   (DESIGN.md §4). With reduced motion it runs once in 1ms and ends solid (rule below). */
+@keyframes fp-live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.fp-live-pulse {
+  animation: fp-live-pulse 2s ease-in-out infinite;
+}
+
 /* UI-A11Y-03, DESIGN.md §4: with reduced motion transitions are off (0s,
    not 1ms: with the default transition-property "all" a 1ms duration would
    make every property change on every element transition), animations take

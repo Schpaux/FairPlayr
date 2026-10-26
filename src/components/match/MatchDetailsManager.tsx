@@ -36,6 +36,7 @@ import { retryPendingMatchCompletion, submitMatchCompletion } from "@/lib/match/
 import { getStoredMatchSetup } from "@/lib/storage/matchStorage";
 import { getPendingMatchCompletion } from "@/lib/storage/pendingMatchCompletionStorage";
 import { cn } from "@/lib/utils";
+import { MatchDetailsSharePanel } from "@/components/share/MatchDetailsSharePanel";
 import { EventTimeline } from "@/components/match/EventTimeline";
 
 /** Section kicker (DESIGN.md §3 "Label"), as in `MatchPlayingTime`. */
@@ -1141,6 +1142,10 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
           </div>
         </section>
       ) : null}
+
+      {/* FEAT-SHARE-01: the public link; change the level or turn it off.
+          Not while the match exists only on this device (its row may not). */}
+      {isLocalOnly ? null : <MatchDetailsSharePanel matchId={match.id} />}
 
       {/* Destructive on its own, behind a confirmation (DESIGN.md §5.5). */}
       {deleteMatchError ? <Notice tone="error">{deleteMatchError}</Notice> : null}

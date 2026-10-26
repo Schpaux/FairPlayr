@@ -17,7 +17,8 @@ import {
   type CanonicalMatchStatus,
 } from "@/lib/match/activeMatchRecovery";
 import { retryPendingMatchCompletion, submitMatchCompletion } from "@/lib/match/matchCompletion";
-import { syncActiveMatchCreate } from "@/lib/match/matchServerCreate";
+import { syncActiveMatchCreate, syncActiveMatchStart } from "@/lib/match/matchServerCreate";
+import { revokeDiscardedMatchShare, syncStoredMatchShare } from "@/lib/match/matchShareSync";
 import { listPendingMatchCompletions } from "@/lib/storage/pendingMatchCompletionStorage";
 import { getStoredMatchSetup } from "@/lib/storage/matchStorage";
 
@@ -181,6 +182,8 @@ export function ActiveMatchProvider({ children }: { children: ReactNode }) {
           }
 
           clearLocalActiveState();
+          // FEAT-SHARE-01: a discarded match's public link stops working (queued).
+          revokeDiscardedMatchShare(device.serverMatchId ?? null, isSignedIn ? userId : null);
         }
       }
     } else if (shown.recoveryMatch) {
@@ -192,8 +195,10 @@ export function ActiveMatchProvider({ children }: { children: ReactNode }) {
 
       // Never clears another match this device holds.
       clearLocalActiveStateFor(targetId);
+      if (mode === "discard") revokeDiscardedMatchShare(targetId, isSignedIn ? userId : null);
     }
 
+    if (mode === "discard" && isSignedIn) void syncStoredMatchShare(userId);
     await refreshActiveMatch();
   }, [auth.status, refreshActiveMatch, resolution, resolveNow, userId]);
 
@@ -259,6 +264,11 @@ export function ActiveMatchProvider({ children }: { children: ReactNode }) {
 
     if (userId) {
       await syncActiveMatchCreate(userId);
+      // A planned match started offline turns live on the server now, not
+      // only at its completion.
+      await syncActiveMatchStart(userId);
+      // FEAT-SHARE-01: a share change that could not be sent yet.
+      await syncStoredMatchShare(userId);
     }
 
     for (const pending of listPendingMatchCompletions()) {

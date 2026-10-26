@@ -53,6 +53,13 @@ export interface StoredMatchServerLink {
    * with the stored server match id, so a repeat never makes a second one.
    */
   pendingCreate: { title: string; startsAt: string } | null;
+  /**
+   * A planned match started here whose start has not reached the server yet
+   * (started offline): set at the start, cleared once the server has it or
+   * refuses it. Sent again on reconnect and when the app comes back, only
+   * while the match is still running here.
+   */
+  pendingStart?: { startedAt: string; reportEnabled: boolean } | null;
 }
 
 /**
@@ -214,9 +221,15 @@ function toValidServerLink(v: unknown): StoredMatchServerLink | null {
   const title = create ? readString(create.title) : null;
   const startsAt = create ? readString(create.startsAt) : null;
 
+  const start = isRecord(v.pendingStart) ? v.pendingStart : null;
+  const startedAt = start ? readString(start.startedAt) : null;
+
   return {
     ownerUserId: v.ownerUserId,
     pendingCreate: title && startsAt ? { title, startsAt } : null,
+    ...(start && startedAt && typeof start.reportEnabled === "boolean"
+      ? { pendingStart: { startedAt, reportEnabled: start.reportEnabled } }
+      : {}),
   };
 }
 
@@ -428,6 +441,31 @@ export function markServerMatchCreated(setupId: string, serverMatchId: string): 
     return true;
   } catch {
     // Kept as pending: the next attempt creates idempotently again.
+    return false;
+  }
+}
+
+/**
+ * Records that the server has the start of this planned match (or refused
+ * it, so sending it again cannot help). Same-match guard as above.
+ */
+export function markServerMatchStarted(setupId: string, serverMatchId: string): boolean {
+  const stored = getStoredMatchSetup();
+
+  if (
+    !stored ||
+    stored.config.id !== setupId ||
+    stored.serverMatchId !== serverMatchId ||
+    !stored.serverLink?.pendingStart
+  ) {
+    return false;
+  }
+
+  try {
+    writeEnvelope(stored.config, stored.status, serverMatchId, { ...stored.serverLink, pendingStart: null });
+    return true;
+  } catch {
+    // Kept as pending: a repeated start with the same time changes nothing.
     return false;
   }
 }

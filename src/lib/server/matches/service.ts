@@ -21,6 +21,7 @@ import {
   isSameRuntimeRevision,
   planMatchUpdate,
   resolveCompletionEndedAt,
+  resolveStartStartedAt,
 } from "@/domain/matchLifecycle";
 import { goalEventsFromRuntimeState, planGoalEventSync, type GoalEventWrite } from "@/domain/goalEventSync";
 import { ALL_FORMATS } from "@/domain/match";
@@ -144,6 +145,22 @@ function mapMatchEventRows(rows: MatchEventRow[]): MatchEventItem[] {
   }));
 }
 
+/**
+ * FEAT-SHARE-01: planned placeholders the coach discarded in setup
+ * (matches.discarded_at). They are kept, but never listed as matches. Empty
+ * before the migration adds the column.
+ */
+async function getDiscardedMatchIds(supabase: SupabaseClient, teamId: string): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from("matches")
+    .select("id")
+    .eq("team_id", teamId)
+    .not("discarded_at", "is", null)
+    .returns<{ id: string }[]>();
+
+  return new Set(error ? [] : (data ?? []).map((row) => row.id));
+}
+
 export async function getTeamMatches(
   supabase: SupabaseClient,
   userId: string,
@@ -176,7 +193,8 @@ export async function getTeamMatches(
     throw new IntegrationError("MATCH_LIST_FAILED", matchError.message, 500);
   }
 
-  const rows = matchRows ?? [];
+  const discarded = await getDiscardedMatchIds(supabase, teamId);
+  const rows = (matchRows ?? []).filter((row) => !discarded.has(row.id));
 
   if (rows.length === 0) {
     return [];
@@ -398,11 +416,12 @@ export async function getActiveMatchForUser(
 
 function resolveStatusTimestamps(
   mode: "start" | "complete" | "reset" | "keep",
-  completedAt: () => string
+  completedAt: () => string,
+  startedAt: () => string = () => new Date().toISOString()
 ) {
   if (mode === "start") {
     return {
-      started_at: new Date().toISOString(),
+      started_at: startedAt(),
       ended_at: null,
     };
   }
@@ -497,7 +516,8 @@ export async function updateMatchStatus(
       runtimeState: input.runtimeState,
       startedAt: existing.startedAt,
       nowMs: Date.now(),
-    })
+    }),
+    () => resolveStartStartedAt({ requestedStartedAt: input.startedAt, nowMs: Date.now() })
   );
   const nextStatus = input.status ?? existing.status;
 

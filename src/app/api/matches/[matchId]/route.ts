@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { jsonError, requireAuthenticatedSupabaseClient } from "@/lib/server/integrations/spond/http";
 import { deleteMatch, getMatchById, updateMatchStatus } from "@/lib/server/matches/service";
+import { refreshPublicSummary } from "@/lib/server/share/service";
 import type { MatchReportStatus, MatchStatus } from "@/lib/server/matches/types";
 
 function isUuid(value: string): boolean {
@@ -41,6 +42,7 @@ function parsePatchPayload(value: unknown): {
   reportStatus?: MatchReportStatus;
   reportText?: string | null;
   endedAt?: string;
+  startedAt?: string;
 } {
   if (typeof value !== "object" || value === null) {
     throw new Error("INVALID_PAYLOAD");
@@ -93,6 +95,14 @@ function parsePatchPayload(value: unknown): {
     throw new Error("INVALID_PAYLOAD");
   }
 
+  // The device's start time (a start synced later); only read with a status,
+  // and like endedAt an unparseable value falls back to the server's now.
+  const hasStartedAt = "startedAt" in payload;
+
+  if (hasStartedAt && (typeof payload.startedAt !== "string" || payload.startedAt.length > 64)) {
+    throw new Error("INVALID_PAYLOAD");
+  }
+
   if (hasStatus) {
     return {
       status,
@@ -108,6 +118,7 @@ function parsePatchPayload(value: unknown): {
       reportStatus: hasReportStatus ? (payload.reportStatus as MatchReportStatus) : undefined,
       reportText: hasReportText ? (payload.reportText as string | null) : undefined,
       endedAt: hasEndedAt ? (payload.endedAt as string) : undefined,
+      startedAt: hasStartedAt ? (payload.startedAt as string) : undefined,
     };
   }
 
@@ -154,7 +165,15 @@ export async function PATCH(
       reportStatus: payload.reportStatus,
       reportText: payload.reportText,
       endedAt: payload.endedAt,
+      startedAt: payload.startedAt,
     });
+
+    // FEAT-SHARE-01: a shared match's public summary is written once it is
+    // completed, and again after a correction of the result, after the
+    // response (it stops at once while the stored text matches the data).
+    if (match.status === "completed") {
+      after(() => refreshPublicSummary(supabase, matchId));
+    }
 
     return NextResponse.json({ match });
   } catch (error) {

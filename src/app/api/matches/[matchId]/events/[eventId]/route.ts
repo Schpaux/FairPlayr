@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { jsonError, requireAuthenticatedSupabaseClient } from "@/lib/server/integrations/spond/http";
 import { deleteMatchEvent, updateMatchEvent } from "@/lib/server/matches/service";
+import { refreshPublicSummary } from "@/lib/server/share/service";
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -89,6 +90,9 @@ export async function PATCH(
       payload: payload.payload,
     });
 
+    // FEAT-SHARE-01: a corrected goal rewrites a shared match's public summary.
+    after(() => refreshPublicSummary(supabase, matchId));
+
     return NextResponse.json({ event });
   } catch (error) {
     if (error instanceof Error && error.message === "INVALID_PAYLOAD") {
@@ -124,6 +128,7 @@ export async function DELETE(
     }
 
     await deleteMatchEvent(supabase, userId, eventId);
+    after(() => refreshPublicSummary(supabase, matchId));
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     return jsonError(error);

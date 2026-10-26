@@ -144,6 +144,7 @@ Implementation:
 | undo | 5000ms linear | Undo countdown bar |
 
 - There is no ambient motion: no pulsing, breathing or glow. Critical fatigue is a tinted ring track, not a pulse.
+  - **Exception (FEAT-SHARE-01, public match page only):** the LIVE badge on the public match page (`/s/<token>`) has one small red dot that fades slowly (`.fp-live-pulse`, opacity 1 → 0.35, 2s, ease-in-out) while the match is shared live. Nothing else on that page moves, and the exception does not extend to the coach's app (live screen, setup, history and details stay without ambient motion). The word «LIVE» carries the state; the dot is decoration (`aria-hidden`). With `prefers-reduced-motion` the dot is solid.
 - `prefers-reduced-motion`: all transforms and transitions go to 1ms. The undo countdown stays, because it carries information, and it also shows its seconds as a number.
 
 ---
@@ -381,6 +382,7 @@ A 24 grid with 1.75 stroke and round caps and joins (lucide-compatible). Icons o
 | UI-EVENTS-01 | Sided event timeline with type icons, scorer and assist on one line and bold goals, in Live and match details (§7.2); supersedes C4's neutral timeline without icons (2026-10-25). |
 | UI-LIVE-04 | The live clock shows ordinary time plus stoppage (`30+10:00`) and the second half starts at the half length (§5.1, §6.4). Presentation only (2026-10-25). |
 | UI-LIVE-05 | The live scoreboard uses `canvas` like the dugout, in both themes; club green stays on Home and match details (2026-10-25). Lime digits for "time up" are replaced by the stoppage notation. |
+| FEAT-SHARE-01 | The public match page's LIVE badge may pulse discreetly (one red dot, opacity only, 2s); the only exception to "no ambient motion" (§4), public page only, solid with reduced motion (2026-10-26). |
 | B2 | Adaptive bench, Alternative C (FP-MS2.1-B2, §5.3): sorted least-played first by displayed whole minutes, ties in squad order, at every squad size; order held during interactions and re-sorted once after, with the rail back at its start; one row → two (three tall) → horizontal rail; "+N ›" / "‹ N" jump buttons with counts only; touch direction lock on the rail; tiles 44px tall (amends "≥ 60px"). |
 
 ## 11. Implementation status

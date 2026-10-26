@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { jsonError, requireAuthenticatedSupabaseClient } from "@/lib/server/integrations/spond/http";
 import { createMatchEvent, getMatchEvents } from "@/lib/server/matches/service";
+import { refreshPublicSummary } from "@/lib/server/share/service";
 import type { MatchEventTeamSide, MatchEventType } from "@/lib/server/matches/types";
 
 function isUuid(value: string): boolean {
@@ -135,6 +136,9 @@ export async function POST(
       secondaryPlayerId: payload.secondaryPlayerId,
       payload: payload.payload,
     });
+
+    // FEAT-SHARE-01: a goal added afterwards rewrites a shared match's public summary.
+    after(() => refreshPublicSummary(supabase, matchId));
 
     return NextResponse.json({ event }, { status: 201 });
   } catch (error) {

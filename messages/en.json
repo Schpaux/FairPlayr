@@ -1267,5 +1267,113 @@
     "title": "Something went wrong",
     "body": "The app failed to load. Try restarting.",
     "retry": "Try again"
+  },
+  "publicMatch": {
+    "metaTitle": "{team} – {opponent}",
+    "metaTitleFallback": "Match",
+    "brand": "FairPlayr",
+    "opponentFallback": "Opponent",
+    "status": {
+      "upcoming": "Not started",
+      "live": "LIVE",
+      "inProgress": "In progress",
+      "completed": "Full time"
+    },
+    "kickoff": "Kick-off {time}",
+    "countdownLabel": "Kick-off in",
+    "countdown": {
+      "days": "{days} d {hours} h",
+      "hours": "{hours} h {minutes} min",
+      "minutes": "{minutes} min",
+      "lessThanMinute": "under 1 min"
+    },
+    "waitingForKickoff": "Waiting for kick-off",
+    "waitingForKickoffHelp": "The match shows as live once the coach starts it.",
+    "inProgress": "The match is in progress",
+    "inProgressSummaryOnly": "The summary appears here when the match is over.",
+    "inProgressStatusOnly": "The result and match events are not shared for this match.",
+    "completed": "Played",
+    "phase": {
+      "first_half": "1st half",
+      "half_time": "Half-time",
+      "second_half": "2nd half",
+      "full_time": "Full time",
+      "not_started": "Not started"
+    },
+    "minute": "{minute}′",
+    "scoreA11y": "Score: {team} {scoreFor}, {opponent} {scoreAgainst}",
+    "result": {
+      "win": "Win",
+      "draw": "Draw",
+      "loss": "Loss"
+    },
+    "goalsTitle": "Goals",
+    "goalsLabel": "Goals in the match",
+    "noGoals": "No goals yet.",
+    "noGoalsFinal": "No goals in the match.",
+    "freshness": {
+      "lastChange": "Last update from the coach at {time}",
+      "lastChangeAgo": "Last update from the coach {minutes} min ago ({time})",
+      "checked": "Checked at {time}",
+      "stale": "No new updates for {minutes} min. The score may have changed.",
+      "fetchFailed": "Can't connect. Showing what we had at {time}.",
+      "autoRefresh": "This page updates automatically."
+    },
+    "summaryTitle": "Match summary",
+    "summaryPending": "The summary is not ready yet. This page updates by itself.",
+    "finalStatusTitle": "Final status",
+    "unavailableTitle": "This link is not active",
+    "unavailableBody": "This match is no longer shared, or the link is wrong. Ask the coach for a new link.",
+    "footer": "Shared from FairPlayr. Playing time, attendance and other coach data are not shared."
+  },
+  "matchShare": {
+    "title": "Share the match",
+    "intro": "One link for parents and others: a countdown before the match, live during it and a summary afterwards.",
+    "liveToggle": "Share live",
+    "liveHelp": "Follow the match while it is played.",
+    "summaryToggle": "Share summary",
+    "summaryHelp": "A short public summary after the match. Its own text, not the internal AI report.",
+    "ageGroup": "Age group",
+    "ageGroups": {
+      "child": "12 and under",
+      "youth": "13 and over",
+      "unknown": "Unknown"
+    },
+    "detailLevel": "What is shared",
+    "levels": {
+      "status": "Match status",
+      "statusHelp": "Teams, time, in progress or finished. No result.",
+      "result": "Result without names",
+      "resultHelp": "The score and when the goals came. No player names.",
+      "detailed": "Detailed",
+      "detailedHelp": "Result, scorers and assists by name.",
+      "detailedLocked": "Player names are not shared publicly for children 12 and under or an unknown age."
+    },
+    "nffGuidance": "The Norwegian FA (NFF) advises restraint in sharing results for children aged 12 and under. Match status is therefore the default.",
+    "linkLabel": "Share link",
+    "copy": "Copy link",
+    "copied": "Link copied.",
+    "share": "Share link",
+    "shareText": "Follow the match here",
+    "pendingOffline": "The link is waiting to be created. It works once you are online again. You can start the match as usual.",
+    "pending": "Creating the link …",
+    "ready": "The link is active.",
+    "failed": "Could not save sharing. Retrying.",
+    "unavailable": "Sharing is not available yet.",
+    "signInRequired": "Sign in to share the match.",
+    "offNotice": "Sharing is off. An old link no longer works.",
+    "summaryOn": "Sharing on",
+    "summaryOff": "Sharing off",
+    "open": "Open the match page",
+    "ageGroupHelp": "Used for guidance, not the match format.",
+    "compactOff": "Off",
+    "compactOn": "{what} · {level}",
+    "compactLive": "Live",
+    "compactSummary": "Summary",
+    "compactBoth": "Live and summary",
+    "edit": "Edit",
+    "detailsOffline": "No network. Sharing can be changed when you are online again.",
+    "kickoffLabel": "Kick-off (optional)",
+    "kickoffHelp": "Shows a countdown on the match page. Without a time it says “Waiting for kick-off” until you start the match."
   }
 }

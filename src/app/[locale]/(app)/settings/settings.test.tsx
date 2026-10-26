@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-libra
 import { renderToString } from "react-dom/server";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import no from "../../../../messages/no.json";
+import no from "../../../../../messages/no.json";
 import { renderWithIntl } from "@/components/ui/primitives/testUtils";
 
 let authStatus: "loading" | "guest" | "authenticated";

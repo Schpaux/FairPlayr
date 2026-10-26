@@ -30,14 +30,14 @@ interface GuardException {
 
 const EXCEPTIONS: GuardException[] = [
   ...["#4285F4", "#34A853", "#FBBC05", "#EA4335"].map((match) => ({
-    file: "src/app/[locale]/auth/sign-in/page.tsx",
+    file: "src/app/[locale]/(app)/auth/sign-in/page.tsx",
     rule: "svgColour" as const,
     match,
     count: 1,
     reason: "Google's 'G' mark on the sign-in button must keep Google's brand colours.",
   })),
   {
-    file: "src/app/[locale]/auth/sign-in/page.tsx",
+    file: "src/app/[locale]/(app)/auth/sign-in/page.tsx",
     rule: "colour",
     match: "bg-white",
     count: 1,

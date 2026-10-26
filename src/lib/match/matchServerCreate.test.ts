@@ -6,7 +6,7 @@ import { startLiveMatch, updateScore } from "@/domain/liveMatch";
 import type { MatchSetup } from "@/domain/match";
 import { endLocalActiveMatch, startLocalMatch } from "@/lib/match/activeMatchRecovery";
 import { retrySavingUnsavedMatchCompletions, submitMatchCompletion } from "@/lib/match/matchCompletion";
-import { syncActiveMatchCreate } from "@/lib/match/matchServerCreate";
+import { syncActiveMatchCreate, syncActiveMatchStart } from "@/lib/match/matchServerCreate";
 import { getStoredMatchSetup } from "@/lib/storage/matchStorage";
 import { getStoredLiveMatch, saveStoredLiveMatch } from "@/lib/storage/liveMatchStorage";
 import {
@@ -303,3 +303,80 @@ describe("MATCH-13: a new signed-in match without a planned match", () => {
     expect(recovery.startLocalMatch(setup("setup-B"), MATCH_B).ok).toBe(true);
   });
 });
+
+describe("a planned match started offline", () => {
+  const STARTED_AT = "2026-10-26T17:31:00.000Z";
+
+  beforeEach(() => {
+    // An unsaved completion left in memory by an earlier test would refuse the start.
+    retrySavingUnsavedMatchCompletions();
+    window.localStorage.clear();
+  });
+
+  function startPlannedOffline(setupId = "setup-p", matchId = MATCH_A) {
+    return startLocalMatch(setup(setupId), matchId, {
+      serverLink: { ownerUserId: USER, pendingCreate: null, pendingStart: { startedAt: STARTED_AT, reportEnabled: true } },
+    });
+  }
+
+  it("turns live on the server when the network is back, with the device's start time, once", async () => {
+    startPlannedOffline();
+
+    stubServer(offline);
+    expect(await syncActiveMatchStart(USER)).toBe("offline");
+    expect(getStoredMatchSetup()?.serverLink?.pendingStart).toEqual({ startedAt: STARTED_AT, reportEnabled: true });
+
+    const sent = stubServer(async () => new Response("{}", { status: 200 }));
+    expect(await syncActiveMatchStart(USER)).toBe("started");
+    expect(sent).toEqual([
+      {
+        method: "PATCH",
+        url: `/api/matches/${MATCH_A}`,
+        body: { status: "live", startedAt: STARTED_AT, reportEnabled: true },
+      },
+    ]);
+    expect(getStoredMatchSetup()?.serverLink?.pendingStart).toBeFalsy();
+    // The rest of the link (MATCH-13) is untouched.
+    expect(getStoredMatchSetup()?.serverLink).toMatchObject({ ownerUserId: USER, pendingCreate: null });
+
+    expect(await syncActiveMatchStart(USER)).toBeNull();
+    expect(sent).toHaveLength(1);
+  });
+
+  it("a lapsed session or a server error keeps it for the next attempt", async () => {
+    startPlannedOffline();
+    stubServer(async () => new Response("{}", { status: 401 }));
+    expect(await syncActiveMatchStart(USER)).toBe("failed");
+    stubServer(async () => new Response("{}", { status: 503 }));
+    expect(await syncActiveMatchStart(USER)).toBe("failed");
+    expect(getStoredMatchSetup()?.serverLink?.pendingStart).not.toBeNull();
+  });
+
+  it("a completed or discarded match is never reopened: the refusal ends the attempts", async () => {
+    startPlannedOffline();
+    const sent = stubServer(async () => new Response(JSON.stringify({ errorCode: "MATCH_COMPLETED" }), { status: 409 }));
+
+    expect(await syncActiveMatchStart(USER)).toBe("refused");
+    expect(getStoredMatchSetup()?.serverLink?.pendingStart).toBeFalsy();
+    expect(await syncActiveMatchStart(USER)).toBeNull();
+    expect(sent).toHaveLength(1);
+  });
+
+  it("a match ended here is not sent as live (its completion goes instead)", async () => {
+    startPlannedOffline();
+    saveStoredLiveMatch(startLiveMatch(getStoredLiveMatch()!, Date.parse(STARTED_AT)));
+    expect(endLocalActiveMatch({ nowMs: Date.parse(STARTED_AT) + 60_000 })).not.toBeNull();
+
+    const sent = stubServer(async () => new Response("{}", { status: 200 }));
+    expect(await syncActiveMatchStart(USER)).toBeNull();
+    expect(sent).toEqual([]);
+  });
+
+  it("only the coach who started it sends it", async () => {
+    startPlannedOffline();
+    const sent = stubServer(async () => new Response("{}", { status: 200 }));
+    expect(await syncActiveMatchStart("someone-else")).toBeNull();
+    expect(sent).toEqual([]);
+  });
+});
+
