@@ -650,9 +650,15 @@ export async function createManualMatch(
 ): Promise<MatchListItem> {
   await requireTeamMembership(supabase, userId, input.teamId);
 
+  const clientChosen = {
+    ...(input.id ? { id: input.id } : {}),
+  };
+
   const primary = await supabase
     .from("matches")
     .insert({
+      ...clientChosen,
+      ...(input.startedAt ? { started_at: input.startedAt } : {}),
       team_id: input.teamId,
       title: input.title,
       opponent_name: input.opponentName ?? null,
@@ -675,6 +681,7 @@ export async function createManualMatch(
     const fallback = await supabase
       .from("matches")
       .insert({
+        ...clientChosen,
         team_id: input.teamId,
         title: input.title,
         opponent_name: input.opponentName ?? null,
@@ -695,6 +702,19 @@ export async function createManualMatch(
     error = fallback.error;
   }
 
+  if (input.id && isUniqueViolation(error)) {
+    // A repeat of a create whose answer was lost (MATCH-13): the row the
+    // device asked for already exists. It is returned as it is, never
+    // changed, and only when it is that same team's match.
+    const existing = await getMatchById(supabase, userId, input.id).catch(() => null);
+
+    if (existing && existing.teamId === input.teamId) {
+      return existing;
+    }
+
+    throw new IntegrationError("MATCH_ID_CONFLICT", "Kamp-id-en er allerede i bruk.", 409);
+  }
+
   if (error) {
     throw new IntegrationError("MATCH_CREATE_FAILED", error.message, 500);
   }
@@ -704,6 +724,11 @@ export async function createManualMatch(
   }
 
   return mapMatchRows([row], [])[0];
+}
+
+/** Postgres unique_violation (here: a match id that already exists). */
+function isUniqueViolation(error: { code?: string } | null): boolean {
+  return error?.code === "23505";
 }
 
 export async function deleteMatch(

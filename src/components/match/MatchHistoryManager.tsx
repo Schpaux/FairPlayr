@@ -8,6 +8,11 @@ import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button, ButtonLink, EmptyState, ListGroup, ListRow, Notice, SkeletonList } from "@/components/ui/primitives";
+import {
+  listPendingMatchCompletions,
+  PENDING_COMPLETIONS_CHANGED_EVENT,
+  type PendingMatchCompletion,
+} from "@/lib/storage/pendingMatchCompletionStorage";
 
 interface MatchItem {
   id: string;
@@ -26,10 +31,56 @@ interface MatchItem {
   source: "manual" | "spond";
   startedAt?: string | null;
   endedAt?: string | null;
+  /** Ended on this device; the server does not have the result yet (MATCH-13). */
+  pendingSync?: boolean;
 }
 
 /** Planned matches are a glance ahead here; the full list lives on Kamp. */
 const PLANNED_LIMIT = 3;
+
+/**
+ * Server history plus the matches this device ended but has not synced yet,
+ * one row per match id. A waiting match shows its local result over whatever
+ * the server still says (live, draft or nothing yet).
+ */
+export function mergePendingMatches(
+  serverMatches: readonly MatchItem[],
+  pending: readonly PendingMatchCompletion[]
+): MatchItem[] {
+  const pendingById = new Map(pending.map((record) => [record.matchId, record]));
+  const local = (record: PendingMatchCompletion) => ({
+    status: "completed" as const,
+    scoreFor: record.body.scoreFor,
+    scoreAgainst: record.body.scoreAgainst,
+    endedAt: record.endedAt,
+    pendingSync: true,
+  });
+
+  const merged = serverMatches.map((match) => {
+    const record = pendingById.get(match.id);
+    return record ? { ...match, ...local(record) } : match;
+  });
+  const onServer = new Set(serverMatches.map((match) => match.id));
+
+  for (const record of pending) {
+    if (onServer.has(record.matchId) || !record.info) continue;
+
+    merged.push({
+      id: record.matchId,
+      teamId: record.info.teamId,
+      title: record.info.title,
+      opponentName: null,
+      startsAt: record.info.startsAt,
+      location: null,
+      format: record.info.format,
+      source: "manual",
+      startedAt: record.info.startsAt,
+      ...local(record),
+    });
+  }
+
+  return merged;
+}
 
 function startsAtMs(match: MatchItem): number {
   const time = new Date(match.startsAt).getTime();
@@ -55,6 +106,10 @@ export function MatchHistoryManager() {
   // Only the latest load may write (a team change or retry mid-flight).
   const loadId = useRef(0);
   const [error, setError] = useState<string | null>(null);
+  // Matches ended on this device and still waiting for the server: only the
+  // signed-in coach's own, for teams in this workspace.
+  const [pending, setPending] = useState<PendingMatchCompletion[]>([]);
+  const userId = auth.user?.id ?? null;
 
   // undefined = not yet chosen by user → falls back to workspace.activeTeamId
   // null = user explicitly chose "Alle lag"
@@ -69,8 +124,9 @@ export function MatchHistoryManager() {
   // C4 (UI-HIST-01): live first, then the next few planned matches, then
   // results newest first (an unbounded list, so it goes last). Status is told
   // by the group, not by colour.
+  const allMatches = useMemo(() => mergePendingMatches(matches, pending), [matches, pending]);
   const groups = useMemo(() => {
-    const visible = effectiveTeamId ? matches.filter((match) => match.teamId === effectiveTeamId) : matches;
+    const visible = effectiveTeamId ? allMatches.filter((match) => match.teamId === effectiveTeamId) : allMatches;
     return {
       live: visible.filter((match) => match.status === "live").sort((a, b) => startsAtMs(b) - startsAtMs(a)),
       completed: visible.filter((match) => match.status === "completed").sort((a, b) => startsAtMs(b) - startsAtMs(a)),
@@ -78,7 +134,7 @@ export function MatchHistoryManager() {
         .filter((match) => match.status === "upcoming" || match.status === "draft")
         .sort((a, b) => startsAtMs(a) - startsAtMs(b)),
     };
-  }, [matches, effectiveTeamId]);
+  }, [allMatches, effectiveTeamId]);
 
   const teamNameById = useMemo(
     () => new Map(workspace.teams.map((team) => [team.id, team.name])),
@@ -126,6 +182,35 @@ export function MatchHistoryManager() {
     void loadMatches();
   }, [auth.status, loadMatches, workspace.isLoading]);
 
+  // Follows this device's waiting matches. Once one has synced, the server
+  // list is read again so it shows from there, once.
+  const pendingIdsRef = useRef<ReadonlySet<string>>(new Set());
+  useEffect(() => {
+    if (auth.status !== "authenticated" || workspace.isLoading) return;
+
+    const teamIds = new Set(workspace.teams.map((team) => team.id));
+    const read = () => {
+      const own = listPendingMatchCompletions().filter(
+        (record) =>
+          (record.userId === undefined || record.userId === userId) &&
+          (!record.info || teamIds.has(record.info.teamId))
+      );
+      const ids = new Set(own.map((record) => record.matchId));
+      const synced = [...pendingIdsRef.current].some((id) => !ids.has(id));
+      pendingIdsRef.current = ids;
+      setPending(own);
+      if (synced) void loadMatches();
+    };
+
+    read();
+    window.addEventListener(PENDING_COMPLETIONS_CHANGED_EVENT, read);
+    window.addEventListener("storage", read);
+    return () => {
+      window.removeEventListener(PENDING_COMPLETIONS_CHANGED_EVENT, read);
+      window.removeEventListener("storage", read);
+    };
+  }, [auth.status, loadMatches, userId, workspace.isLoading, workspace.teams]);
+
   if (!isHydrated || auth.status === "loading" || workspace.isLoading) {
     return (
       <PageShell>
@@ -169,6 +254,7 @@ export function MatchHistoryManager() {
       match.location,
       showTeamName ? teamNameById.get(match.teamId) : null,
       match.source === "spond" ? "Spond" : null,
+      match.pendingSync ? t("pendingSync") : null,
     ]
       .filter(Boolean)
       .join(" · ");
@@ -215,9 +301,9 @@ export function MatchHistoryManager() {
         </Notice>
       ) : null}
 
-      {isLoadingMatches ? (
+      {isLoadingMatches && pending.length === 0 ? (
         <SkeletonList rows={4} withDescription label={common("loading")} />
-      ) : error ? null : isEmpty ? (
+      ) : error && isEmpty ? null : isEmpty ? (
         <EmptyState
           icon={History}
           title={t("emptyTitle")}

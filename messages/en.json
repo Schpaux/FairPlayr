@@ -459,6 +459,11 @@
       "description": "A match is running. Match setup stays locked until it has ended, so no playing time is lost.",
       "continue": "Go to the match"
     },
+    "unsavedCompletion": {
+      "title": "The last match is not saved yet",
+      "description": "The result of the last match could not be saved on this device. A new match cannot start until it is saved, or that match would be lost. Free up some space on the device and try again.",
+      "retry": "Try saving again"
+    },
     "startGuard": {
       "title": "Another live match is already active",
       "description": "{title} is still active. Choose what to do before starting a new match.",
@@ -1000,6 +1005,7 @@
     "groupPlanned": "Planned",
     "allPlanned": "All planned matches",
     "retry": "Try again",
+    "pendingSync": "Waiting to sync",
     "scoreA11y": "{scoreFor} to {scoreAgainst}"
   },
   "lineup": {

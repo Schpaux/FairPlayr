@@ -15,7 +15,7 @@ import { activateMatch, endMatch, getStoredMatchSetup } from "@/lib/storage/matc
 import { getPendingMatchCompletion } from "@/lib/storage/pendingMatchCompletionStorage";
 import en from "../../../messages/en.json";
 
-const AUTH = { status: "authenticated" };
+const AUTH = { status: "authenticated", user: { id: "user-1" } };
 const WORKSPACE = { activeTeamId: "team-1" as string | null };
 const NAV = { pathname: "/" };
 
@@ -33,6 +33,8 @@ type ServerRow = { id: string; title: string; teamId: string; status: string; ru
 interface ServerState {
   activeMatch: ServerRow | null;
   online: boolean;
+  /** When set, the answer to a match create (e.g. one still in flight). */
+  createReply?: Promise<Response>;
 }
 
 let server: ServerState;
@@ -96,6 +98,9 @@ beforeEach(() => {
       return Promise.reject(new TypeError("Failed to fetch"));
     }
     const url = String(input);
+    if (init?.method === "POST" && url === "/api/matches") {
+      return server.createReply ?? Promise.resolve(Response.json({ match: {} }, { status: 201 }));
+    }
     if (init?.method === "PATCH") {
       const id = decodeURIComponent(url.split("/").pop() ?? "");
       if (server.activeMatch?.id === id) {
@@ -403,5 +408,44 @@ describe("scoped close actions", () => {
 
     expect(patches()).toEqual([]);
     expect(getStoredMatchSetup()).toMatchObject({ status: "active", serverMatchId: "match-D" });
+  });
+
+  it("discarding a match whose create is still in flight lets the create finish, then discards that row", async () => {
+    // MATCH-13: started here without a planned match; the row may well exist.
+    const setup = createMatchSetup("team-1");
+    activateMatch(setup, "match-N", {
+      ownerUserId: "user-1",
+      pendingCreate: { title: "Kamp N", startsAt: new Date().toISOString() },
+    });
+    saveStoredLiveMatch(startLiveMatch(createLiveMatchFromSetup(setup), Date.now() - 60_000));
+    let answerCreate!: (response: Response) => void;
+    server.createReply = new Promise((resolve) => {
+      answerCreate = resolve;
+    });
+    renderShell();
+    await waitFor(() => expect(actions?.activeMatch?.serverMatchId).toBe("match-N"));
+    // The create sent on start is still waiting for its answer.
+    await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => (init as RequestInit)?.method === "POST")).toBe(true));
+
+    let discarded = false;
+    const discard = actions!.discardActiveMatch().then(() => {
+      discarded = true;
+    });
+    await Promise.resolve();
+    expect(discarded).toBe(false);
+    expect(patches()).toEqual([]);
+
+    await act(async () => {
+      answerCreate(Response.json({ match: { id: "match-N" } }, { status: 201 }));
+      await discard;
+    });
+
+    const methods = fetchMock.mock.calls
+      .map(([input, init]) => `${(init as RequestInit | undefined)?.method ?? "GET"} ${String(input)}`)
+      .filter((line) => !line.startsWith("GET "));
+    // One create (the discard joined it), then the discard of that row; nothing after.
+    expect(methods).toEqual(["POST /api/matches", "PATCH /api/matches/match-N"]);
+    expect(patches()[0].body).toEqual({ status: "completed", runtimeState: null, reportStatus: "failed" });
+    expect(getStoredMatchSetup()?.status).not.toBe("active");
   });
 });

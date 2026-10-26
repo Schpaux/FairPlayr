@@ -7,7 +7,10 @@ import {
   endMatch,
   getStoredMatchSetup,
   hasActiveStoredMatch,
+  type StoredMatchConfig,
+  type StoredMatchServerLink,
 } from "@/lib/storage/matchStorage";
+import { completionContextFor, hasUnsavedMatchCompletion } from "@/lib/match/matchCompletion";
 import {
   clearStoredLiveMatch,
   getStoredLiveMatch,
@@ -254,11 +257,13 @@ export function endLocalActiveMatch(options: {
   if (endedLiveMatch) {
     saveStoredLiveMatch(endedLiveMatch);
   }
-  endMatch(setup.config);
+  const serverMatchId = setup.serverMatchId ?? null;
+  const endedAt = new Date(nowMs).toISOString();
+  const reportEnabled = options.reportEnabled ?? setup.config.reportEnabled;
+  // MATCH-13-F4: the end is kept with the setup until the server confirms it.
+  endMatch(setup.config, serverMatchId ? { endedAt, reportEnabled } : null);
   // An ended match is never restored from the snapshot again.
   clearSquadSnapshot();
-
-  const serverMatchId = setup.serverMatchId ?? null;
 
   if (!serverMatchId) {
     return { serverMatchId: null, endedLiveMatch, completion: null };
@@ -268,7 +273,7 @@ export function endLocalActiveMatch(options: {
     status: "completed",
     scoreFor: endedLiveMatch?.teamScore ?? 0,
     scoreAgainst: endedLiveMatch?.opponentScore ?? 0,
-    reportEnabled: options.reportEnabled ?? setup.config.reportEnabled,
+    reportEnabled,
     // Without a local live state the server keeps its last snapshot.
     ...(endedLiveMatch ? { runtimeState: endedLiveMatch } : {}),
   };
@@ -276,9 +281,16 @@ export function endLocalActiveMatch(options: {
   return {
     serverMatchId,
     endedLiveMatch,
-    completion: { matchId: serverMatchId, body, endedAt: new Date(nowMs).toISOString() },
+    completion: {
+      matchId: serverMatchId,
+      body,
+      endedAt,
+      ...completionContextFor(setup, endedLiveMatch),
+    },
   };
 }
+
+export { completionContextFor };
 
 /** Live screen route for this device's active match (server-backed or local). */
 export function liveHrefFor(serverMatchId: string | null | undefined): string {
@@ -289,13 +301,14 @@ export function liveHrefFor(serverMatchId: string | null | undefined): string {
 
 export type StartLocalMatchResult =
   | { ok: true; liveMatch: LiveMatchState }
-  | { ok: false; reason: "active_match" };
+  | { ok: false; reason: "active_match" | "unsaved_completion" };
 
 /**
  * Starts a match on this device: a fresh live state plus an `active` setup.
  *
  * Refused while another match is active, because starting would wipe its
- * minutes and events. That match must first be ended or discarded through the
+ * minutes and events, and while an ended match's completion exists only in
+ * memory (MATCH-13-F4). That match must first be ended or discarded through the
  * match lifecycle (live screen, recovery card or start guard).
  */
 export function startLocalMatch(
@@ -307,10 +320,18 @@ export function startLocalMatch(
      * saved with it (OFF-01a), so a restore never waits for the team list.
      */
     squadPlayers?: readonly Player[];
+    /** Signed-in coach and, for a match without a planned one, its pending server create. */
+    serverLink?: StoredMatchServerLink | null;
   } = {}
 ): StartLocalMatchResult {
   if (hasActiveStoredMatch()) {
     return { ok: false, reason: "active_match" };
+  }
+
+  // MATCH-13-F4: an ended match whose completion could not be stored would
+  // lose its last stored copy here. Kept until the completion is saved.
+  if (hasUnsavedMatchCompletion()) {
+    return { ok: false, reason: "unsaved_completion" };
   }
 
   clearStoredLiveMatch();
@@ -320,7 +341,7 @@ export function startLocalMatch(
   saveStoredLiveMatch(liveMatch);
   // Keep the server record with the local setup so the live screen can still
   // sync the completion when it is reopened without ?matchId (e.g. offline).
-  activateMatch(setup, serverMatchId);
+  activateMatch(setup, serverMatchId, options.serverLink ?? null);
 
   if (options.squadPlayers) {
     saveSquadSnapshot({

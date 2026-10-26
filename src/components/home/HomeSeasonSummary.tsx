@@ -199,7 +199,8 @@ export function HomeFixturePanel() {
     kicker = countdown ? `${t("nextLabel")} · ${t("countdown", countdown)}` : t("nextLabel");
     title = upcoming.opponent ? t("versus", { opponent: upcoming.opponent }) : t("unknownOpponent");
     detail = formatKickoff(upcoming.startsAt, locale) + (upcoming.location ? ` · ${upcoming.location}` : "");
-    action = { href: "/match/setup", label: t("setup") };
+    // MATCH-13: set up this planned match, so it starts as that server match.
+    action = { href: `/match/setup?matchId=${encodeURIComponent(upcoming.matchId)}`, label: t("setup") };
   } else {
     kicker = t("nextLabel");
     title = t("noFixture");

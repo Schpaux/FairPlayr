@@ -16,6 +16,8 @@ function parseCreatePayload(value: unknown): {
   format: MatchFormat;
   reportEnabled: boolean;
   status: MatchStatus;
+  id?: string;
+  startedAt?: string;
 } {
   if (typeof value !== "object" || value === null) {
     throw new Error("INVALID_PAYLOAD");
@@ -50,6 +52,20 @@ function parseCreatePayload(value: unknown): {
     throw new Error("INVALID_PAYLOAD");
   }
 
+  // MATCH-13: a device-chosen id makes the create idempotent, and a match
+  // started on the device keeps its own start time.
+  const id = payload.id === undefined ? undefined : typeof payload.id === "string" ? payload.id : "";
+  const startedAt =
+    payload.startedAt === undefined ? undefined : typeof payload.startedAt === "string" ? payload.startedAt : "";
+
+  if (id !== undefined && !isUuid(id)) {
+    throw new Error("INVALID_PAYLOAD");
+  }
+
+  if (startedAt !== undefined && (Number.isNaN(Date.parse(startedAt)) || status === "upcoming")) {
+    throw new Error("INVALID_PAYLOAD");
+  }
+
   return {
     teamId,
     title,
@@ -59,6 +75,8 @@ function parseCreatePayload(value: unknown): {
     format,
     reportEnabled,
     status,
+    ...(id ? { id } : {}),
+    ...(startedAt ? { startedAt } : {}),
   };
 }
 

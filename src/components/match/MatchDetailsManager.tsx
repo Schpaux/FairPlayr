@@ -145,6 +145,68 @@ function readDeviceRelation(matchId: string): DeviceRelation {
   return stored.serverMatchId === matchId ? "this" : "other";
 }
 
+/**
+ * MATCH-13: the completion this device is still waiting to send for a match,
+ * only the signed-in coach's own.
+ */
+function readOwnPendingCompletion(matchId: string, userId: string | null) {
+  const pending = getPendingMatchCompletion(matchId);
+  return pending && (pending.userId === undefined || pending.userId === userId) ? pending : null;
+}
+
+/**
+ * The result this device ended with, over whatever the server still says
+ * (live, draft or older data) — as the history list shows it. Without a
+ * server row it is built from the stored completion.
+ */
+function withLocalPendingDetails(
+  matchId: string,
+  userId: string | null,
+  server: MatchDetails | null
+): MatchDetails | null {
+  const pending = readOwnPendingCompletion(matchId, userId);
+
+  if (!pending) {
+    return null;
+  }
+
+  const local = {
+    status: "completed" as const,
+    endedAt: pending.endedAt,
+    scoreFor: pending.body.scoreFor,
+    scoreAgainst: pending.body.scoreAgainst,
+    // The summary is made by the server once the match has synced.
+    reportEnabled: false,
+    reportStatus: "not_requested" as const,
+    reportText: null,
+    runtimeState: (pending.body.runtimeState as MatchRuntimeState | null | undefined) ?? server?.runtimeState ?? null,
+  };
+
+  if (server) {
+    return { ...server, ...local };
+  }
+
+  const info = pending.info;
+  if (!info) {
+    return null;
+  }
+
+  return {
+    id: matchId,
+    title: info.title,
+    teamId: info.teamId,
+    opponentName: null,
+    startsAt: info.startsAt,
+    location: null,
+    format: info.format,
+    source: "manual",
+    externalEventId: null,
+    rsvpLastSyncedAt: null,
+    startedAt: info.startsAt,
+    ...local,
+  };
+}
+
 function payloadName(payload: Record<string, unknown> | null, key: string): string | null {
   if (!payload || typeof payload !== "object") {
     return null;
@@ -159,6 +221,7 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
   const common = useTranslations("common");
   const locale = useLocale();
   const auth = useAuth();
+  const userId = auth.user?.id ?? null;
   const router = useRouter();
   const { refreshActiveMatch } = useActiveMatch();
   const workspace = useTeamWorkspace();
@@ -191,6 +254,9 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
   const [isRegeneratingReport, setIsRegeneratingReport] = useState(false);
   const [autoReportTriggeredFor, setAutoReportTriggeredFor] = useState<string | null>(null);
   const [deviceRelation, setDeviceRelation] = useState<DeviceRelation>("none");
+  // Shown from this device only: the server does not have it yet (MATCH-13).
+  const [isLocalOnly, setIsLocalOnly] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [finishConfirm, setFinishConfirm] = useState<{ open: boolean; relation: Exclude<DeviceRelation, "closed"> }>({
     open: false,
     relation: "this",
@@ -413,17 +479,30 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
         const matchData = matchPayload as { match: MatchDetails };
         const eventData = eventsPayload as { events: MatchEventItem[] };
 
-        setMatch(matchData.match);
+        // A result still waiting to be sent from here wins over the server's.
+        const local = withLocalPendingDetails(matchId, userId, matchData.match);
+        setMatch(local ?? matchData.match);
         setEvents(eventData.events ?? []);
         setDeviceRelation(readDeviceRelation(matchId));
+        setIsLocalOnly(local !== null);
       } catch (cause) {
-        const message = cause instanceof Error ? cause.message : t("errors.generic");
-        setError(message);
+        // Not on the server yet, or no network: a match ended here still opens.
+        const local = withLocalPendingDetails(matchId, userId, null);
+
+        if (local) {
+          setMatch(local);
+          setEvents([]);
+          setDeviceRelation(readDeviceRelation(matchId));
+          setIsLocalOnly(true);
+        } else {
+          const message = cause instanceof Error ? cause.message : t("errors.generic");
+          setError(message);
+        }
       } finally {
         setIsLoading(false);
       }
     })();
-  }, [auth.status, matchId, t]);
+  }, [auth.status, matchId, reloadKey, t, userId]);
 
   // FP-P0-F2: starting goes through setup, which marks the match live only
   // after this device has actually started it (and refuses while it runs
@@ -434,6 +513,24 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
     }
 
     router.push(`/match/setup?matchId=${encodeURIComponent(match.id)}`);
+  };
+
+  // Sends a match shown from this device, then reads it back from the server.
+  const handleSyncLocal = async () => {
+    setError(null);
+    setIsUpdatingStatus(true);
+    const result = await retryPendingMatchCompletion(matchId);
+    setIsUpdatingStatus(false);
+
+    if (result?.status === "completed" || result === null) {
+      if (result) showNotice(t("completedNotice"));
+      setReloadKey((key) => key + 1);
+      await refreshActiveMatch();
+    } else if (result.status === "failed") {
+      setError(result.message ?? t("errors.generic"));
+    } else {
+      showNotice(t("completedOfflineNotice"));
+    }
   };
 
   const handleFinish = async () => {
@@ -530,7 +627,8 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
           const result = await submitMatchCompletion(
             ended.completion.matchId,
             ended.completion.body,
-            ended.completion.endedAt
+            ended.completion.endedAt,
+            ended.completion
           );
 
           if (result.status === "completed") {
@@ -862,6 +960,18 @@ export function MatchDetailsManager({ matchId }: { matchId: string }) {
 
       {notice ? <Notice key={noticeKey} tone="success">{notice}</Notice> : null}
       {error ? <Notice tone="error">{error}</Notice> : null}
+      {isLocalOnly ? (
+        <Notice
+          testId="match-pending-sync"
+          action={
+            <Button size="sm" disabled={isUpdatingStatus} onClick={() => { void handleSyncLocal(); }}>
+              {isUpdatingStatus ? t("statusUpdating") : t("syncFinishCta")}
+            </Button>
+          }
+        >
+          {t("closedOnDevice")}
+        </Notice>
+      ) : null}
 
       {/* Result first: the club-green scoreboard (DESIGN.md §2.2, §3). */}
       <section className="rounded-[20px] bg-fp-club p-5 text-fp-on-club" data-testid="match-hero">

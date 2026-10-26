@@ -209,7 +209,8 @@ describe("HomeSeasonSummary", () => {
     expect(screen.getByTestId("home-fixture-panel").textContent).toMatch(/Neste kamp · om [\d\s\u00a0]+ dager/);
     // The score is spoken as words, not "2 dash 1".
     expect(screen.getByTestId("home-stat-last").textContent).toContain("3 mot 1");
-    expect(screen.getByTestId("home-primary-action").getAttribute("href")).toBe("/match/setup");
+    // MATCH-13: the planned match is set up by its own id, never as a new match.
+    expect(screen.getByTestId("home-primary-action").getAttribute("href")).toBe("/match/setup?matchId=m5");
     expect(screen.queryByTestId("home-summary-loading")).toBeNull();
   });
 

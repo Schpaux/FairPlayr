@@ -46,7 +46,19 @@ const PLAYERS: Player[] = ["p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8"].map((
 }));
 
 const TEAM = { id: "team-1", name: "Local team", players: PLAYERS };
-const WORKSPACE = { isLoading: false, error: null, activeTeamId: "team-1", activeTeam: TEAM, teams: [TEAM] };
+const WORKSPACE: Record<string, unknown> = {
+  isLoading: false,
+  error: null,
+  activeTeamId: "team-1",
+  activeTeam: TEAM,
+  teams: [TEAM],
+};
+// Guest unless a test signs in (mutated, never replaced).
+const AUTH: { status: string; user: { id: string } | null } = { status: "unauthenticated", user: null };
+
+vi.mock("@/components/providers/AuthProvider", () => ({
+  useAuth: () => AUTH,
+}));
 
 vi.mock("@/components/providers/TeamWorkspaceProvider", () => ({
   useTeamWorkspace: () => WORKSPACE,
@@ -123,6 +135,76 @@ describe("MatchSetupManager start match", () => {
 
     await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/match/live?matchId=match-1"));
     expect(getStoredMatchSetup()).toMatchObject({ status: "active", serverMatchId: "match-1" });
+  });
+
+  it("still opens a planned match when the network is gone (it is stored here first)", async () => {
+    searchParams = new URLSearchParams("matchId=match-1");
+    vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))));
+    renderManager();
+
+    fireEvent.click(await screen.findByRole("button", { name: en.matchSetup.startMatch }));
+
+    await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/match/live?matchId=match-1"));
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  // MATCH-13: a signed-in coach's new match always gets a server identity.
+  describe("signed in, without a planned match", () => {
+    beforeEach(() => {
+      searchParams = new URLSearchParams();
+      AUTH.status = "authenticated";
+      AUTH.user = { id: "user-1" };
+      WORKSPACE.mode = "cloud";
+    });
+
+    afterEach(() => {
+      AUTH.status = "unauthenticated";
+      AUTH.user = null;
+      delete WORKSPACE.mode;
+    });
+
+    function creates(fetchMock: ReturnType<typeof vi.fn>) {
+      return fetchMock.mock.calls
+        .filter(([url, init]) => url === "/api/matches" && (init as RequestInit).method === "POST")
+        .map(([, init]) => JSON.parse((init as RequestInit).body as string) as Record<string, unknown>);
+    }
+
+    it("creates the server match with an id chosen here and opens Live with it", async () => {
+      const fetchMock = vi.fn(() => Promise.resolve(Response.json({ match: {} }, { status: 201 })));
+      vi.stubGlobal("fetch", fetchMock);
+      renderManager();
+
+      fireEvent.click(await screen.findByRole("button", { name: en.matchSetup.startMatch }));
+
+      const stored = getStoredMatchSetup();
+      const id = stored?.serverMatchId;
+      expect(id).toMatch(/^[0-9a-f-]{36}$/);
+      await waitFor(() => expect(routerPush).toHaveBeenCalledWith(`/match/live?matchId=${id}`));
+      expect(creates(fetchMock)).toEqual([
+        expect.objectContaining({ id, teamId: "team-1", status: "live", reportEnabled: false }),
+      ]);
+      await waitFor(() =>
+        expect(getStoredMatchSetup()?.serverLink).toEqual({ ownerUserId: "user-1", pendingCreate: null })
+      );
+    });
+
+    it("starts and opens the match when the server cannot be reached, keeping the create for later", async () => {
+      const fetchMock = vi.fn(() => Promise.reject(new TypeError("Failed to fetch")));
+      vi.stubGlobal("fetch", fetchMock);
+      renderManager();
+
+      fireEvent.click(await screen.findByRole("button", { name: en.matchSetup.startMatch }));
+
+      const id = getStoredMatchSetup()?.serverMatchId;
+      await waitFor(() => expect(routerPush).toHaveBeenCalledWith(`/match/live?matchId=${id}`));
+      expect(creates(fetchMock)).toHaveLength(1);
+      expect(getStoredMatchSetup()).toMatchObject({
+        status: "active",
+        serverMatchId: id,
+        serverLink: { ownerUserId: "user-1", pendingCreate: { startsAt: expect.any(String) } },
+      });
+      expect(screen.queryByRole("alert")).toBeNull();
+    });
   });
 });
 

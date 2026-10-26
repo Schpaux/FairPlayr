@@ -459,6 +459,11 @@
       "description": "Det er en kamp i gang. Kampoppsettet er låst til kampen er avsluttet, slik at ingen spilletid går tapt.",
       "continue": "Gå til kampen"
     },
+    "unsavedCompletion": {
+      "title": "Forrige kamp er ikke lagret ennå",
+      "description": "Resultatet fra forrige kamp kunne ikke lagres på enheten. Ny kamp kan ikke startes før det er lagret, ellers går kampen tapt. Frigjør gjerne plass på enheten og prøv igjen.",
+      "retry": "Prøv å lagre igjen"
+    },
     "startGuard": {
       "title": "Du har allerede en pågående kamp",
       "description": "{title} er fortsatt aktiv. Velg hva du vil gjøre før du starter en ny kamp.",
@@ -1000,6 +1005,7 @@
     "groupPlanned": "Planlagt",
     "allPlanned": "Alle planlagte kamper",
     "retry": "Prøv igjen",
+    "pendingSync": "Venter på synkronisering",
     "scoreA11y": "{scoreFor} mot {scoreAgainst}"
   },
   "lineup": {

@@ -82,12 +82,13 @@ import { pickLiveBandItem, type LiveBandItem } from "@/components/live/liveBand"
 import type { LiveMenuNote } from "@/components/live/LiveSheets";
 import { buildDisplayNameMap } from "@/lib/utils/playerName";
 import { fetchOrNull, readJsonOrNull } from "@/lib/utils/fetchOrNull";
-import { resolveClosedOnDevice } from "@/lib/match/activeMatchRecovery";
+import { completionContextFor, resolveClosedOnDevice } from "@/lib/match/activeMatchRecovery";
 import {
   getPendingMatchCompletion,
   type PendingMatchCompletion,
 } from "@/lib/storage/pendingMatchCompletionStorage";
 import {
+  hasUnsavedMatchCompletion,
   submitMatchCompletion,
   type MatchCompletionResult,
 } from "@/lib/match/matchCompletion";
@@ -119,7 +120,6 @@ interface PromptPlayerOption {
 }
 
 interface GoalPromptState {
-  eventId: string | null;
   localEventId: string;
   minute: number | null;
   options: PromptPlayerOption[];
@@ -221,7 +221,20 @@ export function MatchLiveManager() {
   const [liveMatch, setLiveMatch] = useState<LiveMatchState | null>(null);
   const [setupStatus, setSetupStatus] = useState<MatchStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [reportEnabled, setReportEnabled] = useState(false);
+  // MATCH-12: the scorer sheet follows the match's own setup on this device;
+  // the server's answer, for the same match only, can only correct it.
+  const [localReportEnabled, setLocalReportEnabled] = useState(false);
+  const [serverReportEnabled, setServerReportEnabled] = useState<{ matchId: string; value: boolean } | null>(null);
+  const reportEnabled =
+    activeMatchId && serverReportEnabled?.matchId === activeMatchId ? serverReportEnabled.value : localReportEnabled;
+  // Server events of goals scored here, by local event id, with the match
+  // they belong to. The scorer sheet never waits for them: scorer and assist
+  // are sent to the server event once it is known (see the effect below).
+  const [serverGoalEvents, setServerGoalEvents] = useState<
+    Readonly<Record<string, { matchId: string; serverEventId: string }>>
+  >({});
+  // Scorer|assist last sent per server goal event, so each change goes once.
+  const sentGoalContributorsRef = useRef(new Map<string, string>());
   const [promptQueue, setPromptQueue] = useState<GoalPromptState[]>([]);
   const [isResolvingRecoveryAction, setIsResolvingRecoveryAction] = useState(false);
   // MATCH-03: ending or discarding a match from the recovery screen goes
@@ -305,6 +318,7 @@ export function MatchLiveManager() {
     setLocalSetupId(storedSetup?.config.id ?? null);
     setSetupSource("none");
     setSetupServerMatchId(undefined);
+    setLocalReportEnabled(storedSetup?.config.reportEnabled ?? false);
 
     if (!storedSetup) {
       setTeamPlayers([]);
@@ -475,12 +489,14 @@ export function MatchLiveManager() {
       return;
     }
 
+    let cancelled = false;
+
     void (async () => {
       const response = await fetchOrNull(`/api/matches/${encodeURIComponent(activeMatchId)}`, {
         method: "GET",
       });
 
-      if (!response?.ok) {
+      if (cancelled || !response?.ok) {
         return;
       }
 
@@ -488,8 +504,15 @@ export function MatchLiveManager() {
         match?: { reportEnabled?: boolean };
       }>(response);
 
-      setReportEnabled(payload?.match?.reportEnabled === true);
+      // Stored with its match id: a late answer never applies to another match.
+      if (!cancelled && typeof payload?.match?.reportEnabled === "boolean") {
+        setServerReportEnabled({ matchId: activeMatchId, value: payload.match.reportEnabled });
+      }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [activeMatchId, auth.status, isHydrated]);
 
   useEffect(() => {
@@ -726,7 +749,7 @@ export function MatchLiveManager() {
     // write. submitMatchCompletion never rejects (network failures resolve to
     // "offline"), so the flag is always reset. No try/finally: the React
     // Compiler cannot compile it and would skip this whole component.
-    const result = await submitMatchCompletion(record.matchId, record.body, record.endedAt);
+    const result = await submitMatchCompletion(record.matchId, record.body, record.endedAt, record);
 
     isSyncingCompletionRef.current = false;
     setIsSyncingCompletion(false);
@@ -848,7 +871,14 @@ export function MatchLiveManager() {
 
     if (storedSetup) {
       try {
-        endMatch(storedSetup.config);
+        // MATCH-13-F4: the end is kept with the setup until the server
+        // confirms it, so a reload still knows the completion is not secured.
+        endMatch(
+          storedSetup.config,
+          matchIdToEnd && storedSetup.serverMatchId === matchIdToEnd
+            ? { endedAt: new Date(endedAtMs).toISOString(), reportEnabled }
+            : null
+        );
         // The match is over on the device: its squad names go (AGENTS.md §2).
         // Kept when the end could not be stored, so a reload still restores
         // the match with names.
@@ -871,12 +901,17 @@ export function MatchLiveManager() {
             runtimeState: endedLiveMatch,
           },
           endedAt: new Date(endedAtMs).toISOString(),
+          // Owner, History info and a still missing server row (MATCH-13).
+          ...(storedSetup && storedSetup.serverMatchId === matchIdToEnd
+            ? completionContextFor(storedSetup, endedLiveMatch)
+            : {}),
         };
         markCompletionAttempt(completion.matchId);
         const result = await submitMatchCompletion(
           completion.matchId,
           completion.body,
-          completion.endedAt
+          completion.endedAt,
+          completion
         );
 
         if (result.status !== "completed") {
@@ -1041,7 +1076,11 @@ export function MatchLiveManager() {
   }, [liveMatch, matchClock.nowMs]);
 
   const handleResetView = () => {
-    clearStoredLiveMatch();
+    // MATCH-13-F4: an ended match whose completion is not secured keeps its
+    // stored final state; setup then refuses to start over it.
+    if (!hasUnsavedMatchCompletion()) {
+      clearStoredLiveMatch();
+    }
     router.push("/match/setup");
   };
 
@@ -1078,12 +1117,16 @@ export function MatchLiveManager() {
     return payload?.event?.id ?? null;
   };
 
-  const patchGoalEvent = async (eventId: string, data: Record<string, unknown>) => {
-    if (!activeMatchId || auth.status !== "authenticated") {
+  const patchGoalEvent = async (
+    eventId: string,
+    data: Record<string, unknown>,
+    matchId: string | null = activeMatchId
+  ) => {
+    if (!matchId || auth.status !== "authenticated") {
       return;
     }
 
-    await fetchOrNull(`/api/matches/${encodeURIComponent(activeMatchId)}/events/${encodeURIComponent(eventId)}`, {
+    await fetchOrNull(`/api/matches/${encodeURIComponent(matchId)}/events/${encodeURIComponent(eventId)}`, {
       method: "PATCH",
       headers: {
         "content-type": "application/json",
@@ -1092,7 +1135,62 @@ export function MatchLiveManager() {
     });
   };
 
-  const queueGoalPrompt = (eventId: string | null, localEventId: string, minute: number | null) => {
+  // Creates the server row for a goal scored here. Bound to the match the
+  // goal was scored in: a late answer only ever touches that match's event.
+  const linkGoalEventToServer = async (localEventId: string, minute: number | null) => {
+    const matchIdAtGoal = activeMatchId;
+    const serverEventId = await createGoalEventOnServer("goal_for", minute);
+
+    if (!serverEventId || !matchIdAtGoal) {
+      return;
+    }
+
+    setServerGoalEvents((previous) => ({ ...previous, [localEventId]: { matchId: matchIdAtGoal, serverEventId } }));
+  };
+
+  const onGoalContributorsChanged = useEffectEvent(
+    (matchId: string, serverEventId: string, data: Record<string, unknown>) => {
+      void patchGoalEvent(serverEventId, data, matchId);
+    }
+  );
+
+  // Scorer and assist of a goal with a server event go to that event, whether
+  // they were chosen before or after the server answered. The local event is
+  // the record; this only mirrors it.
+  useEffect(() => {
+    for (const event of liveMatch?.events ?? []) {
+      const linked = event.type === "goal" ? serverGoalEvents[event.id] : undefined;
+
+      if (!linked || event.type !== "goal") {
+        continue;
+      }
+
+      const signature = `${event.scorerPlayerId ?? ""}|${event.assistPlayerId ?? ""}`;
+      const previous = sentGoalContributorsRef.current.get(linked.serverEventId);
+
+      if (previous === signature) {
+        continue;
+      }
+
+      sentGoalContributorsRef.current.set(linked.serverEventId, signature);
+
+      // Nothing chosen yet: the server event already says so.
+      if (previous === undefined && signature === "|") {
+        continue;
+      }
+
+      onGoalContributorsChanged(linked.matchId, linked.serverEventId, {
+        primaryPlayerId: event.scorerPlayerId,
+        secondaryPlayerId: event.assistPlayerId,
+        payload: {
+          primaryPlayerName: event.scorerName,
+          secondaryPlayerName: event.assistName,
+        },
+      });
+    }
+  }, [liveMatch?.events, serverGoalEvents]);
+
+  const queueGoalPrompt = (localEventId: string, minute: number | null) => {
     if (!liveMatch) {
       return;
     }
@@ -1105,7 +1203,6 @@ export function MatchLiveManager() {
     setPromptQueue((previous) => [
       ...previous,
       {
-        eventId,
         localEventId,
         minute,
         options,
@@ -1123,15 +1220,6 @@ export function MatchLiveManager() {
     }
 
     const scorerName = storedPlayerName(playerId);
-
-    if (current.eventId) {
-      void patchGoalEvent(current.eventId, {
-        primaryPlayerId: playerId,
-        payload: {
-          primaryPlayerName: scorerName,
-        },
-      });
-    }
 
     setLiveMatch((previous) => {
       if (!previous) {
@@ -1172,16 +1260,6 @@ export function MatchLiveManager() {
     }
 
     const assistName = storedPlayerName(playerId);
-
-    if (current.eventId) {
-      void patchGoalEvent(current.eventId, {
-        secondaryPlayerId: playerId,
-        payload: {
-          primaryPlayerName: current.scorerName,
-          secondaryPlayerName: assistName,
-        },
-      });
-    }
 
     setLiveMatch((previous) => {
       if (!previous) {
@@ -1246,20 +1324,14 @@ export function MatchLiveManager() {
       return next;
     });
 
-    if (delta > 0) {
-      void (async () => {
-        const eventId = await createGoalEventOnServer("goal_for", minute);
+    if (delta > 0 && localGoalEvent) {
+      // MATCH-12: the sheet opens now, whatever the network does; the server
+      // event is linked when (and if) it is created.
+      if (reportEnabled) {
+        queueGoalPrompt(localGoalEvent.id, minute);
+      }
 
-        if (!reportEnabled) {
-          return;
-        }
-
-        if (!localGoalEvent) {
-          return;
-        }
-
-        queueGoalPrompt(eventId, localGoalEvent.id, minute);
-      })();
+      void linkGoalEventToServer(localGoalEvent.id, minute);
     }
   };
 

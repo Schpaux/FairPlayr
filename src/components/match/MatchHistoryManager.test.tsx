@@ -1,14 +1,19 @@
 // C4 (UI-HIST-01): History groups a team's matches as live, completed (newest
 // first, score and result word) and the next planned ones; every row is one
 // link to the match.
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MatchHistoryManager } from "@/components/match/MatchHistoryManager";
+import {
+  clearPendingMatchCompletion,
+  savePendingMatchCompletion,
+  type PendingMatchCompletion,
+} from "@/lib/storage/pendingMatchCompletionStorage";
 import no from "../../../messages/no.json";
 
-const AUTH = { status: "authenticated" };
+const AUTH: { status: string; user?: { id: string } | null } = { status: "authenticated" };
 const WORKSPACE: {
   mode: string;
   isLoading: boolean;
@@ -63,7 +68,9 @@ function renderHistory() {
 }
 
 beforeEach(() => {
+  window.localStorage.clear();
   AUTH.status = "authenticated";
+  AUTH.user = { id: "user-1" };
   WORKSPACE.mode = "cloud";
   WORKSPACE.activeTeamId = "team-1";
   WORKSPACE.teams = [{ id: "team-1", name: "Lyn G12", players: [] }];
@@ -193,5 +200,62 @@ describe("MatchHistoryManager (C4)", () => {
     expect(screen.getByText(no.matchHistory.guestTitle)).toBeTruthy();
     expect(screen.getByRole("link", { name: no.matchHistory.guestCta }).getAttribute("href")).toBe("/auth/sign-in");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  // MATCH-13: a match ended on this device whose result the server does not
+  // have yet is listed with the server history, marked as waiting.
+  describe("matches waiting to sync", () => {
+    function pending(matchId: string, over: Partial<PendingMatchCompletion> = {}): PendingMatchCompletion {
+      return {
+        matchId,
+        body: { status: "completed", scoreFor: 2, scoreAgainst: 1, reportEnabled: true, runtimeState: null },
+        endedAt: "2026-10-25T10:45:00.000Z",
+        userId: "user-1",
+        info: { teamId: "team-1", title: "Kamp – 25. okt 10:52", startsAt: "2026-10-25T09:52:00.000Z", format: "7v7" },
+        needsCreate: true,
+        ...over,
+      };
+    }
+
+    it("lists this coach's waiting match even when the server cannot be reached", async () => {
+      savePendingMatchCompletion(pending("local-a"));
+      savePendingMatchCompletion(pending("other-coach", { userId: "user-2" }));
+      savePendingMatchCompletion(
+        pending("other-team", { info: { ...pending("x").info!, teamId: "team-9" } })
+      );
+      fetchMock = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+      vi.stubGlobal("fetch", fetchMock);
+      renderHistory();
+
+      expect(await screen.findByText(no.matchHistory.errors.generic)).toBeTruthy();
+      const row = within(screen.getByTestId("history-completed")).getByRole("link");
+      expect(row.getAttribute("href")).toBe("/match/local-a");
+      expect(row.textContent).toContain("2–1");
+      expect(row.textContent).toContain(no.matchHistory.pendingSync);
+      expect(screen.queryByTestId("history-row-other-coach")).toBeNull();
+      expect(screen.queryByTestId("history-row-other-team")).toBeNull();
+    });
+
+    it("shows the match once, as waiting while the server is behind and from the server once synced", async () => {
+      savePendingMatchCompletion(pending("match-a", { needsCreate: false }));
+      // The server still has the row as live (the completion has not arrived).
+      serve([match("match-a", { status: "live", opponentName: null, title: "Kamp – 25. okt 10:52" })]);
+      renderHistory();
+
+      const completed = await screen.findByTestId("history-completed");
+      expect(within(completed).getAllByRole("link")).toHaveLength(1);
+      expect(screen.queryByTestId("history-live")).toBeNull();
+      expect(screen.getByTestId("history-row-match-a").textContent).toContain(no.matchHistory.pendingSync);
+
+      // The completion syncs: the list is read again and the server row shows once.
+      serve([match("match-a", { status: "completed", scoreFor: 2, scoreAgainst: 1, title: "Kamp – 25. okt 10:52" })]);
+      act(() => clearPendingMatchCompletion("match-a"));
+
+      await waitFor(() =>
+        expect(screen.getByTestId("history-row-match-a").textContent).not.toContain(no.matchHistory.pendingSync)
+      );
+      expect(screen.getAllByTestId("history-row-match-a")).toHaveLength(1);
+      expect(screen.getByTestId("history-row-match-a").textContent).toContain("2–1");
+    });
   });
 });

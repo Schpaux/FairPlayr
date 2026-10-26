@@ -87,6 +87,13 @@ export interface CreateMatchInput {
   format?: MatchFormat;
   reportEnabled?: boolean;
   status?: MatchStatus;
+  /**
+   * Row id chosen by the device (MATCH-13). A repeat with the same id answers
+   * with the existing row instead of creating a second match.
+   */
+  id?: string;
+  /** When the match was started on the device; only for a live or completed match. */
+  startedAt?: string;
 }
 
 export interface UpdateMatchStatusInput {

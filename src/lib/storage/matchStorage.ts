@@ -13,6 +13,7 @@ import {
   safeRemoveItem,
   setItemOrThrow,
 } from "@/lib/storage/storageEnvelope";
+import { getPendingMatchCompletion } from "@/lib/storage/pendingMatchCompletionStorage";
 
 export const MATCH_SETUP_KEY = "fairplayr.matchSetup.v1";
 
@@ -39,9 +40,39 @@ const STORAGE_VERSION = 2;
  */
 export type MatchStatus = "draft" | "active" | "ended";
 
+/**
+ * How a signed-in coach's match reaches the server (MATCH-13). The server
+ * match id is chosen on the device when the match starts, so a match whose
+ * row could not be created yet still has one stable identity.
+ */
+export interface StoredMatchServerLink {
+  /** Signed-in coach who started the match; only that account syncs it. */
+  ownerUserId: string;
+  /**
+   * Set until the server confirms the match row exists. The row is created
+   * with the stored server match id, so a repeat never makes a second one.
+   */
+  pendingCreate: { title: string; startsAt: string } | null;
+}
+
+/**
+ * MATCH-13-F4: kept with an ended server-backed match until the server
+ * confirms its completion. Written in the same write as "ended", so the device
+ * knows after a reload that the completion may exist nowhere else, and can
+ * rebuild it from this setup and the stored live match.
+ */
+export interface StoredEndedCompletion {
+  endedAt: string;
+  reportEnabled: boolean;
+}
+
 export interface StoredMatchConfig {
   config: MatchConfig;
   status: MatchStatus;
+  /** See `StoredEndedCompletion`; null once confirmed or for any other match. */
+  endedCompletion: StoredEndedCompletion | null;
+  /** Null for guest/local-only matches and setups stored before it existed. */
+  serverLink: StoredMatchServerLink | null;
   /**
    * Server match this setup was started for, or null for a guest/local-only
    * match. Undefined for setups stored before this field existed: their
@@ -58,6 +89,8 @@ interface StorageEnvelope {
   status: MatchStatus;
   // Optional so setups written before it existed stay valid (read as unknown).
   serverMatchId?: string | null;
+  serverLink?: StoredMatchServerLink | null;
+  endedCompletion?: StoredEndedCompletion | null;
 }
 
 interface LegacyEnvelope {
@@ -174,6 +207,24 @@ function toValidMatchConfig(v: unknown): MatchConfig | null {
   };
 }
 
+function toValidServerLink(v: unknown): StoredMatchServerLink | null {
+  if (!isRecord(v) || typeof v.ownerUserId !== "string" || !v.ownerUserId) return null;
+
+  const create = isRecord(v.pendingCreate) ? v.pendingCreate : null;
+  const title = create ? readString(create.title) : null;
+  const startsAt = create ? readString(create.startsAt) : null;
+
+  return {
+    ownerUserId: v.ownerUserId,
+    pendingCreate: title && startsAt ? { title, startsAt } : null,
+  };
+}
+
+function toValidEndedCompletion(v: unknown): StoredEndedCompletion | null {
+  if (!isRecord(v) || typeof v.endedAt !== "string" || typeof v.reportEnabled !== "boolean") return null;
+  return { endedAt: v.endedAt, reportEnabled: v.reportEnabled };
+}
+
 function isValidEnvelope(v: unknown): v is StorageEnvelope {
   if (!isRecord(v)) return false;
   return (
@@ -255,15 +306,19 @@ export function getStoredMatchSetup(): StoredMatchConfig | null {
             ? parsed.serverMatchId
             : null;
 
+      const serverLink = toValidServerLink(parsed.serverLink);
+      const endedCompletion =
+        parsed.status === "ended" ? toValidEndedCompletion(parsed.endedCompletion) : null;
+
       if (versionClass === "older" || versionClass === "invalid") {
         try {
-          writeEnvelope(config, parsed.status, serverMatchId);
+          writeEnvelope(config, parsed.status, serverMatchId, serverLink, endedCompletion);
         } catch {
           // Still usable from memory; the next write retries.
         }
       }
 
-      return { config, status: parsed.status, serverMatchId };
+      return { config, status: parsed.status, serverMatchId, serverLink, endedCompletion };
     }
 
     if (!isLegacyEnvelope(parsed)) {
@@ -279,10 +334,12 @@ export function getStoredMatchSetup(): StoredMatchConfig | null {
       config,
       status: parsed.status,
       serverMatchId: null,
+      serverLink: null,
+      endedCompletion: null,
     };
 
     try {
-      writeEnvelope(config, parsed.status, null);
+      writeEnvelope(config, parsed.status, null, null, null);
     } catch {
       // Still usable from memory; the next write retries.
     }
@@ -303,13 +360,32 @@ export function hasActiveStoredMatch(): boolean {
 }
 
 /**
+ * MATCH-13-F4: true while the stored setup is an ended match whose completion
+ * is neither confirmed by the server nor stored as pending. The setup and the
+ * stored live match are then its last copy on the device and must not be
+ * replaced. Read from storage, so it holds across reloads.
+ */
+export function hasUnsecuredMatchEnd(): boolean {
+  const stored = getStoredMatchSetup();
+
+  return Boolean(
+    stored &&
+      stored.status === "ended" &&
+      stored.endedCompletion &&
+      stored.serverMatchId &&
+      !getPendingMatchCompletion(stored.serverMatchId)
+  );
+}
+
+/**
  * Save the current setup as a draft (coach is still configuring).
  *
  * Refused (returns false) while a match is active: writing a draft over it
- * would demote the running match and hide it from the live screen.
+ * would demote the running match and hide it from the live screen. Likewise
+ * while an ended match's completion is not secured (`hasUnsecuredMatchEnd`).
  */
 export function saveMatchSetupDraft(config: MatchConfig): boolean {
-  if (hasActiveStoredMatch()) return false;
+  if (hasActiveStoredMatch() || hasUnsecuredMatchEnd()) return false;
   writeDraftEnvelope(config, "draft");
   return true;
 }
@@ -320,22 +396,74 @@ export function saveMatchSetupDraft(config: MatchConfig): boolean {
  *
  * `serverMatchId` is the server record the match was started for, or null for
  * a guest/local-only match. It is always set explicitly here, so a new start
- * never inherits the server id of a previous match.
+ * never inherits the server id of a previous match. `serverLink` likewise.
  */
-export function activateMatch(config: MatchConfig, serverMatchId: string | null = null): void {
-  writeEnvelope(config, "active", serverMatchId);
+export function activateMatch(
+  config: MatchConfig,
+  serverMatchId: string | null = null,
+  serverLink: StoredMatchServerLink | null = null
+): void {
+  writeEnvelope(config, "active", serverMatchId, serverLink, null);
 }
 
-/** Mark the match as ended. */
-export function endMatch(config: MatchConfig): void {
-  writeEnvelope(config, "ended");
+/**
+ * Records that the server now has the row for this match. Only touches the
+ * stored setup when it is still that same match (a late answer for match A
+ * never changes match B). Returns whether anything was written.
+ */
+export function markServerMatchCreated(setupId: string, serverMatchId: string): boolean {
+  const stored = getStoredMatchSetup();
+
+  if (
+    !stored ||
+    stored.config.id !== setupId ||
+    stored.serverMatchId !== serverMatchId ||
+    !stored.serverLink?.pendingCreate
+  ) {
+    return false;
+  }
+
+  try {
+    writeEnvelope(stored.config, stored.status, serverMatchId, { ...stored.serverLink, pendingCreate: null });
+    return true;
+  } catch {
+    // Kept as pending: the next attempt creates idempotently again.
+    return false;
+  }
 }
 
-/** Refused (returns false) while a match is active, like `saveMatchSetupDraft`. */
+/**
+ * Mark the match as ended. `endedCompletion` is given for a server-backed
+ * match whose completion is still to be confirmed (MATCH-13-F4).
+ */
+export function endMatch(config: MatchConfig, endedCompletion: StoredEndedCompletion | null = null): void {
+  writeEnvelope(config, "ended", undefined, undefined, endedCompletion);
+}
+
+/**
+ * Drops `endedCompletion` once the server confirmed the completion, only while
+ * the stored setup is still that match. Returns whether it is gone.
+ */
+export function markMatchCompletionConfirmed(serverMatchId: string): boolean {
+  const stored = getStoredMatchSetup();
+
+  if (!stored || stored.serverMatchId !== serverMatchId || !stored.endedCompletion) {
+    return true;
+  }
+
+  try {
+    writeEnvelope(stored.config, stored.status, stored.serverMatchId, stored.serverLink, null);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Refused (returns false) like `saveMatchSetupDraft`. */
 export function updateMatchConfig(config: MatchConfig): boolean {
   const stored = getStoredMatchSetup();
 
-  if (stored?.status === "active") return false;
+  if (stored?.status === "active" || hasUnsecuredMatchEnd()) return false;
 
   if (stored) {
     writeDraftEnvelope(config, stored.status);
@@ -370,6 +498,18 @@ function storedServerMatchIdFor(configId: string): string | null | undefined {
   return stored && stored.config.id === configId ? stored.serverMatchId : null;
 }
 
+/** Server link of the stored setup, kept only while it is the same setup. */
+function storedServerLinkFor(configId: string): StoredMatchServerLink | null {
+  const stored = getStoredMatchSetup();
+  return stored && stored.config.id === configId ? stored.serverLink : null;
+}
+
+/** Ended completion of the stored setup, kept only while it is the same ended setup. */
+function storedEndedCompletionFor(configId: string, status: MatchStatus): StoredEndedCompletion | null {
+  const stored = getStoredMatchSetup();
+  return stored && stored.config.id === configId && status === "ended" ? stored.endedCompletion : null;
+}
+
 /**
  * Draft writes run from effects in the setup editors, which have no catch: a
  * newer build's setup is left alone without throwing (the update-required
@@ -386,7 +526,9 @@ function writeDraftEnvelope(config: MatchConfig, status: MatchStatus): void {
 function writeEnvelope(
   config: MatchConfig,
   status: MatchStatus,
-  serverMatchId: string | null | undefined = storedServerMatchIdFor(config.id)
+  serverMatchId: string | null | undefined = storedServerMatchIdFor(config.id),
+  serverLink: StoredMatchServerLink | null = storedServerLinkFor(config.id),
+  endedCompletion: StoredEndedCompletion | null = storedEndedCompletionFor(config.id, status)
 ): void {
   if (typeof window === "undefined") return;
   const envelope: StorageEnvelope = {
@@ -394,6 +536,8 @@ function writeEnvelope(
     config,
     status,
     serverMatchId,
+    ...(serverLink ? { serverLink } : {}),
+    ...(endedCompletion ? { endedCompletion } : {}),
   };
   // Throws on a failed write, as before, and when refusing to replace a newer
   // build's setup (StorageNewerVersionError): lifecycle callers treat both as

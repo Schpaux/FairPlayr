@@ -42,6 +42,14 @@ import {
   saveMatchSetupDraft,
 } from "@/lib/storage/matchStorage";
 import { liveHrefFor, startLocalMatch } from "@/lib/match/activeMatchRecovery";
+import { newServerMatchId, syncActiveMatchCreate } from "@/lib/match/matchServerCreate";
+import {
+  hasUnsavedMatchCompletion,
+  retrySavingUnsavedMatchCompletions,
+} from "@/lib/match/matchCompletion";
+import type { StoredMatchServerLink } from "@/lib/storage/matchStorage";
+import { fetchOrNull, readErrorMessage } from "@/lib/utils/fetchOrNull";
+import { generateMatchName } from "@/lib/utils/matchName";
 import { getTeamMatchPrefs } from "@/lib/storage/teamPrefsStorage";
 import { PageShell } from "@/components/ui/PageShell";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -57,6 +65,7 @@ import { PitchLineupEditor } from "@/components/match/PitchLineupEditor";
 import { cn } from "@/lib/utils";
 import { useTeamWorkspace } from "@/components/providers/TeamWorkspaceProvider";
 import { useActiveMatch } from "@/components/providers/ActiveMatchProvider";
+import { useAuth } from "@/components/providers/AuthProvider";
 
 // ─── Layout pieces ────────────────────────────────────────────────────────────
 
@@ -95,6 +104,7 @@ export function MatchSetupManager() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const workspace = useTeamWorkspace();
+  const auth = useAuth();
   const {
     activeMatch,
     activeMatchHref,
@@ -168,10 +178,21 @@ export function MatchSetupManager() {
     setSettingsOpen(false);
   }, [isHydrated, team, workspace.isLoading]);
 
+  // MATCH-13-F4: the last match's completion could not be stored, so starting
+  // would overwrite its last copy on the device. Start and draft saving wait
+  // for a save.
+  const [unsavedCompletionBlock, setUnsavedCompletionBlock] = useState(false);
+
   // ── Persist draft on every edit (never on open) ────────────────────────────
   useEffect(() => {
     if (!isHydrated || !setup || !hasEdits) return;
     if (!saveMatchSetupDraft(setup)) {
+      // MATCH-13-F4: the stored setup is an ended match whose completion is
+      // not secured. Edits stay here; Start shows why and offers a retry.
+      if (hasUnsavedMatchCompletion()) {
+        setUnsavedCompletionBlock(true);
+        return;
+      }
       // A match became active (e.g. in another tab) and owns the stored setup:
       // show the way to it rather than an editor whose changes are not saved.
       setActiveLiveHref(liveHrefFor(getStoredMatchSetup()?.serverMatchId));
@@ -312,13 +333,36 @@ export function MatchSetupManager() {
     if (startFocusRef.current) startingStatusRef.current?.focus({ preventScroll: true });
     setIsStarting(true);
 
+    // MATCH-13: a signed-in coach's match always has a server identity. A
+    // planned match keeps its own; a new one gets an id chosen here, and its
+    // row is created with that id (now, or later when the network allows).
+    const ownerUserId =
+      auth.status === "authenticated" && workspace.mode === "cloud" ? auth.user?.id ?? null : null;
+    const newMatchId = !matchId && ownerUserId ? newServerMatchId() : null;
+    const serverMatchId = matchId ?? newMatchId;
+    const startedAt = new Date();
+    const serverLink: StoredMatchServerLink | null = ownerUserId
+      ? {
+          ownerUserId,
+          pendingCreate: newMatchId
+            ? { title: generateMatchName(null, startedAt), startsAt: startedAt.toISOString() }
+            : null,
+        }
+      : null;
+
     let started: ReturnType<typeof startLocalMatch>;
     try {
-      started = startLocalMatch(setup, matchId, { squadPlayers: team?.players });
+      started = startLocalMatch(setup, serverMatchId, { squadPlayers: team?.players, serverLink });
     } catch {
       // Not saved on the device (full, or a newer build's data): the match
       // must not start without being stored.
       setStartError(t("errors.startFailed"));
+      setIsStarting(false);
+      restoreStartFocus();
+      return;
+    }
+    if (!started.ok && started.reason === "unsaved_completion") {
+      setUnsavedCompletionBlock(true);
       setIsStarting(false);
       restoreStartFocus();
       return;
@@ -334,7 +378,7 @@ export function MatchSetupManager() {
 
     try {
       if (matchId) {
-        const response = await fetch(`/api/matches/${encodeURIComponent(matchId)}`, {
+        const response = await fetchOrNull(`/api/matches/${encodeURIComponent(matchId)}`, {
           method: "PATCH",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
@@ -343,12 +387,23 @@ export function MatchSetupManager() {
           }),
         });
 
-        if (!response.ok) {
-          const payload = (await response.json()) as { message?: string };
-          throw new Error(payload.message ?? t("errors.startFailed"));
+        // No network: the match is already started and stored here, and its
+        // completion reaches the server later (AGENTS.md §3). A server that
+        // answers with an error (e.g. another match is live) still stops here.
+        if (response && !response.ok) {
+          throw new Error((await readErrorMessage(response)) ?? t("errors.startFailed"));
         }
 
         router.push(`/match/live?matchId=${encodeURIComponent(matchId)}`);
+        return;
+      }
+
+      if (newMatchId && ownerUserId) {
+        // Not awaited: the match runs whatever the server answers. A failed
+        // create stays marked on the stored match and is retried on reconnect,
+        // when the app comes back, and before the completion is sent.
+        void syncActiveMatchCreate(ownerUserId);
+        router.push(`/match/live?matchId=${encodeURIComponent(newMatchId)}`);
         return;
       }
 
@@ -602,6 +657,24 @@ export function MatchSetupManager() {
           the sticky bar so they never cover the squad or the pitch. */}
       <div ref={startNoticesRef} className="space-y-3 empty:hidden">
         {startError ? <Notice tone="error">{startError}</Notice> : null}
+
+        {unsavedCompletionBlock ? (
+          <Notice
+            tone="error"
+            title={t("unsavedCompletion.title")}
+            action={
+              <Button
+                size="sm"
+                block
+                onClick={() => setUnsavedCompletionBlock(!retrySavingUnsavedMatchCompletions())}
+              >
+                {t("unsavedCompletion.retry")}
+              </Button>
+            }
+          >
+            {t("unsavedCompletion.description")}
+          </Notice>
+        ) : null}
 
         {showStartGuard ? (
           <Notice

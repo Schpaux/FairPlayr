@@ -17,7 +17,9 @@ import {
   type CanonicalMatchStatus,
 } from "@/lib/match/activeMatchRecovery";
 import { retryPendingMatchCompletion, submitMatchCompletion } from "@/lib/match/matchCompletion";
-import { listPendingMatchCompletionIds } from "@/lib/storage/pendingMatchCompletionStorage";
+import { syncActiveMatchCreate } from "@/lib/match/matchServerCreate";
+import { listPendingMatchCompletions } from "@/lib/storage/pendingMatchCompletionStorage";
+import { getStoredMatchSetup } from "@/lib/storage/matchStorage";
 
 interface ActiveMatchItem {
   id: string;
@@ -124,6 +126,8 @@ export function ActiveMatchProvider({ children }: { children: ReactNode }) {
     setResolution(resolveNow());
   }, [activeTeamId, auth.status, fetchServerSnapshot, resolveNow]);
 
+  const userId = auth.user?.id ?? null;
+
   // Acts on the match the coach was shown, never on whatever this device
   // holds by the time the action runs (another tab may have changed it).
   const closeWithMode = useCallback(async (mode: "force-close" | "discard") => {
@@ -142,10 +146,33 @@ export function ActiveMatchProvider({ children }: { children: ReactNode }) {
           const ended = endLocalActiveMatch();
 
           if (ended?.completion && isSignedIn) {
-            await submitMatchCompletion(ended.completion.matchId, ended.completion.body, ended.completion.endedAt);
+            await submitMatchCompletion(
+              ended.completion.matchId,
+              ended.completion.body,
+              ended.completion.endedAt,
+              ended.completion
+            );
           }
         } else {
-          if (isSignedIn) {
+          // MATCH-13: a row still marked as not created may exist anyway (its
+          // answer was lost) or be on its way (a create in flight). The create
+          // is idempotent and joins one in flight, so it runs to the end
+          // first; the discard then always reaches the row, and a late repeat
+          // only gets the existing row back. Someone else's match (nothing
+          // to create for this coach) is left alone on the server.
+          let onServer = isSignedIn;
+
+          if (onServer && getStoredMatchSetup()?.serverLink?.pendingCreate) {
+            const created = userId ? await syncActiveMatchCreate(userId) : null;
+
+            if (created === null) {
+              onServer = false;
+            } else if (created.status !== "created") {
+              throw new Error("ACTIVE_MATCH_CLOSE_FAILED");
+            }
+          }
+
+          if (onServer) {
             await persistActiveMatchCloseAction({
               matchId: device.serverMatchId ?? null,
               fetchImpl: fetch,
@@ -168,7 +195,7 @@ export function ActiveMatchProvider({ children }: { children: ReactNode }) {
     }
 
     await refreshActiveMatch();
-  }, [auth.status, refreshActiveMatch, resolution, resolveNow]);
+  }, [auth.status, refreshActiveMatch, resolution, resolveNow, userId]);
 
   const forceCloseActiveMatch = useCallback(async () => {
     await closeWithMode("force-close");
@@ -223,13 +250,23 @@ export function ActiveMatchProvider({ children }: { children: ReactNode }) {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // Completions ended on this device but not yet confirmed (offline, closed
-  // mid-request) are sent once on start and once per reconnect, from any
-  // screen. submitMatchCompletion de-duplicates a send already in flight.
+  // mid-request) are sent on start, per reconnect and when the app comes back
+  // to the foreground, from any screen; so is the server row of a running
+  // match that could not be created at start (MATCH-13). Only the signed-in
+  // coach's own matches are sent. Both de-duplicate a send already in flight.
   const syncPendingCompletions = useEffectEvent(async () => {
     let synced = false;
 
-    for (const matchId of listPendingMatchCompletionIds()) {
-      const result = await retryPendingMatchCompletion(matchId);
+    if (userId) {
+      await syncActiveMatchCreate(userId);
+    }
+
+    for (const pending of listPendingMatchCompletions()) {
+      if (pending.userId !== undefined && pending.userId !== userId) {
+        continue;
+      }
+
+      const result = await retryPendingMatchCompletion(pending.matchId);
       synced = synced || result?.status === "completed";
     }
 
@@ -246,17 +283,24 @@ export function ActiveMatchProvider({ children }: { children: ReactNode }) {
     const handleOnline = () => {
       void syncPendingCompletions();
     };
+    const handleVisible = () => {
+      if (document.visibilityState === "visible" && navigator.onLine) {
+        handleOnline();
+      }
+    };
 
     if (navigator.onLine) {
       handleOnline();
     }
 
     window.addEventListener("online", handleOnline);
+    document.addEventListener("visibilitychange", handleVisible);
 
     return () => {
       window.removeEventListener("online", handleOnline);
+      document.removeEventListener("visibilitychange", handleVisible);
     };
-  }, [auth.status]);
+  }, [auth.status, userId]);
 
   const value = useMemo<ActiveMatchContextValue>(
     () => ({

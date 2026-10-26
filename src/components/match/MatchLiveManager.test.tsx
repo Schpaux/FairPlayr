@@ -1621,5 +1621,49 @@ describe("MatchLiveManager match completion", () => {
       fireEvent.click(screen.getByTestId("live-clock"));
       expect(getStoredLiveMatch()?.status).toBe("running");
     });
+
+    // MATCH-12: the scorer sheet follows the local setup and never waits for
+    // the server; a scorer chosen before the server answers is sent after.
+    it("opens the scorer sheet from the local setup while no server request has answered", async () => {
+      window.localStorage.clear();
+      activateMatch({ ...SETUP, reportEnabled: true }, "match-1");
+      let answerGoal: (response: Response) => void = () => {};
+      fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.endsWith("/api/matches/match-1/events") && init?.method === "POST") {
+          return new Promise<Response>((resolve) => {
+            answerGoal = resolve;
+          });
+        }
+        if (url.includes("/events/") && init?.method === "PATCH") {
+          return Promise.resolve(new Response(null, { status: 204 }));
+        }
+        // Server reads and runtime syncs never answer.
+        return new Promise<Response>(() => {});
+      });
+
+      renderManager();
+      fireEvent.click(screen.getByRole("button", { name: sideline.strip.kickoff }));
+      fireEvent.click(screen.getByRole("button", { name: sideline.goals.us }));
+
+      const sheet = await screen.findByTestId("live-scorer");
+      fireEvent.click(within(sheet).getByRole("button", { name: /Player 2/ }));
+      await waitFor(() => {
+        const goal = getStoredLiveMatch()?.events.find((event) => event.type === "goal");
+        expect(goal && goal.type === "goal" ? goal.scorerPlayerId : null).toBe("p2");
+      });
+      const patches = () =>
+        fetchMock.mock.calls.filter(([url, init]) => String(url).includes("/events/") && init?.method === "PATCH");
+      expect(patches()).toHaveLength(0);
+
+      // The server answers late: the chosen scorer goes to that goal, in this match.
+      await act(async () => {
+        answerGoal(new Response(JSON.stringify({ event: { id: "srv-goal-1" } }), { status: 201 }));
+      });
+      await waitFor(() => expect(patches()).toHaveLength(1));
+      const [url, init] = patches()[0];
+      expect(String(url)).toBe("/api/matches/match-1/events/srv-goal-1");
+      expect(JSON.parse(init!.body as string)).toMatchObject({ primaryPlayerId: "p2" });
+    });
   });
 });
