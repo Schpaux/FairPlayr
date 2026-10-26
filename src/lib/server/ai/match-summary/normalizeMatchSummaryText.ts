@@ -1,11 +1,12 @@
 import "server-only";
 
 /**
- * Maximum number of non-empty content lines (title + up to 3 paragraphs).
+ * Maximum number of non-empty content lines (title + up to 4 paragraphs).
  * Blank separator lines between sections are preserved but do not count toward this limit.
  */
-const MAX_CONTENT_LINES = 4;
-const MAX_CHARS = 1100;
+const MAX_CONTENT_LINES = 5;
+/** Room for about 250 words (FEAT-SHARE-02); a longer text is cut at its last full sentence. */
+const MAX_CHARS = 2200;
 const MIN_WORDS = 6;
 const MIN_WORDS_BEST_EFFORT = 8;
 const MIN_CHARS_BEST_EFFORT = 45;
@@ -15,6 +16,14 @@ function wordCount(text: string): number {
     .split(/\s+/)
     .map((token) => token.trim())
     .filter(Boolean).length;
+}
+
+/** A heading that says nothing about this match (AI-QA-01); the line is dropped. */
+const GENERIC_HEADING = /^(kamp(?:oppsummering|referat|rapport)|oppsummering|referat)(?:\s+(?:av|fra)\s+kampen)?\s*[:.!]?$/i;
+
+/** «4–3 seier» → «4–3-seier» (a compound takes a hyphen after the result). */
+function hyphenateResultCompounds(text: string): string {
+  return text.replace(/(\d+\s*[–-]\s*\d+)\s+(seier|tap)(?![\p{L}])/giu, "$1-$2");
 }
 
 function hasSentenceTerminator(text: string): boolean {
@@ -43,7 +52,12 @@ export function normalizeMatchSummaryText(text: string): string | null {
   }
 
   // Process lines: keep content lines up to MAX_CONTENT_LINES, preserve single blank-line separators
-  const rawLines = normalized.split("\n").map((line) => line.trim());
+  // Plain text only: markdown heading marks and bold around a line are dropped.
+  const rawLines = normalized
+    .split("\n")
+    .map((line) => line.trim().replace(/^#{1,6}\s+/, "").replace(/^\*\*(.+)\*\*$/, "$1").trim());
+  const firstContent = rawLines.findIndex(Boolean);
+  if (firstContent >= 0 && GENERIC_HEADING.test(rawLines[firstContent])) rawLines[firstContent] = "";
   const resultLines: string[] = [];
   let contentLineCount = 0;
   let prevWasBlank = false;
@@ -72,7 +86,7 @@ export function normalizeMatchSummaryText(text: string): string | null {
     return null;
   }
 
-  const compact = resultLines.join("\n");
+  const compact = hyphenateResultCompounds(resultLines.join("\n"));
 
   if (compact.length < 20) {
     return null;
@@ -93,7 +107,9 @@ export function normalizeMatchSummaryText(text: string): string | null {
   }
 
   if (compact.length > MAX_CHARS) {
-    return `${compact.slice(0, MAX_CHARS - 1).trim()}...`;
+    const head = compact.slice(0, MAX_CHARS);
+    const lastEnd = Math.max(head.lastIndexOf(". "), head.lastIndexOf(".\n"), head.lastIndexOf("! "), head.lastIndexOf("? "));
+    return lastEnd > 0 ? head.slice(0, lastEnd + 1).trim() : null;
   }
 
   return compact;

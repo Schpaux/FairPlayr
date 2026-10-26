@@ -448,5 +448,11 @@ export function buildFactualSummary(share: PublicMatchShare, locale: FactualSumm
   if (unique.length === 0) return first;
 
   const list = unique.length === 1 ? unique[0] : `${unique.slice(0, -1).join(", ")} ${locale === "no" ? "og" : "and"} ${unique[unique.length - 1]}`;
+  // AI-QA-01: with goals missing from the log, the recorded scorers are not all of them.
+  if (scorers.length < scored) {
+    return locale === "no"
+      ? `${first} Blant de registrerte målscorerne: ${list}.`
+      : `${first} Recorded scorers include ${list}.`;
+  }
   return locale === "no" ? `${first} Målscorere: ${list}.` : `${first} Scorers: ${list}.`;
 }

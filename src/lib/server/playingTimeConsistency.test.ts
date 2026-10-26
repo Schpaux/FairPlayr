@@ -1,7 +1,7 @@
 // @vitest-environment node
 // STATS-01: one stored match gives the same playing time on the match details
 // page, in the Home season stats and in the AI match summary input, and the
-// AI prompt names no more players than before (SEC-04).
+// AI prompt names no players at all (SEC-04, FEAT-SHARE-02).
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createLiveMatchFromSetup,
@@ -22,6 +22,7 @@ vi.mock("server-only", () => ({}));
 const { getSeasonStats } = await import("@/lib/server/seasonStats");
 const { buildMatchSummaryInput } = await import("@/lib/server/ai/match-summary/buildMatchSummaryInput");
 const { buildMatchSummaryPrompt } = await import("@/lib/server/ai/match-summary/buildMatchSummaryPrompt");
+const { createPseudonymizer } = await import("@/lib/server/ai/match-summary/pseudonymize");
 
 const MIN = 60_000;
 const T0 = 1_000_000;
@@ -140,7 +141,7 @@ describe("STATS-01: one match, the same minutes everywhere", () => {
     expect(stats.timedMatches).toBe(1);
   });
 
-  it("sends the AI provider the same names as before, with corrected minutes", async () => {
+  it("uses the corrected minutes, and sends the AI provider no names, only the playing-time range", async () => {
     const input = await buildMatchSummaryInput(supabase, "user-1", "match-1");
 
     // Starters plus the substitute who came on; Iben never played and is not named (SEC-04).
@@ -154,9 +155,10 @@ describe("STATS-01: one match, the same minutes everywhere", () => {
       cameOn: false,
     });
 
-    const { prompt } = buildMatchSummaryPrompt(input);
-    expect(prompt).not.toContain("Iben");
-    expect(prompt).toContain('"minutter": 40');
+    // FEAT-SHARE-02: no names and no per-player minutes, only the range.
+    const { prompt } = buildMatchSummaryPrompt(input, createPseudonymizer());
+    for (const name of NAMES) expect(prompt).not.toContain(name);
+    expect(prompt).toContain('"høyeste_minutter": 40');
   });
 
   it("states no minutes to the AI when the clock was not stored, rather than too few", async () => {
@@ -199,7 +201,8 @@ describe("STATS-01: one match, the same minutes everywhere", () => {
     const input = await buildMatchSummaryInput(supabase, "user-1", "match-1");
 
     expect(input.playersUsedList.find((player) => player.name === "Hege")).toMatchObject({ cameOn: true, minutesPlayed: null });
-    expect(buildMatchSummaryPrompt(input).prompt).not.toContain('"minutter": 0');
+    // One unknown time: no range is sent at all, rather than a misleading 0.
+    expect(buildMatchSummaryPrompt(input, createPseudonymizer()).prompt).not.toMatch(/minutter": 0\b/);
   });
 
   it("does not add a player the old selection would not have named (known limitation)", async () => {

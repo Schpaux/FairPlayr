@@ -9,9 +9,10 @@ vi.mock("@/lib/server/ai/match-summary", () => ({ generateMatchSummaryByMatchId:
 
 import { sanitizePublicMatchShare, type PublicMatchShare } from "@/domain/matchShare";
 
-const { forbiddenNamesFor, generatePublicSummary, mentionsAnyName, statesResult } = await import(
+const { RESULT_LEVEL_RULE, alignGoalPlayerIds, buildPublicSummaryPrompt, forbiddenNamesFor, generatePublicSummary, mentionsAnyName, statesResult } = await import(
   "@/lib/server/share/publicSummary"
 );
+const { createPseudonymizer } = await import("@/lib/server/ai/match-summary/pseudonymize");
 const { getPublicMatchShare, refreshPublicSummary, saveMatchShare } = await import("@/lib/server/share/service");
 const { generateText } = await import("@/lib/server/ai/service");
 
@@ -266,6 +267,82 @@ describe("public summary", () => {
     expect(mentionsAnyName("Thea var god.", forbidden)).toBe(true);
   });
 
+  // FEAT-SHARE-02: pseudonymised model data per level.
+  const predictable = () => {
+    let calls = 0;
+    return createPseudonymizer(() => Math.floor(calls++ / 4));
+  };
+  const reply = (text: string) => ({ text, model: "stub", location: "stub", project: "stub" });
+
+  it("without names: no player codes, names, teams or date in the model data, and a code in the text is refused", async () => {
+    const view = completedView("result");
+    const { prompt, systemInstruction, allowedCodes } = buildPublicSummaryPrompt(view, predictable());
+    expect(allowedCodes.size).toBe(0);
+    expect(`${systemInstruction}\n${prompt}`).not.toMatch(/SPILLER_[A-Z0-9]{4}|Frida|Ida|Lyn G14|Byåsen|2026|søndag/);
+    expect(prompt).toContain('"stilling_etter": "2–1"');
+
+    const withCode = "Seier for [LAG]\n\n[LAG] vant 2–1 mot [MOTSTANDER] etter mål av SPILLER_AAAA. [MOTSTANDER] utlignet underveis.";
+    const generateTextFn = vi.fn().mockResolvedValue(reply(withCode));
+    const result = await generatePublicSummary(view, { squadNames: SQUAD, generateTextFn, pseudonymizer: predictable() });
+    expect(result.source).toBe("factual");
+  });
+
+  it("detailed: only scorer and assist codes are sent, and they come back as names", async () => {
+    const view = completedView("detailed");
+    const { prompt, allowedCodes } = buildPublicSummaryPrompt(view, predictable());
+    // The public answer has no player ids: each mention gets its own code, never merged by name.
+    expect([...allowedCodes].sort()).toEqual(["SPILLER_AAAA", "SPILLER_BBBB", "SPILLER_CCCC"]);
+    expect(prompt).not.toMatch(/Frida|Ida|Thea|Lyn G14|Byåsen/);
+
+    const text = [
+      "[LAG] vant 2–1 mot [MOTSTANDER]",
+      "",
+      "SPILLER_AAAA ga [LAG] ledelsen etter 4 minutter, etter pasning fra SPILLER_BBBB. [MOTSTANDER] utlignet til 1–1 etter 30 minutter, før SPILLER_CCCC avgjorde med 2–1 etter 41 minutter.",
+    ].join("\n");
+    const generateTextFn = vi.fn().mockResolvedValue(reply(text));
+    const result = await generatePublicSummary(view, { squadNames: SQUAD, generateTextFn, pseudonymizer: predictable() });
+    expect(result.source).toBe("ai");
+    expect(result.text).toContain("Frida Hansen ga Lyn G14 ledelsen etter 4 minutter, etter pasning fra Ida.");
+    expect(result.text).toContain("Byåsen utlignet til 1–1");
+  });
+
+  it("detailed: a code that was not handed out is refused", async () => {
+    const text = "Seier for [LAG]\n\n[LAG] vant 2–1 mot [MOTSTANDER]. SPILLER_DDDD var også med og scoret ikke, men laget vant.";
+    const generateTextFn = vi.fn().mockResolvedValue(reply(text));
+    expect(
+      (await generatePublicSummary(completedView("detailed"), { squadNames: SQUAD, generateTextFn, pseudonymizer: predictable() })).source
+    ).toBe("factual");
+  });
+
+  it("an incomplete public timeline sends the final score only, no order", () => {
+    const view = sanitizePublicMatchShare({
+      ...completedView("result"),
+      score: { for: 3, against: 1 },
+      summary: { status: "pending" },
+    })!;
+    const { prompt } = buildPublicSummaryPrompt(view, predictable());
+    expect(prompt).toContain('"tidslinje": "ufullstendig"');
+    expect(prompt).toContain('"tekst": "3–1"');
+    expect(prompt).not.toContain("stilling_etter");
+  });
+
+  it("incomplete and detailed: shows the goals without a recorded scorer", () => {
+    const view = sanitizePublicMatchShare({ ...completedView("detailed"), score: { for: 4, against: 1 }, summary: { status: "pending" } })!;
+    const { prompt, systemInstruction } = buildPublicSummaryPrompt(view, predictable());
+    expect(prompt).toContain('"egne_mål_uten_registrert_målscorer": 2');
+    expect(systemInstruction).toContain("Blant de registrerte målscorerne");
+    expect(buildPublicSummaryPrompt(completedView("result"), predictable()).prompt).not.toContain("uten_registrert");
+    expect(systemInstruction).not.toContain(RESULT_LEVEL_RULE);
+  });
+
+  it("AI-QA-02: the result level asks for no comment on missing scorers and gives no scorer rules", () => {
+    const view = sanitizePublicMatchShare({ ...completedView("result"), score: { for: 4, against: 1 }, summary: { status: "pending" } })!;
+    const { systemInstruction } = buildPublicSummaryPrompt(view, predictable());
+    expect(systemInstruction).toContain(RESULT_LEVEL_RULE);
+    expect(systemInstruction).not.toContain("Blant de registrerte målscorerne");
+    expect(systemInstruction).not.toContain("Nevn målscorerne samlet");
+  });
+
   it("checks names as whole words and results in common spellings", () => {
     expect(mentionsAnyName("Idar spilte", ["Ida"])).toBe(false);
     expect(mentionsAnyName("Mål av IDA.", ["Ida"])).toBe(true);
@@ -319,7 +396,7 @@ describe("public summary: only from the current data", () => {
   it("states the match's own result, and a stored text matching the data is not written again", async () => {
     // Goal events missing (an older match): the result is still 3–1.
     const { tables, supabase } = await sharedCompletedMatch([3, 1]);
-    aiText("Seier\nLyn G14 vant 3–1 mot Byåsen.");
+    aiText("Seier for [LAG]\n\n[LAG] vant 3–1 mot [MOTSTANDER], og det ble sluttresultatet i kampen.");
 
     await refreshPublicSummary(supabase, MATCH_ID);
     expect(tables.match_shares[0].public_summary_text).toContain("3–1");
@@ -334,13 +411,13 @@ describe("public summary: only from the current data", () => {
 
   it("a corrected result hides the old text at once and writes a new one", async () => {
     const { tables, supabase } = await sharedCompletedMatch([3, 1]);
-    aiText("Seier\nLyn G14 vant 3–1 mot Byåsen.");
+    aiText("Seier for [LAG]\n\n[LAG] vant 3–1 mot [MOTSTANDER], og det ble sluttresultatet i kampen.");
     await refreshPublicSummary(supabase, MATCH_ID);
 
     Object.assign(tables.matches[0], { score_for: 2 });
     expect((await getPublicMatchShare(supabase, DEVICE_TOKEN))?.summary).toEqual({ status: "pending", text: null, generatedAt: null });
 
-    aiText("Seier\nLyn G14 vant 2–1 mot Byåsen.");
+    aiText("Seier for [LAG]\n\n[LAG] vant 2–1 mot [MOTSTANDER], og det ble sluttresultatet i kampen.");
     await refreshPublicSummary(supabase, MATCH_ID);
     const view = await getPublicMatchShare(supabase, DEVICE_TOKEN);
     expect(view?.summary?.status).toBe("ready");
@@ -351,7 +428,7 @@ describe("public summary: only from the current data", () => {
     const { tables, supabase } = await sharedCompletedMatch([3, 1]);
     vi.mocked(generateText).mockImplementation(async () => {
       Object.assign(tables.matches[0], { score_for: 2 }); // corrected meanwhile
-      return { text: "Seier\nLyn G14 vant 3–1 mot Byåsen." } as never;
+      return { text: "Seier for [LAG]\n\n[LAG] vant 3–1 mot [MOTSTANDER], og det ble sluttresultatet i kampen." } as never;
     });
 
     await refreshPublicSummary(supabase, MATCH_ID);
@@ -363,7 +440,7 @@ describe("public summary: only from the current data", () => {
     vi.mocked(generateText).mockImplementation(async () => {
       // Turned off and on again meanwhile: a new row with a new token.
       remade.tables.match_shares[0].token = "N".repeat(43);
-      return { text: "Seier\nLyn G14 vant 3–1 mot Byåsen." } as never;
+      return { text: "Seier for [LAG]\n\n[LAG] vant 3–1 mot [MOTSTANDER], og det ble sluttresultatet i kampen." } as never;
     });
     await refreshPublicSummary(remade.supabase, MATCH_ID);
     expect(remade.tables.match_shares[0].public_summary_text).toBeNull();
@@ -376,9 +453,110 @@ describe("public summary: only from the current data", () => {
         public_summary_level: "result",
         public_summary_generated_at: new Date(Date.now() + 60_000).toISOString(),
       });
-      return { text: "Seier\nLyn G14 vant 3–1 mot Byåsen." } as never;
+      return { text: "Seier for [LAG]\n\n[LAG] vant 3–1 mot [MOTSTANDER], og det ble sluttresultatet i kampen." } as never;
     });
     await refreshPublicSummary(raced.supabase, MATCH_ID);
     expect(raced.tables.match_shares[0].public_summary_text).toBe("Nyere tekst 3–1");
+  });
+});
+
+// ─── AI-ID-01: player ids from the goal events, on the server only ───────────
+
+const FRIDA = "aaaaaaaa-0000-4000-8000-000000000001";
+const IDA = "aaaaaaaa-0000-4000-8000-000000000002";
+const FRIDA_TWO = "aaaaaaaa-0000-4000-8000-000000000003";
+
+/** The goal events behind completedView's goals, stored out of order. */
+function goalEvents(): Row[] {
+  return [
+    { match_id: MATCH_ID, type: "goal_for", minute: 41, timestamp_ms: 2_460_000, created_at: "2026-10-26T10:41:00.000Z", primary_player_id: FRIDA, secondary_player_id: null, payload: { primaryPlayerName: "Frida Hansen" } },
+    { match_id: MATCH_ID, type: "goal_for", minute: 4, timestamp_ms: 240_000, created_at: "2026-10-26T10:04:00.000Z", primary_player_id: FRIDA, secondary_player_id: IDA, payload: { primaryPlayerName: "Frida Hansen", secondaryPlayerName: "Ida" } },
+    { match_id: MATCH_ID, type: "goal_against", minute: 30, timestamp_ms: 1_800_000, created_at: "2026-10-26T10:30:00.000Z", primary_player_id: null, secondary_player_id: null, payload: {} },
+  ];
+}
+
+describe("public summary: player ids (AI-ID-01)", () => {
+  const predictable = () => {
+    let calls = 0;
+    return createPseudonymizer(() => Math.floor(calls++ / 4));
+  };
+  const goals = () => completedView("detailed").goals!;
+
+  it("lines the events up with the public goals in the public order", () => {
+    expect(alignGoalPlayerIds(goals(), goalEvents() as never)).toEqual([
+      { scorerId: FRIDA, assistId: IDA },
+      null,
+      { scorerId: FRIDA, assistId: null },
+    ]);
+  });
+
+  it("any doubt gives null: count, side, minute, name or a tie with different players", () => {
+    const events = goalEvents();
+    expect(alignGoalPlayerIds(goals(), events.slice(1) as never)).toBeNull();
+    expect(alignGoalPlayerIds(goals(), events.map((e) => (e.minute === 30 ? { ...e, type: "goal_for" } : e)) as never)).toBeNull();
+    expect(alignGoalPlayerIds(goals(), events.map((e) => (e.minute === 41 ? { ...e, minute: 40 } : e)) as never)).toBeNull();
+    expect(
+      alignGoalPlayerIds(goals(), events.map((e) => (e.minute === 41 ? { ...e, payload: { primaryPlayerName: "Thea Berg" } } : e)) as never)
+    ).toBeNull();
+    // Two own goals with the same sort key but different scorers: the database may order them either way.
+    const tied = sanitizePublicMatchShare({
+      ...completedView("detailed"),
+      goals: [
+        { minute: 4, side: "own", scorer: "Frida Hansen" },
+        { minute: 4, side: "own", scorer: "Frida Hansen" },
+      ],
+      summary: { status: "pending" },
+    })!.goals!;
+    const same = { match_id: MATCH_ID, type: "goal_for", minute: 4, timestamp_ms: null, created_at: "2026-10-26T10:04:00.000Z", secondary_player_id: null, payload: {} };
+    expect(alignGoalPlayerIds(tied, [{ ...same, primary_player_id: FRIDA }, { ...same, primary_player_id: FRIDA_TWO }] as never)).toBeNull();
+    expect(alignGoalPlayerIds(tied, [{ ...same, primary_player_id: FRIDA }, { ...same, primary_player_id: FRIDA }] as never)).toHaveLength(2);
+  });
+
+  it("with lined-up ids one player keeps one code; two players with the same name keep two", () => {
+    const view = completedView("detailed");
+    const ids = alignGoalPlayerIds(view.goals!, goalEvents() as never);
+    const { prompt, allowedCodes } = buildPublicSummaryPrompt(view, predictable(), ids);
+    expect([...allowedCodes].sort()).toEqual(["SPILLER_AAAA", "SPILLER_BBBB"]);
+    expect(prompt).not.toContain(FRIDA);
+    expect(prompt).not.toContain("aaaaaaaa");
+
+    const namesakes = alignGoalPlayerIds(
+      view.goals!,
+      goalEvents().map((e) => (e.minute === 41 ? { ...e, primary_player_id: FRIDA_TWO } : e)) as never
+    );
+    expect(buildPublicSummaryPrompt(view, predictable(), namesakes).allowedCodes.size).toBe(3);
+    // Without ids (or a list of the wrong length): a code per mention, as before.
+    expect(buildPublicSummaryPrompt(view, predictable(), null).allowedCodes.size).toBe(3);
+    expect(buildPublicSummaryPrompt(view, predictable(), [null]).allowedCodes.size).toBe(3);
+  });
+
+  it("refresh reads the ids on the server; they reach neither the model, the stored text nor the logs", async () => {
+    const tables = { ...matchTables("completed"), match_events: goalEvents() };
+    Object.assign(tables.matches[0], { score_for: 2, score_against: 1 });
+    const answer = publicAnswerFrom(tables);
+    const supabase = fakeSupabase(tables, (fn, args) => {
+      const base = answer(fn, args);
+      return base && { ...base, goals: completedView("detailed").goals };
+    });
+    await saveMatchShare(supabase, "coach", MATCH_ID, { summary: true, detailLevel: "detailed", ageGroup: "youth", token: DEVICE_TOKEN });
+    const logs = [vi.spyOn(console, "warn"), vi.spyOn(console, "error"), vi.spyOn(console, "info")];
+    for (const log of logs) log.mockImplementation(() => {});
+
+    vi.mocked(generateText).mockReset();
+    vi.mocked(generateText).mockImplementation(async (input) => {
+      const codes = [...new Set(input.prompt.match(/SPILLER_[A-Z0-9]{4}/g) ?? [])];
+      return {
+        text: `${codes[0]} scoret to ganger\n\n[LAG] vant 2–1 mot [MOTSTANDER]. ${codes[0]} scoret begge målene, det første etter pasning fra ${codes[1]}.`,
+      } as never;
+    });
+    await refreshPublicSummary(supabase, MATCH_ID);
+
+    const sent = JSON.stringify(vi.mocked(generateText).mock.calls);
+    // The rule's example code (SPILLER_A1B2) aside, Frida has one code and Ida one.
+    expect(new Set(sent.match(/SPILLER_[A-Z0-9]{4}/g)?.filter((code) => code !== "SPILLER_A1B2")).size).toBe(2);
+    expect(sent).not.toMatch(/aaaaaaaa|Frida|Ida/);
+    expect(tables.match_shares[0].public_summary_text).toContain("Frida Hansen scoret begge målene");
+    expect(JSON.stringify(logs.flatMap((log) => log.mock.calls))).not.toContain("aaaaaaaa");
+    for (const log of logs) log.mockRestore();
   });
 });

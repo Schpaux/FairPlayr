@@ -1,13 +1,15 @@
 import "server-only";
 import { getVertexAiConfig } from "@/lib/server/ai/config";
 import { AiServiceError } from "@/lib/server/ai/errors";
-import { createVertexAiClient, getVertexAiClient } from "@/lib/server/ai/vertex";
+import { getVertexAiClient } from "@/lib/server/ai/vertex";
 
 export interface GenerateTextInput {
   systemInstruction?: string;
   prompt: string;
   maxOutputTokens?: number;
   temperature?: number;
+  /** Gemini 2.5 thinking tokens; sent only to Gemini 2.5 models (see thinkingConfigFor). */
+  thinkingBudget?: number;
 }
 
 export interface GenerateTextResult {
@@ -31,6 +33,33 @@ function normalizeMaxOutputTokens(value: number | undefined): number {
   }
 
   return Math.max(32, Math.min(2048, Math.floor(value)));
+}
+
+/**
+ * AI-QA-01: Gemini 2.5 thinks by default with a dynamic budget of up to 8,192
+ * tokens, and the thinking counts against maxOutputTokens, so a long think
+ * can leave an empty answer. A fixed budget bounds it.
+ *
+ * Documented ranges (Vertex AI "Thinking", checked 2026-10-27): 2.5 Flash
+ * 1–24,576 (0 turns it off), 2.5 Pro 128–32,768, 2.5 Flash-Lite 512–24,576.
+ * The field is generationConfig.thinkingConfig.thinkingBudget; the
+ * @google-cloud/vertexai 1.11 types lack it, but the SDK sends the
+ * generationConfig unchanged. Other models get no thinkingConfig.
+ */
+export function thinkingConfigFor(
+  model: string,
+  budget: number | undefined
+): { thinkingBudget: number } | undefined {
+  if (typeof budget !== "number" || !Number.isFinite(budget)) return undefined;
+  if (!/^gemini-2\.5-/.test(model)) return undefined;
+  const min = model.startsWith("gemini-2.5-pro") ? 128 : model.startsWith("gemini-2.5-flash-lite") ? 512 : 0;
+  const max = model.startsWith("gemini-2.5-pro") ? 32768 : 24576;
+  return { thinkingBudget: Math.max(min, Math.min(max, Math.floor(budget))) };
+}
+
+function finishReasonOf(response: unknown): string | undefined {
+  const reason = (response as { candidates?: Array<{ finishReason?: unknown }> } | null)?.candidates?.[0]?.finishReason;
+  return typeof reason === "string" ? reason : undefined;
 }
 
 function responseToText(response: unknown): string {
@@ -121,11 +150,6 @@ function extractVertexFailureDetails(error: unknown): Record<string, unknown> {
   return details;
 }
 
-function isHtmlJsonParseFailure(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.includes("Unexpected token '<'");
-}
-
 export async function generateText(input: GenerateTextInput): Promise<GenerateTextResult> {
   if (!input.prompt || !input.prompt.trim()) {
     throw new AiServiceError("VERTEX_INVALID_PROMPT", "Prompt kan ikke være tom.", 400);
@@ -135,11 +159,14 @@ export async function generateText(input: GenerateTextInput): Promise<GenerateTe
 
   try {
     const client = getVertexAiClient();
+    const thinkingConfig = thinkingConfigFor(config.model, input.thinkingBudget);
     const model = client.getGenerativeModel({
       model: config.model,
       generationConfig: {
         temperature: normalizeTemperature(input.temperature),
         maxOutputTokens: normalizeMaxOutputTokens(input.maxOutputTokens),
+        // Not in the SDK's GenerationConfig type; passed through to the API as is.
+        ...(thinkingConfig ? ({ thinkingConfig } as Record<string, unknown>) : {}),
       },
     });
 
@@ -165,7 +192,9 @@ export async function generateText(input: GenerateTextInput): Promise<GenerateTe
       throw new AiServiceError(
         "VERTEX_EMPTY_RESPONSE",
         "Vertex AI returnerte tom tekst for foresporselen.",
-        502
+        502,
+        // Only the reason (for example MAX_TOKENS), never response content.
+        { finishReason: finishReasonOf(response) }
       );
     }
 
@@ -176,69 +205,8 @@ export async function generateText(input: GenerateTextInput): Promise<GenerateTe
       project: config.project,
     };
   } catch (error) {
-    if (config.location === "global" && isHtmlJsonParseFailure(error)) {
-      console.warn("[ai] Retrying Vertex call with regional fallback", {
-        stage: "vertex_generate_content_fallback",
-        fallbackLocation: "us-central1",
-        fallbackApiEndpoint: "us-central1-aiplatform.googleapis.com",
-      });
-
-      try {
-        const fallback = createVertexAiClient({
-          location: "us-central1",
-          apiEndpoint: "us-central1-aiplatform.googleapis.com",
-        });
-
-        const fallbackModel = fallback.client.getGenerativeModel({
-          model: config.model,
-          generationConfig: {
-            temperature: normalizeTemperature(input.temperature),
-            maxOutputTokens: normalizeMaxOutputTokens(input.maxOutputTokens),
-          },
-        });
-
-        const fallbackResult = await fallbackModel.generateContent({
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: input.prompt.trim() }],
-            },
-          ],
-          systemInstruction: input.systemInstruction
-            ? {
-                role: "system",
-                parts: [{ text: input.systemInstruction.trim() }],
-              }
-            : undefined,
-        });
-
-        const fallbackResponse = await fallbackResult.response;
-        const fallbackText = responseToText(fallbackResponse);
-
-        if (!fallbackText) {
-          throw new AiServiceError(
-            "VERTEX_EMPTY_RESPONSE",
-            "Vertex AI returnerte tom tekst for foresporselen.",
-            502,
-            {
-              stage: "vertex_generate_content_fallback",
-              fallbackLocation: fallback.runtimeInfo.effectiveLocation,
-              fallbackApiEndpoint: fallback.runtimeInfo.apiEndpoint,
-            }
-          );
-        }
-
-        return {
-          text: fallbackText,
-          model: config.model,
-          location: fallback.runtimeInfo.effectiveLocation,
-          project: config.project,
-        };
-      } catch (fallbackError) {
-        error = fallbackError;
-      }
-    }
-
+    // SEC-10: no retry in another region. A failed call fails here, and the
+    // caller uses its fallback text; the data never leaves VERTEX_AI_LOCATION.
     if (error instanceof AiServiceError) {
       throw error;
     }

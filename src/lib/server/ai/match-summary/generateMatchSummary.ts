@@ -1,28 +1,58 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { AiServiceError } from "@/lib/server/ai/errors";
 import { generateText, type GenerateTextResult } from "@/lib/server/ai/service";
 import { buildFallbackMatchSummary } from "@/lib/server/ai/match-summary/buildFallbackMatchSummary";
 import { buildMatchSummaryInput } from "@/lib/server/ai/match-summary/buildMatchSummaryInput";
 import { buildMatchSummaryPrompt } from "@/lib/server/ai/match-summary/buildMatchSummaryPrompt";
 import { normalizeMatchSummaryText } from "@/lib/server/ai/match-summary/normalizeMatchSummaryText";
-import type { MatchSummaryInput, MatchSummaryResult } from "@/lib/server/ai/match-summary/types";
+import {
+  MIN_SUMMARY_WORDS,
+  inventsUnsupportedDetail,
+  statesResult,
+  statesReversedResult,
+  wordCount,
+} from "@/lib/server/ai/match-summary/checkSummaryText";
+import { createPseudonymizer, type Pseudonymizer } from "@/lib/server/ai/match-summary/pseudonymize";
+import type {
+  MatchSummaryFailureCode,
+  MatchSummaryInput,
+  MatchSummaryResult,
+} from "@/lib/server/ai/match-summary/types";
+
+export type GenerateTextFn = (input: {
+  systemInstruction?: string;
+  prompt: string;
+  maxOutputTokens?: number;
+  temperature?: number;
+  thinkingBudget?: number;
+}) => Promise<GenerateTextResult>;
 
 interface GenerateMatchSummaryDeps {
-  generateTextFn?: (input: {
-    systemInstruction?: string;
-    prompt: string;
-    maxOutputTokens?: number;
-    temperature?: number;
-  }) => Promise<GenerateTextResult>;
+  generateTextFn?: GenerateTextFn;
+  /** Tests only: a deterministic code source. */
+  pseudonymizer?: Pseudonymizer;
 }
 
-const SUMMARY_DEFAULTS = {
+/** Shared by the internal report and the public text (publicSummary.ts). */
+export const SUMMARY_DEFAULTS = {
   temperature: 0.2,
-  maxOutputTokens: 600,
+  // Gemini 2.5 counts its thinking against this limit; 600 cut longer texts short.
+  maxOutputTokens: 2048,
+  // AI-QA-01: a bounded think (valid for every Gemini 2.5 model, see
+  // thinkingConfigFor) leaves at least 1,500 tokens for a 250-word text; the
+  // dynamic default could use the whole limit and return nothing.
+  thinkingBudget: 512,
 };
 
+/** The finish reason of an empty answer, for the log (never content). */
+export function finishReasonOfError(error: unknown): string | undefined {
+  const reason = error instanceof AiServiceError ? error.details?.finishReason : undefined;
+  return typeof reason === "string" ? reason : undefined;
+}
+
 const RETRY_PROMPT_SUFFIX =
-  "\n\nViktig: Skriv 3 til 6 hele setninger pa norsk bokmal. Ikke svar med bare en kort frase.";
+  "\n\nViktig: Skriv hele setninger på norsk bokmål, med overskrift og avsnitt. Bruk plassholderne og kodene nøyaktig slik de står.";
 
 interface GenerationAttemptSpec {
   label: string;
@@ -31,127 +61,38 @@ interface GenerationAttemptSpec {
   temperature?: number;
 }
 
-function summarizeInvalidOutput(rawText: string): string {
-  const compact = rawText.replace(/\s+/g, " ").trim();
-  const words = compact ? compact.split(" ").filter(Boolean).length : 0;
-  const hasTerminator = /[.!?](?:["')\]]|\s|$)/.test(compact);
-  const snippet = compact.slice(0, 120);
-  return `invalid_output(chars=${compact.length}, words=${words}, sentenceTerminator=${String(hasTerminator)}, snippet="${snippet}")`;
+/** A short code for a failed call: never the message, which can carry upstream response text. */
+export function failureCodeForError(error: unknown): MatchSummaryFailureCode {
+  if (error instanceof AiServiceError && error.code.startsWith("VERTEX_CONFIG")) return "ai_config";
+  return "ai_call_failed";
 }
 
-function buildRepairedSummaryFromPartial(input: MatchSummaryInput, rawText: string): string | null {
-  const compact = rawText.replace(/\s+/g, " ").trim();
-  if (!compact) {
-    return null;
+/**
+ * Checks a raw model text and, when it passes, returns it with the names put
+ * back. Codes and placeholders are checked first (on the model's own text),
+ * then the result, the length and invented details.
+ */
+export function acceptSummaryText(
+  rawText: string,
+  input: MatchSummaryInput,
+  pseudonyms: Pseudonymizer,
+  allowedCodes: ReadonlySet<string>
+): { ok: true; text: string } | { ok: false; code: MatchSummaryFailureCode } {
+  const restored = pseudonyms.restore(rawText, {
+    team: input.teamName.trim() || "Laget",
+    opponent: input.opponentName.trim() || "motstanderen",
+    allowedCodes,
+  });
+  if (!restored.ok) return { ok: false, code: "ai_unknown_code" };
+
+  const text = normalizeMatchSummaryText(restored.text);
+  if (!text || wordCount(text) < MIN_SUMMARY_WORDS) return { ok: false, code: "ai_invalid_output" };
+  const score = { for: input.scoreFor, against: input.scoreAgainst };
+  if (!statesResult(text, score) || statesReversedResult(text, score)) {
+    return { ok: false, code: "ai_wrong_result" };
   }
-
-  const words = compact.split(" ").filter(Boolean);
-  if (words.length < 5) {
-    return null;
-  }
-
-  const team = input.teamName.trim() || "Laget";
-  const opponent = input.opponentName.trim() || "motstanderen";
-  const score = `${input.scoreFor}-${input.scoreAgainst}`;
-
-  const cleanedBase = compact.replace(/[.!?\s]+$/g, "");
-  const needsOpponentCompletion = /\bmot$/i.test(cleanedBase);
-  const firstSentenceBase = needsOpponentCompletion
-    ? `${cleanedBase} ${opponent}`
-    : cleanedBase;
-  const firstSentence = `${firstSentenceBase}.`;
-
-  const resultSentence = `Resultatet ble ${score}.`;
-
-  let detailSentence = "";
-  if (input.goalsFor.length > 0) {
-    const scorers = input.goalsFor
-      .map((goal) => goal.scorerName)
-      .filter((name): name is string => typeof name === "string" && name.trim().length > 0)
-      .slice(0, 3);
-    if (scorers.length > 0) {
-      detailSentence = `Målscorere for ${team} var ${scorers.join(", ")}.`;
-    }
-  }
-
-  const usageSentence =
-    input.playersUsed > 0
-      ? `${team} brukte ${input.playersUsed} spillere i kampen.`
-      : "";
-
-  const repaired = [firstSentence, resultSentence, detailSentence, usageSentence]
-    .filter(Boolean)
-    .join(" ");
-
-  return normalizeMatchSummaryText(repaired);
-}
-
-function buildHardRecoveryPrompt(input: MatchSummaryInput): string {
-  const outcome =
-    input.scoreFor > input.scoreAgainst
-      ? "seier"
-      : input.scoreFor === input.scoreAgainst
-        ? "uavgjort"
-        : "tap";
-
-  const goalsForLines = input.goalsFor
-    .slice(0, 6)
-    .map((g) => {
-      const min = g.minute !== null ? `${g.minute}'` : "?'";
-      const scorer = g.scorerName ?? "ukjent";
-      const assist = g.assistName ? ` (assist: ${g.assistName})` : "";
-      return `  ${min} ${scorer}${assist}`;
-    })
-    .join("\n");
-
-  const goalsAgainstLines = input.goalsAgainst
-    .slice(0, 6)
-    .map((g) => `  ${g.minute !== null ? `${g.minute}'` : "?'"}`)
-    .join("\n");
-
-  // Include a condensed event timeline if available
-  const timelinePart =
-    input.matchEvents.length > 2
-      ? [
-          "",
-          "Hendelsesforløp:",
-          ...input.matchEvents
-            .filter((e) => e.type !== "match_start" && e.type !== "match_end")
-            .slice(0, 8)
-            .map((e) => `  ${e.minute !== null ? `${e.minute}'` : "?"} — ${e.detail}`),
-        ].join("\n")
-      : "";
-
-  const playersLine =
-    input.playersUsed > 0
-      ? `Spillere brukt: ${input.playersUsed}${input.startingPlayers.length > 0 ? ` (herav ${input.startingPlayers.length} i startoppstilling)` : ""}`
-      : "";
-
-  return [
-    "Skriv en kampoppsummering pa norsk bokmal.",
-    "",
-    "Krav:",
-    "- Skriv en kort overskrift pa forste linje",
-    "- Deretter 2 korte avsnitt (totalt 4-6 setninger)",
-    "- Totalt ca. 80-150 ord",
-    "- Ingen punktliste",
-    "- Bruk kun fakta fra dataene under",
-    outcome === "tap"
-      ? "- Vaer aErlig om at laget tapte — ikke pynt pa resultatet, men vaer rolig og konstruktiv"
-      : outcome === "uavgjort"
-        ? "- Beskriv kampen balansert og saklig"
-        : "- Tonen kan vaere positiv og konkret",
-    "",
-    `Lag: ${input.teamName}`,
-    `Motstander: ${input.opponentName}`,
-    `Resultat: ${input.scoreFor}-${input.scoreAgainst} (${outcome})`,
-    goalsForLines ? `Vare mal:\n${goalsForLines}` : "Vare mal: ingen",
-    goalsAgainstLines ? `Motstanders mal:\n${goalsAgainstLines}` : "Motstanders mal: ingen",
-    playersLine,
-    timelinePart,
-  ]
-    .filter(Boolean)
-    .join("\n");
+  if (inventsUnsupportedDetail(text)) return { ok: false, code: "ai_unsupported_detail" };
+  return { ok: true, text };
 }
 
 export async function generateMatchSummary(
@@ -159,14 +100,16 @@ export async function generateMatchSummary(
   deps: GenerateMatchSummaryDeps = {}
 ): Promise<MatchSummaryResult> {
   const generateTextFn = deps.generateTextFn ?? generateText;
+  // One code map per generation: the same player keeps the same code in every attempt.
+  const pseudonyms = deps.pseudonymizer ?? createPseudonymizer();
 
   console.info("[match-summary] generation started", {
     matchId: input.matchId,
   });
 
   const fallback = buildFallbackMatchSummary(input);
-  const prompt = buildMatchSummaryPrompt(input);
-  let lastErrorMessage: string | null = null;
+  const prompt = buildMatchSummaryPrompt(input, pseudonyms);
+  let lastFailure: MatchSummaryFailureCode | null = null;
   const attempts: GenerationAttemptSpec[] = [
     {
       label: "default",
@@ -177,6 +120,7 @@ export async function generateMatchSummary(
       label: "default_with_retry_suffix",
       systemInstruction: prompt.systemInstruction,
       prompt: `${prompt.prompt}${RETRY_PROMPT_SUFFIX}`,
+      temperature: 0.3,
     },
     {
       label: "no_system_instruction",
@@ -188,11 +132,6 @@ export async function generateMatchSummary(
         `${prompt.prompt}${RETRY_PROMPT_SUFFIX}`,
       ].join("\n"),
     },
-    {
-      label: "hard_recovery_plain_prompt",
-      prompt: buildHardRecoveryPrompt(input),
-      temperature: 0.35,
-    },
   ];
 
   for (let attempt = 1; attempt <= attempts.length; attempt += 1) {
@@ -202,11 +141,12 @@ export async function generateMatchSummary(
         systemInstruction: spec.systemInstruction,
         prompt: spec.prompt,
         maxOutputTokens: SUMMARY_DEFAULTS.maxOutputTokens,
+        thinkingBudget: SUMMARY_DEFAULTS.thinkingBudget,
         temperature: spec.temperature ?? SUMMARY_DEFAULTS.temperature,
       });
 
-      const normalized = normalizeMatchSummaryText(generated.text);
-      if (normalized) {
+      const accepted = acceptSummaryText(generated.text, input, pseudonyms, prompt.allowedCodes);
+      if (accepted.ok) {
         console.info("[match-summary] generation finished with ai", {
           matchId: input.matchId,
           attempt,
@@ -214,53 +154,43 @@ export async function generateMatchSummary(
         });
 
         return {
-          text: normalized,
+          text: accepted.text,
           source: "ai",
         };
       }
 
-      const repaired = buildRepairedSummaryFromPartial(input, generated.text);
-      if (repaired) {
-        console.info("[match-summary] generation finished with repaired ai text", {
-          matchId: input.matchId,
-          attempt,
-          strategy: spec.label,
-        });
-
-        return {
-          text: repaired,
-          source: "ai",
-        };
-      }
-
-      lastErrorMessage = `${summarizeInvalidOutput(generated.text)} (attempt ${attempt}, strategy=${spec.label})`;
-      console.warn("[match-summary] ai output invalid", {
+      lastFailure = accepted.code;
+      console.warn("[match-summary] ai output rejected", {
         matchId: input.matchId,
         attempt,
         strategy: spec.label,
+        code: accepted.code,
         rawLength: generated.text.length,
-        rawPreview: generated.text.slice(0, 120),
       });
     } catch (error) {
-      lastErrorMessage = error instanceof Error ? error.message : "Ukjent feil";
+      lastFailure = failureCodeForError(error);
       console.error("[match-summary] ai call failed", {
         matchId: input.matchId,
         attempt,
         strategy: spec.label,
-        message: lastErrorMessage,
+        code: lastFailure,
+        errorCode: error instanceof AiServiceError ? error.code : undefined,
+        finishReason: finishReasonOfError(error),
       });
+      // Missing configuration does not change between attempts.
+      if (lastFailure === "ai_config") break;
     }
   }
 
   console.warn("[match-summary] using fallback summary", {
     matchId: input.matchId,
-    reason: lastErrorMessage,
+    code: lastFailure,
   });
 
   return {
     text: fallback,
     source: "fallback",
-    failureReason: lastErrorMessage ?? "Ukjent AI-feil",
+    failureReason: lastFailure ?? "ai_invalid_output",
   };
 }
 

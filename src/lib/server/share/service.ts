@@ -2,7 +2,11 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { IntegrationError } from "@/lib/server/integrations/spond/errors";
 import { getMatchById } from "@/lib/server/matches/service";
-import { generatePublicSummary } from "@/lib/server/share/publicSummary";
+import {
+  alignGoalPlayerIds,
+  generatePublicSummary,
+  type GoalEventRow,
+} from "@/lib/server/share/publicSummary";
 import {
   generateShareToken,
   isShareEnabled,
@@ -240,6 +244,27 @@ export async function getPublicMatchShare(supabase: SupabaseClient, token: strin
 }
 
 /**
+ * AI-ID-01: the goal events' player ids, lined up with the public goal list
+ * (alignGoalPlayerIds), only at the detailed level where names are shown.
+ * Read on the server for the code map alone; a failed read or any doubt
+ * gives null (a code per mention). The ids are never returned or logged.
+ */
+async function readGoalPlayerIds(
+  supabase: SupabaseClient,
+  matchId: string,
+  view: PublicMatchShare
+): Promise<ReturnType<typeof alignGoalPlayerIds>> {
+  if (view.detailLevel !== "detailed" || !view.goals?.length) return null;
+  const { data, error } = await supabase
+    .from("match_events")
+    .select("type, minute, timestamp_ms, created_at, primary_player_id, secondary_player_id, payload")
+    .eq("match_id", matchId)
+    .in("type", ["goal_for", "goal_against"]);
+  if (error || !Array.isArray(data)) return null;
+  return alignGoalPlayerIds(view.goals, data as GoalEventRow[]);
+}
+
+/**
  * Writes the public summary of a completed, shared match from the public view
  * itself (see publicSummary.ts), tagged with the basis (fingerprint) of the
  * data it was written from. Nothing happens while the stored text already
@@ -269,7 +294,8 @@ export async function refreshPublicSummary(supabase: SupabaseClient, matchId: st
       .map((player: { name?: unknown }) => (typeof player.name === "string" ? player.name : ""))
       .filter(Boolean);
 
-    const summary = await generatePublicSummary(view, { squadNames });
+    const goalPlayerIds = await readGoalPlayerIds(supabase, matchId, view);
+    const summary = await generatePublicSummary(view, { squadNames, goalPlayerIds });
 
     // The data changed while the text was written (a correction, a new
     // level, the link turned off): this text is old, the newer run writes.

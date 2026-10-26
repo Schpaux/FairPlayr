@@ -285,7 +285,9 @@ describe("factual summary", () => {
     const result = sanitizePublicMatchShare(rawAnswer({ detailLevel: "result" }))!;
     expect(buildFactualSummary(result, "no")).toBe("Lyn G10 og Strindheim spilte 9–9.");
     const detailed = sanitizePublicMatchShare(rawAnswer({ detailLevel: "detailed" }))!;
-    expect(buildFactualSummary(detailed, "en")).toBe("Lyn G10 and Strindheim drew 9–9. Scorers: Frida.");
+    // AI-QA-01: one recorded scorer of nine goals is not «the scorers».
+    expect(buildFactualSummary(detailed, "en")).toBe("Lyn G10 and Strindheim drew 9–9. Recorded scorers include Frida.");
+    expect(buildFactualSummary(detailed, "no")).toBe("Lyn G10 og Strindheim spilte 9–9. Blant de registrerte målscorerne: Frida.");
   });
 });
 

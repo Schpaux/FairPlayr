@@ -444,12 +444,26 @@ export async function buildMatchSummaryInput(
       minute: resolveMinute(event),
       scorerName: payloadName(event.payload, "primaryPlayerName"),
       assistName: payloadName(event.payload, "secondaryPlayerName"),
+      scorerId: event.primaryPlayerId,
+      assistId: event.secondaryPlayerId,
     }));
 
   const goalsAgainst = events
     .filter((event) => event.type === "goal_against")
     .map((event) => ({
       minute: resolveMinute(event),
+    }));
+
+  // Both sides in recorded order (timestamp, then creation): the narrative's source
+  const goalTimeline = events
+    .filter((event) => event.type === "goal_for" || event.type === "goal_against")
+    .map((event) => ({
+      side: event.type === "goal_for" ? ("own" as const) : ("opponent" as const),
+      minute: resolveMinute(event),
+      scorerName: event.type === "goal_for" ? payloadName(event.payload, "primaryPlayerName") : null,
+      assistName: event.type === "goal_for" ? payloadName(event.payload, "secondaryPlayerName") : null,
+      scorerId: event.type === "goal_for" ? event.primaryPlayerId : null,
+      assistId: event.type === "goal_for" ? event.secondaryPlayerId : null,
     }));
 
   // Substitutions — prefer runtime_state.events (domain model, richer) over server events
@@ -503,6 +517,7 @@ export async function buildMatchSummaryInput(
     startingPlayers,
     goalsFor,
     goalsAgainst,
+    goalTimeline,
     substitutions,
     playersUsed,
     playersUsedList,

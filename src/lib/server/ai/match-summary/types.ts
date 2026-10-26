@@ -4,10 +4,24 @@ export interface MatchSummaryGoalFor {
   minute: number | null;
   scorerName: string | null;
   assistName: string | null;
+  /** Player ids, only for telling players apart in the code map (pseudonymize.ts); never sent. */
+  scorerId?: string | null;
+  assistId?: string | null;
 }
 
 export interface MatchSummaryGoalAgainst {
   minute: number | null;
+}
+
+/** A goal of either side, in the order the goals were recorded. */
+export interface MatchSummaryGoal {
+  side: "own" | "opponent";
+  minute: number | null;
+  scorerName: string | null;
+  assistName: string | null;
+  /** Player ids, only for telling players apart in the code map (pseudonymize.ts); never sent. */
+  scorerId?: string | null;
+  assistId?: string | null;
 }
 
 export interface MatchSummarySubstitution {
@@ -58,6 +72,8 @@ export interface MatchSummaryInput {
   startingPlayers: MatchSummaryStartingPlayer[];
   goalsFor: MatchSummaryGoalFor[];
   goalsAgainst: MatchSummaryGoalAgainst[];
+  /** Both sides' recorded goals in recorded order (FEAT-SHARE-02). Optional for older callers. */
+  goalTimeline?: MatchSummaryGoal[];
   /** Recorded substitutions for own team, in chronological order. */
   substitutions: MatchSummarySubstitution[];
   /** Number of distinct players who appeared on the pitch (union of starters + subs + tracked time). */
@@ -70,8 +86,20 @@ export interface MatchSummaryInput {
   matchEvents: MatchSummaryEvent[];
 }
 
+/**
+ * Short failure codes: never model output, upstream error bodies or names,
+ * since they are stored with the report and logged.
+ */
+export type MatchSummaryFailureCode =
+  | "ai_config"
+  | "ai_call_failed"
+  | "ai_invalid_output"
+  | "ai_unknown_code"
+  | "ai_wrong_result"
+  | "ai_unsupported_detail";
+
 export interface MatchSummaryResult {
   text: string;
   source: "ai" | "fallback";
-  failureReason?: string;
+  failureReason?: MatchSummaryFailureCode;
 }
