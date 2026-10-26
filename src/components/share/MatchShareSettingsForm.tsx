@@ -38,6 +38,8 @@ interface MatchShareSettingsFormProps {
   disabled?: boolean;
   /** Shown while sharing is on, just above the link (setup's kick-off field). */
   beforeLink?: ReactNode;
+  /** The link (copy, share) first, above the switches: the live screen's sheet. */
+  linkFirst?: boolean;
 }
 
 export function MatchShareSettingsForm({
@@ -47,6 +49,7 @@ export function MatchShareSettingsForm({
   linkStatus,
   disabled,
   beforeLink,
+  linkFirst = false,
 }: MatchShareSettingsFormProps) {
   const t = useTranslations("matchShare");
   const uid = useId();
@@ -55,6 +58,11 @@ export function MatchShareSettingsForm({
 
   return (
     <div className="divide-y divide-fp-rule" data-testid="match-share-form">
+      {linkFirst && enabled && token ? (
+        <div className="p-4">
+          <ShareLink token={token} status={linkStatus} />
+        </div>
+      ) : null}
       <ShareSwitch
         id={`${uid}-live`}
         label={t("liveToggle")}
@@ -108,7 +116,7 @@ export function MatchShareSettingsForm({
 
           {beforeLink}
 
-          {token ? <ShareLink token={token} status={linkStatus} /> : null}
+          {token && !linkFirst ? <ShareLink token={token} status={linkStatus} /> : null}
         </div>
       ) : null}
     </div>

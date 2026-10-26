@@ -39,7 +39,8 @@ interface SetupSharePanelProps {
   plannedMatchId: string | null;
 }
 
-function linkStatusOf(record: StoredMatchShare | null, result: MatchShareSyncResult | "sending" | null): ShareLinkStatus {
+/** The link's status line for a share kept on the device (also the live screen's). */
+export function linkStatusOf(record: StoredMatchShare | null, result: MatchShareSyncResult | "sending" | null): ShareLinkStatus {
   if (result === "sending") return "pending";
   if (record && record.syncedRevision >= record.revision && record.matchCreated) return "ready";
   if (result === "unavailable") return "unavailable";

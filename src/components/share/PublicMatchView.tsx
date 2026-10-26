@@ -8,29 +8,35 @@
  * - Before the match: teams, kick-off and a countdown. Without a kick-off
  *   time, or once it has passed, it is «Venter på avspark» (no countdown)
  *   until the coach starts the match.
+ * - The match starts with the coach's first ▶, not with «Start kampen»
+ *   (the server answers "upcoming" until the clock has started).
  * - During it: a LIVE badge with a quiet red pulse (solid with reduced
- *   motion), and the score and goals when the level shares them. With only
- *   «Del oppsummering» it just says the match is in progress.
+ *   motion), the score between the two teams when the level shares it, and
+ *   the match clock, worked out here between updates (half, pause, stoppage).
+ *   With only «Del oppsummering» it just says the match is in progress.
  * - After it: the public summary first when it is shared (a calm waiting
  *   state until it is written), and the final status per level.
- * - The page refreshes itself (polling, calm after the match, paused while
- *   hidden, at once when shown again) and always says when the coach last
- *   updated and when it last checked; old data is marked as possibly out of
- *   date, never shown as fresh.
+ * - Updates: a Realtime «oppdatert» hint (no data) makes the page read the
+ *   filtered public answer at once; a calm poll stays as the fallback, and
+ *   the page reads again when (re)connected, back online or shown again
+ *   (publicRefresh.ts: one read at a time, bursts become one). The card says
+ *   when the match data last changed; old data or no contact is said in one
+ *   short line, never shown as fresh.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { CircleAlert } from "lucide-react";
 import { EventTimeline, type TimelineEntry } from "@/components/match/EventTimeline";
+import { publicMatchClock, type PublicMatchClock } from "@/components/share/publicMatchClock";
 import { Skeleton } from "@/components/ui/primitives";
+import { createRefreshCoordinator, type RefreshCoordinator } from "@/lib/share/publicRefresh";
 import {
-  LIVE_STALE_AFTER_MINUTES,
   buildFactualSummary,
-  minutesSince,
-  publicMatchMinute,
+  publicDataStatus,
   publicRefreshIntervalMs,
   sanitizePublicMatchShare,
+  type PublicDataStatus,
   type PublicMatchShare,
 } from "@/domain/matchShare";
 
@@ -39,6 +45,8 @@ interface PublicMatchViewProps {
   locale: "no" | "en";
   initialShare: PublicMatchShare | null;
   initialFetchedAt: string;
+  /** The share's Realtime topic (no token in it); without one the page only polls. */
+  signalTopic?: string | null;
 }
 
 const TIME_ZONE = "Europe/Oslo";
@@ -47,18 +55,17 @@ function intlLocale(locale: "no" | "en"): string {
   return locale === "no" ? "nb-NO" : "en-GB";
 }
 
-export function PublicMatchView({ token, locale, initialShare, initialFetchedAt }: PublicMatchViewProps) {
+export function PublicMatchView({ token, locale, initialShare, initialFetchedAt, signalTopic = null }: PublicMatchViewProps) {
   const t = useTranslations("publicMatch");
   const [share, setShare] = useState<PublicMatchShare | null>(initialShare);
   const [fetchedAt, setFetchedAt] = useState(initialFetchedAt);
   const [fetchFailed, setFetchFailed] = useState(false);
   // Starts at the server's time, so the first client render matches the HTML.
   const [nowMs, setNowMs] = useState(() => Date.parse(initialFetchedAt));
-  const inFlight = useRef(false);
+  const [realtime, setRealtime] = useState(false);
+  const coordinator = useRef<RefreshCoordinator | null>(null);
 
   const refresh = useCallback(async () => {
-    if (inFlight.current) return;
-    inFlight.current = true;
     try {
       const response = await fetch(`/api/public/matches/${encodeURIComponent(token)}`, { cache: "no-store" });
       if (response.status === 404) {
@@ -75,28 +82,65 @@ export function PublicMatchView({ token, locale, initialShare, initialFetchedAt 
       setFetchFailed(false);
     } catch {
       setFetchFailed(true);
-    } finally {
-      inFlight.current = false;
     }
   }, [token]);
 
-  // Clock for the countdown, the match minute and the freshness line.
+  useEffect(() => {
+    const next = createRefreshCoordinator(refresh, { coalesceMs: 250, minIntervalMs: 2_000 });
+    coordinator.current = next;
+    return () => {
+      next.dispose();
+      if (coordinator.current === next) coordinator.current = null;
+    };
+  }, [refresh]);
+
+  const requestRefresh = useCallback(() => coordinator.current?.request(), []);
+
+  // The Realtime hint, while the link works. Loaded only here, so the page
+  // renders (and polls) without it.
+  const hasShare = share !== null;
+  useEffect(() => {
+    if (!hasShare || !signalTopic) return;
+    let unsubscribe: (() => void) | null = null;
+    let cancelled = false;
+    void import("@/lib/share/shareSignal")
+      .then(({ subscribeToShareSignal }) => {
+        if (cancelled) return;
+        unsubscribe = subscribeToShareSignal(signalTopic, {
+          onSignal: requestRefresh,
+          onConnected: () => {
+            setRealtime(true);
+            requestRefresh();
+          },
+          onDisconnected: () => setRealtime(false),
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+      setRealtime(false);
+    };
+  }, [hasShare, signalTopic, requestRefresh]);
+
+  // Clock for the countdown, the match clock and the data line.
   useEffect(() => {
     const id = window.setInterval(() => setNowMs(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, []);
 
-  // Refresh while the share is on (calmly once the match is over, so a
-  // revoked link, a lower level or a correction still arrives); paused while
-  // hidden, and checked at once when the page is shown again.
-  const intervalMs = publicRefreshIntervalMs(share);
+  // The fallback poll while the share is on (calm with Realtime connected,
+  // and once the match is over, so a revoked link, a lower level or a
+  // correction still arrives); paused while hidden, and read at once when
+  // the page is shown again or back online.
+  const intervalMs = publicRefreshIntervalMs(share, { realtime });
   useEffect(() => {
     if (intervalMs === null) return;
     const id = window.setInterval(() => {
-      if (document.visibilityState === "visible") void refresh();
+      if (document.visibilityState === "visible") requestRefresh();
     }, intervalMs);
     const onVisible = () => {
-      if (document.visibilityState === "visible") void refresh();
+      if (document.visibilityState === "visible") requestRefresh();
     };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("online", onVisible);
@@ -107,7 +151,7 @@ export function PublicMatchView({ token, locale, initialShare, initialFetchedAt 
       window.removeEventListener("online", onVisible);
       window.removeEventListener("pageshow", onVisible);
     };
-  }, [intervalMs, refresh]);
+  }, [intervalMs, requestRefresh]);
 
   const timeFormat = new Intl.DateTimeFormat(intlLocale(locale), { timeZone: TIME_ZONE, hour: "2-digit", minute: "2-digit" });
   const formatTime = (iso: string | null) => {
@@ -140,9 +184,8 @@ export function PublicMatchView({ token, locale, initialShare, initialFetchedAt 
       }).format(kickoffMs);
 
   const liveData = share.phase === "live" && share.shareLive ? share.live : null;
-  const minute = publicMatchMinute(liveData, nowMs);
-  const sinceUpdate = minutesSince(liveData?.updatedAt ?? null, nowMs);
-  const stale = sinceUpdate !== null && sinceUpdate >= LIVE_STALE_AFTER_MINUTES;
+  const clock = publicMatchClock(liveData, nowMs);
+  const dataStatus = publicDataStatus({ live: liveData, fetchFailed, nowMs });
 
   const statusLabel =
     share.phase === "upcoming"
@@ -187,63 +230,63 @@ export function PublicMatchView({ token, locale, initialShare, initialFetchedAt 
           </p>
           <StatusBadge label={statusLabel} live={share.phase === "live" && share.shareLive} />
         </div>
-        <h1 className="mt-3 text-[24px] font-bold leading-[1.15] tracking-[-0.02em] [overflow-wrap:anywhere] sm:text-[30px]">
-          {share.teamName}
-          <span className="text-fp-on-club-2"> – </span>
-          {opponent}
+
+        <h1 className="sr-only">
+          {share.teamName} – {opponent}
         </h1>
-
-        {share.phase === "upcoming" ? (
-          <Countdown kickoffMs={kickoffMs} nowMs={nowMs} />
-        ) : null}
-
-        {share.phase !== "upcoming" && share.score ? (
-          <p className="mt-5 flex flex-wrap items-baseline gap-x-4 gap-y-1" data-testid="public-match-score">
-            <span aria-hidden className="font-num text-[56px] leading-[0.9] sm:text-[72px]">
+        <div
+          aria-hidden
+          className="mt-5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-3 sm:gap-x-6"
+          data-testid="public-match-scoreline"
+        >
+          <p className="text-center text-[17px] font-semibold leading-tight tracking-[-0.01em] [overflow-wrap:anywhere] sm:text-[22px]">
+            {share.teamName}
+          </p>
+          {share.phase !== "upcoming" && share.score ? (
+            <p className="whitespace-nowrap text-center font-num text-[64px] leading-none sm:text-[88px]" data-testid="public-match-score">
               {share.score.for}
-              <span className="px-2 text-fp-on-club-2">–</span>
+              <span className="px-1.5 text-fp-on-club-2 sm:px-2.5">–</span>
               {share.score.against}
-            </span>
-            <span className="sr-only" aria-live="polite">
-              {t("scoreA11y", { team: share.teamName, scoreFor: share.score.for, opponent, scoreAgainst: share.score.against })}
-            </span>
-            {resultWord ? <span className="text-base font-semibold">{resultWord}</span> : null}
+            </p>
+          ) : (
+            <p className="text-center text-[28px] leading-none text-fp-on-club-2">–</p>
+          )}
+          <p className="text-center text-[17px] font-semibold leading-tight tracking-[-0.01em] [overflow-wrap:anywhere] sm:text-[22px]">
+            {opponent}
+          </p>
+        </div>
+        {share.phase !== "upcoming" && share.score ? (
+          <p className="sr-only" aria-live="polite">
+            {t("scoreA11y", { team: share.teamName, scoreFor: share.score.for, opponent, scoreAgainst: share.score.against })}
           </p>
         ) : null}
+        {resultWord ? <p className="mt-2 text-center text-base font-semibold">{resultWord}</p> : null}
 
-        {liveData ? (
-          <p className="mt-3 text-base font-semibold text-fp-on-club" data-testid="public-match-phase">
-            {liveData.phase ? t(`phase.${liveData.phase}`) : t("inProgress")}
-            {minute ? <span className="font-num text-[22px] leading-none"> · {t("minute", { minute })}</span> : null}
-          </p>
-        ) : null}
+        {share.phase === "upcoming" ? <Countdown kickoffMs={kickoffMs} nowMs={nowMs} /> : null}
+
+        {liveData ? <ClockBlock clock={clock} halves={liveData.halves} /> : null}
 
         {share.phase === "live" && !share.shareLive ? (
-          <div className="mt-4" data-testid="public-match-in-progress">
+          <div className="mt-4 text-center" data-testid="public-match-in-progress">
             <p className="text-[20px] font-semibold">{t("inProgress")}</p>
             <p className="mt-1 text-[15px] text-fp-on-club-2">{t("inProgressSummaryOnly")}</p>
           </div>
         ) : null}
 
         {share.phase === "live" && share.shareLive && !share.score ? (
-          <p className="mt-2 text-[15px] text-fp-on-club-2">{t("inProgressStatusOnly")}</p>
+          <p className="mt-2 text-center text-[15px] text-fp-on-club-2">{t("inProgressStatusOnly")}</p>
         ) : null}
 
         {share.phase === "completed" && !share.score ? (
-          <p className="mt-4 text-[20px] font-semibold">{t("completed")}</p>
+          <p className="mt-4 text-center text-[20px] font-semibold">{t("completed")}</p>
         ) : null}
-      </section>
 
-      {liveData || (share.phase === "upcoming") ? (
-        <Freshness
-          lastChange={liveData ? liveData.updatedAt : null}
-          sinceUpdate={sinceUpdate}
-          stale={stale}
-          checkedAt={fetchedAt}
-          fetchFailed={fetchFailed}
-          formatTime={formatTime}
+        <DataLine
+          status={dataStatus}
+          // The time of the match data itself; without live data, of the last answer.
+          time={formatTime(liveData?.updatedAt ?? (dataStatus === "noContact" ? fetchedAt : null))}
         />
-      ) : null}
+      </section>
 
       {share.phase === "completed" && share.shareSummary ? (
         <section className="rounded-[14px] border border-fp-rule bg-fp-surface p-5 sm:p-6" aria-labelledby="public-summary-title">
@@ -322,7 +365,7 @@ function Countdown({ kickoffMs, nowMs }: { kickoffMs: number; nowMs: number }) {
 
   if (remaining <= 0) {
     return (
-      <div className="mt-4" data-testid="public-match-waiting">
+      <div className="mt-5 text-center" data-testid="public-match-waiting">
         <p className="text-[20px] font-semibold">{t("waitingForKickoff")}</p>
         <p className="mt-1 text-[15px] text-fp-on-club-2">{t("waitingForKickoffHelp")}</p>
       </div>
@@ -343,55 +386,72 @@ function Countdown({ kickoffMs, nowMs }: { kickoffMs: number; nowMs: number }) {
           : t("countdown.minutes", { minutes });
 
   return (
-    <div className="mt-4" data-testid="public-match-countdown">
+    <div className="mt-5 text-center" data-testid="public-match-countdown">
       <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-fp-on-club-2">{t("countdownLabel")}</p>
       <p className="mt-1 font-num text-[40px] leading-[0.95] sm:text-[52px]">{text}</p>
     </div>
   );
 }
 
-function Freshness({
-  lastChange,
-  sinceUpdate,
-  stale,
-  checkedAt,
-  fetchFailed,
-  formatTime,
-}: {
-  lastChange: string | null;
-  sinceUpdate: number | null;
-  stale: boolean;
-  checkedAt: string;
-  fetchFailed: boolean;
-  formatTime: (iso: string | null) => string;
-}) {
+/** The match clock under the score: what part of the match, and the time. */
+function ClockBlock({ clock, halves }: { clock: PublicMatchClock | null; halves: 1 | 2 | null }) {
   const t = useTranslations("publicMatch");
 
+  if (!clock) {
+    return <p className="mt-4 text-center text-base font-semibold" data-testid="public-match-phase">{t("inProgress")}</p>;
+  }
+
+  const label =
+    clock.state === "fullTime"
+      ? t("phase.full_time")
+      : clock.state === "halfTime"
+        ? t("phase.half_time")
+        : clock.state === "stopped"
+          ? t("clockStopped")
+          : clock.half !== null && halves === 2
+            ? t(clock.half === 1 ? "phase.first_half" : "phase.second_half")
+            : t("inPlay");
+
   return (
-    <div className="space-y-1 px-1 text-[14px] text-fp-ink-2" data-testid="public-match-freshness">
-      {lastChange ? (
-        <p>
-          {sinceUpdate !== null && sinceUpdate >= 1
-            ? t("freshness.lastChangeAgo", { minutes: sinceUpdate, time: formatTime(lastChange) })
-            : t("freshness.lastChange", { time: formatTime(lastChange) })}
-        </p>
-      ) : null}
-      {stale && sinceUpdate !== null ? (
-        <p className="flex items-start gap-1.5 font-medium text-fp-warn-text" data-testid="public-match-stale">
-          <CircleAlert aria-hidden size={16} className="mt-0.5 shrink-0" />
-          {t("freshness.stale", { minutes: sinceUpdate })}
-        </p>
-      ) : null}
-      {fetchFailed ? (
-        <p className="flex items-start gap-1.5 font-medium text-fp-warn-text" role="status">
-          <CircleAlert aria-hidden size={16} className="mt-0.5 shrink-0" />
-          {t("freshness.fetchFailed", { time: formatTime(checkedAt) })}
-        </p>
-      ) : (
-        <p>
-          {t("freshness.checked", { time: formatTime(checkedAt) })} · {t("freshness.autoRefresh")}
-        </p>
-      )}
+    <div className="mt-4 flex flex-col items-center" data-testid="public-match-phase">
+      <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-fp-on-club-2">
+        {label}
+        {clock.stoppage ? ` · ${t("stoppage")}` : null}
+        {clock.state === "stopped" && clock.half !== null
+          ? ` · ${t(clock.half === 1 ? "phase.first_half" : "phase.second_half")}`
+          : null}
+      </p>
+      <p
+        className={`mt-1 font-num text-[32px] leading-none tabular-nums sm:text-[40px] ${clock.state === "running" ? "" : "text-fp-on-club-2"}`}
+        data-testid="public-match-clock"
+      >
+        {clock.text}
+      </p>
     </div>
+  );
+}
+
+/** One quiet line in the card: when the match data last changed, or a short warning. */
+function DataLine({ status, time }: { status: PublicDataStatus; time: string }) {
+  const t = useTranslations("publicMatch");
+  if (!time) return null;
+
+  if (status === "current") {
+    return (
+      <p className="mt-3 text-center text-[13px] text-fp-on-club-2" data-testid="public-match-updated">
+        {t("updatedAt", { time })}
+      </p>
+    );
+  }
+
+  return (
+    <p
+      className="mx-auto mt-3 flex w-fit items-center gap-1.5 rounded-full bg-fp-surface px-3 py-1 text-[13px] font-semibold text-fp-warn-text"
+      role="status"
+      data-testid={status === "noContact" ? "public-match-no-contact" : "public-match-stale"}
+    >
+      <CircleAlert aria-hidden size={14} className="shrink-0" />
+      {status === "noContact" ? t("noContact", { time }) : t("dataStale", { time })}
+    </p>
   );
 }

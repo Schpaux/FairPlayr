@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { createSupabaseAnonClient } from "@/lib/supabase/anon";
 import { getPublicMatchShare } from "@/lib/server/share/service";
+import { shareSignalTopic } from "@/lib/server/share/signal";
 import { PublicMatchView } from "@/components/share/PublicMatchView";
 
 /**
@@ -53,6 +54,8 @@ export default async function PublicMatchPage({ params }: Props) {
       locale={locale === "no" ? "no" : "en"}
       initialShare={share}
       initialFetchedAt={new Date().toISOString()}
+      // Only for a working link; the topic is a hash, never the token itself.
+      signalTopic={share ? shareSignalTopic(token) : null}
     />
   );
 }

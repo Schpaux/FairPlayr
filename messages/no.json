@@ -657,6 +657,7 @@
         "open": "Kampmeny",
         "title": "Kampmeny",
         "events": "Hendelser",
+        "share": "Del kampen",
         "endHalf": "Avslutt omgang",
         "removeGoalUs": "Fjern siste mål for oss",
         "removeGoalThem": "Fjern siste mål for dem",
@@ -1293,6 +1294,12 @@
     "inProgressSummaryOnly": "Oppsummeringen kommer her når kampen er ferdig.",
     "inProgressStatusOnly": "Resultat og hendelser deles ikke for denne kampen.",
     "completed": "Ferdigspilt",
+    "updatedAt": "Oppdatert kl. {time}",
+    "dataStale": "Ingen nye data siden kl. {time}",
+    "noContact": "Ingen kontakt. Viser data fra kl. {time}",
+    "clockStopped": "Klokka står",
+    "stoppage": "Tilleggstid",
+    "inPlay": "Pågår",
     "phase": {
       "first_half": "1. omgang",
       "half_time": "Pause",
@@ -1300,7 +1307,6 @@
       "full_time": "Slutt",
       "not_started": "Ikke startet"
     },
-    "minute": "{minute}′",
     "scoreA11y": "Stilling: {team} {scoreFor}, {opponent} {scoreAgainst}",
     "result": {
       "win": "Seier",
@@ -1311,14 +1317,6 @@
     "goalsLabel": "Mål i kampen",
     "noGoals": "Ingen mål ennå.",
     "noGoalsFinal": "Ingen mål i kampen.",
-    "freshness": {
-      "lastChange": "Siste oppdatering fra treneren kl. {time}",
-      "lastChangeAgo": "Siste oppdatering fra treneren for {minutes} min siden (kl. {time})",
-      "checked": "Sjekket kl. {time}",
-      "stale": "Ingen nye oppdateringer på {minutes} min. Stillingen kan ha endret seg.",
-      "fetchFailed": "Får ikke kontakt. Viser det vi hadde kl. {time}.",
-      "autoRefresh": "Siden oppdateres automatisk."
-    },
     "summaryTitle": "Kampoppsummering",
     "summaryPending": "Oppsummeringen er ikke klar ennå. Siden oppdateres av seg selv.",
     "finalStatusTitle": "Sluttstatus",

@@ -23,6 +23,7 @@ import {
   EventsSheet,
   GoalContributorSheet,
   MenuSheet,
+  ShareSheet,
   type GoalPromptView,
   type LiveMenuNote,
 } from "@/components/live/LiveSheets";
@@ -78,9 +79,11 @@ export interface LiveScreenProps {
   goalPrompt: GoalPromptView | null;
   notices: LiveNoticesProps;
   ending: { done: boolean } | null;
+  /** «Del kampen» in the menu: the share panel to show, or null where sharing is not possible. */
+  sharePanel?: React.ReactNode;
 }
 
-type OpenSheet = "menu" | "events" | "confirmEndHalf" | "confirmEndMatch" | "confirmRemoveGoalUs" | "confirmRemoveGoalThem";
+type OpenSheet = "menu" | "events" | "share" | "confirmEndHalf" | "confirmEndMatch" | "confirmRemoveGoalUs" | "confirmRemoveGoalThem";
 
 export function LiveScreen({
   model,
@@ -93,6 +96,7 @@ export function LiveScreen({
   goalPrompt,
   notices,
   ending,
+  sharePanel = null,
 }: LiveScreenProps) {
   const t = useTranslations("matchLive");
   const [sheet, setSheet] = useState<OpenSheet | null>(null);
@@ -218,6 +222,7 @@ export function LiveScreen({
           canEndMatch={!isEnded}
           onClose={closeSheet}
           onEvents={() => setSheet("events")}
+          onShare={sharePanel ? () => setSheet("share") : undefined}
           onEndHalf={() => setSheet("confirmEndHalf")}
           onRemoveGoalUs={() => setSheet("confirmRemoveGoalUs")}
           onRemoveGoalThem={() => setSheet("confirmRemoveGoalThem")}
@@ -226,6 +231,7 @@ export function LiveScreen({
       ) : null}
 
       {sheet === "events" ? <EventsSheet events={model.events} onClose={closeSheet} /> : null}
+      {sheet === "share" && sharePanel ? <ShareSheet onClose={closeSheet}>{sharePanel}</ShareSheet> : null}
 
       {sheet === "confirmEndHalf" ? (
         <ConfirmSheet

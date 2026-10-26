@@ -17,7 +17,7 @@
  *   can never widen what a visitor gets.
  */
 
-import { getElapsedMsFromClock, type MatchClockBasis } from "@/domain/liveMatch";
+import type { MatchClockBasis } from "@/domain/liveMatch";
 
 export type ShareDetailLevel = "status" | "result" | "detailed";
 export type ShareAgeGroup = "child" | "youth" | "unknown";
@@ -228,7 +228,7 @@ function sanitizeClock(value: unknown): MatchClockBasis | null {
 export function sanitizePublicMatchShare(raw: unknown): PublicMatchShare | null {
   if (!isRecord(raw)) return null;
 
-  const phase = oneOf(raw.phase, ["upcoming", "live", "completed"] as const);
+  let phase = oneOf(raw.phase, ["upcoming", "live", "completed"] as const);
   const detailLevel = isShareDetailLevel(raw.detailLevel) ? raw.detailLevel : null;
   const startsAt = str(raw.startsAt);
   if (!phase || !detailLevel) return null;
@@ -236,6 +236,12 @@ export function sanitizePublicMatchShare(raw: unknown): PublicMatchShare | null 
   const shareLive = raw.shareLive === true;
   const shareSummary = raw.shareSummary === true;
   if (!shareLive && !shareSummary) return null;
+
+  // The match starts with the coach's first ▶ (the clock), not with «Start
+  // kampen»: a live answer whose clock never started is still upcoming.
+  if (phase === "live" && shareLive && isRecord(raw.live) && sanitizeClock(raw.live.clock)?.startedAtMs == null) {
+    phase = "upcoming";
+  }
 
   const liveVisible = phase === "live" && shareLive;
   const showScore = detailLevel !== "status" && (liveVisible || phase === "completed");
@@ -350,29 +356,6 @@ export function publicSummaryBasis(
 
 // ─── Presentation helpers ─────────────────────────────────────────────────────
 
-/**
- * The match minute a visitor sees: "23" in ordinary time, "30+2" in
- * stoppage (the half's ordinary end plus the started stoppage minute), or
- * null when the clock cannot say (not started, half-time, full time).
- */
-export function publicMatchMinute(live: PublicLiveState | null, nowMs: number): string | null {
-  if (!live?.clock || live.clock.startedAtMs === null) return null;
-  if (live.phase !== "first_half" && live.phase !== "second_half") return null;
-
-  const regular = live.regularSecondsPerHalf;
-  const phaseStart = live.phaseStartedAtElapsedMs ?? 0;
-  const phaseSeconds = Math.floor(Math.max(0, getElapsedMsFromClock(live.clock, nowMs) - phaseStart) / 1000);
-  const offsetSeconds = live.phase === "second_half" && regular !== null ? regular : 0;
-
-  if (regular !== null && regular > 0 && phaseSeconds >= regular) {
-    const halfEndMinute = Math.round((offsetSeconds + regular) / 60);
-    const stoppageMinute = Math.floor((phaseSeconds - regular) / 60) + 1;
-    return `${halfEndMinute}+${stoppageMinute}`;
-  }
-
-  return String(Math.floor((offsetSeconds + phaseSeconds) / 60) + 1);
-}
-
 /** How old the coach's last write is, in whole minutes (never negative). */
 export function minutesSince(iso: string | null, nowMs: number): number | null {
   if (!iso) return null;
@@ -390,12 +373,40 @@ export const LIVE_STALE_AFTER_MINUTES = 5;
  * refresh, so an open page still learns of a revoked link, a lower level or
  * corrected goals (the page also checks when it becomes visible again).
  */
-export function publicRefreshIntervalMs(share: PublicMatchShare | null): number | null {
+export function publicRefreshIntervalMs(
+  share: PublicMatchShare | null,
+  options: { realtime?: boolean } = {}
+): number | null {
   if (!share) return null;
-  if (share.phase === "live") return share.shareLive ? 15_000 : 60_000;
-  if (share.phase === "upcoming") return 30_000;
-  if (share.summary?.status === "pending") return 20_000;
-  return 120_000;
+  const interval =
+    share.phase === "live"
+      ? share.shareLive
+        ? 15_000
+        : 60_000
+      : share.phase === "upcoming"
+        ? 30_000
+        : share.summary?.status === "pending"
+          ? 20_000
+          : 120_000;
+  // With the Realtime signal connected, polling is only the calm fallback.
+  return options.realtime ? Math.max(interval, 60_000) : interval;
+}
+
+/**
+ * What the page says about its data: current, possibly out of date (a
+ * running match without a write from the coach for a while: the coach's
+ * phone may be offline), or no contact (the last refresh failed).
+ */
+export type PublicDataStatus = "current" | "stale" | "noContact";
+
+export function publicDataStatus(input: {
+  live: PublicLiveState | null;
+  fetchFailed: boolean;
+  nowMs: number;
+}): PublicDataStatus {
+  if (input.fetchFailed) return "noContact";
+  const since = minutesSince(input.live?.updatedAt ?? null, input.nowMs);
+  return since !== null && since >= LIVE_STALE_AFTER_MINUTES ? "stale" : "current";
 }
 
 export type FactualSummaryLocale = "no" | "en";

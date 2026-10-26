@@ -1,16 +1,32 @@
 // FEAT-SHARE-01: before kick-off the public page counts down only to a real
 // kick-off. Without one it waits for the coach, and never counts from the
-// time the link was made.
-import { cleanup, render, screen } from "@testing-library/react";
+// time the link was made. From the first ▶ it is live with a running clock.
+// A Realtime hint (no data) makes it read the filtered answer at once; a
+// calm poll stays as the fallback.
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PublicMatchView } from "@/components/share/PublicMatchView";
 import type { PublicMatchShare } from "@/domain/matchShare";
 import no from "../../../messages/no.json";
 
 vi.mock("@/i18n/navigation", () => ({ Link: () => null }));
 
+type SignalHandlers = { onSignal: () => void; onConnected: () => void; onDisconnected: () => void };
+const signal = vi.hoisted(() => ({ handlers: null as SignalHandlers | null, topic: null as string | null, closed: 0 }));
+vi.mock("@/lib/share/shareSignal", () => ({
+  subscribeToShareSignal: (topic: string, handlers: SignalHandlers) => {
+    signal.topic = topic;
+    signal.handlers = handlers;
+    return () => {
+      signal.closed += 1;
+    };
+  },
+}));
+
 const FETCHED_AT = "2026-10-26T16:00:00.000Z";
+const NOW = Date.parse(FETCHED_AT);
+const MIN = 60_000;
 
 function upcoming(startsAt: string | null): PublicMatchShare {
   return {
@@ -28,12 +44,48 @@ function upcoming(startsAt: string | null): PublicMatchShare {
   };
 }
 
-function renderView(share: PublicMatchShare) {
+function liveShare(overrides: Partial<NonNullable<PublicMatchShare["live"]>> = {}, score = { for: 0, against: 0 }): PublicMatchShare {
+  return {
+    ...upcoming("2026-10-26T15:45:00.000Z"),
+    phase: "live",
+    detailLevel: "result",
+    score,
+    goals: [],
+    live: {
+      updatedAt: "2026-10-26T15:58:00.000Z",
+      phase: "first_half",
+      status: "running",
+      halves: 2,
+      regularSecondsPerHalf: 25 * 60,
+      phaseStartedAtElapsedMs: 0,
+      clock: { startedAtMs: NOW - 10 * MIN, pausedAtMs: null, accumulatedPausedMs: 0, isRunning: true },
+      ...overrides,
+    },
+  };
+}
+
+function renderView(share: PublicMatchShare | null, signalTopic: string | null = null) {
   return render(
     <NextIntlClientProvider locale="no" messages={no}>
-      <PublicMatchView token={"a".repeat(43)} locale="no" initialShare={share} initialFetchedAt={FETCHED_AT} />
+      <PublicMatchView
+        token={"a".repeat(43)}
+        locale="no"
+        initialShare={share}
+        initialFetchedAt={FETCHED_AT}
+        signalTopic={signalTopic}
+      />
     </NextIntlClientProvider>
   );
+}
+
+function jsonResponse(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+}
+
+async function advance(ms: number) {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(ms);
+  });
 }
 
 describe("PublicMatchView before kick-off", () => {
@@ -47,10 +99,126 @@ describe("PublicMatchView before kick-off", () => {
     expect(screen.queryByText(/Avspark /)).toBeNull();
   });
 
-  it("with a kick-off time ahead: a countdown to it", () => {
+  it("with a kick-off time ahead: a countdown to it, not LIVE", () => {
     renderView(upcoming("2026-10-26T17:30:00.000Z"));
 
     expect(screen.getByTestId("public-match-countdown").textContent).toContain("1 t 30 min");
     expect(screen.queryByTestId("public-match-waiting")).toBeNull();
+    expect(screen.getByTestId("public-match-status").textContent).toBe(no.publicMatch.status.upcoming);
+    expect(screen.queryByTestId("public-match-clock")).toBeNull();
+  });
+});
+
+describe("PublicMatchView after the first ▶", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+  });
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    signal.handlers = null;
+  });
+
+  it("is LIVE with the score between the teams, a running clock and when the data last changed", async () => {
+    renderView(liveShare({}, { for: 2, against: 1 }));
+
+    expect(screen.getByTestId("public-match-status").textContent).toBe("LIVE");
+    expect(screen.getByTestId("public-match-score").textContent).toBe("2–1");
+    expect(screen.getByTestId("public-match-phase").textContent).toContain("1. omgang");
+    expect(screen.getByTestId("public-match-clock").textContent).toBe("10:00");
+    expect(screen.getByTestId("public-match-updated").textContent).toBe("Oppdatert kl. 16:58");
+
+    await advance(5_000);
+    expect(screen.getByTestId("public-match-clock").textContent).toBe("10:05");
+  });
+
+  it("a paused clock stands still and says so, never «not started»", async () => {
+    renderView(
+      liveShare({
+        status: "paused",
+        clock: { startedAtMs: NOW - 10 * MIN, pausedAtMs: NOW - 2 * MIN, accumulatedPausedMs: 0, isRunning: false },
+      })
+    );
+
+    expect(screen.getByTestId("public-match-status").textContent).toBe("LIVE");
+    expect(screen.getByTestId("public-match-phase").textContent).toContain(no.publicMatch.clockStopped);
+    expect(screen.getByTestId("public-match-clock").textContent).toBe("08:00");
+    await advance(5_000);
+    expect(screen.getByTestId("public-match-clock").textContent).toBe("08:00");
+  });
+
+  it("a signal reads the filtered answer at once; a burst of signals is one read", async () => {
+    const fetchMock = vi.fn(async (_url: string) =>
+      jsonResponse(200, {
+        fetchedAt: FETCHED_AT,
+        share: {
+          ...liveShare({ updatedAt: "2026-10-26T16:00:00.000Z" }, { for: 1, against: 0 }),
+          playingTime: { p1: 25 },
+          reportText: "Intern rapport",
+        },
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    renderView(liveShare(), "match-share:abc");
+    await advance(0);
+
+    expect(signal.topic).toBe("match-share:abc");
+    act(() => {
+      signal.handlers?.onSignal();
+      signal.handlers?.onSignal();
+      signal.handlers?.onSignal();
+    });
+    await advance(300);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(`/api/public/matches/${"a".repeat(43)}`);
+    expect(screen.getByTestId("public-match-score").textContent).toBe("1–0");
+    expect(screen.getByTestId("public-match-updated").textContent).toBe("Oppdatert kl. 17:00");
+    expect(document.body.textContent).not.toContain("Intern rapport");
+  });
+
+  it("a signal after the link was turned off shows that it is no longer active, and stops listening", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse(404, { share: null })));
+    renderView(liveShare(), "match-share:abc");
+    await advance(0);
+    const closedBefore = signal.closed;
+
+    act(() => signal.handlers?.onSignal());
+    await advance(300);
+
+    expect(screen.getByTestId("public-match-unavailable")).toBeTruthy();
+    expect(signal.closed).toBe(closedBefore + 1);
+  });
+
+  it("without Realtime it still polls, and a failed read says so in one short line", async () => {
+    const fetchMock = vi.fn(async () => {
+      throw new TypeError("offline");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    renderView(liveShare());
+
+    // The live poll (15 s), then the read after the short merge window.
+    await advance(15_300);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("public-match-no-contact").textContent).toBe("Ingen kontakt. Viser data fra kl. 16:58");
+    expect(screen.queryByTestId("public-match-updated")).toBeNull();
+  });
+
+  it("reads fresh data when the channel (re)connects, and polls calmly while connected", async () => {
+    const fetchMock = vi.fn(async () => jsonResponse(200, { fetchedAt: FETCHED_AT, share: liveShare() }));
+    vi.stubGlobal("fetch", fetchMock);
+    renderView(liveShare(), "match-share:abc");
+    await advance(0);
+
+    act(() => signal.handlers?.onConnected());
+    await advance(300);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await advance(30_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await advance(30_000);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

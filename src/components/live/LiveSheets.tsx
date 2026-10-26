@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useId, useRef } from "react";
-import { CircleAlert, Flag, History, House, Minus, TriangleAlert, WifiOff } from "lucide-react";
+import { CircleAlert, Flag, History, House, Minus, Share2, TriangleAlert, WifiOff } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
@@ -113,6 +113,8 @@ interface MenuSheetProps {
   canEndMatch: boolean;
   onClose: () => void;
   onEvents: () => void;
+  /** «Del kampen»; left out where sharing is not possible (a guest's match). */
+  onShare?: () => void;
   onEndHalf: () => void;
   onRemoveGoalUs: () => void;
   onRemoveGoalThem: () => void;
@@ -129,6 +131,7 @@ export function MenuSheet({
   canEndMatch,
   onClose,
   onEvents,
+  onShare,
   onEndHalf,
   onRemoveGoalUs,
   onRemoveGoalThem,
@@ -171,6 +174,12 @@ export function MenuSheet({
           <History size={20} {...ICON} />
           <span className={styles.menuGrow}>{t("events")}</span>
         </button>
+        {onShare ? (
+          <button type="button" className={styles.menuRow} onClick={onShare} data-testid="live-menu-share">
+            <Share2 size={20} {...ICON} />
+            <span className={styles.menuGrow}>{t("share")}</span>
+          </button>
+        ) : null}
         {canEndHalf ? (
           <button type="button" className={styles.menuRow} onClick={onEndHalf}>
             <Flag size={20} {...ICON} />
@@ -203,6 +212,20 @@ export function MenuSheet({
         </div>
       ) : null}
 
+      <button type="button" className={cn(styles.btn, styles.btnSecondary, styles.btnBlock)} onClick={onClose}>
+        {t("close")}
+      </button>
+    </Sheet>
+  );
+}
+
+/** «Del kampen»: the share panel in a sheet (the panel itself is the caller's). */
+export function ShareSheet({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
+  const t = useTranslations("matchLive.sideline.menu");
+
+  return (
+    <Sheet title={t("share")} onClose={onClose} testId="live-share-sheet">
+      {children}
       <button type="button" className={cn(styles.btn, styles.btnSecondary, styles.btnBlock)} onClick={onClose}>
         {t("close")}
       </button>

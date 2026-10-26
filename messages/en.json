@@ -657,6 +657,7 @@
         "open": "Match menu",
         "title": "Match menu",
         "events": "Events",
+        "share": "Share the match",
         "endHalf": "End half",
         "removeGoalUs": "Remove our last goal",
         "removeGoalThem": "Remove their last goal",
@@ -1293,6 +1294,12 @@
     "inProgressSummaryOnly": "The summary appears here when the match is over.",
     "inProgressStatusOnly": "The result and match events are not shared for this match.",
     "completed": "Played",
+    "updatedAt": "Updated at {time}",
+    "dataStale": "No new data since {time}",
+    "noContact": "No connection. Showing data from {time}",
+    "clockStopped": "Clock stopped",
+    "stoppage": "Stoppage time",
+    "inPlay": "In play",
     "phase": {
       "first_half": "1st half",
       "half_time": "Half-time",
@@ -1300,7 +1307,6 @@
       "full_time": "Full time",
       "not_started": "Not started"
     },
-    "minute": "{minute}′",
     "scoreA11y": "Score: {team} {scoreFor}, {opponent} {scoreAgainst}",
     "result": {
       "win": "Win",
@@ -1311,14 +1317,6 @@
     "goalsLabel": "Goals in the match",
     "noGoals": "No goals yet.",
     "noGoalsFinal": "No goals in the match.",
-    "freshness": {
-      "lastChange": "Last update from the coach at {time}",
-      "lastChangeAgo": "Last update from the coach {minutes} min ago ({time})",
-      "checked": "Checked at {time}",
-      "stale": "No new updates for {minutes} min. The score may have changed.",
-      "fetchFailed": "Can't connect. Showing what we had at {time}.",
-      "autoRefresh": "This page updates automatically."
-    },
     "summaryTitle": "Match summary",
     "summaryPending": "The summary is not ready yet. This page updates by itself.",
     "finalStatusTitle": "Final status",

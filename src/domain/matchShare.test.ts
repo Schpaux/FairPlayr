@@ -11,13 +11,12 @@ import {
   kickoffFromTimeOfDay,
   normalizeKickoffAt,
   normalizeShareSettings,
-  publicMatchMinute,
+  publicDataStatus,
   publicRefreshIntervalMs,
   publicSummaryBasis,
   sanitizePublicMatchShare,
   timeOfDayOf,
   withAgeGroup,
-  type PublicLiveState,
 } from "@/domain/matchShare";
 
 const TOKEN = "a".repeat(43);
@@ -230,24 +229,52 @@ describe("one link through the phases", () => {
   });
 });
 
-describe("match minute", () => {
-  const live = (overrides: Partial<PublicLiveState> = {}): PublicLiveState => ({
-    updatedAt: null,
-    phase: "first_half",
-    status: "running",
-    halves: 2,
-    regularSecondsPerHalf: 25 * 60,
-    phaseStartedAtElapsedMs: 0,
-    clock: { startedAtMs: 0, pausedAtMs: null, accumulatedPausedMs: 0, isRunning: true },
-    ...overrides,
+describe("kick-off is the first ▶", () => {
+  const clock = (startedAtMs: number | null, isRunning: boolean, pausedAtMs: number | null = null) => ({
+    startedAtMs,
+    pausedAtMs,
+    accumulatedPausedMs: 0,
+    isRunning,
+  });
+  const liveAnswer = (live: Record<string, unknown>) =>
+    rawAnswer({ phase: "live", detailLevel: "result", live: { ...rawAnswer().live, ...live } });
+
+  it("a match made ready with «Start kampen» but no ▶ yet is still upcoming: no LIVE, no score, no clock", () => {
+    const share = sanitizePublicMatchShare(liveAnswer({ status: "not_started", clock: clock(null, false) }));
+    expect(share?.phase).toBe("upcoming");
+    expect(share?.live).toBeNull();
+    expect(share?.score).toBeNull();
   });
 
-  it("counts the started minute, from the half length in the second half, and stoppage as 25+1", () => {
-    expect(publicMatchMinute(live(), 30_000)).toBe("1");
-    expect(publicMatchMinute(live(), 10 * 60_000 + 5_000)).toBe("11");
-    expect(publicMatchMinute(live(), 25 * 60_000 + 10_000)).toBe("25+1");
-    expect(publicMatchMinute(live({ phase: "second_half", phaseStartedAtElapsedMs: 25 * 60_000 }), 27 * 60_000)).toBe("28");
-    expect(publicMatchMinute(live({ phase: "half_time" }), 30 * 60_000)).toBeNull();
+  it("after the first ▶ it is live; a paused clock or half-time is still a started match", () => {
+    expect(sanitizePublicMatchShare(liveAnswer({ clock: clock(1000, true) }))?.phase).toBe("live");
+    const paused = sanitizePublicMatchShare(liveAnswer({ status: "paused", clock: clock(1000, false, 60_000) }));
+    expect(paused?.phase).toBe("live");
+    expect(paused?.live?.clock?.isRunning).toBe(false);
+    const halfTime = sanitizePublicMatchShare(
+      liveAnswer({ phase: "half_time", status: "paused", clock: clock(1000, false, 1_500_000) })
+    );
+    expect(halfTime?.phase).toBe("live");
+  });
+});
+
+describe("refresh and data status", () => {
+  it("polls calmly as a fallback while the Realtime hint is connected", () => {
+    const live = sanitizePublicMatchShare(rawAnswer({ phase: "live" }));
+    const upcoming = sanitizePublicMatchShare(rawAnswer({ phase: "upcoming" }));
+    expect(publicRefreshIntervalMs(live, { realtime: true })).toBe(60_000);
+    expect(publicRefreshIntervalMs(upcoming, { realtime: true })).toBe(60_000);
+    expect(publicRefreshIntervalMs(sanitizePublicMatchShare(withCurrentSummary(rawAnswer())), { realtime: true })).toBe(120_000);
+    expect(publicRefreshIntervalMs(null, { realtime: true })).toBeNull();
+  });
+
+  it("says no contact when the last read failed, and old data when the coach has not written for a while", () => {
+    const live = sanitizePublicMatchShare(rawAnswer({ phase: "live" }))!.live;
+    const at = Date.parse("2026-10-26T10:20:00.000Z");
+    expect(publicDataStatus({ live, fetchFailed: false, nowMs: at + 60_000 })).toBe("current");
+    expect(publicDataStatus({ live, fetchFailed: false, nowMs: at + 5 * 60_000 })).toBe("stale");
+    expect(publicDataStatus({ live, fetchFailed: true, nowMs: at })).toBe("noContact");
+    expect(publicDataStatus({ live: null, fetchFailed: false, nowMs: at })).toBe("current");
   });
 });
 

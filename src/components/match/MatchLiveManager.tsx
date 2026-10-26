@@ -84,6 +84,7 @@ import { buildDisplayNameMap } from "@/lib/utils/playerName";
 import { fetchOrNull, readJsonOrNull } from "@/lib/utils/fetchOrNull";
 import { completionContextFor, resolveClosedOnDevice } from "@/lib/match/activeMatchRecovery";
 import { sendLiveRuntimeState } from "@/lib/match/liveRuntimeSync";
+import { LiveSharePanel } from "@/components/share/LiveSharePanel";
 import {
   getPendingMatchCompletion,
   type PendingMatchCompletion,
@@ -1524,6 +1525,12 @@ export function MatchLiveManager() {
           band: bandItems,
         }}
         ending={isEndingMatch ? { done: endMatchDone } : null}
+        // FEAT-SHARE-01: the same link and choices as setup, also before the first ▶.
+        sharePanel={
+          auth.status === "authenticated" && userId && activeMatchId ? (
+            <LiveSharePanel matchId={activeMatchId} teamId={liveMatch.teamId} ownerUserId={userId} />
+          ) : null
+        }
         handlers={{
           onStart: handleStart,
           onPause: handlePause,
