@@ -336,9 +336,15 @@ describe("MatchLiveManager restore (OFF-01a)", () => {
     const goal = getStoredLiveMatch()!.events.filter((event) => event.type === "goal").at(-1)!;
     const scorerId = goal.type === "goal" ? goal.scorerPlayerId : null;
     expect(goal.type === "goal" ? goal.scorerName : "x").toBeNull();
-    await waitFor(() => expect(requests.some((request) => request.method === "PATCH" && request.url.includes("/events/"))).toBe(true));
-    const patch = requests.find((request) => request.method === "PATCH" && request.url.includes("/events/"))!;
-    expect(patch.body).toMatchObject({ primaryPlayerId: scorerId, payload: { primaryPlayerName: null } });
+    // The scorer reaches the server with that goal in the runtime state (MATCH-02a).
+    const sentGoal = () =>
+      requests
+        .filter((request) => request.method === "PATCH" && request.url === "/api/matches/match-1")
+        .map((request) => (request.body as { runtimeState: { events: { id: string }[] } }).runtimeState.events)
+        .map((events) => events.find((event) => event.id === goal.id) as Record<string, unknown> | undefined)
+        .findLast((event) => event?.scorerPlayerId);
+    await waitFor(() => expect(sentGoal()).toBeTruthy(), { timeout: 2_000 });
+    expect(sentGoal()).toMatchObject({ scorerPlayerId: scorerId, scorerName: null });
 
     // Nothing stored or sent carries a placeholder name.
     await act(() => new Promise((resolve) => window.setTimeout(resolve, 700)));

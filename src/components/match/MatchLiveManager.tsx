@@ -83,6 +83,7 @@ import type { LiveMenuNote } from "@/components/live/LiveSheets";
 import { buildDisplayNameMap } from "@/lib/utils/playerName";
 import { fetchOrNull, readJsonOrNull } from "@/lib/utils/fetchOrNull";
 import { completionContextFor, resolveClosedOnDevice } from "@/lib/match/activeMatchRecovery";
+import { sendLiveRuntimeState } from "@/lib/match/liveRuntimeSync";
 import {
   getPendingMatchCompletion,
   type PendingMatchCompletion,
@@ -227,14 +228,6 @@ export function MatchLiveManager() {
   const [serverReportEnabled, setServerReportEnabled] = useState<{ matchId: string; value: boolean } | null>(null);
   const reportEnabled =
     activeMatchId && serverReportEnabled?.matchId === activeMatchId ? serverReportEnabled.value : localReportEnabled;
-  // Server events of goals scored here, by local event id, with the match
-  // they belong to. The scorer sheet never waits for them: scorer and assist
-  // are sent to the server event once it is known (see the effect below).
-  const [serverGoalEvents, setServerGoalEvents] = useState<
-    Readonly<Record<string, { matchId: string; serverEventId: string }>>
-  >({});
-  // Scorer|assist last sent per server goal event, so each change goes once.
-  const sentGoalContributorsRef = useRef(new Map<string, string>());
   const [promptQueue, setPromptQueue] = useState<GoalPromptState[]>([]);
   const [isResolvingRecoveryAction, setIsResolvingRecoveryAction] = useState(false);
   // MATCH-03: ending or discarding a match from the recovery screen goes
@@ -458,31 +451,60 @@ export function MatchLiveManager() {
     if (liveMatchEnded) stopLiveHeartbeat();
   }, [liveMatchEnded]);
 
+  // MATCH-02a / OFF-01b: the state on screen, goals with scorer and assist
+  // included, goes to the server until it has arrived. A state that could
+  // not be sent is sent again when the network or the app comes back, and
+  // after a reload (the restored state has not been sent yet). Sending a
+  // state twice is safe: the server ignores older states and keeps one row
+  // per goal.
+  const runtimeSentRef = useRef<{ matchId: string; state: LiveMatchState } | null>(null);
+  const [runtimeRetryTick, setRuntimeRetryTick] = useState(0);
+  const userId = auth.user?.id ?? null;
+
+  useEffect(() => {
+    const handleVisible = () => {
+      if (document.visibilityState === "visible") {
+        setRuntimeRetryTick((tick) => tick + 1);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisible);
+    };
+  }, []);
+
   useEffect(() => {
     // An ended match is sent once, by the completion (FP-P0-F2); a runtime
     // sync after that could only race it.
-    if (!isHydrated || auth.status !== "authenticated" || !activeMatchId || !liveMatch || liveMatch.status === "ended") {
+    if (
+      !isHydrated ||
+      auth.status !== "authenticated" ||
+      !activeMatchId ||
+      !liveMatch ||
+      liveMatch.status === "ended" ||
+      !isOnline
+    ) {
+      return;
+    }
+
+    const sent = runtimeSentRef.current;
+    if (sent?.matchId === activeMatchId && sent.state === liveMatch) {
       return;
     }
 
     const timeout = window.setTimeout(() => {
-      void fetchOrNull(`/api/matches/${encodeURIComponent(activeMatchId)}`, {
-        method: "PATCH",
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          runtimeState: liveMatch,
-          scoreFor: liveMatch.teamScore,
-          scoreAgainst: liveMatch.opponentScore,
-        }),
+      void sendLiveRuntimeState({ matchId: activeMatchId, userId, liveMatch }).then((result) => {
+        if (result !== "retry") {
+          runtimeSentRef.current = { matchId: activeMatchId, state: liveMatch };
+        }
       });
     }, 600);
 
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [activeMatchId, auth.status, isHydrated, liveMatch]);
+  }, [activeMatchId, auth.status, isHydrated, isOnline, liveMatch, runtimeRetryTick, userId]);
 
   useEffect(() => {
     if (!isHydrated || auth.status !== "authenticated" || !activeMatchId) {
@@ -1084,112 +1106,6 @@ export function MatchLiveManager() {
     router.push("/match/setup");
   };
 
-  const createGoalEventOnServer = async (
-    type: "goal_for" | "goal_against",
-    minute: number | null
-  ) => {
-    if (!activeMatchId || auth.status !== "authenticated") {
-      return null;
-    }
-
-    const response = await fetchOrNull(`/api/matches/${encodeURIComponent(activeMatchId)}/events`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        type,
-        minute,
-        timestampMs: liveMatch ? elapsedSeconds * 1000 : null,
-        teamSide: type === "goal_for" ? "own" : "opponent",
-        payload: {},
-      }),
-    });
-
-    if (!response?.ok) {
-      return null;
-    }
-
-    const payload = await readJsonOrNull<{
-      event?: { id: string };
-    }>(response);
-
-    return payload?.event?.id ?? null;
-  };
-
-  const patchGoalEvent = async (
-    eventId: string,
-    data: Record<string, unknown>,
-    matchId: string | null = activeMatchId
-  ) => {
-    if (!matchId || auth.status !== "authenticated") {
-      return;
-    }
-
-    await fetchOrNull(`/api/matches/${encodeURIComponent(matchId)}/events/${encodeURIComponent(eventId)}`, {
-      method: "PATCH",
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
-  };
-
-  // Creates the server row for a goal scored here. Bound to the match the
-  // goal was scored in: a late answer only ever touches that match's event.
-  const linkGoalEventToServer = async (localEventId: string, minute: number | null) => {
-    const matchIdAtGoal = activeMatchId;
-    const serverEventId = await createGoalEventOnServer("goal_for", minute);
-
-    if (!serverEventId || !matchIdAtGoal) {
-      return;
-    }
-
-    setServerGoalEvents((previous) => ({ ...previous, [localEventId]: { matchId: matchIdAtGoal, serverEventId } }));
-  };
-
-  const onGoalContributorsChanged = useEffectEvent(
-    (matchId: string, serverEventId: string, data: Record<string, unknown>) => {
-      void patchGoalEvent(serverEventId, data, matchId);
-    }
-  );
-
-  // Scorer and assist of a goal with a server event go to that event, whether
-  // they were chosen before or after the server answered. The local event is
-  // the record; this only mirrors it.
-  useEffect(() => {
-    for (const event of liveMatch?.events ?? []) {
-      const linked = event.type === "goal" ? serverGoalEvents[event.id] : undefined;
-
-      if (!linked || event.type !== "goal") {
-        continue;
-      }
-
-      const signature = `${event.scorerPlayerId ?? ""}|${event.assistPlayerId ?? ""}`;
-      const previous = sentGoalContributorsRef.current.get(linked.serverEventId);
-
-      if (previous === signature) {
-        continue;
-      }
-
-      sentGoalContributorsRef.current.set(linked.serverEventId, signature);
-
-      // Nothing chosen yet: the server event already says so.
-      if (previous === undefined && signature === "|") {
-        continue;
-      }
-
-      onGoalContributorsChanged(linked.matchId, linked.serverEventId, {
-        primaryPlayerId: event.scorerPlayerId,
-        secondaryPlayerId: event.assistPlayerId,
-        payload: {
-          primaryPlayerName: event.scorerName,
-          secondaryPlayerName: event.assistName,
-        },
-      });
-    }
-  }, [liveMatch?.events, serverGoalEvents]);
-
   const queueGoalPrompt = (localEventId: string, minute: number | null) => {
     if (!liveMatch) {
       return;
@@ -1232,6 +1148,8 @@ export function MatchLiveManager() {
           scorerPlayerId: playerId,
           scorerName,
         }),
+        // A newer state for the server (MATCH-02a), like every other change.
+        updatedAt: new Date().toISOString(),
       };
     });
 
@@ -1272,6 +1190,7 @@ export function MatchLiveManager() {
           assistPlayerId: playerId,
           assistName,
         }),
+        updatedAt: new Date().toISOString(),
       };
     });
 
@@ -1325,13 +1244,12 @@ export function MatchLiveManager() {
     });
 
     if (delta > 0 && localGoalEvent) {
-      // MATCH-12: the sheet opens now, whatever the network does; the server
-      // event is linked when (and if) it is created.
+      // MATCH-12: the sheet opens now, whatever the network does. The goal
+      // reaches the server with the runtime state (MATCH-02a).
       if (reportEnabled) {
         queueGoalPrompt(localGoalEvent.id, minute);
       }
 
-      void linkGoalEventToServer(localGoalEvent.id, minute);
     }
   };
 
@@ -1378,10 +1296,6 @@ export function MatchLiveManager() {
 
       return next;
     });
-
-    if (delta > 0) {
-      void createGoalEventOnServer("goal_against", minute);
-    }
   };
 
   // UI-LIVE-03: every state screen uses the full-screen canvas of Live.

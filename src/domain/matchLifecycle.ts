@@ -46,9 +46,17 @@ export function isEndedRuntimeState(value: unknown): boolean {
   );
 }
 
+/**
+ * `current.runtimeState` (optional): the state stored on the match. When it is
+ * given and already ended, a repeated completion keeps it and its score
+ * (MATCH-02a): only the first final state counts, so a completion that lost a
+ * race to another one cannot put its own state next to the winner's goals.
+ * Without it, an ended state on a repeated completion is always accepted.
+ */
 export function planMatchUpdate(
   currentStatus: ServerMatchStatus,
-  request: MatchUpdateRequest
+  request: MatchUpdateRequest,
+  current?: { runtimeState: unknown }
 ): MatchUpdatePlan {
   const sendsRuntime = request.runtimeState !== undefined;
 
@@ -64,7 +72,10 @@ export function planMatchUpdate(
     // Repeated completion. Only an ended runtime state may replace the stored
     // one (and bring its score); anything else — a clear from a recovery
     // action, a stale running snapshot — is dropped so the history stays.
-    const acceptsFinalState = sendsRuntime && isEndedRuntimeState(request.runtimeState);
+    const acceptsFinalState =
+      sendsRuntime &&
+      isEndedRuntimeState(request.runtimeState) &&
+      !(current !== undefined && isEndedRuntimeState(current.runtimeState));
 
     return {
       allowed: true,
@@ -193,4 +204,46 @@ export function isCompletionReplay(
     isEndedRuntimeState(request.runtimeState) && !isEndedRuntimeState(existing.runtimeState);
 
   return !bringsFirstFinalState;
+}
+
+/**
+ * True when a live-screen runtime state is older than the one the server
+ * already has for the same live match (MATCH-02a): a retry or a request that
+ * arrived late after a newer one. Such a write must change nothing. States
+ * of different live matches, or without a readable `updatedAt`, are never
+ * considered older.
+ */
+export function isOlderRuntimeState(stored: unknown, incoming: unknown): boolean {
+  if (typeof stored !== "object" || stored === null || typeof incoming !== "object" || incoming === null) {
+    return false;
+  }
+
+  const storedState = stored as Record<string, unknown>;
+  const incomingState = incoming as Record<string, unknown>;
+
+  if (typeof storedState.id !== "string" || storedState.id !== incomingState.id) {
+    return false;
+  }
+
+  const storedMs = parseIsoMs(storedState.updatedAt);
+  const incomingMs = parseIsoMs(incomingState.updatedAt);
+
+  return storedMs !== null && incomingMs !== null && incomingMs < storedMs;
+}
+
+/** True when both runtime states are the same revision of the same live match. */
+export function isSameRuntimeRevision(stored: unknown, incoming: unknown): boolean {
+  if (typeof stored !== "object" || stored === null || typeof incoming !== "object" || incoming === null) {
+    return false;
+  }
+
+  const storedState = stored as Record<string, unknown>;
+  const incomingState = incoming as Record<string, unknown>;
+
+  return (
+    typeof storedState.id === "string" &&
+    storedState.id === incomingState.id &&
+    typeof storedState.updatedAt === "string" &&
+    storedState.updatedAt === incomingState.updatedAt
+  );
 }

@@ -14,7 +14,15 @@ import type {
   MatchRow,
   UpdateMatchStatusInput,
 } from "@/lib/server/matches/types";
-import { isCompletionReplay, planMatchUpdate, resolveCompletionEndedAt } from "@/domain/matchLifecycle";
+import {
+  isCompletionReplay,
+  isEndedRuntimeState,
+  isOlderRuntimeState,
+  isSameRuntimeRevision,
+  planMatchUpdate,
+  resolveCompletionEndedAt,
+} from "@/domain/matchLifecycle";
+import { goalEventsFromRuntimeState, planGoalEventSync, type GoalEventWrite } from "@/domain/goalEventSync";
 import { ALL_FORMATS } from "@/domain/match";
 
 const MATCH_SELECT_LEGACY = "id, team_id, title, opponent_name, starts_at, location, status, runtime_state, created_by, created_at, updated_at";
@@ -432,14 +440,45 @@ export async function updateMatchStatus(
   const existing = await getMatchById(supabase, userId, input.matchId);
 
   // Completed is terminal (FP-P0-F2). See src/domain/matchLifecycle.ts.
-  const plan = planMatchUpdate(existing.status, {
-    status: input.status,
-    runtimeState: input.runtimeState,
-    hasScore: input.scoreFor !== undefined || input.scoreAgainst !== undefined,
-  });
+  // A repeated completion never replaces a final state already stored, so the
+  // result, the state and the goals stay those of the first completion.
+  const plan = planMatchUpdate(
+    existing.status,
+    {
+      status: input.status,
+      runtimeState: input.runtimeState,
+      hasScore: input.scoreFor !== undefined || input.scoreAgainst !== undefined,
+    },
+    { runtimeState: existing.runtimeState }
+  );
 
   if (!plan.allowed) {
     throw matchCompletedError();
+  }
+
+  // MATCH-02a: a live-screen write older than the state the server already
+  // has (a retry, or a request that arrived after a newer one) changes nothing.
+  if (input.status === undefined && isOlderRuntimeState(existing.runtimeState, input.runtimeState)) {
+    return existing;
+  }
+
+  // The goals of the device's final state go to the server with the
+  // completion, so a failure leaves the match open and the device's retry does
+  // it again (and the report reads the right goals). Only the first final
+  // state: a repeat completion leaves goals corrected on the details page alone.
+  const runtimeRecord = isRecord(input.runtimeState) ? input.runtimeState : null;
+  const syncFinalGoals =
+    input.status === "completed" &&
+    plan.writeRuntimeState &&
+    runtimeRecord !== null &&
+    (existing.status !== "completed" || !isEndedRuntimeState(existing.runtimeState));
+  // The first completion writes its goals and itself in one database step
+  // (below), so two completions with different final states cannot mix.
+  const completionGoals =
+    syncFinalGoals && plan.timestamps === "complete" ? goalEventsFromRuntimeState(runtimeRecord) : null;
+
+  if (syncFinalGoals && !completionGoals) {
+    await syncGoalEventsWithRuntimeState(supabase, input.matchId, runtimeRecord, { final: true });
   }
 
   if (input.status === "live") {
@@ -543,15 +582,44 @@ export async function updateMatchStatus(
   // the repeat it now is.
   const completesNow = plan.timestamps === "complete";
   const onlyWhileOpen = plan.requireNotCompleted || completesNow;
+  // MATCH-02a: a live-screen state is written only over the state checked
+  // above (compare-and-set), so an older request that is overtaken while in
+  // flight never overwrites a newer one; it is re-planned below instead.
+  const onlyOverCheckedState =
+    input.status === undefined && plan.writeRuntimeState && input.runtimeState !== undefined;
 
-  let primaryQuery = supabase.from("matches").update(updatePayload).eq("id", input.matchId);
-  if (onlyWhileOpen) {
-    primaryQuery = primaryQuery.neq("status", "completed");
+  let row: MatchRow | null;
+  let error: { code?: string; message: string } | null = null;
+
+  const completed = completionGoals
+    ? await completeMatchWithGoalEvents(supabase, input.matchId, updatePayload, completionGoals)
+    : undefined;
+
+  if (completed !== undefined) {
+    // No row: another completion won; re-planned below as a repeat.
+    row = completed;
+  } else {
+    if (completionGoals && runtimeRecord) {
+      // The database function is not installed: the previous, separate writes.
+      await syncGoalEventsWithRuntimeState(supabase, input.matchId, runtimeRecord, { final: true });
+    }
+
+    let primaryQuery = supabase.from("matches").update(updatePayload).eq("id", input.matchId);
+    if (onlyWhileOpen) {
+      primaryQuery = primaryQuery.neq("status", "completed");
+    }
+    if (onlyOverCheckedState) {
+      const checkedRevision = runtimeRevision(existing.runtimeState);
+      primaryQuery =
+        checkedRevision === null
+          ? primaryQuery.is("runtime_state->>updatedAt", null)
+          : primaryQuery.eq("runtime_state->>updatedAt", checkedRevision);
+    }
+
+    const primary = await primaryQuery.select(MATCH_SELECT_ENHANCED).maybeSingle<MatchRow>();
+
+    ({ data: row, error } = primary);
   }
-
-  const primary = await primaryQuery.select(MATCH_SELECT_ENHANCED).maybeSingle<MatchRow>();
-
-  let { data: row, error } = primary;
 
   if (isMissingMatchTimestampColumnError(error)) {
     let fallbackQuery = supabase.from("matches").update({ status: nextStatus }).eq("id", input.matchId);
@@ -582,6 +650,12 @@ export async function updateMatchStatus(
       return updateMatchStatus(supabase, userId, input);
     }
 
+    if (onlyOverCheckedState) {
+      // Another state (or the completion) was written after our read.
+      // Re-read: this one is then older (ignored), refused, or still newer.
+      return updateMatchStatus(supabase, userId, input);
+    }
+
     if (plan.requireNotCompleted) {
       throw matchCompletedError();
     }
@@ -590,6 +664,12 @@ export async function updateMatchStatus(
   }
 
   let mapped = mapMatchRows([row], [])[0];
+
+  // A live-screen state: its goals follow, unless a newer state (or the
+  // completion) was written in the meantime and brings its own.
+  if (input.status !== "completed" && plan.writeRuntimeState && runtimeRecord !== null) {
+    await syncGoalEventsWithRuntimeState(supabase, input.matchId, runtimeRecord, { final: false });
+  }
 
   if (shouldGenerateReport) {
     console.info("[match-report] generation requested", {
@@ -650,6 +730,182 @@ export async function updateMatchStatus(
   }
 
   return mapped;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function runtimeRevision(runtimeState: unknown): string | null {
+  return isRecord(runtimeState) && typeof runtimeState.updatedAt === "string" ? runtimeState.updatedAt : null;
+}
+
+function goalEventRow(matchId: string, goal: GoalEventWrite) {
+  return {
+    id: goal.id,
+    match_id: matchId,
+    type: goal.type,
+    minute: goal.minute,
+    timestamp_ms: goal.timestampMs,
+    team_side: goal.teamSide,
+    primary_player_id: goal.primaryPlayerId,
+    secondary_player_id: goal.secondaryPlayerId,
+    payload: goal.payload,
+  };
+}
+
+/** PostgREST / Postgres: the function is not installed (migration not applied). */
+function isMissingFunctionError(error: { code?: string } | null): boolean {
+  return error?.code === "PGRST202" || error?.code === "42883";
+}
+
+/**
+ * MATCH-02a: makes the match's server goal rows equal the goals in the
+ * device's runtime state (see src/domain/goalEventSync.ts). Idempotent: the
+ * rows use the device's event ids, so a repeat writes nothing new.
+ *
+ * The check and the writes happen in one database call that locks the match
+ * row (sync_match_goal_events, migration 20261026120000): a live state's goals
+ * are written only while the match is open and still holds that state; the
+ * completion's (`final`) also stores the final state first, so a live sync
+ * still in flight writes nothing after it, and writes nothing once the match
+ * is completed with its final state (a racing second completion).
+ */
+async function syncGoalEventsWithRuntimeState(
+  supabase: SupabaseClient,
+  matchId: string,
+  runtimeState: Record<string, unknown>,
+  options: { final: boolean }
+): Promise<void> {
+  const desired = goalEventsFromRuntimeState(runtimeState);
+
+  if (!desired) {
+    return;
+  }
+
+  const { error } = await supabase.rpc("sync_match_goal_events", {
+    p_match_id: matchId,
+    p_runtime_state: runtimeState,
+    p_goals: desired.map((goal) => goalEventRow(matchId, goal)),
+    p_final: options.final,
+  });
+
+  if (!error) {
+    return;
+  }
+
+  if (!isMissingFunctionError(error)) {
+    throw new IntegrationError("MATCH_EVENTS_SYNC_FAILED", error.message, 500);
+  }
+
+  await syncGoalEventsWithoutLock(supabase, matchId, runtimeState, desired, { onlyIfStored: !options.final });
+}
+
+/**
+ * MATCH-02a: the first completion and its final goals in one database call
+ * under the match row lock (complete_match_with_goal_events, migration
+ * 20261026120000). Returns the completed row, null when the match was already
+ * completed (another completion won and nothing was written), or undefined
+ * when the function is not installed.
+ */
+async function completeMatchWithGoalEvents(
+  supabase: SupabaseClient,
+  matchId: string,
+  updatePayload: Record<string, unknown>,
+  goals: GoalEventWrite[]
+): Promise<MatchRow | null | undefined> {
+  const { data, error } = await supabase.rpc("complete_match_with_goal_events", {
+    p_match_id: matchId,
+    p_match: updatePayload,
+    p_goals: goals.map((goal) => goalEventRow(matchId, goal)),
+  });
+
+  if (isMissingFunctionError(error)) {
+    return undefined;
+  }
+
+  if (isCompletedTriggerError(error)) {
+    throw matchCompletedError();
+  }
+
+  if (error) {
+    throw new IntegrationError("MATCH_UPDATE_FAILED", error.message, 500);
+  }
+
+  return (data as MatchRow[] | null)?.[0] ?? null;
+}
+
+/**
+ * The same sync as separate requests, used until sync_match_goal_events is
+ * installed. Not atomic: a request overtaken between its check and its
+ * writes can still change goal rows (MATCH-02a limitation (a)).
+ */
+async function syncGoalEventsWithoutLock(
+  supabase: SupabaseClient,
+  matchId: string,
+  runtimeState: Record<string, unknown>,
+  desired: GoalEventWrite[],
+  options: { onlyIfStored: boolean }
+): Promise<void> {
+  if (options.onlyIfStored) {
+    const { data: current, error: currentError } = await supabase
+      .from("matches")
+      .select("runtime_state")
+      .eq("id", matchId)
+      .maybeSingle<{ runtime_state: unknown }>();
+
+    if (currentError) {
+      throw new IntegrationError("MATCH_READ_FAILED", currentError.message, 500);
+    }
+
+    if (!isSameRuntimeRevision(current?.runtime_state, runtimeState)) {
+      return;
+    }
+  }
+
+  const { data: rows, error: readError } = await supabase
+    .from("match_events")
+    .select(MATCH_EVENT_SELECT)
+    .eq("match_id", matchId)
+    .in("type", ["goal_for", "goal_against"])
+    .returns<MatchEventRow[]>();
+
+  if (readError) {
+    throw new IntegrationError("MATCH_EVENTS_READ_FAILED", readError.message, 500);
+  }
+
+  const plan = planGoalEventSync(desired, mapMatchEventRows(rows ?? []));
+  const fail = (message: string) => {
+    throw new IntegrationError("MATCH_EVENTS_SYNC_FAILED", message, 500);
+  };
+
+  if (plan.remove.length > 0) {
+    const { error } = await supabase.from("match_events").delete().eq("match_id", matchId).in("id", plan.remove);
+    if (error) fail(error.message);
+  }
+
+  for (const goal of plan.insert) {
+    const { error } = await supabase.from("match_events").insert(goalEventRow(matchId, goal));
+    // Already there: a concurrent sync of the same state created it.
+    if (error && !isUniqueViolation(error)) fail(error.message);
+  }
+
+  for (const goal of plan.update) {
+    const { error } = await supabase
+      .from("match_events")
+      .update({
+        type: goal.type,
+        minute: goal.minute,
+        timestamp_ms: goal.timestampMs,
+        team_side: goal.teamSide,
+        primary_player_id: goal.primaryPlayerId,
+        secondary_player_id: goal.secondaryPlayerId,
+        payload: goal.payload,
+      })
+      .eq("id", goal.id)
+      .eq("match_id", matchId);
+    if (error) fail(error.message);
+  }
 }
 
 export async function createManualMatch(
@@ -784,7 +1040,13 @@ export async function createMatchEvent(
   userId: string,
   input: CreateMatchEventInput
 ): Promise<MatchEventItem> {
-  await getMatchById(supabase, userId, input.matchId);
+  const match = await getMatchById(supabase, userId, input.matchId);
+
+  // A request that arrives after the match was completed or discarded (an
+  // older app's late goal) must not add to its final record (MATCH-02a).
+  if (match.status === "completed") {
+    throw matchCompletedError();
+  }
 
   const { data, error } = await supabase
     .from("match_events")

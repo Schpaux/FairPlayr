@@ -52,6 +52,16 @@ describe("planMatchUpdate: completed is terminal", () => {
     });
   });
 
+  it("keeps a final state already stored when a repeated completion brings another (MATCH-02a)", () => {
+    expect(
+      planMatchUpdate("completed", { status: "completed", runtimeState: ENDED, hasScore: true }, { runtimeState: ENDED })
+    ).toMatchObject({ allowed: true, timestamps: "keep", writeRuntimeState: false, writeScore: false });
+    // A server-only finish without a final state still takes the device's.
+    expect(
+      planMatchUpdate("completed", { status: "completed", runtimeState: ENDED, hasScore: true }, { runtimeState: null })
+    ).toMatchObject({ writeRuntimeState: true, writeScore: true });
+  });
+
   it("drops a stale running snapshot or a clear sent with a repeated completion", () => {
     for (const runtimeState of [RUNNING, null]) {
       expect(

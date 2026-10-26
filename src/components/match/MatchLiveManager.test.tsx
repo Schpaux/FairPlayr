@@ -914,6 +914,88 @@ describe("MatchLiveManager match completion", () => {
     });
   });
 
+  // MATCH-02a / OFF-01b: a live state the server did not get is sent again.
+  describe("runtime state retry", () => {
+    const runtimePatches = () =>
+      fetchMock.mock.calls
+        .filter(([url, init]) => String(url) === "/api/matches/match-1" && init?.method === "PATCH")
+        .map(([, init]) => JSON.parse(init!.body as string) as { status?: string; scoreFor: number; runtimeState: { events: { type: string }[] } })
+        .filter((body) => body.status === undefined);
+    const showApp = () =>
+      act(() => {
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+    const settle = () => act(() => new Promise((resolve) => window.setTimeout(resolve, 800)));
+
+    beforeEach(() => {
+      vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    });
+
+    it("sends a state that failed again when the app comes back, once it arrived never again", async () => {
+      let failRuntime = true;
+      const answer = fetchMock.getMockImplementation()!;
+      fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) =>
+        failRuntime && init?.method === "PATCH" ? Promise.resolve(new Response(null, { status: 503 })) : answer(input, init)
+      );
+
+      renderManager();
+      fireEvent.click(screen.getByRole("button", { name: en.matchLive.actions.start }));
+      fireEvent.click(screen.getByRole("button", { name: en.matchLive.score.increaseTeam }));
+      await waitFor(() => expect(runtimePatches()).toHaveLength(1), { timeout: 2_000 });
+      await settle();
+      expect(runtimePatches()).toHaveLength(1);
+
+      failRuntime = false;
+      showApp();
+      await waitFor(() => expect(runtimePatches()).toHaveLength(2), { timeout: 2_000 });
+      expect(runtimePatches()[1].scoreFor).toBe(1);
+      expect(runtimePatches()[1].runtimeState.events.filter((event) => event.type === "goal")).toHaveLength(1);
+
+      // Arrived: coming back again sends nothing new, and no goal row is posted separately.
+      showApp();
+      await settle();
+      expect(runtimePatches()).toHaveLength(2);
+      expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/events"))).toBe(false);
+    });
+
+    it("sends a goal registered offline after a reload, when the network is back", async () => {
+      renderManager();
+      setOnline(false);
+      fireEvent.click(screen.getByRole("button", { name: en.matchLive.actions.start }));
+      fireEvent.click(screen.getByRole("button", { name: en.matchLive.score.increaseTeam }));
+      await waitFor(() => expect(getStoredLiveMatch()?.teamScore).toBe(1));
+      await settle();
+      expect(runtimePatches()).toHaveLength(0);
+
+      // Reload while still offline: the goal is kept on the device only.
+      cleanup();
+      fetchMock.mockClear();
+      renderManager();
+      await settle();
+      expect(runtimePatches()).toHaveLength(0);
+
+      setOnline(true);
+      await waitFor(() => expect(runtimePatches()).toHaveLength(1), { timeout: 2_000 });
+      expect(runtimePatches()[0].scoreFor).toBe(1);
+      expect(runtimePatches()[0].runtimeState.events.filter((event) => event.type === "goal")).toHaveLength(1);
+    });
+
+    it("never sends the live state again after the match was ended", async () => {
+      renderManager();
+      fireEvent.click(screen.getByRole("button", { name: en.matchLive.actions.start }));
+      fireEvent.click(screen.getByRole("button", { name: en.matchLive.score.increaseTeam }));
+      fireEvent.click(screen.getByRole("button", { name: en.matchLive.actions.end }));
+      await waitFor(() => expect(completionCalls()).toHaveLength(1));
+
+      showApp();
+      setOnline(false);
+      setOnline(true);
+      await settle();
+      expect(runtimePatches()).toHaveLength(0);
+      expect(completionCalls()).toHaveLength(1);
+    });
+  });
+
   describe("Modern Sideline view (NEXT_PUBLIC_LIVE_UI=sideline)", () => {
     const sideline = en.matchLive.sideline;
 
@@ -1627,18 +1709,14 @@ describe("MatchLiveManager match completion", () => {
     it("opens the scorer sheet from the local setup while no server request has answered", async () => {
       window.localStorage.clear();
       activateMatch({ ...SETUP, reportEnabled: true }, "match-1");
-      let answerGoal: (response: Response) => void = () => {};
+      // Server reads and runtime syncs do not answer until released.
+      const unanswered: Array<() => void> = [];
       fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
-        const url = String(input);
-        if (url.endsWith("/api/matches/match-1/events") && init?.method === "POST") {
+        if (String(input) === "/api/matches/match-1" && init?.method === "PATCH") {
           return new Promise<Response>((resolve) => {
-            answerGoal = resolve;
+            unanswered.push(() => resolve(new Response(JSON.stringify({ match: {} }), { status: 200 })));
           });
         }
-        if (url.includes("/events/") && init?.method === "PATCH") {
-          return Promise.resolve(new Response(null, { status: 204 }));
-        }
-        // Server reads and runtime syncs never answer.
         return new Promise<Response>(() => {});
       });
 
@@ -1652,18 +1730,25 @@ describe("MatchLiveManager match completion", () => {
         const goal = getStoredLiveMatch()?.events.find((event) => event.type === "goal");
         expect(goal && goal.type === "goal" ? goal.scorerPlayerId : null).toBe("p2");
       });
-      const patches = () =>
-        fetchMock.mock.calls.filter(([url, init]) => String(url).includes("/events/") && init?.method === "PATCH");
-      expect(patches()).toHaveLength(0);
+      const goalId = getStoredLiveMatch()!.events.find((event) => event.type === "goal")!.id;
 
-      // The server answers late: the chosen scorer goes to that goal, in this match.
-      await act(async () => {
-        answerGoal(new Response(JSON.stringify({ event: { id: "srv-goal-1" } }), { status: 201 }));
-      });
-      await waitFor(() => expect(patches()).toHaveLength(1));
-      const [url, init] = patches()[0];
-      expect(String(url)).toBe("/api/matches/match-1/events/srv-goal-1");
-      expect(JSON.parse(init!.body as string)).toMatchObject({ primaryPlayerId: "p2" });
+      // The server answers late: the chosen scorer goes with that same goal
+      // (one event id) in the next runtime state, and no separate goal row is
+      // created from the device (MATCH-02a).
+      const sentScorer = () =>
+        fetchMock.mock.calls
+          .filter(([url, init]) => String(url) === "/api/matches/match-1" && init?.method === "PATCH")
+          .map(([, init]) => JSON.parse(init!.body as string) as { runtimeState: { events: Record<string, unknown>[] } })
+          .flatMap((body) => body.runtimeState.events.filter((event) => event.type === "goal"))
+          .find((event) => event.scorerPlayerId === "p2");
+      await waitFor(
+        () => {
+          unanswered.splice(0).forEach((answer) => answer());
+          expect(sentScorer()).toMatchObject({ id: goalId });
+        },
+        { timeout: 3_000 }
+      );
+      expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/events"))).toBe(false);
     });
   });
 });

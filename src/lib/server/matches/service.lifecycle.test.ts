@@ -15,6 +15,14 @@ type Row = Record<string, unknown>;
  * return copies; `afterRead` runs after each read of `matches`, so a test can
  * change the row between the service's read and its write.
  */
+/** Column value, also for a JSON path such as "runtime_state->>updatedAt". */
+function columnValue(row: Row, col: string): unknown {
+  const [column, key] = col.split("->>");
+  if (key === undefined) return row[column];
+  const json = row[column] as Row | null | undefined;
+  return json?.[key] ?? null;
+}
+
 function fakeSupabase(tables: Record<string, Row[]>, afterRead?: () => void) {
   const writes: Row[] = [];
   const from = (table: string) => {
@@ -38,7 +46,8 @@ function fakeSupabase(tables: Record<string, Row[]>, afterRead?: () => void) {
         patch = payload;
         return builder;
       },
-      eq: (col: string, value: unknown) => (filters.push((row) => row[col] === value), builder),
+      eq: (col: string, value: unknown) => (filters.push((row) => columnValue(row, col) === value), builder),
+      is: (col: string, value: null) => (filters.push((row) => (columnValue(row, col) ?? null) === value), builder),
       neq: (col: string, value: unknown) => (filters.push((row) => row[col] !== value), builder),
       in: (col: string, values: unknown[]) => (filters.push((row) => values.includes(row[col])), builder),
       not: (col: string, _op: string, value: unknown) => (filters.push((row) => row[col] !== value), builder),
@@ -51,7 +60,9 @@ function fakeSupabase(tables: Record<string, Row[]>, afterRead?: () => void) {
     };
     return builder;
   };
-  return { client: { from } as never, writes };
+  // The MATCH-02a goal sync function; goal rows are covered in service.goalSync.test.ts.
+  const rpc = () => Promise.resolve({ data: true, error: null });
+  return { client: { from, rpc } as never, writes };
 }
 
 const ENDED_AT = "2026-10-15T11:30:00.000Z";
