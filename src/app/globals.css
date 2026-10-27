@@ -70,6 +70,7 @@
   --color-fp-on-club: var(--fp-on-club);
   --color-fp-on-club-2: var(--fp-on-club-2);
   --color-fp-club-disc: var(--fp-club-disc);
+  --color-fp-brand-mark: var(--fp-brand-mark);
   --color-fp-lime: var(--fp-lime);
   --color-fp-on-lime: var(--fp-on-lime);
   --color-fp-grass: var(--fp-grass);
@@ -143,8 +144,9 @@
   --fp-on-club: #F2EFE7;
   --fp-on-club-2: #B7CCBE;
   --fp-club-disc: #0E4D33;       /* shirt discs off the pitch */
+  --fp-brand-mark: var(--fp-club);  /* the logo: club green on light (BRAND.md §3) */
 
-  --fp-lime: #9FE870;            /* "your next action" — fill/ring/underline only, never text on light */
+  --fp-lime: #9FE870;           /* "your next action" — fill/ring/underline only, never text on light */
   --fp-on-lime: #0B2E1A;
 
   --fp-grass: #2E6A45;
@@ -261,6 +263,7 @@
   --fp-ink-2: #A4B3A9;
 
   --fp-club-disc: #1D6345;       /* lifted so discs separate from the dark canvas */
+  --fp-brand-mark: var(--fp-on-club);  /* the logo: chalk on the dark canvas (BRAND.md §3) */
 
   --fp-grass: #1E4B31;
   --fp-grass-stripe: #1B452D;

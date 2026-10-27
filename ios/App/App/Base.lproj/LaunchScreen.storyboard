@@ -12,7 +12,7 @@
             <objects>
                 <viewController id="01J-lp-oVM" sceneMemberID="viewController">
                     <!--
-                        Solid dark background matching FairPlayr's brand color (#0b0f1a).
+                        Solid dark canvas (#121B16, BRAND-01, BRAND.md §4).
                         Keeps the native iOS launch screen consistent with the Capacitor
                         SplashScreen backgroundColor — no white flash before the plugin takes over.
 
@@ -22,7 +22,7 @@
                     <view key="view" contentMode="scaleToFill" id="Ze5-6b-2t3">
                         <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
-                        <color key="backgroundColor" red="0.043137" green="0.058824" blue="0.101961" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <color key="backgroundColor" red="0.070588" green="0.105882" blue="0.086275" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                     </view>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="iYj-Kq-Ea1" userLabel="First Responder" sceneMemberID="firstResponder"/>

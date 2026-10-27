@@ -34,6 +34,7 @@ import { CircleAlert } from "lucide-react";
 import { EventTimeline, type TimelineEntry } from "@/components/match/EventTimeline";
 import { publicMatchClock, type PublicMatchClock } from "@/components/share/publicMatchClock";
 import { PublicLineup } from "@/components/share/PublicLineup";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Skeleton } from "@/components/ui/primitives";
 import { createRefreshCoordinator, type RefreshCoordinator } from "@/lib/share/publicRefresh";
 import {
@@ -334,7 +335,9 @@ function PublicShell({ children, footer, brand }: { children: React.ReactNode; f
   return (
     <div className="min-h-dvh bg-fp-canvas text-fp-ink">
       <main className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-[calc(1.25rem+env(safe-area-inset-top))] sm:gap-5 sm:px-6 sm:pt-10">
-        <p className="px-1 text-[15px] font-bold tracking-[-0.01em] text-fp-ink">{brand}</p>
+        {/* BRAND-01: the same main logo as the app and the website (BRAND.md §5).
+            -ml-[7px] cancels the master's left clear space, as in the header. */}
+        <BrandLogo label={brand} className="-ml-[7px]" />
         {children}
         <p className="px-1 pt-2 text-[14px] text-fp-ink-2">{footer}</p>
       </main>

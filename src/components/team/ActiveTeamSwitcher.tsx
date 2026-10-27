@@ -17,9 +17,11 @@ export function ActiveTeamSwitcher() {
 
   // C2-F2: with one team there is nothing to choose, so the header shows its
   // name as text, wrapping rather than cut; the picker appears from two teams.
+  // At most two lines, so a long name stays inside the 56px header row next to
+  // the 150px logo (BRAND-01); screen readers still get the whole name.
   if (teams.length === 1) {
     return (
-      <p className="min-w-0 max-w-[10rem] text-right text-sm font-semibold leading-tight text-fp-ink [overflow-wrap:anywhere] sm:max-w-[14rem]">
+      <p className="line-clamp-2 min-w-0 max-w-[10rem] text-right text-sm font-semibold leading-tight text-fp-ink [overflow-wrap:anywhere] sm:max-w-[14rem]">
         <span className="sr-only">{t("label")}: </span>
         {teams[0].name}
       </p>

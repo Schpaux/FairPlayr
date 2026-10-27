@@ -51,9 +51,10 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchShowDuration: 1200,
       launchAutoHide: true,
-      backgroundColor: "#0b0f1a",
-      // Splash assets go in ios/App/App/Assets.xcassets/Splash.imageset
-      // Replace with your own once artwork is ready.
+      // BRAND-01: the dark canvas (--fp-canvas dark), the same as the launch
+      // screen and the splash image in ios/App/App/Assets.xcassets/Splash.imageset
+      // (chalk symbol on the canvas, BRAND.md §4).
+      backgroundColor: "#121B16",
       showSpinner: false,
       androidSplashResourceName: "splash",
       androidScaleType: "CENTER_CROP",
