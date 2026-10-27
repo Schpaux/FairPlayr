@@ -7,12 +7,12 @@
     {
       "id": "SRC-CHATGPT",
       "title": "ChatGPT-samtaler",
-      "note": "Produkteiers beslutningshistorikk i ChatGPT er ikke tilgjengelig for Claude. Importeres via ROADMAP-02."
+      "note": "Produkteiers beslutningshistorikk i ChatGPT er ikke tilgjengelig for Claude. Beslutningene i produkteiers oppdrag ROADMAP-02 (2026-10-27) er avstemt; samtalene selv er ikke importert."
     },
     {
       "id": "SRC-COMPETITOR",
       "title": "Konkurrentanalysen",
-      "note": "Ikke i repoet. Importeres via COMPETITOR-01a."
+      "note": "Ikke i repoet. Fem eksempelfunn fra ROADMAP-02 er registrert (COMPETITOR-01b–f); resten importeres via COMPETITOR-01a."
     },
     {
       "id": "SRC-DEPLOYS-PRE-OCT",
@@ -28,6 +28,11 @@
       "id": "SRC-VERSIONS",
       "title": "Versjonsnumre",
       "note": "Repoet har ingen tagger, releases eller PR-er; package.json står på 0.1.0. Ingen historiske versjonsnumre er registrert."
+    },
+    {
+      "id": "SRC-DEVICE-TESTS",
+      "title": "Fysiske enhetstester",
+      "note": "Produkteier opplyser at flere enhetstester er gjennomført (OFF-04, OFF-05, OFF-07, OFF-12), men ingen testlogg eller rapport er funnet. De står som needs_verification til resultatene er dokumentert."
     }
   ],
   "items": [
@@ -770,11 +775,12 @@
       "rationale": "ROADMAP-01 leverte selve roadmap-systemet og er ferdig. Arbeidet med å holde innholdet komplett og oppdatert fortsetter, og trenger et eget initiativ slik at det ikke holder ROADMAP-01 åpent.",
       "category": "process",
       "decision": "committed",
-      "status": "not_started",
+      "status": "in_progress",
       "priority": "P1",
       "origin": "owner_decision",
       "dates": {
-        "created": "2026-10-27"
+        "created": "2026-10-27",
+        "started": "2026-10-27"
       },
       "related": [
         "ROADMAP-01",
@@ -792,6 +798,10 @@
         {
           "date": "2026-10-27",
           "note": "Opprettet da ROADMAP-01 ble ferdigstilt; ROADMAP-02 og OPS-01 flyttet hit fra ROADMAP-01 uten endring i innhold, beslutning eller prioritet."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Påbegynt med ROADMAP-02."
         }
       ]
     },
@@ -804,12 +814,18 @@
       "category": "process",
       "parent": "INIT-ROADMAP",
       "decision": "committed",
-      "status": "not_started",
+      "status": "in_review",
       "priority": "P1",
       "origin": "owner_decision",
       "dates": {
-        "created": "2026-10-27"
+        "created": "2026-10-27",
+        "started": "2026-10-27"
       },
+      "related": [
+        "COMPETITOR-01a",
+        "OPS-01"
+      ],
+      "uncertainty": "ChatGPT-samtalene og selve konkurrentanalysen er fortsatt ikke tilgjengelige for Claude. Avstemmingen bygger på produkteiers oppdrag ROADMAP-02, koden på main (fd5ebfe), git-historikken, det arkiverte TODO-dokumentet og lokale rapporter. Påstander om gjennomførte enhetstester som ikke er dokumentert, er registrert som udokumenterte, ikke som verifisert.",
       "sources": [
         {
           "type": "owner_decision",
@@ -820,13 +836,23 @@
           "type": "owner_decision",
           "ref": "Produkteiers godkjenning av ROADMAP-01 (2026-10-27)",
           "note": "Neste datakvalitetsoppgave, før WEB-01"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "Fullstendig avstemming av kampfeil, kampoppsett, offline-tester, brukerønsker, konkurrentfunn og branding; ingen nye produktfunksjoner"
+        },
+        {
+          "type": "review_patch",
+          "ref": "fairplayr-roadmap02-review.patch"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
+          "note": "Arkitektur og hovedinnhold godkjent; beslutningene i §1–§7 innarbeidet før commit"
         }
       ],
       "updated": "2026-10-27",
-      "related": [
-        "COMPETITOR-01a",
-        "OPS-01"
-      ],
       "changelog": [
         {
           "date": "2026-10-27",
@@ -835,6 +861,18 @@
         {
           "date": "2026-10-27",
           "note": "Flyttet fra ROADMAP-01 til INIT-ROADMAP da ROADMAP-01 ble ferdigstilt; innhold, beslutning og prioritet er uendret."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Gjennomført til review: åpne kamp- og synkfeil kontrollert mot kode og commits, C6-F1 løftet til funksjon, ny sentral lagvelger, brukerønsker og konkurrentfunn fra oppdraget registrert. Venter på produkteiers gjennomgang (in_review)."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Produkteiers endelige beslutninger innarbeidet: MATCH-01 → P3, MATCH-02 → P1, MATCH-13-F2 utsatt, TEAM-PICKER-01 bekreftet, C6-F1 med underoppgaver på P1, FEAT-SHARE-05 kontrollert (åpen), UI-GOAL-01 ferdig, enhetstester samlet i OFF-13, MATCH-14-V1 som eget kontrollpunkt. Venter på review før commit."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Siste justeringer fra produkteier: FIX-DATA P0 → P1, FEAT-SHARE-05 committed (not_started, P2), UI-GOAL-01 beholdt som ferdig. Øvrige beslutninger uendret."
         }
       ]
     },
@@ -1620,7 +1658,7 @@
       "id": "WEB-01f",
       "type": "task",
       "title": "Markedsføring av nye funksjoner",
-      "summary": "En enkel måte å fremheve nye, større funksjoner på nettsiden, drevet av roadmapens offentlige milepæler.",
+      "summary": "En enkel måte å fremheve nye, større funksjoner på nettsiden, blant annet FairPlayr Next, drevet av roadmapens offentlige milepæler.",
       "category": "website",
       "parent": "WEB-01",
       "decision": "committed",
@@ -1633,11 +1671,19 @@
       "depends_on": [
         "WEB-01e"
       ],
+      "related": [
+        "FEAT-NEXT-01"
+      ],
       "sources": [
         {
           "type": "owner_decision",
           "ref": "Produkteiers oppdrag ROADMAP-01 (2026-10-27)",
           "note": "WEB-01: fremtidig markedsføring av nye funksjoner"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§2: markedsføring av FairPlayr Next og andre viktige funksjoner"
         }
       ],
       "updated": "2026-10-27"
@@ -2161,15 +2207,26 @@
       "parent": "FIX-POLISH",
       "decision": "committed",
       "status": "in_progress",
-      "priority": "P0",
+      "priority": "P1",
       "origin": "legacy_todo",
       "sources": [
         {
           "type": "legacy_todo",
           "ref": "TODO.archive-2026-10-27.md#§2"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers siste justeringer ROADMAP-02 (2026-10-27)",
+          "note": "FIX-DATA P0 → P1"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "Produkteiers beslutning (ROADMAP-02): prioritet P0 → P1."
+        }
+      ]
     },
     {
       "id": "FIX-SETUP",
@@ -2426,6 +2483,61 @@
       "updated": "2026-10-27"
     },
     {
+      "id": "TEAM-PICKER-01",
+      "type": "task",
+      "title": "Én sentral lagvelger",
+      "summary": "Én sentral lagvelger (ActiveTeamSwitcher i toppfeltet) definerer aktivt lag i hele appen. Historikk følger det aktive laget, og det egne «Alle lag»-filteret på Historikk (MatchHistoryManager) fjernes. Lag-siden skal ikke ha en konkurrerende lagvelger (lagbrikkene i TeamManager endrer i dag aktivt lag). Lagvalg som trengs i en bestemt arbeidsflyt, må skilles tydelig fra valg av aktivt lag og ikke endre det.",
+      "category": "team",
+      "parent": "FIX-SETTINGS",
+      "decision": "committed",
+      "status": "not_started",
+      "priority": "P2",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "related": [
+        "C2-F2",
+        "HIST-MULTITEAM-01"
+      ],
+      "uncertainty": "Hvilke arbeidsflyter som trenger et eget lagvalg (for eksempel import eller flytting av spillere), er ikke kartlagt; det avklares ved implementering. Endringen er ikke implementert.",
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§4: én sentral lagvelger; unødvendige lagvelgere på undersider fjernes; ikke endre kode ennå"
+        },
+        {
+          "type": "doc",
+          "ref": "src/components/layout/Header.tsx",
+          "note": "kontrollert 2026-10-27: sentral ActiveTeamSwitcher"
+        },
+        {
+          "type": "doc",
+          "ref": "src/components/team/TeamManager.tsx",
+          "note": "kontrollert 2026-10-27: lagbrikker"
+        },
+        {
+          "type": "doc",
+          "ref": "src/components/match/MatchHistoryManager.tsx",
+          "note": "kontrollert 2026-10-27: lagfilter"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
+          "note": "§2: bekreftet produktbeslutning; committed, P2; ikke implementer nå"
+        }
+      ],
+      "updated": "2026-10-27",
+      "rationale": "Flere steder som velger eller filtrerer lag gjør det uklart hvilket lag appen viser. Ett aktivt lag, valgt ett sted, gir forutsigbar historikk og lagside.",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "Produkteier bekreftet: committed, P2. Historikk følger aktivt lag uten «Alle lag»-filter; ingen konkurrerende lagvelger på Lag-siden; lagvalg i arbeidsflyter skilles fra aktivt lag. Ikke implementert nå."
+        }
+      ]
+    },
+    {
       "id": "COMPETITOR-01",
       "type": "initiative",
       "title": "Funn fra konkurrentanalysen",
@@ -2439,12 +2551,17 @@
       "dates": {
         "created": "2026-10-27"
       },
-      "uncertainty": "Konkurrentanalysen finnes ikke i repoet eller i Claudes arbeidsmiljø; funnene er derfor ikke registrert ennå.",
+      "uncertainty": "Konkurrentanalysen finnes ikke i repoet eller i Claudes arbeidsmiljø. Fem funn fra produkteiers oppdrag ROADMAP-02 er registrert (COMPETITOR-01b–f), alle considering og ikke godkjent for implementering.",
       "sources": [
         {
           "type": "owner_decision",
           "ref": "Produkteiers oppdrag ROADMAP-01 (2026-10-27)",
           "note": "Prioritet 5"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
+          "note": "§7: COMPETITOR-01b–f beholdes considering; ikke godkjent for implementering"
         }
       ],
       "updated": "2026-10-27",
@@ -2463,17 +2580,165 @@
       "category": "process",
       "parent": "COMPETITOR-01",
       "decision": "committed",
-      "status": "not_started",
+      "status": "in_progress",
       "priority": "P3",
       "origin": "owner_decision",
       "dates": {
-        "created": "2026-10-27"
+        "created": "2026-10-27",
+        "started": "2026-10-27"
       },
+      "uncertainty": "Fem funn fra produkteiers oppdrag ROADMAP-02 er registrert (COMPETITOR-01b–f). Selve konkurrentanalysen er fortsatt ikke i repoet; flere funn kan komme når den importeres.",
       "sources": [
         {
           "type": "owner_decision",
           "ref": "Produkteiers oppdrag ROADMAP-01 (2026-10-27)",
           "note": "Prioritet 5: registrer som considering"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§8: eksempler på konkurrentfunn"
+        }
+      ],
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "ROADMAP-02: påbegynt med fem funn fra oppdraget; analysen selv mangler fortsatt."
+        }
+      ]
+    },
+    {
+      "id": "COMPETITOR-01b",
+      "type": "task",
+      "title": "Mer avansert posisjonsrotasjon",
+      "summary": "Rotasjon av spillere mellom posisjoner over omganger og kamper, ikke bare bytter inn og ut.",
+      "category": "substitutions",
+      "parent": "COMPETITOR-01",
+      "decision": "considering",
+      "status": "not_started",
+      "priority": "P3",
+      "origin": "competitor_finding",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "related": [
+        "SMART-SUBS-POSAWARE",
+        "FEAT-POS-01"
+      ],
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§8: konkurrentfunn, considering til det finnes en eksplisitt beslutning"
+        }
+      ],
+      "updated": "2026-10-27"
+    },
+    {
+      "id": "COMPETITOR-01c",
+      "type": "task",
+      "title": "Tydeligere varsling om skjev spilletid",
+      "summary": "Varsle treneren tydeligere når spilletiden blir skjevt fordelt, i tillegg til dagens bytteforslag fra 4 minutters gap.",
+      "category": "playing-time",
+      "parent": "COMPETITOR-01",
+      "decision": "considering",
+      "status": "not_started",
+      "priority": "P3",
+      "origin": "competitor_finding",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "related": [
+        "SMART-SUBS-FAIR",
+        "MATCH-09",
+        "FEAT-NEXT-01"
+      ],
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§8: konkurrentfunn, considering til det finnes en eksplisitt beslutning"
+        }
+      ],
+      "updated": "2026-10-27"
+    },
+    {
+      "id": "COMPETITOR-01d",
+      "type": "task",
+      "title": "Gjenbruk av startoppstillinger",
+      "summary": "Lagre og gjenbruke en startoppstilling fra en tidligere kamp eller som lagmal.",
+      "category": "setup",
+      "parent": "COMPETITOR-01",
+      "decision": "considering",
+      "status": "not_started",
+      "priority": "P3",
+      "origin": "competitor_finding",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "related": [
+        "C6-F1",
+        "UI-PITCH-03"
+      ],
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§8: konkurrentfunn, considering til det finnes en eksplisitt beslutning"
+        }
+      ],
+      "updated": "2026-10-27"
+    },
+    {
+      "id": "COMPETITOR-01e",
+      "type": "task",
+      "title": "Cupgruppering i historikken",
+      "summary": "Gruppere kamper fra samme cup eller turnering i historikken.",
+      "category": "history",
+      "parent": "COMPETITOR-01",
+      "decision": "considering",
+      "status": "not_started",
+      "priority": "P3",
+      "origin": "competitor_finding",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "related": [
+        "C4-F2"
+      ],
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§8: konkurrentfunn, considering til det finnes en eksplisitt beslutning"
+        }
+      ],
+      "updated": "2026-10-27"
+    },
+    {
+      "id": "COMPETITOR-01f",
+      "type": "task",
+      "title": "Videreutvikling av FairPlayr Next",
+      "summary": "Flere eller smartere forslag i handlingslinjen i livevisningen, utover det SMART-SUBS allerede omfatter.",
+      "category": "match-live",
+      "parent": "COMPETITOR-01",
+      "decision": "considering",
+      "status": "not_started",
+      "priority": "P3",
+      "origin": "competitor_finding",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "related": [
+        "FEAT-NEXT-01",
+        "SMART-SUBS-07"
+      ],
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§8: konkurrentfunn, considering til det finnes en eksplisitt beslutning"
         }
       ],
       "updated": "2026-10-27"
@@ -4185,8 +4450,10 @@
       },
       "verification": "partial",
       "related": [
-        "MATCH-14-F1"
+        "MATCH-14-F1",
+        "MATCH-14-V1"
       ],
+      "uncertainty": "Kontrollert i kode 2026-10-27: alle veier som skriver kampstatus til serveren, også fullføringen, sender runtime-state, og LiveMatchState har alltid format. updateMatchStatus skriver da format-kolonnen fra den (regresjonstest i service.lifecycle.test.ts). Nye kamper skal derfor lagre og vise riktig format. Ikke kontrollert med en ny planlagt 7v7-kamp i produksjon. En fullføring uten lagret live-kamp på enheten sender ingen runtime-state og retter derfor ikke formatet; det er ikke observert.",
       "sources": [
         {
           "type": "commit",
@@ -4195,6 +4462,55 @@
         {
           "type": "legacy_todo",
           "ref": "TODO.archive-2026-10-27.md#MATCH-14"
+        },
+        {
+          "type": "doc",
+          "ref": "src/lib/server/matches/service.ts",
+          "note": "kontrollert 2026-10-27: updateMatchStatus skriver format fra runtime-state"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§5: kontroller at nye kamper lagrer og viser riktig format"
+        }
+      ],
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "ROADMAP-02: nye kamper kontrollert i kode og test; produksjonskontroll gjenstår (verification partial)."
+        }
+      ]
+    },
+    {
+      "id": "MATCH-14-V1",
+      "type": "task",
+      "title": "Produksjonskontroll: ny kamp lagres og vises med riktig format",
+      "summary": "Kontroller i produksjon at en ny planlagt eller Spond-importert 7v7-kamp lagres og vises som 7v7 gjennom hele flyten (oppsett, live, fullføring, historikk og kampdetaljer). Gjelder nye kamper, ikke retting av eldre (MATCH-14-F1).",
+      "category": "offline-sync",
+      "parent": "FIX-DATA",
+      "decision": "committed",
+      "status": "needs_verification",
+      "priority": "P2",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "related": [
+        "MATCH-14",
+        "MATCH-14-F1"
+      ],
+      "uncertainty": "Kodekontroll og regresjonstest er gjort (se MATCH-14); produksjonskontrollen er ikke dokumentert. Prioriteten er Claudes forslag.",
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
+          "note": "§1: behold eventuell utestående produksjonsverifisering som eget kontrollpunkt"
+        },
+        {
+          "type": "commit",
+          "ref": "57b2a3c",
+          "note": "MATCH-14"
         }
       ],
       "updated": "2026-10-27"
@@ -5237,17 +5553,18 @@
       "id": "MATCH-01",
       "type": "bug",
       "title": "Reparer enheter med skadet legacy-kamp (FP-MS2.1-A1.1)",
-      "summary": "Foreldreløs live-kamp, destruktiv start, tapte minutter ved åpning og foreldet klokke fra builds før A1. Avklar først hva P0-F2 og OFF-01a allerede dekker.",
+      "summary": "Gjelder eldre lokal kampstatus, ikke den ordinære kampflyten i dagens versjon. Enheter som kjørte builds fra før A1 (4918b3c) kan ha et kampoppsett som står som utkast mens en løpende live-kamp ligger lagret. Den tilstanden vises ikke som aktiv kamp, slettes ved neste kampstart, og lastes av Live uten statuskontroll.",
       "category": "offline-sync",
       "parent": "FIX-DATA",
       "decision": "committed",
       "status": "not_started",
-      "priority": "P0",
+      "priority": "P3",
       "origin": "legacy_todo",
       "related": [
         "FP-P0-F2",
         "OFF-09"
       ],
+      "uncertainty": "Kontrollert i kode 2026-10-27: A1 hindrer at tilstanden oppstår på nytt (oppsett og laguttak kan ikke skrive over en aktiv kamp). P0-F2 (89e2afe) og OFF-01a (5cf0e28) dekker livssyklusen for aktive kamper og gir melding når appen har vært lukket (B9), men ikke legacy-tilstanden: resolveLocalActiveMatch og hasActiveStoredMatch ser bare på status «active», startLocalMatch tømmer lagret live-kamp, og MatchLiveManager laster live-kampen når oppsett-ID-en stemmer uansett status. Feilen finnes altså fortsatt i koden, men kan bare ramme enheter som fortsatt har lagret data fra før 2026-10-15 og ikke har startet en ny kamp siden. Ikke reprodusert på enhet.",
       "sources": [
         {
           "type": "legacy_todo",
@@ -5256,39 +5573,100 @@
         {
           "type": "local_doc",
           "ref": "FP-MS2.1-A1.1-legacy-match-recovery.md"
+        },
+        {
+          "type": "doc",
+          "ref": "src/lib/match/activeMatchRecovery.ts",
+          "note": "kontrollert 2026-10-27: resolveLocalActiveMatch og startLocalMatch"
+        },
+        {
+          "type": "commit",
+          "ref": "4918b3c",
+          "note": "A1: hindrer ny skade"
+        },
+        {
+          "type": "commit",
+          "ref": "89e2afe",
+          "note": "P0-F2: livssyklus for aktiv kamp"
+        },
+        {
+          "type": "commit",
+          "ref": "5cf0e28",
+          "note": "OFF-01a: gjenoppretting og B9-melding"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§3: kontroller faktisk kode før konklusjon"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
+          "note": "§1: nedprioriter til P3; behold som dokumentert historisk problem; ikke marker som løst"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "ROADMAP-02: delvis rettet. Årsaken er fjernet (A1), men eksisterende skadet tilstand repareres ikke. Prioritet P0 er beholdt; nedprioritering eller lukking som foreldet krever produkteiers beslutning."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Produkteier: P0 → P3. Beholdes som dokumentert historisk problem i eldre lokal kampstatus; ikke løst og skal ikke markeres løst uten dokumentasjon."
+        }
+      ]
     },
     {
       "id": "MATCH-02",
       "type": "feature",
       "title": "Målkorrigering og serverforsoning",
-      "summary": "Angring av mål må slette serverraden, offline mål må sendes, eldre mål rettes via Hendelser. Delt i MATCH-02a (levert) og MATCH-02b (UI).",
+      "summary": "Angring av mål må slette serverraden, offline mål må sendes, og eldre mål rettes via Hendelser. Serverdelen er levert (MATCH-02a); UI-delen gjenstår (MATCH-02b).",
       "category": "offline-sync",
       "parent": "FIX-POLISH",
       "decision": "committed",
       "status": "in_progress",
-      "priority": "P0",
+      "priority": "P1",
       "origin": "legacy_todo",
       "related": [
         "MATCH-02a",
         "MATCH-02b",
         "C4-F1"
       ],
+      "uncertainty": "Serverdelen (serveravstemming av målrader) er levert og i produksjon (MATCH-02a, 081c135). Det som gjenstår er UI for korrigering av tidligere mål (MATCH-02b, P1). Den åpne dataintegritetsfeilen ved sletting av servermål i kampdetaljer er egen oppføring (C4-F1, P1).",
       "sources": [
         {
           "type": "legacy_todo",
           "ref": "TODO.archive-2026-10-27.md#MATCH-02"
+        },
+        {
+          "type": "commit",
+          "ref": "081c135",
+          "note": "MATCH-02a"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
+          "note": "§1: P0 → P1; serverdelen er implementert, UI for korrigering av tidligere mål gjenstår (MATCH-02b)"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "ROADMAP-02: delvis rettet. Serverforsoningen er levert; UI for målkorrigering gjenstår."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Produkteier: P0 → P1. Serverdelen er implementert; MATCH-02b (UI for målkorrigering) er fortsatt åpen. C4-F1 beholder P1."
+        }
+      ]
     },
     {
       "id": "MATCH-02b",
       "type": "task",
       "title": "UI for målkorrigering",
-      "summary": "5 s «Angre» etter mål, trykkbare målrader i Hendelser for ny scorer/assist og fjerning med bekreftelse som oppgir ny stilling.",
+      "summary": "5 s «Angre» etter mål, trykkbare målrader i Hendelser for ny scorer/assist, og fjerning med bekreftelse som oppgir ny stilling.",
       "category": "match-live",
       "parent": "MATCH-02",
       "decision": "committed",
@@ -5301,13 +5679,30 @@
       "related": [
         "C6-F2"
       ],
+      "uncertainty": "Kontrollert i kode 2026-10-27: Live har «Fjern siste mål for oss/dem» i kampmenyen, med bekreftelse som oppgir ny stilling. Det finnes ingen 5 s angring rett etter mål, og hendelsesloggen i Live er skrivebeskyttet. I kampdetaljer kan bare mål uten lagrede kjøretidshendelser rettes (se C4-F1).",
       "sources": [
         {
           "type": "legacy_todo",
           "ref": "TODO.archive-2026-10-27.md#MATCH-02b"
+        },
+        {
+          "type": "doc",
+          "ref": "src/components/live/LiveScreen.tsx",
+          "note": "kontrollert 2026-10-27: fjern siste mål med bekreftelse; ingen angring etter mål"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
+          "note": "§1: beholdes som konkret åpen oppgave"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "ROADMAP-02: finnes fortsatt (ikke påbegynt); dagens delløsning dokumentert."
+        }
+      ]
     },
     {
       "id": "MATCH-04",
@@ -5320,30 +5715,111 @@
       "status": "not_started",
       "priority": "P1",
       "origin": "legacy_todo",
+      "uncertainty": "Kontrollert i kode 2026-10-27: getActiveMatchForTeam bruker fortsatt maybeSingle() uten limit(1), og ingen migrering hindrer to live-rader per lag. Det er ikke observert to live-rader i produksjon; MATCH-13 (idempotent opprettelse) gjør det mindre sannsynlig, men utelukker det ikke.",
       "sources": [
         {
           "type": "legacy_todo",
           "ref": "TODO.archive-2026-10-27.md#MATCH-04"
+        },
+        {
+          "type": "doc",
+          "ref": "src/lib/server/matches/service.ts",
+          "note": "kontrollert 2026-10-27: getActiveMatchForTeam"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "ROADMAP-02: feilen finnes fortsatt i koden."
+        }
+      ]
     },
     {
       "id": "MATCH-05",
       "type": "bug",
       "title": "Offline start: feilet live-PATCH",
-      "summary": "Feilet live-PATCH ved start lot serverraden stå som draft og viste feil i oppsettet.",
+      "summary": "En planlagt kamp som startes uten nett starter lokalt, viser ingen feil og åpner Live. Starten lagres som ventende og sendes til serveren når nettet er tilbake, når appen kommer tilbake og før kampstatus sendes.",
       "category": "offline-sync",
       "parent": "FIX-DATA",
-      "decision": "committed",
-      "status": "needs_verification",
+      "decision": "completed",
+      "status": "released",
       "priority": "P1",
       "origin": "legacy_todo",
-      "uncertainty": "MATCH-13 og FEAT-SHARE-01 (pendingStart) sender nå start på nytt; kontroller om oppgaven er dekket før arbeid.",
+      "dates": {
+        "implemented": "2026-10-26",
+        "released": "2026-10-26"
+      },
+      "verification": "partial",
+      "related": [
+        "MATCH-05-F1",
+        "MATCH-13",
+        "FEAT-SHARE-01"
+      ],
+      "uncertainty": "Kontrollert i kode 2026-10-27: oppsettet sender start-PATCH uten å vente på nett (MATCH-13), og pendingStart sendes på nytt av syncActiveMatchStart (FEAT-SHARE-01 v1). Dekket av Vitest (MatchSetupManager.test, matchServerCreate.test). Ikke kontrollert med en ekte offline-start i produksjon. Når serveren svarer med en feil (ikke manglende nett), vises fortsatt en feil i oppsettet selv om kampen er startet lokalt; det er skilt ut som MATCH-05-F1.",
       "sources": [
         {
           "type": "legacy_todo",
           "ref": "TODO.archive-2026-10-27.md#MATCH-05"
+        },
+        {
+          "type": "commit",
+          "ref": "4c37ab9",
+          "note": "planlagt kamp åpner Live uten nett"
+        },
+        {
+          "type": "commit",
+          "ref": "51bae21",
+          "note": "pendingStart sendes på nytt"
+        },
+        {
+          "type": "legacy_todo",
+          "ref": "TODO.archive-2026-10-27.md#FEAT-SHARE-01",
+          "note": "51bae21 publisert 2026-10-26"
+        },
+        {
+          "type": "doc",
+          "ref": "src/lib/match/matchServerCreate.ts",
+          "note": "kontrollert 2026-10-27: syncActiveMatchStart"
+        }
+      ],
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "ROADMAP-02: rettet for offline-start (needs_verification → released). Begge commits er dokumentert deployet 2026-10-26. Restpunktet ved serverfeil er skilt ut som MATCH-05-F1 (considering)."
+        }
+      ]
+    },
+    {
+      "id": "MATCH-05-F1",
+      "type": "bug",
+      "title": "Serverfeil ved start av planlagt kamp viser feil selv om kampen er startet lokalt",
+      "summary": "Svarer serveren med en feil (ikke manglende nett) når en planlagt kamp startes, viser oppsettet en feilmelding og blir stående, selv om kampen allerede er startet og lagret på enheten. Starten sendes på nytt senere, så ingen data går tapt.",
+      "category": "offline-sync",
+      "parent": "FIX-DATA",
+      "decision": "considering",
+      "status": "not_started",
+      "priority": "P3",
+      "origin": "claude_proposal",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "related": [
+        "MATCH-05",
+        "OFF-08"
+      ],
+      "uncertainty": "Funnet ved kodelesing, ikke observert av bruker. Prioritet er Claudes forslag.",
+      "sources": [
+        {
+          "type": "doc",
+          "ref": "src/components/match/MatchSetupManager.tsx",
+          "note": "kontrollert 2026-10-27: start av planlagt kamp"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§3: skill mellom rettet og delvis rettet"
         }
       ],
       "updated": "2026-10-27"
@@ -5383,13 +5859,20 @@
       "status": "needs_verification",
       "priority": "P1",
       "origin": "legacy_todo",
+      "uncertainty": "Kontrollert 2026-10-27: det er ikke funnet dokumentasjon av en kjøring mot ekte Supabase (lokal eller staging). Signed-in-dekningen er fortsatt stubbet, og den eneste Supabase-instansen er produksjon. At appen er brukt i ekte kamper (cup 2026-10-25) er ikke en systematisk verifisering.",
       "sources": [
         {
           "type": "legacy_todo",
           "ref": "TODO.archive-2026-10-27.md#MATCH-08"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "ROADMAP-02: krever fortsatt verifisering; ingen dokumentert kjøring funnet."
+        }
+      ]
     },
     {
       "id": "MATCH-12-F1",
@@ -5412,30 +5895,112 @@
       "updated": "2026-10-27"
     },
     {
+      "id": "UI-GOAL-01",
+      "type": "task",
+      "title": "Tydeligere fremheving av scoringer",
+      "summary": "Scoringer skal være visuelt tydeligere enn bytter i hendelsesloggen under live kamp, i hendelsesloggen i kampdetaljer og i kampoppsummeringen der scoringer presenteres, med mål og assist på samme linje. Dekket av den felles EventTimeline: mål vises med fet scorer (15 px, bold) og assist på samme linje, bytter i vanlig vekt. Brukt i Live (LiveSheets), kampdetaljer (MatchDetailsManager) og målene på den offentlige kampsiden (PublicMatchView), også etter kampslutt.",
+      "category": "design-ui",
+      "parent": "FIX-LIVE",
+      "decision": "completed",
+      "status": "released",
+      "priority": "P3",
+      "origin": "user_feedback",
+      "dates": {
+        "implemented": "2026-10-26",
+        "released": "2026-10-26"
+      },
+      "related": [
+        "UI-EVENTS-01",
+        "FEAT-SHARE-01"
+      ],
+      "uncertainty": "Levert gjennom UI-EVENTS-01 (9233ac1, i produksjon 2026-10-25, Live og kampdetaljer) og FEAT-SHARE-01 (51bae21, i produksjon 2026-10-26, offentlig kampside). Den offentlige siden er ikke egen produksjonskontrollert for dette. Oppføringen ble registrert 2026-10-27, etter leveransen. Ønsker produkteier sterkere fremheving enn i dag, blir det en ny oppføring.",
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§7: tydeligere fremheving av scoringer"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
+          "note": "§5: hendelseslogg i Live, hendelseslogg i kampdetaljer og kampoppsummeringen; kontroller EventTimeline først"
+        },
+        {
+          "type": "commit",
+          "ref": "9233ac1",
+          "note": "C6: EventTimeline med fet scorer og assist på samme linje (UI-EVENTS-01)"
+        },
+        {
+          "type": "commit",
+          "ref": "51bae21",
+          "note": "FEAT-SHARE-01: EventTimeline for mål på offentlig kampside"
+        },
+        {
+          "type": "doc",
+          "ref": "src/components/match/EventTimeline.tsx",
+          "note": "kontrollert 2026-10-27: mål fet, bytter vanlig"
+        },
+        {
+          "type": "doc",
+          "ref": "src/components/match/EventTimeline.test.tsx",
+          "note": "scorer fet med assist på samme linje"
+        }
+      ],
+      "updated": "2026-10-27",
+      "verification": "partial",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "ROADMAP-02: allerede implementert i EventTimeline (considering → completed, released). Kilder: 9233ac1 og 51bae21."
+        }
+      ]
+    },
+    {
       "id": "MATCH-13-F2",
       "type": "bug",
       "title": "Aktiv kamp startet før MATCH-13 får ingen server-ID",
       "summary": "En kamp som var aktiv før oppdateringen, uten ID, opprettes ikke på serveren.",
       "category": "offline-sync",
       "parent": "FIX-DATA",
-      "decision": "committed",
+      "decision": "deferred",
       "status": "not_started",
       "priority": "P3",
       "origin": "legacy_todo",
+      "uncertainty": "Kontrollert i kode 2026-10-27: syncActiveMatchCreate oppretter bare kamper med pendingCreate, og en aktiv kamp lagret før MATCH-13 (4c37ab9, 2026-10-26) har ikke det. Feilen finnes fortsatt, men gjelder bare en kamp som var aktiv på en enhet da oppdateringen kom; nye kamper får alltid server-ID. Ikke reprodusert.",
       "sources": [
         {
           "type": "legacy_todo",
           "ref": "TODO.archive-2026-10-27.md#MATCH-13",
           "note": "F2"
+        },
+        {
+          "type": "doc",
+          "ref": "src/lib/match/matchServerCreate.ts",
+          "note": "kontrollert 2026-10-27: syncActiveMatchCreate"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
+          "note": "§1: decision deferred, status not_started, P3; gjelder kamper som var aktive før MATCH-13-rettingen"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "ROADMAP-02: feilen finnes i koden, men gjelder bare overgangen til MATCH-13. Foreslått lukket som foreldet."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Produkteier: utsatt (committed → deferred), P3. Gjelder bare kamper som var aktive før MATCH-13; historikk og kilder beholdes, implementering prioriteres ikke nå."
+        }
+      ]
     },
     {
       "id": "MATCH-13-F3",
-      "type": "bug",
-      "title": "Kamptittel uten motstander",
-      "summary": "Kamper startet uten planlagt kamp får auto-navnet «Kamp – dato» uten motstander.",
+      "type": "task",
+      "title": "Bedre kamptittel når motstander mangler",
+      "summary": "Kamper startet uten planlagt kamp får auto-navnet «Kamp – dato». Mindre forbedring av visningen, ikke en feil i kampdata.",
       "category": "history",
       "parent": "FIX-HISTORY",
       "decision": "committed",
@@ -5447,50 +6012,112 @@
           "type": "legacy_todo",
           "ref": "TODO.archive-2026-10-27.md#MATCH-13",
           "note": "F3"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§5: behold som mindre forbedringsoppgave"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "ROADMAP-02: endret fra bug til task etter produkteiers vurdering (mindre forbedring, ikke kritisk feil). Prioritet P3 uendret."
+        }
+      ]
     },
     {
       "id": "MATCH-14-F1",
       "type": "bug",
       "title": "Rett format på allerede fullførte kamper",
-      "summary": "Fullførte kamper med feil format-kolonne er ikke rettet. Krever godkjent dataretting eller at visningen foretrekker runtime_state.format.",
+      "summary": "Fullførte kamper fra før MATCH-14 kan ha feil format-kolonne (for eksempel 7v7 vist som 5v5). Krever enten godkjent dataretting eller at visningen foretrekker runtime_state.format. Nye kamper er rettet i MATCH-14.",
       "category": "history",
       "parent": "FIX-HISTORY",
-      "decision": "committed",
+      "decision": "deferred",
       "status": "not_started",
-      "priority": "P2",
+      "priority": "P3",
       "origin": "legacy_todo",
       "sources": [
         {
           "type": "legacy_todo",
           "ref": "TODO.archive-2026-10-27.md#MATCH-14",
           "note": "åpen oppfølging"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§5: produkteier ønsker ikke å prioritere reparasjon av eldre kampdata; kan nedprioriteres eller utsettes, ikke slettes"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
+          "note": "§1: beholdes deferred / not_started, P3; korrigering av eldre kamper prioriteres ikke"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "ROADMAP-02: utsatt etter produkteiers beslutning (committed → deferred, P2 → P3). Beholdes for sporbarhet."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Produkteier bekreftet: deferred / not_started, P3. Det viktigste er at nye kamper lagres og vises med riktig format; produksjonskontrollen av det er eget kontrollpunkt (MATCH-14-V1)."
+        }
+      ],
+      "related": [
+        "MATCH-14",
+        "MATCH-14-V1"
+      ]
     },
     {
       "id": "C4-F1",
       "type": "bug",
       "title": "Slettet eller endret servermål oppdaterer ikke stillingen",
-      "summary": "I kampdetaljer endres bare hendelsesraden, ikke stillingen. Bryter AGENTS.md §2. Bekreftet i prod-test (2–1 står etter sletting).",
+      "summary": "Når et servermål slettes i kampdetaljer, slettes bare hendelsesraden; stillingen (score_for/score_against) står uendret. Bryter AGENTS.md §2. Bekreftet i prod-test (2–1 står etter sletting).",
       "category": "history",
       "parent": "FIX-DATA",
       "decision": "committed",
       "status": "not_started",
       "priority": "P1",
       "origin": "legacy_todo",
+      "related": [
+        "MATCH-02"
+      ],
+      "uncertainty": "Kontrollert i kode 2026-10-27: handleDeleteEvent og deleteMatchEvent endrer verken stillingen eller runtime-state, og ingen databasetrigger gjør det. Å endre scorer, assist eller minutt påvirker ikke stillingen (lagside kan ikke endres i UI), så feilen gjelder sletting. Bare egne mål i kamper uten lagrede kjøretidshendelser (eldre, planlagte uten live-data og Spond) kan rettes i kampdetaljer; kamper med kjøretidshendelser er skrivebeskyttet der, og retting av dem hører til MATCH-02b. Ingen commit etter C4 har endret dette.",
       "sources": [
         {
           "type": "legacy_todo",
           "ref": "TODO.archive-2026-10-27.md#C4-F1"
+        },
+        {
+          "type": "doc",
+          "ref": "src/components/match/MatchDetailsManager.tsx",
+          "note": "kontrollert 2026-10-27: handleDeleteEvent og handleSaveEdit"
+        },
+        {
+          "type": "doc",
+          "ref": "src/lib/server/matches/service.ts",
+          "note": "kontrollert 2026-10-27: deleteMatchEvent"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§3: endring eller sletting av mål må gi korrekt stilling"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
+          "note": "§1: kontrollert at dataintegritetsfeilen beholder sin alvorlighetsgrad (P1)"
         }
       ],
       "updated": "2026-10-27",
-      "related": [
-        "MATCH-02"
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "ROADMAP-02: feilen finnes fortsatt (sletting). Endring av scorer/assist/minutt påvirker ikke stillingen."
+        }
       ]
     },
     {
@@ -5571,13 +6198,25 @@
       "status": "not_started",
       "priority": "P2",
       "origin": "legacy_todo",
+      "uncertainty": "Kontrollert i kode 2026-10-27: det finnes ingen «Logg inn igjen»-tilstand. En fullføring som avvises med utløpt sesjon beholdes og sendes på nytt, men løpende kampstatus (liveRuntimeSync) behandler 401 som endelig og stopper uten melding. Ikke reprodusert på enhet.",
       "sources": [
         {
           "type": "legacy_todo",
           "ref": "TODO.archive-2026-10-27.md#OFF-08"
+        },
+        {
+          "type": "doc",
+          "ref": "src/lib/match/liveRuntimeSync.ts",
+          "note": "kontrollert 2026-10-27: svarstatus som gir nytt forsøk"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "ROADMAP-02: feilen finnes fortsatt; fullføringen er beskyttet, løpende synk er ikke."
+        }
+      ]
     },
     {
       "id": "C2-F3",
@@ -5619,19 +6258,21 @@
     },
     {
       "id": "C6-F1",
-      "type": "task",
-      "title": "Laguttak uten unødvendig scrolling",
-      "summary": "Oppsettet er 2,10 skjermer (375×667, 11 spillere) og 2,32 (360×640, 15). Brukeren opplever for mye scrolling mellom spillerutvalg og bane. Krever designbeslutning (lavere bane eller sammenfoldbart oppmøte).",
+      "type": "feature",
+      "title": "Bane og benk i kampoppsettet uten scrolling",
+      "summary": "Treneren skal raskt kunne sette opp startoppstillingen på mobil uten å scrolle mellom bane og benk. Bane og benk bør kunne brukes i samme arbeidsområde, spillere skal enkelt kunne plasseres på ønsket posisjon, og visningen må være tydelig og mobiltilpasset på 360×640 og 375×667. I dag er oppsettet 2,10 skjermer (375×667, 11 spillere) og 2,32 (360×640, 15). Oppsettets PitchLineupEditor har allerede dra-og-slipp og trykk-for-å-plassere, men benk og bane er ikke synlige samtidig.",
+      "rationale": "Produkteier opplever at det er vanskelig å flytte spillere fra benken inn på banen når man må scrolle mellom områdene. Høyt prioritert innenfor UX-arbeidet, men går ikke automatisk foran kritiske P0-feil.",
       "category": "setup",
-      "parent": "FIX-SETUP",
+      "parent": "FIX-POLISH",
       "decision": "committed",
       "status": "not_started",
-      "priority": "P2",
+      "priority": "P1",
       "origin": "legacy_todo",
       "related": [
         "C1-F1",
         "UI-MS-01d"
       ],
+      "uncertainty": "Endelig design skal vurderes før implementering; ingen UI-løsning er valgt. Oppsettet bruker PitchLineupEditor, som står på listen over kritisk kamplogikk i AGENTS.md §8 (én skriver).",
       "sources": [
         {
           "type": "legacy_todo",
@@ -5645,15 +6286,208 @@
           "type": "owner_decision",
           "ref": "Produkteiers oppdrag ROADMAP-01 (2026-10-27)",
           "note": "Forbedre laguttak uten unødvendig scrolling"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§4: høyt prioritert forbedring; bruk C6-F1 som utgangspunkt; ikke velg endelig UI-løsning"
+        },
+        {
+          "type": "doc",
+          "ref": "src/components/match/PitchLineupEditor.tsx",
+          "note": "kontrollert 2026-10-27: dra-og-slipp og trykk-for-å-plassere"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
+          "note": "§3: høyt prioritert; C6-F1 og underoppgavene på P1; endelig design vurderes før implementering; ikke bygg nå"
         }
       ],
+      "updated": "2026-10-27",
       "changelog": [
         {
           "date": "2026-10-27",
           "note": "Slått sammen med produkteiers punkt «forbedre laguttak uten unødvendig scrolling» (samme problem)."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "ROADMAP-02: løftet fra oppgave til funksjon med underoppgaver (forelder FIX-SETUP → FIX-POLISH), og prioritet P2 → P1 etter produkteiers beslutning om høy prioritet innenfor UX-arbeidet."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Produkteier bekreftet P1 for funksjonen og underoppgavene, med produktmål og akseptkrav (samme arbeidsområde, enkel plassering, 360×640 og 375×667). Design vurderes før implementering; ikke bygget."
+        }
+      ]
+    },
+    {
+      "id": "C6-F1a",
+      "type": "task",
+      "title": "Designbeslutning: bane og benk i samme arbeidsområde",
+      "summary": "Velg løsning der bane og benk kan brukes i samme arbeidsområde på 360×640 og 375×667, for eksempel et mer kompakt banekart i oppsettet. Inkluderer UX-gjennomgangen som avgjør C6-F1e. Avklares mot DESIGN.md og godkjennes før implementering.",
+      "category": "setup",
+      "parent": "C6-F1",
+      "decision": "committed",
+      "status": "not_started",
+      "priority": "P1",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "related": [
+        "C1-F1",
+        "UI-MS-01d"
+      ],
+      "uncertainty": "Løsningen er bevisst ikke valgt i ROADMAP-02.",
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§4: eksempel på underoppgave"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
+          "note": "§3: endelig design skal vurderes før implementering"
         }
       ],
       "updated": "2026-10-27"
+    },
+    {
+      "id": "C6-F1b",
+      "type": "task",
+      "title": "Rask plassering av spillere fra benk til bane",
+      "summary": "Effektiv plassering med god støtte for dra-og-slipp og trykk-for-å-plassere når benk og bane er synlige samtidig, uten at bevegelsen kolliderer med scrolling.",
+      "category": "setup",
+      "parent": "C6-F1",
+      "decision": "committed",
+      "status": "not_started",
+      "priority": "P1",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "depends_on": [
+        "C6-F1a"
+      ],
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§4: eksempel på underoppgave"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
+          "note": "§3: beholdes på P1"
+        }
+      ],
+      "updated": "2026-10-27"
+    },
+    {
+      "id": "C6-F1c",
+      "type": "task",
+      "title": "Tydelig hvem som er på banen og på benken",
+      "summary": "Treneren ser med ett blikk hvem som står i startoppstillingen og hvem som er på benken, i lys og mørk modus.",
+      "category": "setup",
+      "parent": "C6-F1",
+      "decision": "committed",
+      "status": "not_started",
+      "priority": "P1",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "depends_on": [
+        "C6-F1a"
+      ],
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§4: eksempel på underoppgave"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
+          "note": "§3: beholdes på P1"
+        }
+      ],
+      "updated": "2026-10-27"
+    },
+    {
+      "id": "C6-F1d",
+      "type": "task",
+      "title": "Akseptkriterier på 360×640 og 375×667",
+      "summary": "Oppsettet fungerer uten omfattende scrolling på 375×667 og 360×640, verifisert med e2e i lys og mørk og skjermbilder før og etter (AGENTS.md §5).",
+      "category": "setup",
+      "parent": "C6-F1",
+      "decision": "committed",
+      "status": "not_started",
+      "priority": "P1",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "depends_on": [
+        "C6-F1b",
+        "C6-F1c"
+      ],
+      "related": [
+        "OFF-04"
+      ],
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§4: eksempel på underoppgave"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
+          "note": "§3: beholdes på P1"
+        }
+      ],
+      "updated": "2026-10-27"
+    },
+    {
+      "id": "C6-F1e",
+      "type": "task",
+      "title": "Forenkle bunnområdet i kampoppsettet",
+      "summary": "Bunnlinjen i oppsettet tar plass fra bane og benk. Vurder hva som kan forenkles. Hvilke elementer som er overflødige er ikke spesifisert.",
+      "category": "setup",
+      "parent": "C6-F1",
+      "decision": "considering",
+      "status": "not_started",
+      "priority": "P1",
+      "origin": "user_feedback",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "related": [
+        "UI-MS-01a",
+        "C1-F8",
+        "C6-F1a"
+      ],
+      "uncertainty": "Beholdes som considering til UX-gjennomgangen i C6-F1a. Hvilke elementer som er overflødige er ikke avklart.",
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§7: forenkling av bunnområdet i kampoppsett"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
+          "note": "§3: beholdes som considering frem til UX-gjennomgangen; underoppgavene på P1"
+        }
+      ],
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "Produkteier: C6-F1 og underoppgavene på P1 (P2 → P1). Fortsatt considering frem til UX-gjennomgangen."
+        }
+      ]
     },
     {
       "id": "C1-F5",
@@ -6174,18 +7008,39 @@
       "title": "Android 360×640 på fysisk enhet før bred lansering",
       "summary": "Bestått i Chromium-emulering; fysisk enhet gjenstår.",
       "category": "platform",
-      "parent": "INIT-OFFLINE",
+      "parent": "OFF-13",
       "decision": "committed",
       "status": "needs_verification",
       "priority": "P1",
       "origin": "legacy_todo",
+      "uncertainty": "Dokumentert: Chromium-emulering 360×640 (2026-10-20, lys og mørk, Sideline-live uten overflyt) og e2e-prosjektet android-360×640. Kontrollert 2026-10-27: produkteier opplyser at flere enhetstester er gjennomført, men det er ikke funnet testlogg, rapport eller notat om dem (FP-rapporter, arkivert TODO, review-patcher). Fysisk enhetsverifisering er derfor ikke registrert som gjennomført.",
       "sources": [
         {
           "type": "legacy_todo",
           "ref": "TODO.archive-2026-10-27.md#OFF-04"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§6: ikke merk fysisk enhetsverifisering uten dokumentasjon"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
+          "note": "§6: beholdes needs_verification; samles i koordinert enhetsverifisering (OFF-13); emulering er ikke fysisk enhet"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "ROADMAP-02: bare emulering er dokumentert; fysisk Android-test venter på dokumentasjon."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Produkteier: beholdes needs_verification. Flyttet under OFF-13 (koordinert enhetsverifisering), forelder INIT-OFFLINE → OFF-13."
+        }
+      ]
     },
     {
       "id": "OFF-05",
@@ -6193,11 +7048,12 @@
       "title": "Adaptiv benk på iPhone Safari og i Capacitor",
       "summary": "Sjekkliste med 13 punkter i FP-MS2.1-B2.",
       "category": "substitutions",
-      "parent": "INIT-OFFLINE",
+      "parent": "OFF-13",
       "decision": "committed",
       "status": "needs_verification",
       "priority": "P1",
       "origin": "legacy_todo",
+      "uncertainty": "Dokumentert: bare Chromium via CDP (FP-MS2.1-B2 §6). iPhone Safari og Capacitor er ikke dokumentert; sjekklisten i §7 er ikke registrert som gjennomført. Kontrollert 2026-10-27: produkteier opplyser at flere enhetstester er gjennomført, men det er ikke funnet testlogg, rapport eller notat om dem (FP-rapporter, arkivert TODO, review-patcher). Fysisk enhetsverifisering er derfor ikke registrert som gjennomført.",
       "sources": [
         {
           "type": "legacy_todo",
@@ -6207,9 +7063,29 @@
           "type": "local_doc",
           "ref": "FP-MS2.1-B2-adaptive-bench.md",
           "note": "§6–7"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§6"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
+          "note": "§6: beholdes needs_verification; samles i koordinert enhetsverifisering (OFF-13); emulering er ikke fysisk enhet"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "ROADMAP-02: bare emulering er dokumentert."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Produkteier: beholdes needs_verification. Flyttet under OFF-13 (koordinert enhetsverifisering), forelder INIT-OFFLINE → OFF-13."
+        }
+      ]
     },
     {
       "id": "OFF-07",
@@ -6217,18 +7093,39 @@
       "title": "Manuell enhetsverifisering av offline-PWA",
       "summary": "iPhone Safari som installert PWA (flymodus, kaldstart med kamp), Android Chrome, og sw.js-hodene i produksjon (x-vercel-cache HIT må vurderes).",
       "category": "platform",
-      "parent": "INIT-OFFLINE",
+      "parent": "OFF-13",
       "decision": "committed",
       "status": "needs_verification",
       "priority": "P1",
       "origin": "legacy_todo",
+      "uncertainty": "Dokumentert: offline-suiten i Chromium (A2, 75/75) og hodene til /serwist/sw.js i produksjon (SEC-07, 2026-10-23). iPhone Safari som installert PWA (flymodus, kaldstart) og Android Chrome er ikke dokumentert. Kontrollert 2026-10-27: produkteier opplyser at flere enhetstester er gjennomført, men det er ikke funnet testlogg, rapport eller notat om dem (FP-rapporter, arkivert TODO, review-patcher). Fysisk enhetsverifisering er derfor ikke registrert som gjennomført.",
       "sources": [
         {
           "type": "legacy_todo",
           "ref": "TODO.archive-2026-10-27.md#OFF-07"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§6"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
+          "note": "§6: beholdes needs_verification; samles i koordinert enhetsverifisering (OFF-13); emulering er ikke fysisk enhet"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "ROADMAP-02: bare emulering og hodekontroll er dokumentert."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Produkteier: beholdes needs_verification. Flyttet under OFF-13 (koordinert enhetsverifisering), forelder INIT-OFFLINE → OFF-13."
+        }
+      ]
     },
     {
       "id": "OFF-09",
@@ -6301,15 +7198,67 @@
       "title": "Skjermlås og bakgrunn under kamp: kort iPhone-kontroll",
       "summary": "Kodegjennomgang fant ingen hull. Gjenstår: lås skjermen 2–5 min med klokka i gang og kontroller tid, melding og at bytte/mål havner én gang i historikken.",
       "category": "offline-sync",
-      "parent": "INIT-OFFLINE",
+      "parent": "OFF-13",
       "decision": "committed",
       "status": "needs_verification",
       "priority": "P2",
       "origin": "legacy_todo",
+      "uncertainty": "Dokumentert: kodegjennomgang og Vitest (66/66, 2026-10-26), og produkteiers observasjon fra cupen 2026-10-25 om at skjermlås fungerte på iPhone under ekte kamper. Den korte kontrollen (lås 2–5 min, tid, melding, bytte og mål én gang i historikken) er ikke dokumentert. Kontrollert 2026-10-27: produkteier opplyser at flere enhetstester er gjennomført, men det er ikke funnet testlogg, rapport eller notat om dem (FP-rapporter, arkivert TODO, review-patcher). Fysisk enhetsverifisering er derfor ikke registrert som gjennomført.",
       "sources": [
         {
           "type": "legacy_todo",
           "ref": "TODO.archive-2026-10-27.md#OFF-12"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§6"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
+          "note": "§6: beholdes needs_verification; samles i koordinert enhetsverifisering (OFF-13); emulering er ikke fysisk enhet"
+        }
+      ],
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "ROADMAP-02: kodegjennomgang og uformell observasjon fra ekte kamp er dokumentert; den korte iPhone-kontrollen er ikke."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Produkteier: beholdes needs_verification. Flyttet under OFF-13 (koordinert enhetsverifisering), forelder INIT-OFFLINE → OFF-13."
+        }
+      ]
+    },
+    {
+      "id": "OFF-13",
+      "type": "feature",
+      "title": "Koordinert verifisering på fysiske enheter",
+      "summary": "Samler de udokumenterte enhetstestene (OFF-04, OFF-05, OFF-07, OFF-12) i én fremtidig, planlagt runde på fysiske enheter, med testlogg per test: enhet, OS og nettleser, dato, build og resultat. Nettleseremulering teller ikke som verifisering på fysisk enhet.",
+      "rationale": "Produkteier har gjennomført flere enhetstester, men uten fullstendige logger. Én koordinert runde gir dokumentasjon som kan lukke oppgavene.",
+      "category": "platform",
+      "parent": "INIT-OFFLINE",
+      "decision": "committed",
+      "status": "not_started",
+      "priority": "P1",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "related": [
+        "UI-TOKENS-01-SW",
+        "C6-F4",
+        "C1-F8",
+        "UI-LIVE-01"
+      ],
+      "uncertainty": "Testene gjentas ikke i ROADMAP-02. Andre enhetskontroller (beslektede oppføringer) kan tas i samme runde, men er ikke flyttet hit uten beslutning. Prioriteten følger de underliggende oppgavene.",
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
+          "note": "§6: samle som fremtidig, koordinert enhetsverifisering; ikke gjenta testene nå"
         }
       ],
       "updated": "2026-10-27"
@@ -6516,6 +7465,107 @@
         {
           "type": "legacy_todo",
           "ref": "TODO.archive-2026-10-27.md#FEAT-SHARE-03"
+        }
+      ],
+      "updated": "2026-10-27"
+    },
+    {
+      "id": "FEAT-SHARE-05",
+      "type": "task",
+      "title": "Korrekt delingsvisning etter kampslutt",
+      "summary": "Kontrollert i kode 2026-10-27. Finnes: kampdetaljer (MatchDetailsSharePanel) viser om deling er på (bryterne, «Deling er av»), viser den offentlige lenken når deling er på, og lar treneren slå på deling, endre nivå og slå den av også etter kampslutt. Personvern håndheves på serveren (navn nektes for 12 år og yngre og ukjent alder; av-av sletter delingen så lenken slutter å virke), med tester i share.test.ts. Gjenstår: (1) panelet kjenner ikke kampens status og viser samme skjema som under kampen, med «Del live – Følg kampen mens den pågår» først og introteksten «live under kampen». Etter kampslutt kan det se ut som å aktivere livekampen på nytt; offentlig side viser aldri live etter kampslutt. (2) Ingen komponent- eller e2e-test dekker delingspanelet på en ferdigspilt kamp.",
+      "category": "sharing",
+      "parent": "INIT-SHARING",
+      "decision": "committed",
+      "status": "not_started",
+      "priority": "P2",
+      "origin": "user_feedback",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "related": [
+        "FEAT-SHARE-01",
+        "FEAT-SHARE-01-V1"
+      ],
+      "uncertainty": "Ikke kontrollert i nettleser eller produksjon. Hvordan det ferdige panelet skal se ut (skjule «Del live», egen tekst etter kampslutt eller bare oppsummering), avgjøres i designarbeidet for oppgaven.",
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§7: korrekt håndtering av deling på ferdigspilte kamper"
+        },
+        {
+          "type": "doc",
+          "ref": "src/components/share/MatchDetailsSharePanel.tsx",
+          "note": "kontrollert 2026-10-27: deling etter kampen"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
+          "note": "§4: lukkes dersom eksisterende funksjonalitet fungerer som ønsket; ellers åpen med dokumentert gjenstående arbeid"
+        },
+        {
+          "type": "doc",
+          "ref": "src/components/share/MatchShareSettingsForm.tsx",
+          "note": "kontrollert 2026-10-27: samme brytere og tekster under og etter kampen"
+        },
+        {
+          "type": "doc",
+          "ref": "src/lib/server/share/service.ts",
+          "note": "kontrollert 2026-10-27: saveMatchShare godtar endring etter kampslutt"
+        },
+        {
+          "type": "doc",
+          "ref": "src/lib/server/share/share.test.ts",
+          "note": "kontrollert 2026-10-27: personvern, sletting og samme lenke"
+        },
+        {
+          "type": "commit",
+          "ref": "51bae21",
+          "note": "FEAT-SHARE-01 v1: delingspanelet i kampdetaljer"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers siste justeringer ROADMAP-02 (2026-10-27)",
+          "note": "FEAT-SHARE-05 committed / not_started, P2: korrekt delingsvisning etter kampslutt"
+        }
+      ],
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "ROADMAP-02: kunne ikke lukkes. Funksjonene finnes, men panelet fremstiller deling etter kampslutt som under kampen, og ingen test dekker ferdigspilte kamper. Forblir considering."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Produkteiers beslutning: considering → committed, status not_started, P2. Omfang: korrekt delingsvisning etter kampslutt, med test for ferdigspilt kamp."
+        }
+      ]
+    },
+    {
+      "id": "FEAT-SHARE-06",
+      "type": "task",
+      "title": "Eget subdomene for offentlig kampvisning",
+      "summary": "Mulig eget subdomene for den offentlige kampsiden, for eksempel match.fairplayr.app, i stedet for fairplayr.app/s/<token>. Eksisterende delingslenker må fortsatt virke.",
+      "category": "sharing",
+      "parent": "INIT-SHARING",
+      "decision": "considering",
+      "status": "not_started",
+      "priority": "P3",
+      "origin": "user_feedback",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "related": [
+        "WEB-01d",
+        "FEAT-SHARE-01"
+      ],
+      "uncertainty": "Bør ses sammen med domenevalget for nettside og app i WEB-01d. Prioriteten er Claudes forslag.",
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
+          "note": "§7: mulig subdomene for offentlig kampvisning"
         }
       ],
       "updated": "2026-10-27"
