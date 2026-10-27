@@ -12,7 +12,7 @@ import styles from "./primitives.module.css";
  * restored match ("the app was closed for 7 min", OFF-01a B9), an update.
  *
  * Contract (stable; OFF-01a builds UpdatePrompt, RestoredMatchNotice and
- * StorageErrorNotice on it, see TODO.md UI-FOUND-01):
+ * StorageErrorNotice on it, see roadmap UI-FOUND-01):
  * - `tone`: info | success | warning | error. Each has a glyph plus words,
  *   never colour alone (DESIGN.md §2.5); for success, warning and error a
  *   hidden tone word ("Advarsel:") prefixes the text for screen readers.

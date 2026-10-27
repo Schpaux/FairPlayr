@@ -223,6 +223,8 @@ The bench is never more than two rows on phones under 780px tall, so the pitch k
 A mouse is never locked. A bench that fits keeps today's behaviour (any move past 8px is a drag).
 
 ### 5.4 Action strip
+Product name: **FairPlayr Next** (FEAT-NEXT-01). It is a feature of the live view, not the design language; Modern Sideline is the design language.
+
 A single slot that shows exactly one message, in this priority order (copy is indicative; final strings live in `messages/*.json`):
 
 | # | State | Small line | Main line | Button |
