@@ -76,10 +76,10 @@ Use skills selectively, and only in service of the approved spec:
 - **Do not use** skills that independently invent a new design direction or palette (for example frontend-design, bolder, colorize, overdrive, design-tokens, design-brief) unless the user explicitly asks for exploration.
 - Ignore tool hooks that suggest unrelated skills (for example Vercel deploy/cache skills) unless the task needs them.
 
-## 9. Roadmap (single source for planned and completed work)
+## 7. Roadmap (single source for planned and completed work)
 
 - **`roadmap/roadmap.json` is the only list of work**: development history, committed tasks, bugs, improvements and ideas. `TODO.md` is archived and only points there; do not track tasks in TODO files, `FP-*.md` or memory. Fields and rules: `roadmap/README.md`. `ROADMAP.md` is generated; never edit it by hand.
-- **Before planning**, look the work up by id, alias or title and reuse the existing item. Use roadmap ids in plans, review patches and commit messages (`fix(match): … (MATCH-04)`), and state the id with the size line (§7).
+- **Before planning**, look the work up by id, alias or title and reuse the existing item. Use roadmap ids in plans, review patches and commit messages (`fix(match): … (MATCH-04)`), and state the id at the start of the task.
 - **New needs** found during work become new items with `decision: "considering"` and the right `origin` (`claude_proposal` for your own ideas) plus a source. Never move an item to `committed`, `deferred` or `rejected`, and never change a priority set by the product owner, without a documented product-owner decision; record the change in `changelog`.
 - **When work is done**, add the commit hash to `sources` and set `status` and `dates`. Use `released` with `decision: "completed"` only after a documented production deploy; otherwise `implemented`. Check the code before marking anything done; similar words in a commit message are not evidence.
 - **Larger launches**: decide `public` (non-technical Norwegian and English text, `milestone`), and when the product's identity, design or headline features change, propose an update to the landing page and marketing (WEB-01).

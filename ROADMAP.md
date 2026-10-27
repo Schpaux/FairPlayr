@@ -18,7 +18,7 @@ Oppdatert 2026-10-27. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); re
 
 ## Arbeidsrekkefølge
 
-Produkteiers prioriterte utviklingsområder. Unntak: P0-feil som kan påvirke kampdata, datalagring eller kritisk kampfunksjonalitet tas før neste reelle kamptest.
+Produkteiers prioriterte utviklingsområder. Unntak: P0-feil som kan påvirke kampdata, datalagring eller kritisk kampfunksjonalitet, og kritiske sikkerhetssårbarheter, tas før neste reelle kamptest.
 
 1. **ROADMAP-01** Roadmap-system som felles sannhetskilde (vedtatt, til review)
 2. **WEB-01** Ny landingsside og tydelig skille mellom nettside og app (vedtatt, ikke startet, etter ROADMAP-02)

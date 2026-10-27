@@ -729,6 +729,10 @@
         {
           "date": "2026-10-27",
           "note": "Arkitektur og datamodell godkjent av produkteier; commit på egen branch for gjennomgang."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Ferdigstilling: produkteier bekreftet FairPlayr Next som offentlig milepæl og utvidet P0-unntaket til kritiske sikkerhetssårbarheter; AGENTS.md-roadmapseksjonen nummereres §7."
         }
       ]
     },
@@ -1486,14 +1490,23 @@
           "type": "owner_decision",
           "ref": "Produkteiers godkjenning av ROADMAP-01 (2026-10-27)",
           "note": "Rekkefølgen bekreftet; unntak for P0 før neste reelle kamptest"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers beslutning ved ferdigstilling av ROADMAP-01 (2026-10-27)",
+          "note": "P0-unntaket omfatter også kritiske sikkerhetssårbarheter"
         }
       ],
       "updated": "2026-10-27",
-      "rationale": "Produkteiers rekkefølge står (ROADMAP-01, WEB-01, SMART-SUBS, FIX-POLISH, COMPETITOR-01), med ett unntak: P0-feil som kan påvirke kampdata, datalagring eller kritisk kampfunksjonalitet tas før neste reelle kamptest, uavhengig av området de ligger i.",
+      "rationale": "Produkteiers rekkefølge står (ROADMAP-01, WEB-01, SMART-SUBS, FIX-POLISH, COMPETITOR-01), med ett unntak: P0-feil som kan påvirke kampdata, datalagring eller kritisk kampfunksjonalitet, og kritiske sikkerhetssårbarheter, tas før neste reelle kamptest, uavhengig av området de ligger i.",
       "changelog": [
         {
           "date": "2026-10-27",
           "note": "Produkteier bekreftet arbeidsrekkefølgen og unntaket for P0-feil før neste reelle kamptest."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Produkteier utvidet P0-unntaket til også å gjelde kritiske sikkerhetssårbarheter."
         }
       ]
     },
@@ -2900,12 +2913,17 @@
           "summary": "One fixed line in the match view that always shows the next step: kick-off, substitution, undo or half-time. The coach still decides."
         }
       },
-      "uncertainty": "Navnet «FairPlayr Next» er produkteiers navn fra 2026-10-27 og finnes ikke i appens tekster; koden bruker «action strip» (stripModel.ts). Spesifisert i DESIGN.md §5.4 (f934791), først bygget bak flagg (6065fee) og standard i web-produksjon fra C6 (9233ac1). Offentlig milepæl og bruk i markedsføring er Claudes forslag og må bekreftes av produkteier (WEB-01).",
+      "uncertainty": "Navnet «FairPlayr Next» er produkteiers navn fra 2026-10-27 og finnes ikke i appens tekster; koden bruker «action strip» (stripModel.ts). Spesifisert i DESIGN.md §5.4 (f934791), først bygget bak flagg (6065fee) og standard i web-produksjon fra C6 (9233ac1). Offentlig milepæl bekreftet av produkteier 2026-10-27; hvordan den brukes på landingssiden og i markedsføring avgjøres i WEB-01.",
       "sources": [
         {
           "type": "owner_decision",
           "ref": "Produkteiers godkjenning av ROADMAP-01 (2026-10-27)",
           "note": "FairPlayr Next er den dynamiske handlingslinjen i livevisningen"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers beslutning ved ferdigstilling av ROADMAP-01 (2026-10-27)",
+          "note": "FairPlayr Next er en offentlig produktmilepæl"
         },
         {
           "type": "commit",
@@ -2942,6 +2960,10 @@
         {
           "date": "2026-10-27",
           "note": "Registrert som egen produktfunksjon etter produkteiers avklaring av begrepet."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Produkteier bekreftet FairPlayr Next som offentlig produktmilepæl (public.milestone var Claudes forslag)."
         }
       ],
       "updated": "2026-10-27"

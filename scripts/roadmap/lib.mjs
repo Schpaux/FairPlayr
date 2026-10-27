@@ -369,7 +369,7 @@ export function renderMarkdown(data) {
 
   push(
     '## Arbeidsrekkefølge', '',
-    'Produkteiers prioriterte utviklingsområder. Unntak: P0-feil som kan påvirke kampdata, datalagring eller kritisk kampfunksjonalitet tas før neste reelle kamptest.', '',
+    'Produkteiers prioriterte utviklingsområder. Unntak: P0-feil som kan påvirke kampdata, datalagring eller kritisk kampfunksjonalitet, og kritiske sikkerhetssårbarheter, tas før neste reelle kamptest.', '',
   );
   const ordered = items.filter((i) => i.work_order !== undefined).sort((a, b) => a.work_order - b.work_order);
   for (const init of ordered) {

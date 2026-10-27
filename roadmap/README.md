@@ -21,7 +21,7 @@ JSON kan importeres direkte i Next.js uten ny avhengighet, valideres med JSON Sc
 
 En flat liste med stabile ID-er og eksplisitte relasjoner, inspirert av initiativ → epic → oppgave (Atlassian, GitLab), men uten dyp nesting:
 
-- **initiative**: større produktleveranse eller område (nivå 1). Kan ha `work_order` (produkteiers arbeidsrekkefølge). Unntak fra rekkefølgen: P0-feil som kan påvirke kampdata, datalagring eller kritisk kampfunksjonalitet tas før neste reelle kamptest. `depends_on` på et initiativ vises i rekkefølgen (for eksempel WEB-01 etter ROADMAP-02).
+- **initiative**: større produktleveranse eller område (nivå 1). Kan ha `work_order` (produkteiers arbeidsrekkefølge). Unntak fra rekkefølgen: P0-feil som kan påvirke kampdata, datalagring eller kritisk kampfunksjonalitet, og kritiske sikkerhetssårbarheter, tas før neste reelle kamptest. `depends_on` på et initiativ vises i rekkefølgen (for eksempel WEB-01 etter ROADMAP-02).
 - **feature**: funksjon eller utviklingsområde under et initiativ (nivå 2).
 - **task / bug / chore**: konkret oppgave, feilretting eller vedlikehold (nivå 3). Forelder er et initiativ eller en funksjon, eller ingen: en liten retting trenger ikke kunstig hierarki.
 
