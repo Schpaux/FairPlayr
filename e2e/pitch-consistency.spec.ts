@@ -166,7 +166,7 @@ test.describe("FP-PITCH-01 consistent pitch from setup to live", () => {
         await shot(page, live, `pitch-${format}-${theme}-live`);
         const liveSpots = await layoutOf(live);
 
-        // Both views draw the same full-pitch markings (own goal at the bottom).
+        // Both views draw the same own-half markings (own goal at the bottom).
         expect(setupHadMarkings).toBe(true);
         await expect(page.getByTestId("live-sideline").locator("svg[data-pitch-markings]")).toHaveCount(1);
         expect(setupSpots).toHaveLength(onField);

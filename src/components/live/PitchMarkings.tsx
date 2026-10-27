@@ -1,19 +1,25 @@
 "use client";
 
 /**
- * Grass and full-pitch markings shared by the live pitch and the setup pitch
+ * Grass and pitch markings shared by the live pitch and the setup pitch
  * (DESIGN.md §5.2, §7), so both draw one pitch facing one way.
  *
  * Orientation (FP-PITCH-01): formation slots are in % with y = 0 at the
  * opponent's goal line and y = 100 at our own, so the keeper is at the bottom
- * and the team attacks upwards. `placeTokens` keeps that direction, and the
- * markings are symmetric, so the drawn pitch never contradicts the tokens.
+ * and the team attacks upwards. `placeTokens` keeps that direction.
+ *
+ * Framing (UI-PITCH-04): only our own half is drawn, plus a strip past the
+ * halfway line, so the halfway line sits HALFWAY_LINE_Y px below the top edge
+ * and the touchlines run off the top. On phone pitches that is about 52–55 %
+ * of the pitch. The token box starts below the line (`.tokenBox` top), so
+ * every outfield line stands in our own half and the keeper at our goal.
  */
 
 import { useLayoutEffect, useState, type RefObject } from "react";
 import styles from "@/components/live/LiveScreen.module.css";
 
 export interface PitchLineInset {
+  /** Unused since UI-PITCH-04: the touchlines run off the top edge. */
   top: number;
   right: number;
   bottom: number;
@@ -22,6 +28,8 @@ export interface PitchLineInset {
 
 /** Live: the dugout overlaps the grass by 18px, so the bottom line sits higher. */
 export const LIVE_LINE_INSET: PitchLineInset = { top: 10, right: 10, bottom: 28, left: 10 };
+/** Halfway line, in px from the top edge; `.tokenBox` starts below it (live 56px, setup 50px). */
+export const HALFWAY_LINE_Y = 22;
 const STRIPES = 14;
 
 /** Rounded size of an element, kept up to date with a ResizeObserver. */
@@ -63,13 +71,13 @@ export function PitchMarkings({
   if (!width || !height) return null;
 
   const x0 = inset.left;
-  const y0 = inset.top;
   const x1 = width - inset.right;
   const y1 = height - inset.bottom;
   const pw = x1 - x0;
-  const ph = y1 - y0;
   const cx = x0 + pw / 2;
-  const cy = y0 + ph / 2;
+  const cy = Math.min(HALFWAY_LINE_Y, y1 / 2);
+  // The whole pitch would be twice our half; its proportions stay as before.
+  const ph = (y1 - cy) * 2;
   const boxW = pw * 0.58;
   const boxH = Math.min(ph * 0.15, pw * 0.3);
   const sixW = pw * 0.28;
@@ -89,15 +97,12 @@ export function PitchMarkings({
           height={height / STRIPES}
         />
       ))}
-      <rect x={x0} y={y0} width={pw} height={ph} rx={2} />
+      <path d={`M${x0} 0V${y1}H${x1}V0`} />
       <path d={`M${x0} ${cy}H${x1}`} />
       <circle cx={cx} cy={cy} r={cr} />
       <circle className={styles.pitchSpot} cx={cx} cy={cy} r={2.2} />
-      <rect x={cx - boxW / 2} y={y0} width={boxW} height={boxH} />
-      <rect x={cx - sixW / 2} y={y0} width={sixW} height={sixH} />
       <rect x={cx - boxW / 2} y={y1 - boxH} width={boxW} height={boxH} />
       <rect x={cx - sixW / 2} y={y1 - sixH} width={sixW} height={sixH} />
-      <path d={`M${cx - arc * 0.62} ${y0 + boxH} A${arc} ${arc} 0 0 0 ${cx + arc * 0.62} ${y0 + boxH}`} />
       <path d={`M${cx - arc * 0.62} ${y1 - boxH} A${arc} ${arc} 0 0 1 ${cx + arc * 0.62} ${y1 - boxH}`} />
     </svg>
   );

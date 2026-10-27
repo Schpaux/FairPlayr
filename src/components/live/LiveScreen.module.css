@@ -370,11 +370,13 @@
 
 .tokenBox {
   position: absolute;
-  inset: 30px 12px 74px;
+  /* The top clears the halfway line (HALFWAY_LINE_Y, UI-PITCH-04), so
+     the front line's ring stays in our own half. */
+  inset: 56px 12px 74px;
 }
 
 .compact .tokenBox {
-  inset: 30px 10px 84px;
+  inset: 56px 10px 84px;
 }
 
 /* ── Player token ─────────────────────────────────────────────────────── */
@@ -677,12 +679,13 @@
   outline-offset: 2px;
 }
 
+/* No ring here, so the front line's disc clears the halfway line 6px higher. */
 .setupPitch .tokenBox {
-  inset: 30px 12px 56px;
+  inset: 50px 12px 56px;
 }
 
 .setupPitch.compact .tokenBox {
-  inset: 30px 10px 66px;
+  inset: 50px 10px 66px;
 }
 
 /* Short phones (≤ 700px tall, e.g. 375×667): a lower pitch, so the setup
@@ -691,6 +694,12 @@
 @media (max-height: 700px) {
   .setupPitch {
     aspect-ratio: 1 / 1;
+  }
+
+  /* 7v7 (regular density) stacks a tag between every line: a little more
+     height keeps each tag clear of the next line and the keeper's K badge. */
+  .setupPitch:not(.compact, .roomy) {
+    aspect-ratio: 10 / 11;
   }
 }
 
@@ -1447,7 +1456,7 @@
   }
 
   .compact .tokenBox {
-    inset: 28px 10px 80px;
+    inset: 56px 10px 80px;
   }
 
   .scorerOption {
