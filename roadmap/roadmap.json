@@ -695,8 +695,8 @@
       "rationale": "TODO.md hadde vokst til over 100 000 tegn med statusprosa og var ikke lesbar for verken mennesker, Claude eller ChatGPT som felles grunnlag, og den lå utenfor git.",
       "category": "process",
       "work_order": 1,
-      "decision": "committed",
-      "status": "in_review",
+      "decision": "completed",
+      "status": "implemented",
       "priority": "P1",
       "origin": "owner_decision",
       "dates": {
@@ -704,9 +704,11 @@
         "started": "2026-10-27",
         "implemented": "2026-10-27"
       },
+      "verification": "not_applicable",
       "related": [
         "WEB-01e",
-        "OPS-01"
+        "OPS-01",
+        "INIT-ROADMAP"
       ],
       "sources": [
         {
@@ -722,6 +724,26 @@
           "type": "owner_decision",
           "ref": "Produkteiers godkjenning av ROADMAP-01 (2026-10-27)",
           "note": "Arkitektur og datamodell godkjent"
+        },
+        {
+          "type": "commit",
+          "ref": "fb5cc71",
+          "note": "roadmap, validering og CI"
+        },
+        {
+          "type": "commit",
+          "ref": "5320df8",
+          "note": "produkteiers beslutninger fra ferdigstillingen"
+        },
+        {
+          "type": "commit",
+          "ref": "2813bff",
+          "note": "CodeQL-retting: backslash i tabellceller"
+        },
+        {
+          "type": "commit",
+          "ref": "4e25cfe",
+          "note": "merge av PR #1 til main"
         }
       ],
       "updated": "2026-10-27",
@@ -733,6 +755,43 @@
         {
           "date": "2026-10-27",
           "note": "Ferdigstilling: produkteier bekreftet FairPlayr Next som offentlig milepæl og utvidet P0-unntaket til kritiske sikkerhetssårbarheter; AGENTS.md-roadmapseksjonen nummereres §7."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Merget til main etter godkjenning fra produkteier (PR #1, merge commit) med grønn CI. Ferdig som prosessverktøy (implemented); produksjonsdeploy er ikke relevant. ROADMAP-02 og OPS-01 er flyttet til det nye initiativet INIT-ROADMAP og holder ikke ROADMAP-01 åpent."
+        }
+      ]
+    },
+    {
+      "id": "INIT-ROADMAP",
+      "type": "initiative",
+      "title": "Roadmap-forvaltning og datakvalitet",
+      "summary": "Videre drift av roadmapen etter at systemet er på plass (ROADMAP-01): avstemming mot produktbeslutninger, åpne funn og konkurrentanalysen, og jevnlig kontroll av at roadmapen stemmer med beslutninger og commits.",
+      "rationale": "ROADMAP-01 leverte selve roadmap-systemet og er ferdig. Arbeidet med å holde innholdet komplett og oppdatert fortsetter, og trenger et eget initiativ slik at det ikke holder ROADMAP-01 åpent.",
+      "category": "process",
+      "decision": "committed",
+      "status": "not_started",
+      "priority": "P1",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "related": [
+        "ROADMAP-01",
+        "WEB-01"
+      ],
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers valg av alternativ C ved ferdigstilling av ROADMAP-01 (2026-10-27)",
+          "note": "Nytt initiativ for ROADMAP-02 og OPS-01"
+        }
+      ],
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "Opprettet da ROADMAP-01 ble ferdigstilt; ROADMAP-02 og OPS-01 flyttet hit fra ROADMAP-01 uten endring i innhold, beslutning eller prioritet."
         }
       ]
     },
@@ -743,7 +802,7 @@
       "summary": "Importer og avstem mot roadmapen: produktbeslutninger fra ChatGPT, åpne feil og UX-forbedringer fra diskusjonene med produkteier, konkurrentanalysen (sammen med COMPETITOR-01a) og planlagte funksjoner og produktidéer. Hver oppføring får kilde; nye ideer får decision «considering». Oppdater samtidig historiske oppføringer merket med usikkerhet (blant annet første fungerende versjon og første produksjonsdato).",
       "rationale": "Roadmapen er ikke komplett: GitHub viser ikke alle produktbeslutninger, og Claude har ikke tilgang til ChatGPT-samtalene eller konkurrentanalysen. Den må være avstemt før den vises offentlig (WEB-01).",
       "category": "process",
-      "parent": "ROADMAP-01",
+      "parent": "INIT-ROADMAP",
       "decision": "committed",
       "status": "not_started",
       "priority": "P1",
@@ -772,6 +831,10 @@
         {
           "date": "2026-10-27",
           "note": "Vedtatt av produkteier (considering → committed, P2 → P1) som neste datakvalitetsoppgave; skal gjennomføres før WEB-01."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Flyttet fra ROADMAP-01 til INIT-ROADMAP da ROADMAP-01 ble ferdigstilt; innhold, beslutning og prioritet er uendret."
         }
       ]
     },
@@ -781,7 +844,7 @@
       "title": "Daglig avstemming av beslutninger mot roadmapen",
       "summary": "En daglig gjennomgang som oppdager nye beslutninger i prosjektchatter og nye commits, sammenligner mot roadmapen og foreslår endringer uten å endre repoet automatisk.",
       "category": "process",
-      "parent": "ROADMAP-01",
+      "parent": "INIT-ROADMAP",
       "decision": "committed",
       "status": "not_started",
       "priority": "P2",
@@ -797,6 +860,10 @@
         {
           "date": "2026-10-27",
           "note": "Mål endret fra TODO.md til roadmap/roadmap.json ved migrering."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Flyttet fra ROADMAP-01 til INIT-ROADMAP da ROADMAP-01 ble ferdigstilt; innhold, beslutning og prioritet er uendret."
         }
       ],
       "updated": "2026-10-27"

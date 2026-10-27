@@ -8,8 +8,8 @@ Oppdatert 2026-10-27. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); re
 
 | | Antall |
 | :- | -: |
-| Oppføringer totalt | 255 |
-| Ferdige (`completed`) | 120 |
+| Oppføringer totalt | 256 |
+| Ferdige (`completed`) | 121 |
 | Åpne vedtatte (`committed`) | 122 |
 | Til vurdering (`considering`) | 11 |
 | Utsatt (`deferred`) | 2 |
@@ -20,7 +20,7 @@ Oppdatert 2026-10-27. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); re
 
 Produkteiers prioriterte utviklingsområder. Unntak: P0-feil som kan påvirke kampdata, datalagring eller kritisk kampfunksjonalitet, og kritiske sikkerhetssårbarheter, tas før neste reelle kamptest.
 
-1. **ROADMAP-01** Roadmap-system som felles sannhetskilde (vedtatt, til review)
+1. **ROADMAP-01** Roadmap-system som felles sannhetskilde (ferdig, implementert)
 2. **WEB-01** Ny landingsside og tydelig skille mellom nettside og app (vedtatt, ikke startet, etter ROADMAP-02)
 3. **SMART-SUBS** Smart byttemotor (vedtatt, ikke startet)
 4. **FIX-POLISH** Samlet feilretting og UI-polish (vedtatt, pågår)
@@ -29,13 +29,6 @@ Produkteiers prioriterte utviklingsområder. Unntak: P0-feil som kan påvirke ka
 ## Åpent arbeid per initiativ
 
 Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med arbeidsrekkefølge først.
-
-### ROADMAP-01: Roadmap-system som felles sannhetskilde
-
-| ID | Prio | Status | Oppgave | Under |
-| :- | :- | :- | :- | :- |
-| ROADMAP-02 | P1 | ikke startet | Importer og avstem produktbeslutninger, åpne funn og konkurrentanalysen |  |
-| OPS-01 | P2 | ikke startet | Daglig avstemming av beslutninger mot roadmapen |  |
 
 ### WEB-01: Ny landingsside og tydelig skille mellom nettside og app
 
@@ -162,6 +155,13 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 | OFF-12 | P2 | må verifiseres | Skjermlås og bakgrunn under kamp: kort iPhone-kontroll |  |
 | OFF-10 | P3 | ikke startet | Småpunkter fra A2 |  |
 
+### INIT-ROADMAP: Roadmap-forvaltning og datakvalitet
+
+| ID | Prio | Status | Oppgave | Under |
+| :- | :- | :- | :- | :- |
+| ROADMAP-02 | P1 | ikke startet | Importer og avstem produktbeslutninger, åpne funn og konkurrentanalysen |  |
+| OPS-01 | P2 | ikke startet | Daglig avstemming av beslutninger mot roadmapen |  |
+
 ### INIT-SECURITY: Sikkerhet og personvern
 
 | ID | Prio | Status | Oppgave | Under |
@@ -241,6 +241,7 @@ Ferdige initiativer og funksjoner, nyeste først. «≤» betyr at commiten var 
 | :- | :- | :- | :- |
 | 2026-10-27 (prod 2026-10-27) | FEAT-SHARE-02 | Pseudonymiserte, lengre og faktatro AI-oppsummeringer i EU | `965200b` |
 | 2026-10-27 (prod 2026-10-27) | FEAT-SHARE-04 | Offentlig lagoppstilling og benk | `b8181a3` |
+| 2026-10-27 | ROADMAP-01 | Roadmap-system som felles sannhetskilde | `fb5cc71` `5320df8` `2813bff` |
 | 2026-10-27 (prod 2026-10-27) | UI-PITCH-04 | Banekart som egen halvdel med alle linjer | `e654da5` |
 | 2026-10-26 (prod 2026-10-26) | FEAT-SHARE-01 | Offentlig kamplenke med live og oppsummering | `51bae21` `3b78537` |
 | 2026-10-26 (prod 2026-10-26) | INIT-SYNC | Pålitelige kampdata og synk | `4918b3c` `89e2afe` `4c37ab9` |
