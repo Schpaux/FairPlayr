@@ -43,3 +43,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env*.local
+
+# Claude Code: personal settings and runtime state (AGENTS.md §8, §9)
+.claude/settings.local.json
+.claude/worktrees/
+.claude/scheduled_tasks.lock
+.claude/scheduled_tasks.json
+.claude/checkpoints/

@@ -8,10 +8,10 @@ Oppdatert 2026-10-27. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); re
 
 | | Antall |
 | :- | -: |
-| Oppføringer totalt | 268 |
+| Oppføringer totalt | 269 |
 | Ferdige (`completed`) | 126 |
 | Åpne vedtatte (`committed`) | 125 |
-| Til vurdering (`considering`) | 15 |
+| Til vurdering (`considering`) | 16 |
 | Utsatt (`deferred`) | 2 |
 | Må verifiseres | 18 |
 | Offentlig synlige | 21 |
@@ -139,7 +139,7 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 | STAB-04 | P2 | ikke startet | Rett lint-baselinen |  |
 | STAB-08 | P2 | ikke startet | Ustabil match-lifecycle.spec.ts |  |
 | HK-01 | P3 | ikke startet | Rydd rot-artefaktene |  |
-| HK-03 | P3 | ikke startet | Commit Next-blokken i AGENTS.md sammen med SEC-03 |  |
+| HK-03 | P3 | til review | Commit Next-blokken i AGENTS.md sammen med SEC-03 |  |
 | STAB-05 | P3 | ikke startet | Prod-smoke-spec gir falske feil mot produksjon |  |
 | STAB-07 | P3 | ikke startet | Benken kan bli stående 1 px forskjøvet |  |
 | STAB-11 | P3 | ikke startet | Ustabil Vitest i share.test.ts |  |
@@ -234,6 +234,7 @@ Ideer og muligheter. Ikke vedtatt; endres bare til `committed` med dokumentert b
 | FEAT-SHARE-03 | P3 | Offentlige byttehendelser tilpasset delingsnivå | INIT-SHARING |
 | FEAT-SPOND-01 | P3 | Kontroller read-only Spond-spillere og gjenværende synkfeil | INIT-SPOND |
 | HK-02 | P3 | Usporet Xcode-workspace: commit eller ignorer | INIT-DEVEX |
+| SEC-03-F1 | P3 | Videre herding av agentvernet etter SEC-03 | INIT-SECURITY |
 | UI-HIST-01-F1 | P3 | Historikk i to kolonner på desktop | FIX-POLISH |
 | UI-LIVE-02 | P3 | To lime «neste handlinger» før avspark | FIX-POLISH |
 
