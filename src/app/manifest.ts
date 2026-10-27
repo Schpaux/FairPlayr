@@ -12,10 +12,11 @@ import { BRAND_COLORS } from "@/lib/pwa/brandColors";
  *   inside the installed app.
  * - Colours come from `brandColors.ts` (= `--fp-canvas` dark, DESIGN.md §2.1).
  *
- * - Icons (B7, option C): 192 and 512 `any`, a separate 512 `maskable` (motif
- *   inside the 80 % safe zone) and `src/app/apple-icon.png` (180×180, linked
- *   by Next). Source: `public/icons/icon-source.svg`. Never combine purposes
- *   as "maskable any".
+ * - Icons (BRAND-01, BRAND.md §4): 192 and 512 `any`, a separate 512
+ *   `maskable` (symbol inside the 80 % safe zone) and `src/app/apple-icon.png`
+ *   (180×180, linked by Next), all from the brand package. Sources:
+ *   `public/icons/icon-source.svg` and `icon-maskable-source.svg`. Never
+ *   combine purposes as "maskable any".
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {

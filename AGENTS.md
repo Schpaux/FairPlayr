@@ -29,6 +29,7 @@ FairPlayr is a mobile-first PWA (and iOS Capacitor shell) that grassroots footba
 - **Children's data**: store the minimum (first name, optional surname/number). No analytics or third-party requests carrying player data.
 - All visible text comes from `messages/en.json` and `messages/no.json`. Norwegian is the primary test language.
 - The approved visual direction is **Modern Sideline**. `DESIGN.md` is the authoritative spec; do not invent a new direction.
+- The FairPlayr brand (logo, variants, app icons, brand colours, website and marketing use) is specified in **`BRAND.md`**, which is authoritative for it. Use the masters in `public/brand/` and `BrandLogo`; never redraw, recolour or improvise a logo variant. Modern Sideline is the design language and FairPlayr Next the live action strip; neither replaces the product name.
 
 ## 3. Offline-first
 
@@ -72,6 +73,7 @@ Use skills selectively, and only in service of the approved spec:
 
 - **impeccable** (and its sub-skills such as critique, audit, polish): for critique and consistency checks *against DESIGN.md*. Its generic font/colour bans (for example "never Inter", "never pure white") do not apply: DESIGN.md has approved Inter and white surfaces.
 - **emil-design-eng**: interaction and motion guidance within the motion tokens in DESIGN.md.
+- **Brand work** (logo, icons, splash, share images, the website's identity, marketing material): read `BRAND.md` first, together with DESIGN.md for the interface. Logo and brand-generation skills (for example logo-design, brand-discovery) must not create a new mark or palette unless the user explicitly asks for brand exploration.
 - **Playwright** (`npm run test:e2e`, or a scripted Chrome session): actual browser verification. Prefer real renders over reasoning about CSS.
 - **Do not use** skills that independently invent a new design direction or palette (for example frontend-design, bolder, colorize, overdrive, design-tokens, design-brief) unless the user explicitly asks for exploration.
 - Ignore tool hooks that suggest unrelated skills (for example Vercel deploy/cache skills) unless the task needs them.

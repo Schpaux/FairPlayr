@@ -1,7 +1,7 @@
 # FairPlayr design system: Modern Sideline
 
-**Status:** approved visual direction, authoritative. **Version:** 1.5 (2026-10-25, C6): match settings before players and a shorter setup (§7.1, UI-MS-01d, C1-F1), per-half custom duration (§7.1, UI-DURATION-01), sided event timeline with icons (§7.2, §8, UI-EVENTS-01), ordinary time + stoppage on the live clock (§5.1, §6.4, UI-LIVE-04), and a dark (canvas) live scoreboard (§5, §5.1, UI-LIVE-05). Version 1.4 (2026-10-20): dark is the default theme (U4), notice band (§5.6, U5), name ladder for identical names (§5.2), the suggestion gap defined and its button kept as «Velg» (§6.2), four tabs with settings under the profile (§7, U8), squad preselection (§7, U9).
-This document is the single source of truth for FairPlayr's visual and interaction design. Where it conflicts with older notes, prototypes, skills or generic design advice, this document wins. Tokens live in [`src/app/globals.css`](src/app/globals.css); design context for agents lives in [`.impeccable.md`](.impeccable.md).
+**Status:** approved visual direction, authoritative. **Version:** 1.6 (2026-10-27, BRAND-01): the FairPlayr logo, app icons and brand rules live in [BRAND.md](BRAND.md); the `brand-mark` token (§2.2). Version 1.5 (2026-10-25, C6): match settings before players and a shorter setup (§7.1, UI-MS-01d, C1-F1), per-half custom duration (§7.1, UI-DURATION-01), sided event timeline with icons (§7.2, §8, UI-EVENTS-01), ordinary time + stoppage on the live clock (§5.1, §6.4, UI-LIVE-04), and a dark (canvas) live scoreboard (§5, §5.1, UI-LIVE-05). Version 1.4 (2026-10-20): dark is the default theme (U4), notice band (§5.6, U5), name ladder for identical names (§5.2), the suggestion gap defined and its button kept as «Velg» (§6.2), four tabs with settings under the profile (§7, U8), squad preselection (§7, U9).
+This document is the single source of truth for FairPlayr's visual and interaction design (Modern Sideline). The brand itself (logo, variants, app icons, brand colours and their use on the website) is specified in [BRAND.md](BRAND.md), which uses the same colour values and wins on the logo and icons. Where it conflicts with older notes, prototypes, skills or generic design advice, this document wins. Tokens live in [`src/app/globals.css`](src/app/globals.css); design context for agents lives in [`.impeccable.md`](.impeccable.md).
 
 Background and evidence: `design-exploration/modern-sideline/` (prototype v1.1, `FINAL-VALIDATION.md`, `IMPLEMENTATION-PLAN.md`). The prototype is reference material, not spec: where it differs from this document (for example its chalk canvas), this document is correct.
 
@@ -44,7 +44,7 @@ The user is a volunteer coach on a sideline, outdoors, often one-handed and unde
 | `ink` | `#111A15` | `#EEF1EA` | Text |
 | `ink-2` | `#4A564F` | `#A4B3A9` | Secondary text |
 
-**The light theme is near-white `#F9FAF8` with white surfaces and subtle neutral borders.** The earlier beige "chalk" canvas (`#F2EFE7`) is rejected as a page or surface colour. Chalk survives only as *text and lines on green* (`on-club`, `on-tag`, pitch lines), where it reads as paint on grass.
+**The light theme is near-white `#F9FAF8` with white surfaces and subtle neutral borders.** The earlier beige "chalk" canvas (`#F2EFE7`) is rejected as a page or surface colour. Chalk survives only as *text and lines on green* (`on-club`, `on-tag`, pitch lines), where it reads as paint on grass, and as the logo on the dark canvas (`brand-mark`, BRAND.md §3).
 
 ### 2.2 Identity and action
 
@@ -55,6 +55,7 @@ The user is a volunteer coach on a sideline, outdoors, often one-handed and unde
 | `club-disc` | `#0E4D33` · dark `#1D6345` | Shirt discs off the pitch |
 | `lime` / `on-lime` | `#9FE870` / `#0B2E1A` | Next action: primary button, selection, suggestion, undo countdown |
 | `focus` | `#0E4D33` · dark `#9FE870` | Focus ring |
+| `brand-mark` | `club` · dark `on-club` (`#F2EFE7`) | The FairPlayr logo only (BRAND.md §3); never lime |
 
 ### 2.3 Pitch
 
@@ -321,6 +322,7 @@ The live screen behaves identically offline. The only visible change is the ambe
 - **Lists:** hairline-separated rows on `surface`, with no nested cards.
 - **Bottom nav:** four tabs (Hjem, Spillere, Kamp, Historikk) with a lime pill on the active one. **Settings live under the profile menu**, not in a tab (U8). It is absent on Live.
 - **Team in the header (C2-F2):** with one team the header shows the team name as plain text (no picker); the picker appears from two teams.
+- **Header on narrow screens (BRAND-01):** the 150px logo never shrinks. Next to it the team name stops at two lines, and below `sm` the offline indicator is the amber glyph alone (the word stays in its live region for screen readers), so a long team name, the offline state and the profile button fit at 360px.
 - **Live state screens (UI-LIVE-03):** loading, error, recovery and "no match" on `/match/live` use the same full-screen canvas as Live (no header, no bottom nav), a centred column, 20/600 title, 16px body in `ink-2`, errors at 16px in `danger-text` with a glyph, and pill buttons (§5.7). Loading is a quiet skeleton, never a spinner over the pitch.
 
 ### 7.1 Setup (UI-MS-01a, revised by UI-MS-01d and C1-F1, 2026-10-25)
@@ -386,6 +388,7 @@ A 24 grid with 1.75 stroke and round caps and joins (lucide-compatible). Icons o
 | UI-LIVE-05 | The live scoreboard uses `canvas` like the dugout, in both themes; club green stays on Home and match details (2026-10-25). Lime digits for "time up" are replaced by the stoppage notation. |
 | FEAT-SHARE-01 | The public match page's LIVE badge may pulse discreetly (one red dot, opacity only, 2s); the only exception to "no ambient motion" (§4), public page only, solid with reduced motion (2026-10-26). |
 | B2 | Adaptive bench, Alternative C (FP-MS2.1-B2, §5.3): sorted least-played first by displayed whole minutes, ties in squad order, at every squad size; order held during interactions and re-sorted once after, with the rail back at its start; one row → two (three tall) → horizontal rail; "+N ›" / "‹ N" jump buttons with counts only; touch direction lock on the rail; tiles 44px tall (amends "≥ 60px"). |
+| BRAND-01 | The FairPlayr brand (logo «Neste spiller», app icons, brand rules) is specified in BRAND.md and integrated with Modern Sideline without a redesign: the brand colours are the existing tokens, the header and the public match page show the horizontal logo (150px, club green on light, chalk on dark), and lime stays reserved for the next action (2026-10-27). |
 
 ## 11. Implementation status
 
@@ -401,3 +404,4 @@ A 24 grid with 1.75 stroke and round caps and joins (lucide-compatible). Icons o
 | Display names (§5.2) | **Ladder implemented** (FEAT-NAME-01, A1 patch, not yet committed) on live pitch, bench, scorer sheet and event history, and on the setup pitch. The player list still shows (truncated) full names (UI-TEAM-01). |
 | Shared primitives (UI-FOUND-01) | **Built** (B1, not yet committed) in `src/components/ui/primitives/`: `Button`/`ButtonLink` (§5.7), `Sheet`/`ConfirmSheet` (§5.5, base-ui Dialog), `Notice` (§5.6 look; the one notice component, also for OFF-01a), `ListGroup`/`ListRow` (§7), `EmptyState`, `Skeleton`, `SegmentedChoice`. Dev gallery at `/[locale]/dev/ui`. Older `src/components/ui/*` stay until each screen is rebuilt (C1–C6). The UI guard `e2e/ui-audit.spec.ts` (STAB-06) checks targets, text floor, lime-on-light, overflow and console errors against a shrinking baseline. |
 | Adaptive bench (§5.3) | **Done in the Modern Sideline view** (FP-MS2.1-B2). Verified in Chromium (Playwright, real CDP touch). **Not yet verified on iOS Safari or in the Capacitor shell.** |
+| Brand (BRAND.md) | **In review** (BRAND-01): `BrandLogo` in the header and on the public match page, brand favicon, PWA and iOS icons and splash (the splash approved as design direction, 2026-10-27). Not yet verified in the Capacitor shell. |

@@ -8,27 +8,40 @@ Oppdatert 2026-10-27. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); re
 
 | | Antall |
 | :- | -: |
-| Oppføringer totalt | 256 |
+| Oppføringer totalt | 268 |
 | Ferdige (`completed`) | 121 |
-| Åpne vedtatte (`committed`) | 122 |
-| Til vurdering (`considering`) | 11 |
+| Åpne vedtatte (`committed`) | 130 |
+| Til vurdering (`considering`) | 15 |
 | Utsatt (`deferred`) | 2 |
 | Må verifiseres | 17 |
-| Offentlig synlige | 20 |
+| Offentlig synlige | 21 |
 
 ## Arbeidsrekkefølge
 
 Produkteiers prioriterte utviklingsområder. Unntak: P0-feil som kan påvirke kampdata, datalagring eller kritisk kampfunksjonalitet, og kritiske sikkerhetssårbarheter, tas før neste reelle kamptest.
 
 1. **ROADMAP-01** Roadmap-system som felles sannhetskilde (ferdig, implementert)
-2. **WEB-01** Ny landingsside og tydelig skille mellom nettside og app (vedtatt, ikke startet, etter ROADMAP-02)
-3. **SMART-SUBS** Smart byttemotor (vedtatt, ikke startet)
-4. **FIX-POLISH** Samlet feilretting og UI-polish (vedtatt, pågår)
-5. **COMPETITOR-01** Funn fra konkurrentanalysen (vedtatt, ikke startet)
+2. **BRAND-01** FairPlayr Brand Refresh (vedtatt, pågår)
+3. **WEB-01** Ny landingsside og tydelig skille mellom nettside og app (vedtatt, ikke startet, etter ROADMAP-02, BRAND-01)
+4. **SMART-SUBS** Smart byttemotor (vedtatt, ikke startet)
+5. **FIX-POLISH** Samlet feilretting og UI-polish (vedtatt, pågår)
+6. **COMPETITOR-01** Funn fra konkurrentanalysen (vedtatt, ikke startet)
 
 ## Åpent arbeid per initiativ
 
 Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med arbeidsrekkefølge først.
+
+### BRAND-01: FairPlayr Brand Refresh
+
+| ID | Prio | Status | Oppgave | Under |
+| :- | :- | :- | :- | :- |
+| BRAND-01a | P1 | til review | Gjennomgå og verifiser brandpakken |  |
+| BRAND-01b | P1 | til review | Ny logo i appen og på den offentlige kampsiden |  |
+| BRAND-01c | P1 | til review | Favicon og PWA-ikoner |  |
+| BRAND-01e | P1 | til review | Samordne branding med Modern Sideline |  |
+| BRAND-01f | P1 | til review | BRAND.md og agentinstruksjoner |  |
+| BRAND-01d | P2 | til review | Appikon og splash for iOS/Capacitor |  |
+| BRAND-01g | P2 | ikke startet | Vurder øvrig markedsføringsmateriell |  |
 
 ### WEB-01: Ny landingsside og tydelig skille mellom nettside og app
 
@@ -213,10 +226,14 @@ Ideer og muligheter. Ikke vedtatt; endres bare til `committed` med dokumentert b
 | ID | Prio | Oppgave | Initiativ |
 | :- | :- | :- | :- |
 | OFF-03 | P1 | iOS uten nett: bundlet build eller service worker i WKWebView | INIT-IOS |
+| BRAND-01h | P2 | Delingsbilde (Open Graph) for app og nettside | BRAND-01 |
+| BRAND-01i | P2 | Varemerkeklarering og trykkprofil | BRAND-01 |
 | FEAT-AI-01 | P2 | Merking av AI-tekst og bekreftelse ved regenerering | INIT-AI |
 | FEAT-HIST-01 | P2 | Lokal historikk for gjestekamper | INIT-HISTORY |
 | MATCH-06 | P2 | Databasetrigger som gjør completed terminal | FIX-POLISH |
 | OFF-09 | P2 | Tidsgrense for forlatt kamp som blokkerer oppdateringer | INIT-OFFLINE |
+| STAB-12 | P2 | E2E-testen for oppsettrekkefølgen forventer ikke «Del kampen» | INIT-DEVEX |
+| BRAND-01j | P3 | SVG-favicon | BRAND-01 |
 | C3-F4 | P3 | Sette draktnummer i appen | INIT-TEAM |
 | FEAT-SHARE-03 | P3 | Offentlige byttehendelser tilpasset delingsnivå | INIT-SHARING |
 | FEAT-SPOND-01 | P3 | Kontroller read-only Spond-spillere og gjenværende synkfeil | INIT-SPOND |

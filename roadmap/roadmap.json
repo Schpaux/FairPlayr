@@ -869,13 +869,453 @@
       "updated": "2026-10-27"
     },
     {
+      "id": "BRAND-01",
+      "type": "initiative",
+      "title": "FairPlayr Brand Refresh",
+      "summary": "Ny visuell identitet fra brandpakke v1.0 («Neste spiller»): logo, appikon, favicon, PWA- og iOS-ikoner, brandfarger og regler for bruk, integrert med Modern Sideline uten redesign av appen. BRAND.md er autoritativ for merkevaren; DESIGN.md for designspråket.",
+      "rationale": "Appen hadde ingen egentlig logo (et banemerke og ordet FairPlayr i ren tekst), og iOS-skallet brukte Capacitors standardikon og -splash. Den kommende landingssiden (WEB-01) skal bygge på samme identitet uten å gjøre brandingarbeidet på nytt.",
+      "category": "design-ui",
+      "work_order": 2,
+      "decision": "committed",
+      "status": "in_progress",
+      "priority": "P1",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-27",
+        "started": "2026-10-27"
+      },
+      "related": [
+        "WEB-01",
+        "OFF-02",
+        "SEC-03",
+        "FEAT-NEXT-01",
+        "INIT-IOS"
+      ],
+      "public": {
+        "visible": true,
+        "milestone": true,
+        "no": {
+          "title": "Ny visuell identitet",
+          "summary": "Ny logo og nytt appikon for FairPlayr, brukt likt i appen, på delte kampsider og på den kommende nettsiden."
+        },
+        "en": {
+          "title": "A new FairPlayr identity",
+          "summary": "A new logo and app icon for FairPlayr, used the same way in the app, on shared match pages and on the coming website."
+        }
+      },
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag BRAND-01 (2026-10-27)",
+          "note": "Godkjent produktbeslutning: P1, prioriteres før videre arbeid med SEC-03 og WEB-01"
+        },
+        {
+          "type": "local_doc",
+          "ref": "design-exploration/FairPlayr-Brand-package-v1/",
+          "note": "brandpakke v1.0, retning «Neste spiller»; kildemateriale, ikke versjonert"
+        },
+        {
+          "type": "doc",
+          "ref": "BRAND.md"
+        },
+        {
+          "type": "review_patch",
+          "ref": "fairplayr-brand01-review.patch"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers gjennomgang av BRAND-01 (2026-10-27)",
+          "note": "Offentlig milepæl bekreftet; splash godkjent som retning; tagline til WEB-01; BRAND-01h–j forblir considering; BRAND.md i SEC-03-instruksjonene tas i SEC-03; godkjent commit, push og PR (ikke merge eller deploy)"
+        }
+      ],
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "Opprettet etter produkteiers beslutning (committed, P1, not_started), med arbeidsrekkefølge 2: før WEB-01 og før videre arbeid med SEC-03."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Påbegynt: brandpakken er verifisert og logo, ikoner og dokumentasjon ligger i review-patch (in_progress)."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Produkteier bekreftet offentlig milepæl. BRAND-01h, -01i og -01j forblir considering. Oppdatering av SEC-03-instruksjonene med BRAND.md gjøres i SEC-03, ikke her."
+        }
+      ]
+    },
+    {
+      "id": "BRAND-01a",
+      "type": "task",
+      "title": "Gjennomgå og verifiser brandpakken",
+      "summary": "Pakken har én valgt retning («Neste spiller») og er komplett for app og web: symbol, ordmerke, horisontal og stablet logo (klubbgrønn, kalkhvit, svart, hvit; SVG med tekst i konturer og PNG), liten variant for 16–23 px, appikon, maskable, favicon (ICO 16/32/48, PNG, SVG), PWA-ikoner, brand tokens, brandguide (PDF), SoMe-maler, logoanimasjon og Inter med OFL-lisens. Fargene er identiske med Modern Sideline-tokenene; ingen designkonflikt.",
+      "category": "design-ui",
+      "parent": "BRAND-01",
+      "decision": "committed",
+      "status": "in_review",
+      "priority": "P1",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-27",
+        "started": "2026-10-27"
+      },
+      "uncertainty": "Varemerkeklarering og trykkprofil er ikke utført i pakken (BRAND-01i). Logoen er laget for FairPlayr; Inter og Barlow Condensed er OFL.",
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag BRAND-01 (2026-10-27)",
+          "note": "Punkt 1"
+        },
+        {
+          "type": "local_doc",
+          "ref": "design-exploration/FairPlayr-Brand-package-v1/",
+          "note": "brandpakke v1.0, retning «Neste spiller»; kildemateriale, ikke versjonert"
+        },
+        {
+          "type": "doc",
+          "ref": "BRAND.md"
+        }
+      ],
+      "updated": "2026-10-27"
+    },
+    {
+      "id": "BRAND-01b",
+      "type": "task",
+      "title": "Ny logo i appen og på den offentlige kampsiden",
+      "summary": "Den horisontale logoen erstatter banemerket og ordet i ren tekst i appens header, og ordet i ren tekst på den offentlige kampsiden. Én komponent med stidata uendret fra masterfilene (test mot public/brand), klubbgrønn i lyst tema og kalkhvit i mørkt via et nytt brand-token, 150 px bred (minstemål). På smale skjermer (360 px) stopper lagnavnet etter to linjer, og offline-indikatoren vises bare som glyf under sm, så logo, lagnavn, offline-status og profil ikke kolliderer.",
+      "category": "design-ui",
+      "parent": "BRAND-01",
+      "decision": "committed",
+      "status": "in_review",
+      "priority": "P1",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-27",
+        "started": "2026-10-27"
+      },
+      "related": [
+        "FEAT-SHARE-01"
+      ],
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag BRAND-01 (2026-10-27)",
+          "note": "Punkt 3"
+        },
+        {
+          "type": "doc",
+          "ref": "BRAND.md"
+        },
+        {
+          "type": "review_patch",
+          "ref": "fairplayr-brand01-review.patch"
+        }
+      ],
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "Headeren kontrollert innlogget med langt lagnavn på 360×640 og 375×667 (lyst/mørkt, på nett/frakoblet); offline-pillen kolliderte med lagnavnet og ble rettet før commit."
+        }
+      ]
+    },
+    {
+      "id": "BRAND-01c",
+      "type": "task",
+      "title": "Favicon og PWA-ikoner",
+      "summary": "favicon.ico, apple-touch-icon og manifestikonene (192, 512 og maskable 512) byttet til brandpakkens filer med samme filnavn, så service workerens forhåndslagring er uendret. Optimalisert tapsfritt (ugjennomsiktig RGB). Manifestfargene var allerede brandets mørke canvas.",
+      "category": "design-ui",
+      "parent": "BRAND-01",
+      "decision": "committed",
+      "status": "in_review",
+      "priority": "P1",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-27",
+        "started": "2026-10-27"
+      },
+      "related": [
+        "OFF-02"
+      ],
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag BRAND-01 (2026-10-27)",
+          "note": "Punkt 3"
+        },
+        {
+          "type": "doc",
+          "ref": "BRAND.md"
+        },
+        {
+          "type": "review_patch",
+          "ref": "fairplayr-brand01-review.patch"
+        }
+      ],
+      "updated": "2026-10-27"
+    },
+    {
+      "id": "BRAND-01d",
+      "type": "task",
+      "title": "Appikon og splash for iOS/Capacitor",
+      "summary": "iOS-appikonet (1024, uten alfakanal) byttet fra Capacitors standardikon til brandets appikon. Splash-bildet (Capacitors standard) erstattet med kalkhvitt symbol på mørk canvas, og bakgrunnen i launch screen og SplashScreen endret fra en gammel marineblå farge til canvas.",
+      "category": "design-ui",
+      "parent": "BRAND-01",
+      "decision": "committed",
+      "status": "in_review",
+      "priority": "P2",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-27",
+        "started": "2026-10-27"
+      },
+      "related": [
+        "INIT-IOS"
+      ],
+      "uncertainty": "Splash-oppsettet (kalkhvitt symbol sentrert, 416 px i 2732-bildet) er godkjent som designretning av produkteier. Ikke verifisert på enhet: Capacitor-synk og Xcode-bygg er ikke kjørt og krever egen godkjenning.",
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag BRAND-01 (2026-10-27)",
+          "note": "Punkt 3: vurdere appikoner og splash"
+        },
+        {
+          "type": "doc",
+          "ref": "BRAND.md"
+        },
+        {
+          "type": "review_patch",
+          "ref": "fairplayr-brand01-review.patch"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers gjennomgang av BRAND-01 (2026-10-27)",
+          "note": "Punkt 2: splash godkjent som designretning; ikke kjør Capacitor-synk eller Xcode-bygg ennå"
+        }
+      ],
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "Splash godkjent som designretning av produkteier; verifisering på enhet venter på godkjent synk og bygg."
+        }
+      ]
+    },
+    {
+      "id": "BRAND-01e",
+      "type": "task",
+      "title": "Samordne branding med Modern Sideline",
+      "summary": "Brandfargene er de samme som Modern Sideline-tokenene. Nytt token for logofargen (klubbgrønn på lyst, kalkhvitt på mørkt); DESIGN.md peker til BRAND.md for logo og ikoner. Ingen redesign: lime brukes fortsatt bare til neste handling og aldri i logoen.",
+      "category": "design-ui",
+      "parent": "BRAND-01",
+      "decision": "committed",
+      "status": "in_review",
+      "priority": "P1",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-27",
+        "started": "2026-10-27"
+      },
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag BRAND-01 (2026-10-27)",
+          "note": "Punkt 4"
+        },
+        {
+          "type": "doc",
+          "ref": "DESIGN.md"
+        },
+        {
+          "type": "doc",
+          "ref": "BRAND.md"
+        },
+        {
+          "type": "review_patch",
+          "ref": "fairplayr-brand01-review.patch"
+        }
+      ],
+      "updated": "2026-10-27"
+    },
+    {
+      "id": "BRAND-01f",
+      "type": "task",
+      "title": "BRAND.md og agentinstruksjoner",
+      "summary": "BRAND.md beskriver logoen og variantene, bruk på lys og mørk bakgrunn, farger, typografi, filplassering, ikoner, bruk på landingssiden og forholdet mellom FairPlayr, Modern Sideline og FairPlayr Next. AGENTS.md og .impeccable.md peker til BRAND.md for brandingarbeid.",
+      "category": "design-ui",
+      "parent": "BRAND-01",
+      "decision": "committed",
+      "status": "in_review",
+      "priority": "P1",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-27",
+        "started": "2026-10-27"
+      },
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag BRAND-01 (2026-10-27)",
+          "note": "Punkt 5"
+        },
+        {
+          "type": "doc",
+          "ref": "BRAND.md"
+        },
+        {
+          "type": "review_patch",
+          "ref": "fairplayr-brand01-review.patch"
+        }
+      ],
+      "updated": "2026-10-27"
+    },
+    {
+      "id": "BRAND-01g",
+      "type": "task",
+      "title": "Vurder øvrig markedsføringsmateriell",
+      "summary": "Brandpakken har SoMe-maler (1:1, 4:5, 9:16), video-endcard, presentasjon, logoanimasjon (punktet glir på plass på 0,9 s) og et videobrief. Avklar hva som tas i bruk, hvor kildene skal ligge og hvordan taglinen «Mer oversikt. Mer kamp.» brukes, sammen med WEB-01.",
+      "category": "design-ui",
+      "parent": "BRAND-01",
+      "decision": "committed",
+      "status": "not_started",
+      "priority": "P2",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "related": [
+        "WEB-01",
+        "WEB-01f",
+        "WEB-01a"
+      ],
+      "uncertainty": "Taglinen er en anbefaling fra brandpakken, ikke vedtatt. Produkteier har utsatt beslutningen om taglinen til WEB-01.",
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag BRAND-01 (2026-10-27)",
+          "note": "Punkt 2.8: vurdere øvrig markedsføringsmateriell"
+        },
+        {
+          "type": "local_doc",
+          "ref": "design-exploration/FairPlayr-Brand-package-v1/",
+          "note": "brandpakke v1.0, retning «Neste spiller»; kildemateriale, ikke versjonert"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers gjennomgang av BRAND-01 (2026-10-27)",
+          "note": "Punkt 3: tagline utsatt til WEB-01"
+        }
+      ],
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "Taglinen avgjøres i WEB-01 (produkteiers beslutning)."
+        }
+      ]
+    },
+    {
+      "id": "BRAND-01h",
+      "type": "task",
+      "title": "Delingsbilde (Open Graph) for app og nettside",
+      "summary": "Appen og den offentlige kampsiden har ikke noe delingsbilde, så lenker vises uten bilde. Brandpakken har ikke et ferdig bilde i 1200×630; det må lages av leverte filer etter BRAND.md og godkjennes før bruk.",
+      "category": "design-ui",
+      "parent": "BRAND-01",
+      "decision": "considering",
+      "status": "not_started",
+      "priority": "P2",
+      "origin": "claude_proposal",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "related": [
+        "WEB-01",
+        "FEAT-SHARE-01"
+      ],
+      "sources": [
+        {
+          "type": "doc",
+          "ref": "BRAND.md",
+          "note": "åpne behov"
+        },
+        {
+          "type": "local_doc",
+          "ref": "design-exploration/FairPlayr-Brand-package-v1/",
+          "note": "brandpakke v1.0, retning «Neste spiller»; kildemateriale, ikke versjonert"
+        }
+      ],
+      "updated": "2026-10-27"
+    },
+    {
+      "id": "BRAND-01i",
+      "type": "task",
+      "title": "Varemerkeklarering og trykkprofil",
+      "summary": "Brandpakken sier at varemerkeklarering ikke er gjort, og at fargene bare er skjermverdier (ingen Pantone eller trykkprofil). Avklar begge før en større offentlig lansering og før trykk.",
+      "category": "design-ui",
+      "parent": "BRAND-01",
+      "decision": "considering",
+      "status": "not_started",
+      "priority": "P2",
+      "origin": "claude_proposal",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "related": [
+        "WEB-01"
+      ],
+      "sources": [
+        {
+          "type": "local_doc",
+          "ref": "design-exploration/FairPlayr-Brand-package-v1/",
+          "note": "brandpakke v1.0, retning «Neste spiller»; kildemateriale, ikke versjonert"
+        },
+        {
+          "type": "doc",
+          "ref": "BRAND.md",
+          "note": "åpne behov"
+        }
+      ],
+      "updated": "2026-10-27"
+    },
+    {
+      "id": "BRAND-01j",
+      "type": "task",
+      "title": "SVG-favicon",
+      "summary": "Brandpakken har en favicon i SVG som er skarpere i nettleserfaner. Den krever en ny sti i service workerens forhåndslagring og offline-ruting, og er derfor holdt utenfor BRAND-01b–c (ICO dekker favicon i dag).",
+      "category": "design-ui",
+      "parent": "BRAND-01",
+      "decision": "considering",
+      "status": "not_started",
+      "priority": "P3",
+      "origin": "claude_proposal",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "related": [
+        "OFF-02"
+      ],
+      "sources": [
+        {
+          "type": "doc",
+          "ref": "BRAND.md",
+          "note": "åpne behov"
+        },
+        {
+          "type": "local_doc",
+          "ref": "design-exploration/FairPlayr-Brand-package-v1/",
+          "note": "brandpakke v1.0, retning «Neste spiller»; kildemateriale, ikke versjonert"
+        }
+      ],
+      "updated": "2026-10-27"
+    },
+    {
       "id": "WEB-01",
       "type": "initiative",
       "title": "Ny landingsside og tydelig skille mellom nettside og app",
       "summary": "En egen FairPlayr-nettside med produktpresentasjon, branding, kontaktinformasjon, tydelig vei inn i appen, offentlig roadmap (inspirert av Immich) og plass til å markedsføre nye funksjoner.",
       "rationale": "I dag er forsiden appens Hjem; det finnes ingen offentlig presentasjon av produktet. Den første markedsføringssiden fra april ble erstattet av kampdag-dashbordet i mai.",
       "category": "website",
-      "work_order": 2,
+      "work_order": 3,
       "decision": "committed",
       "status": "not_started",
       "priority": "P1",
@@ -885,7 +1325,8 @@
       },
       "related": [
         "HIST-LANDING-01",
-        "ROADMAP-01"
+        "ROADMAP-01",
+        "BRAND-01"
       ],
       "public": {
         "visible": true,
@@ -908,12 +1349,21 @@
       ],
       "updated": "2026-10-27",
       "depends_on": [
-        "ROADMAP-02"
+        "ROADMAP-02",
+        "BRAND-01"
       ],
       "changelog": [
         {
           "date": "2026-10-27",
           "note": "Avhenger av ROADMAP-02 (produkteiers beslutning): roadmapen avstemmes før landingssiden."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Arbeidsrekkefølge 2 → 3: produkteier prioriterte BRAND-01 foran (BRAND-01)."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Avhenger av BRAND-01 (produkteiers beslutning): nettsiden bygger på den nye merkevaren."
         }
       ]
     },
@@ -944,7 +1394,7 @@
       "id": "WEB-01b",
       "type": "task",
       "title": "FairPlayr-branding på nettsiden",
-      "summary": "Logo, appikon og visuell profil fra Modern Sideline (DESIGN.md) brukt på nettsiden.",
+      "summary": "Bruk FairPlayr-merkevaren fra BRAND-01 på nettsiden etter BRAND.md: hovedlogoen (klubbgrønn på lyst, kalkhvit på mørkt), logofiler fra public/brand, appikon og brandfargene (Modern Sideline-tokenene), og Modern Sideline (DESIGN.md) for selve grensesnittet.",
       "category": "website",
       "parent": "WEB-01",
       "decision": "committed",
@@ -963,9 +1413,22 @@
         {
           "type": "doc",
           "ref": "DESIGN.md"
+        },
+        {
+          "type": "doc",
+          "ref": "BRAND.md"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-27",
+      "depends_on": [
+        "BRAND-01"
+      ],
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "Bygger på BRAND-01 og BRAND.md i stedet for egen branding (produkteiers beslutning)."
+        }
+      ]
     },
     {
       "id": "WEB-01c",
@@ -1084,7 +1547,7 @@
       "summary": "Bytteforslag som tar hensyn til spilletid, posisjoner og lagets bytterytme: posisjonspreferanser per spiller, faste bytteintervaller per lag og dynamiske forslag. Rettferdig spilletid er det sentrale prinsippet.",
       "rationale": "Dagens forslag ser bare på spilletidsgap (minst 4 min, aldri keeper). Trenere bytter i praksis etter posisjon og faste intervaller.",
       "category": "substitutions",
-      "work_order": 3,
+      "work_order": 4,
       "decision": "committed",
       "status": "not_started",
       "priority": "P2",
@@ -1121,7 +1584,13 @@
           "note": "§2, §4"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "Arbeidsrekkefølge 3 → 4: produkteier prioriterte BRAND-01 foran (BRAND-01)."
+        }
+      ]
     },
     {
       "id": "FEAT-POS-01",
@@ -1539,7 +2008,7 @@
       "title": "Samlet feilretting og UI-polish",
       "summary": "Alle registrerte feil og forbedringer som selvstendige oppgaver, gruppert etter område. Hver oppgave har egen prioritet; P0/P1 for kampdata går foran polish innenfor området.",
       "category": "design-ui",
-      "work_order": 4,
+      "work_order": 5,
       "decision": "committed",
       "status": "in_progress",
       "priority": "P1",
@@ -1574,6 +2043,10 @@
         {
           "date": "2026-10-27",
           "note": "Produkteier utvidet P0-unntaket til også å gjelde kritiske sikkerhetssårbarheter."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Arbeidsrekkefølge 4 → 5: produkteier prioriterte BRAND-01 foran (BRAND-01)."
         }
       ]
     },
@@ -1856,7 +2329,7 @@
       "title": "Funn fra konkurrentanalysen",
       "summary": "Relevante forbedringer fra konkurrentanalysen registreres som mulige fremtidige funksjoner med decision «considering». Ingen konkurrentfunksjon blir vedtatt uten egen beslutning.",
       "category": "process",
-      "work_order": 5,
+      "work_order": 6,
       "decision": "committed",
       "status": "not_started",
       "priority": "P3",
@@ -1872,7 +2345,13 @@
           "note": "Prioritet 5"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "Arbeidsrekkefølge 5 → 6: produkteier prioriterte BRAND-01 foran (BRAND-01)."
+        }
+      ]
     },
     {
       "id": "COMPETITOR-01a",
@@ -6057,6 +6536,33 @@
         }
       ],
       "updated": "2026-10-27"
+    },
+    {
+      "id": "STAB-12",
+      "type": "bug",
+      "title": "E2E-testen for oppsettrekkefølgen forventer ikke «Del kampen»",
+      "summary": "e2e/match-setup-c1.spec.ts (custom 2 × 18) forventer overskriftene «Kamp», «Hvem er med i dag?», «Startoppstilling», men oppsettet har nå delingsseksjonen «Del kampen» mellom dem. Testen feiler på alle tre viewports i begge temaer, også på main; appen ser ut til å oppføre seg som tiltenkt. Avklar ønsket rekkefølge (DESIGN.md §7.1) og oppdater testen eller oppsettet.",
+      "category": "devex",
+      "decision": "considering",
+      "status": "not_started",
+      "priority": "P2",
+      "origin": "claude_proposal",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "related": [
+        "UI-DURATION-01",
+        "FEAT-SHARE-01"
+      ],
+      "sources": [
+        {
+          "type": "local_doc",
+          "ref": "fairplayr-brand01-review.patch",
+          "note": "funnet ved baseline-kjøring under BRAND-01 (main 26b2c6f)"
+        }
+      ],
+      "updated": "2026-10-27",
+      "parent": "INIT-DEVEX"
     },
     {
       "id": "E2E-DRAG-01",
