@@ -8,11 +8,11 @@ Oppdatert 2026-10-27. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); re
 
 | | Antall |
 | :- | -: |
-| Oppføringer totalt | 269 |
-| Ferdige (`completed`) | 128 |
-| Åpne vedtatte (`committed`) | 123 |
-| Til vurdering (`considering`) | 16 |
-| Utsatt (`deferred`) | 2 |
+| Oppføringer totalt | 286 |
+| Ferdige (`completed`) | 130 |
+| Åpne vedtatte (`committed`) | 128 |
+| Til vurdering (`considering`) | 24 |
+| Utsatt (`deferred`) | 4 |
 | Må verifiseres | 18 |
 | Offentlig synlige | 21 |
 
@@ -68,24 +68,26 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 
 | ID | Prio | Status | Oppgave | Under |
 | :- | :- | :- | :- | :- |
-| MATCH-01 | P0 | ikke startet | Reparer enheter med skadet legacy-kamp (FP-MS2.1-A1.1) | FIX-DATA |
 | C4-F1 | P1 | ikke startet | Slettet eller endret servermål oppdaterer ikke stillingen | FIX-DATA |
+| C6-F1a | P1 | ikke startet | Designbeslutning: bane og benk i samme arbeidsområde | C6-F1 |
+| C6-F1b | P1 | ikke startet | Rask plassering av spillere fra benk til bane | C6-F1 |
+| C6-F1c | P1 | ikke startet | Tydelig hvem som er på banen og på benken | C6-F1 |
+| C6-F1d | P1 | ikke startet | Akseptkriterier på 360×640 og 375×667 | C6-F1 |
 | MATCH-02b | P1 | ikke startet | UI for målkorrigering | MATCH-02 |
 | MATCH-04 | P1 | ikke startet | Flere live-rader per lag gir lesefeil | FIX-DATA |
-| MATCH-05 | P1 | må verifiseres | Offline start: feilet live-PATCH | FIX-DATA |
 | MATCH-08 | P1 | må verifiseres | Verifiser livssyklus og synk mot ekte Supabase | FIX-DATA |
 | OFF-06 | P1 | ikke startet | Synkstatus-UI | FIX-DATA |
 | SPOND-RESET-01 | P1 | ikke startet | Spond-sletting rapporterer «slettet» når kampene ikke ble slettet | FIX-DATA |
 | C4-F4 | P2 | må verifiseres | Verifiser innlogget historikk og kampdetaljer mot ekte Supabase | FIX-HISTORY |
-| C6-F1 | P2 | ikke startet | Laguttak uten unødvendig scrolling | FIX-SETUP |
 | FEAT-LINEUP-01 | P2 | ikke startet | Nye /lineup-oppsett skal bruke lagets standardformat | FIX-CLEANUP |
-| MATCH-14-F1 | P2 | ikke startet | Rett format på allerede fullførte kamper | FIX-HISTORY |
+| MATCH-14-V1 | P2 | må verifiseres | Produksjonskontroll: ny kamp lagres og vises med riktig format | FIX-DATA |
 | OFF-08 | P2 | ikke startet | Utsatt sesjon og 401 under kamp | FIX-DATA |
 | POLISH-01 | P2 | ikke startet | Overflødig informasjon om pågående kamp | FIX-SETTINGS |
 | POLISH-02 | P2 | ikke startet | Lik UI for skysynkronisering og Spond | FIX-SETTINGS |
 | POLISH-03 | P2 | ikke startet | Spond-innstillinger på egen side | FIX-SETTINGS |
 | POLISH-04 | P2 | ikke startet | Faresonen på egen side | FIX-SETTINGS |
 | STAB-10 | P2 | må verifiseres | Treg menyknapp og navigasjon etter oppdatering | FIX-SETTINGS |
+| TEAM-PICKER-01 | P2 | ikke startet | Én sentral lagvelger | FIX-SETTINGS |
 | UI-MS-01c | P2 | ikke startet | Fjern den gamle live-visningen | UI-MS-01 |
 | UI-PITCH-03 | P2 | til review | Pensjonere /lineup (U6) | FIX-CLEANUP |
 | C1-F5 | P3 | ikke startet | Init-effekten i oppsettet kjører på nytt ved ny lagidentitet | FIX-SETUP |
@@ -102,9 +104,9 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 | C6-F4 | P3 | må verifiseres | Verifiser live-annonseringer, zoom og viewport på enhet | FIX-A11Y |
 | C6-F5 | P3 | ikke startet | Små a11y-rester fra C6 | FIX-A11Y |
 | C6-F6 | P3 | ikke startet | FpButton (legacy) tegner 1 px kant | FIX-CLEANUP |
+| MATCH-01 | P3 | ikke startet | Reparer enheter med skadet legacy-kamp (FP-MS2.1-A1.1) | FIX-DATA |
 | MATCH-12-F1 | P3 | ikke startet | Nedtellingen i målscorer-arket viser ingen sekunder | FIX-LIVE |
-| MATCH-13-F2 | P3 | ikke startet | Aktiv kamp startet før MATCH-13 får ingen server-ID | FIX-DATA |
-| MATCH-13-F3 | P3 | ikke startet | Kamptittel uten motstander | FIX-HISTORY |
+| MATCH-13-F3 | P3 | ikke startet | Bedre kamptittel når motstander mangler | FIX-HISTORY |
 | POLISH-05 | P3 | ikke startet | Mer logisk plassering av språk og tema | FIX-SETTINGS |
 | UI-A11Y-03-F1 | P3 | ikke startet | LiveSheets på felles Sheet-primitiv | FIX-A11Y |
 | UI-DEAD-01 | P3 | til review | Slett død UI-kode | FIX-CLEANUP |
@@ -114,7 +116,7 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 
 | ID | Prio | Status | Oppgave | Under |
 | :- | :- | :- | :- | :- |
-| COMPETITOR-01a | P3 | ikke startet | Importer konkurrentanalysen og registrer funn |  |
+| COMPETITOR-01a | P3 | pågår | Importer konkurrentanalysen og registrer funn |  |
 
 ### INIT-AI: AI-genererte kampoppsummeringer
 
@@ -154,19 +156,19 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 
 | ID | Prio | Status | Oppgave | Under |
 | :- | :- | :- | :- | :- |
-| OFF-04 | P1 | må verifiseres | Android 360×640 på fysisk enhet før bred lansering |  |
-| OFF-05 | P1 | må verifiseres | Adaptiv benk på iPhone Safari og i Capacitor |  |
-| OFF-07 | P1 | må verifiseres | Manuell enhetsverifisering av offline-PWA |  |
+| OFF-04 | P1 | må verifiseres | Android 360×640 på fysisk enhet før bred lansering | OFF-13 |
+| OFF-05 | P1 | må verifiseres | Adaptiv benk på iPhone Safari og i Capacitor | OFF-13 |
+| OFF-07 | P1 | må verifiseres | Manuell enhetsverifisering av offline-PWA | OFF-13 |
 | OFF-11 | P1 | pågår | Avstem dokumentasjon med online-first-retningen |  |
 | UI-TOKENS-01-SW | P1 | må verifiseres | Service worker-oppgradering på ekte enhet |  |
-| OFF-12 | P2 | må verifiseres | Skjermlås og bakgrunn under kamp: kort iPhone-kontroll |  |
+| OFF-12 | P2 | må verifiseres | Skjermlås og bakgrunn under kamp: kort iPhone-kontroll | OFF-13 |
 | OFF-10 | P3 | ikke startet | Småpunkter fra A2 |  |
 
 ### INIT-ROADMAP: Roadmap-forvaltning og datakvalitet
 
 | ID | Prio | Status | Oppgave | Under |
 | :- | :- | :- | :- | :- |
-| ROADMAP-02 | P1 | ikke startet | Importer og avstem produktbeslutninger, åpne funn og konkurrentanalysen |  |
+| ROADMAP-02 | P1 | til review | Importer og avstem produktbeslutninger, åpne funn og konkurrentanalysen |  |
 | OPS-01 | P2 | ikke startet | Daglig avstemming av beslutninger mot roadmapen |  |
 
 ### INIT-SECURITY: Sikkerhet og personvern
@@ -187,6 +189,7 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 | ID | Prio | Status | Oppgave | Under |
 | :- | :- | :- | :- | :- |
 | FEAT-SHARE-01-V1 | P2 | må verifiseres | Verifiser mål → offentlig side ende til ende i produksjon |  |
+| FEAT-SHARE-05 | P2 | ikke startet | Korrekt delingsvisning etter kampslutt |  |
 
 ## Må verifiseres
 
@@ -194,7 +197,6 @@ Arbeid som kan være gjort eller er levert, men ikke bekreftet.
 
 | ID | Prio | Oppgave | Initiativ |
 | :- | :- | :- | :- |
-| MATCH-05 | P1 | Offline start: feilet live-PATCH | FIX-POLISH |
 | MATCH-08 | P1 | Verifiser livssyklus og synk mot ekte Supabase | FIX-POLISH |
 | OFF-04 | P1 | Android 360×640 på fysisk enhet før bred lansering | INIT-OFFLINE |
 | OFF-05 | P1 | Adaptiv benk på iPhone Safari og i Capacitor | INIT-OFFLINE |
@@ -204,6 +206,7 @@ Arbeid som kan være gjort eller er levert, men ikke bekreftet.
 | BRAND-01d | P2 | Appikon og splash for iOS/Capacitor | BRAND-01 |
 | C4-F4 | P2 | Verifiser innlogget historikk og kampdetaljer mot ekte Supabase | FIX-POLISH |
 | FEAT-SHARE-01-V1 | P2 | Verifiser mål → offentlig side ende til ende i produksjon | INIT-SHARING |
+| MATCH-14-V1 | P2 | Produksjonskontroll: ny kamp lagres og vises med riktig format | FIX-POLISH |
 | OFF-12 | P2 | Skjermlås og bakgrunn under kamp: kort iPhone-kontroll | INIT-OFFLINE |
 | SEC-10-F1 | P2 | Bekreft Vertex-region etter første ekte oppsummering | INIT-AI |
 | SEC-10-F3 | P2 | Røyktest av skrivende flyter etter flytting til dub1 | INIT-SECURITY |
@@ -219,6 +222,7 @@ Ideer og muligheter. Ikke vedtatt; endres bare til `committed` med dokumentert b
 
 | ID | Prio | Oppgave | Initiativ |
 | :- | :- | :- | :- |
+| C6-F1e | P1 | Forenkle bunnområdet i kampoppsettet | FIX-POLISH |
 | OFF-03 | P1 | iOS uten nett: bundlet build eller service worker i WKWebView | INIT-IOS |
 | BRAND-01h | P2 | Delingsbilde (Open Graph) for app og nettside | BRAND-01 |
 | BRAND-01i | P2 | Varemerkeklarering og trykkprofil | BRAND-01 |
@@ -229,9 +233,16 @@ Ideer og muligheter. Ikke vedtatt; endres bare til `committed` med dokumentert b
 | STAB-12 | P2 | E2E-testen for oppsettrekkefølgen forventer ikke «Del kampen» | INIT-DEVEX |
 | BRAND-01j | P3 | SVG-favicon | BRAND-01 |
 | C3-F4 | P3 | Sette draktnummer i appen | INIT-TEAM |
+| COMPETITOR-01b | P3 | Mer avansert posisjonsrotasjon | COMPETITOR-01 |
+| COMPETITOR-01c | P3 | Tydeligere varsling om skjev spilletid | COMPETITOR-01 |
+| COMPETITOR-01d | P3 | Gjenbruk av startoppstillinger | COMPETITOR-01 |
+| COMPETITOR-01e | P3 | Cupgruppering i historikken | COMPETITOR-01 |
+| COMPETITOR-01f | P3 | Videreutvikling av FairPlayr Next | COMPETITOR-01 |
 | FEAT-SHARE-03 | P3 | Offentlige byttehendelser tilpasset delingsnivå | INIT-SHARING |
+| FEAT-SHARE-06 | P3 | Eget subdomene for offentlig kampvisning | INIT-SHARING |
 | FEAT-SPOND-01 | P3 | Kontroller read-only Spond-spillere og gjenværende synkfeil | INIT-SPOND |
 | HK-02 | P3 | Usporet Xcode-workspace: commit eller ignorer | INIT-DEVEX |
+| MATCH-05-F1 | P3 | Serverfeil ved start av planlagt kamp viser feil selv om kampen er startet lokalt | FIX-POLISH |
 | SEC-03-F1 | P3 | Videre herding av agentvernet etter SEC-03 | INIT-SECURITY |
 | UI-HIST-01-F1 | P3 | Historikk i to kolonner på desktop | FIX-POLISH |
 | UI-LIVE-02 | P3 | To lime «neste handlinger» før avspark | FIX-POLISH |
@@ -244,6 +255,8 @@ Bevisst parkert.
 | :- | :- | :- | :- |
 | MATCH-07 | P2 | FP-MS2.1-A2: øvrige endringer i bytteforslag | SMART-SUBS |
 | FEAT-NAME-02 | P3 | Valgfrie kallenavn på spillere | INIT-TEAM |
+| MATCH-13-F2 | P3 | Aktiv kamp startet før MATCH-13 får ingen server-ID | FIX-POLISH |
+| MATCH-14-F1 | P3 | Rett format på allerede fullførte kamper | FIX-POLISH |
 
 ## Historikk
 
@@ -305,9 +318,10 @@ Ferdige initiativer og funksjoner, nyeste først. «≤» betyr at commiten var 
 
 ## Kilder som mangler eller må importeres
 
-- **SRC-CHATGPT** ChatGPT-samtaler: Produkteiers beslutningshistorikk i ChatGPT er ikke tilgjengelig for Claude. Importeres via ROADMAP-02.
-- **SRC-COMPETITOR** Konkurrentanalysen: Ikke i repoet. Importeres via COMPETITOR-01a.
+- **SRC-CHATGPT** ChatGPT-samtaler: Produkteiers beslutningshistorikk i ChatGPT er ikke tilgjengelig for Claude. Beslutningene i produkteiers oppdrag ROADMAP-02 (2026-10-27) er avstemt; samtalene selv er ikke importert.
+- **SRC-COMPETITOR** Konkurrentanalysen: Ikke i repoet. Fem eksempelfunn fra ROADMAP-02 er registrert (COMPETITOR-01b–f); resten importeres via COMPETITOR-01a.
 - **SRC-DEPLOYS-PRE-OCT** Produksjonsdatoer før 2026-10-19: Ingen dokumentasjon av når commits fra april–oktober først ble deployet. Oppføringene bruker dates.released_no_later_than = 2026-10-19 (første dokumenterte deploy, 89e2afe).
 - **SRC-TESTFLIGHT** iOS/TestFlight-bygg: Ikke dokumentert om eller når et iOS-bygg er lastet opp, eller hvilken URL det laster (UI-LIVE-01, SEC-09).
 - **SRC-VERSIONS** Versjonsnumre: Repoet har ingen tagger, releases eller PR-er; package.json står på 0.1.0. Ingen historiske versjonsnumre er registrert.
+- **SRC-DEVICE-TESTS** Fysiske enhetstester: Produkteier opplyser at flere enhetstester er gjennomført (OFF-04, OFF-05, OFF-07, OFF-12), men ingen testlogg eller rapport er funnet. De står som needs_verification til resultatene er dokumentert.
 
