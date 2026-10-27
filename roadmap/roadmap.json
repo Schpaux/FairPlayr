@@ -4955,7 +4955,7 @@
       "id": "SEC-03",
       "type": "chore",
       "title": "Commit sikkerhetsherdingen av agentmiljøet",
-      "summary": "Prosjektinnstillinger, fp-guard-hook, git-hooks og AGENTS.md §7–8 ligger ukommittert i arbeidstreet og venter på godkjenning.",
+      "summary": "Prosjektinnstillinger (spør- og nektregler, fp-guard og SessionStart-sjekk), git-hooks og AGENTS.md §1 og §8–9 (agentstrategi og sikkerhetslag; UI- og designagenter leser også BRAND.md) ligger klare i review-patch og venter på godkjenning.",
       "category": "security-privacy",
       "parent": "INIT-SECURITY",
       "decision": "committed",
@@ -4963,9 +4963,11 @@
       "priority": "P1",
       "origin": "legacy_todo",
       "related": [
-        "HK-03"
+        "HK-03",
+        "BRAND-01",
+        "SEC-03-F1"
       ],
-      "uncertainty": "Kontrollert 2026-10-27: .claude/settings.json, .gitignore og AGENTS.md er fortsatt endret og .claude/hooks/ usporet.",
+      "uncertainty": "Sluttkontroll 2026-10-27: to uavhengige reviewer (sikkerhet og kode) og isolert test i fersk klone av main c048705 med patchen lagt på. Git-hookene stoppet commit, push, merge-commit og rebase fra agentøkten, også i en worktree; nektreglene ble prøvd med en nestet agentøkt. Vesentlige funn er rettet i patchen; gjenstående punkter ligger i SEC-03-F1. Godkjenningsveien med FP_GIT_APPROVED=1 er ikke prøvd i testen, den brukes først ved godkjent commit.",
       "sources": [
         {
           "type": "legacy_todo",
@@ -4974,6 +4976,60 @@
         {
           "type": "local_doc",
           "ref": "fairplayr-ecc-hardening-review.patch"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag SEC-03 (2026-10-27)",
+          "note": "Ferdigstille for review, BRAND.md i instruksjonene for UI- og designagenter; ikke commit, push, merge eller deploy ennå"
+        },
+        {
+          "type": "review_patch",
+          "ref": "fairplayr-sec03-review.patch"
+        },
+        {
+          "type": "local_doc",
+          "ref": "FP-SEC-03-review-followups.md",
+          "note": "funn og rettinger fra sluttkontrollen"
+        }
+      ],
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "Gjennomgått og komplettert; seksjonene flyttet til AGENTS.md §8–9 etter roadmapseksjonen (§7)."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Ferdigstilt for review: UI- og designagenter leser også BRAND.md (AGENTS.md §8, avtalt i BRAND-01), nektreglene dekker også .env.development og .env.test, og Next-blokken (HK-03) følger med i samme patch."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Sluttkontroll: funn fra sikkerhets- og kodereview rettet (nektreglene forankret i prosjektroten og utvidet, spørreregler for endring av sikkerhetslagene, fp-guard og installasjonsskriptet herdet, nye tester); AGENTS.md §9 presisert."
+        }
+      ]
+    },
+    {
+      "id": "SEC-03-F1",
+      "type": "task",
+      "title": "Videre herding av agentvernet etter SEC-03",
+      "summary": "Restpunkter fra sluttkontrollen av SEC-03 som ikke var nødvendige før commit. Detaljene står i det lokale notatet.",
+      "category": "security-privacy",
+      "parent": "INIT-SECURITY",
+      "decision": "considering",
+      "status": "not_started",
+      "priority": "P3",
+      "origin": "claude_proposal",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "related": [
+        "SEC-03"
+      ],
+      "sources": [
+        {
+          "type": "local_doc",
+          "ref": "FP-SEC-03-review-followups.md",
+          "note": "åpne punkter"
         }
       ],
       "updated": "2026-10-27"
@@ -6778,7 +6834,7 @@
       "category": "process",
       "parent": "INIT-DEVEX",
       "decision": "committed",
-      "status": "not_started",
+      "status": "in_review",
       "priority": "P3",
       "origin": "legacy_todo",
       "related": [
@@ -6788,6 +6844,11 @@
         {
           "type": "legacy_todo",
           "ref": "TODO.archive-2026-10-27.md#HK-03"
+        },
+        {
+          "type": "review_patch",
+          "ref": "fairplayr-sec03-review.patch",
+          "note": "overskriften i Next-blokken slik next dev skriver den"
         }
       ],
       "updated": "2026-10-27"
