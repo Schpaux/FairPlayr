@@ -877,12 +877,13 @@
       "category": "design-ui",
       "work_order": 2,
       "decision": "committed",
-      "status": "in_progress",
+      "status": "implemented",
       "priority": "P1",
       "origin": "owner_decision",
       "dates": {
         "created": "2026-10-27",
-        "started": "2026-10-27"
+        "started": "2026-10-27",
+        "implemented": "2026-10-27"
       },
       "related": [
         "WEB-01",
@@ -926,6 +927,21 @@
           "type": "owner_decision",
           "ref": "Produkteiers gjennomgang av BRAND-01 (2026-10-27)",
           "note": "Offentlig milepæl bekreftet; splash godkjent som retning; tagline til WEB-01; BRAND-01h–j forblir considering; BRAND.md i SEC-03-instruksjonene tas i SEC-03; godkjent commit, push og PR (ikke merge eller deploy)"
+        },
+        {
+          "type": "commit",
+          "ref": "7df63a8",
+          "note": "logo, ikoner og BRAND.md"
+        },
+        {
+          "type": "commit",
+          "ref": "2b8f4b1",
+          "note": "merge av PR #3 til main"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers godkjenning av merge av BRAND-01 (2026-10-27)",
+          "note": "Merge av PR #3 med merge commit og automatisk produksjonsdeploy godkjent"
         }
       ],
       "updated": "2026-10-27",
@@ -941,6 +957,10 @@
         {
           "date": "2026-10-27",
           "note": "Produkteier bekreftet offentlig milepæl. BRAND-01h, -01i og -01j forblir considering. Oppdatering av SEC-03-instruksjonene med BRAND.md gjøres i SEC-03, ikke her."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "PR #3 merget til main og deployet til produksjon; logo og ikoner kontrollert i produksjon. Initiativet står som implemented til iOS-ikon og splash er verifisert (BRAND-01d). BRAND-01g flyttet til WEB-01; BRAND-01h–j forblir considering."
         }
       ]
     },
@@ -951,14 +971,16 @@
       "summary": "Pakken har én valgt retning («Neste spiller») og er komplett for app og web: symbol, ordmerke, horisontal og stablet logo (klubbgrønn, kalkhvit, svart, hvit; SVG med tekst i konturer og PNG), liten variant for 16–23 px, appikon, maskable, favicon (ICO 16/32/48, PNG, SVG), PWA-ikoner, brand tokens, brandguide (PDF), SoMe-maler, logoanimasjon og Inter med OFL-lisens. Fargene er identiske med Modern Sideline-tokenene; ingen designkonflikt.",
       "category": "design-ui",
       "parent": "BRAND-01",
-      "decision": "committed",
-      "status": "in_review",
+      "decision": "completed",
+      "status": "implemented",
       "priority": "P1",
       "origin": "owner_decision",
       "dates": {
         "created": "2026-10-27",
-        "started": "2026-10-27"
+        "started": "2026-10-27",
+        "implemented": "2026-10-27"
       },
+      "verification": "not_applicable",
       "uncertainty": "Varemerkeklarering og trykkprofil er ikke utført i pakken (BRAND-01i). Logoen er laget for FairPlayr; Inter og Barlow Condensed er OFL.",
       "sources": [
         {
@@ -974,6 +996,16 @@
         {
           "type": "doc",
           "ref": "BRAND.md"
+        },
+        {
+          "type": "commit",
+          "ref": "7df63a8",
+          "note": "logo, ikoner og BRAND.md"
+        },
+        {
+          "type": "commit",
+          "ref": "2b8f4b1",
+          "note": "merge av PR #3 til main"
         }
       ],
       "updated": "2026-10-27"
@@ -985,14 +1017,17 @@
       "summary": "Den horisontale logoen erstatter banemerket og ordet i ren tekst i appens header, og ordet i ren tekst på den offentlige kampsiden. Én komponent med stidata uendret fra masterfilene (test mot public/brand), klubbgrønn i lyst tema og kalkhvit i mørkt via et nytt brand-token, 150 px bred (minstemål). På smale skjermer (360 px) stopper lagnavnet etter to linjer, og offline-indikatoren vises bare som glyf under sm, så logo, lagnavn, offline-status og profil ikke kolliderer.",
       "category": "design-ui",
       "parent": "BRAND-01",
-      "decision": "committed",
-      "status": "in_review",
+      "decision": "completed",
+      "status": "released",
       "priority": "P1",
       "origin": "owner_decision",
       "dates": {
         "created": "2026-10-27",
-        "started": "2026-10-27"
+        "started": "2026-10-27",
+        "implemented": "2026-10-27",
+        "released": "2026-10-27"
       },
+      "verification": "partial",
       "related": [
         "FEAT-SHARE-01"
       ],
@@ -1009,6 +1044,16 @@
         {
           "type": "review_patch",
           "ref": "fairplayr-brand01-review.patch"
+        },
+        {
+          "type": "commit",
+          "ref": "7df63a8",
+          "note": "logo, ikoner og BRAND.md"
+        },
+        {
+          "type": "commit",
+          "ref": "2b8f4b1",
+          "note": "merge av PR #3 til main"
         }
       ],
       "updated": "2026-10-27",
@@ -1026,14 +1071,17 @@
       "summary": "favicon.ico, apple-touch-icon og manifestikonene (192, 512 og maskable 512) byttet til brandpakkens filer med samme filnavn, så service workerens forhåndslagring er uendret. Optimalisert tapsfritt (ugjennomsiktig RGB). Manifestfargene var allerede brandets mørke canvas.",
       "category": "design-ui",
       "parent": "BRAND-01",
-      "decision": "committed",
-      "status": "in_review",
+      "decision": "completed",
+      "status": "released",
       "priority": "P1",
       "origin": "owner_decision",
       "dates": {
         "created": "2026-10-27",
-        "started": "2026-10-27"
+        "started": "2026-10-27",
+        "implemented": "2026-10-27",
+        "released": "2026-10-27"
       },
+      "verification": "production",
       "related": [
         "OFF-02"
       ],
@@ -1050,6 +1098,16 @@
         {
           "type": "review_patch",
           "ref": "fairplayr-brand01-review.patch"
+        },
+        {
+          "type": "commit",
+          "ref": "7df63a8",
+          "note": "logo, ikoner og BRAND.md"
+        },
+        {
+          "type": "commit",
+          "ref": "2b8f4b1",
+          "note": "merge av PR #3 til main"
         }
       ],
       "updated": "2026-10-27"
@@ -1062,17 +1120,18 @@
       "category": "design-ui",
       "parent": "BRAND-01",
       "decision": "committed",
-      "status": "in_review",
+      "status": "needs_verification",
       "priority": "P2",
       "origin": "owner_decision",
       "dates": {
         "created": "2026-10-27",
-        "started": "2026-10-27"
+        "started": "2026-10-27",
+        "implemented": "2026-10-27"
       },
       "related": [
         "INIT-IOS"
       ],
-      "uncertainty": "Splash-oppsettet (kalkhvitt symbol sentrert, 416 px i 2732-bildet) er godkjent som designretning av produkteier. Ikke verifisert på enhet: Capacitor-synk og Xcode-bygg er ikke kjørt og krever egen godkjenning.",
+      "uncertainty": "Splash-oppsettet (kalkhvitt symbol sentrert, 416 px i 2732-bildet) er godkjent som designretning av produkteier. Filene er på main, men ikke verifisert på enhet: Capacitor-synk og Xcode-bygg er ikke kjørt og krever egen godkjenning. Åpent kontrollpunkt før BRAND-01 kan avsluttes.",
       "sources": [
         {
           "type": "owner_decision",
@@ -1091,6 +1150,16 @@
           "type": "owner_decision",
           "ref": "Produkteiers gjennomgang av BRAND-01 (2026-10-27)",
           "note": "Punkt 2: splash godkjent som designretning; ikke kjør Capacitor-synk eller Xcode-bygg ennå"
+        },
+        {
+          "type": "commit",
+          "ref": "7df63a8",
+          "note": "logo, ikoner og BRAND.md"
+        },
+        {
+          "type": "commit",
+          "ref": "2b8f4b1",
+          "note": "merge av PR #3 til main"
         }
       ],
       "updated": "2026-10-27",
@@ -1098,6 +1167,10 @@
         {
           "date": "2026-10-27",
           "note": "Splash godkjent som designretning av produkteier; verifisering på enhet venter på godkjent synk og bygg."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Merget til main (needs_verification); appikon og splash må kontrolleres i et iOS-bygg etter godkjent Capacitor-synk."
         }
       ]
     },
@@ -1108,14 +1181,17 @@
       "summary": "Brandfargene er de samme som Modern Sideline-tokenene. Nytt token for logofargen (klubbgrønn på lyst, kalkhvitt på mørkt); DESIGN.md peker til BRAND.md for logo og ikoner. Ingen redesign: lime brukes fortsatt bare til neste handling og aldri i logoen.",
       "category": "design-ui",
       "parent": "BRAND-01",
-      "decision": "committed",
-      "status": "in_review",
+      "decision": "completed",
+      "status": "released",
       "priority": "P1",
       "origin": "owner_decision",
       "dates": {
         "created": "2026-10-27",
-        "started": "2026-10-27"
+        "started": "2026-10-27",
+        "implemented": "2026-10-27",
+        "released": "2026-10-27"
       },
+      "verification": "partial",
       "sources": [
         {
           "type": "owner_decision",
@@ -1133,6 +1209,16 @@
         {
           "type": "review_patch",
           "ref": "fairplayr-brand01-review.patch"
+        },
+        {
+          "type": "commit",
+          "ref": "7df63a8",
+          "note": "logo, ikoner og BRAND.md"
+        },
+        {
+          "type": "commit",
+          "ref": "2b8f4b1",
+          "note": "merge av PR #3 til main"
         }
       ],
       "updated": "2026-10-27"
@@ -1144,14 +1230,16 @@
       "summary": "BRAND.md beskriver logoen og variantene, bruk på lys og mørk bakgrunn, farger, typografi, filplassering, ikoner, bruk på landingssiden og forholdet mellom FairPlayr, Modern Sideline og FairPlayr Next. AGENTS.md og .impeccable.md peker til BRAND.md for brandingarbeid.",
       "category": "design-ui",
       "parent": "BRAND-01",
-      "decision": "committed",
-      "status": "in_review",
+      "decision": "completed",
+      "status": "implemented",
       "priority": "P1",
       "origin": "owner_decision",
       "dates": {
         "created": "2026-10-27",
-        "started": "2026-10-27"
+        "started": "2026-10-27",
+        "implemented": "2026-10-27"
       },
+      "verification": "not_applicable",
       "sources": [
         {
           "type": "owner_decision",
@@ -1165,6 +1253,16 @@
         {
           "type": "review_patch",
           "ref": "fairplayr-brand01-review.patch"
+        },
+        {
+          "type": "commit",
+          "ref": "7df63a8",
+          "note": "logo, ikoner og BRAND.md"
+        },
+        {
+          "type": "commit",
+          "ref": "2b8f4b1",
+          "note": "merge av PR #3 til main"
         }
       ],
       "updated": "2026-10-27"
@@ -1175,7 +1273,7 @@
       "title": "Vurder øvrig markedsføringsmateriell",
       "summary": "Brandpakken har SoMe-maler (1:1, 4:5, 9:16), video-endcard, presentasjon, logoanimasjon (punktet glir på plass på 0,9 s) og et videobrief. Avklar hva som tas i bruk, hvor kildene skal ligge og hvordan taglinen «Mer oversikt. Mer kamp.» brukes, sammen med WEB-01.",
       "category": "design-ui",
-      "parent": "BRAND-01",
+      "parent": "WEB-01",
       "decision": "committed",
       "status": "not_started",
       "priority": "P2",
@@ -1184,7 +1282,7 @@
         "created": "2026-10-27"
       },
       "related": [
-        "WEB-01",
+        "BRAND-01",
         "WEB-01f",
         "WEB-01a"
       ],
@@ -1211,6 +1309,10 @@
         {
           "date": "2026-10-27",
           "note": "Taglinen avgjøres i WEB-01 (produkteiers beslutning)."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Flyttet fra BRAND-01 til WEB-01 (forslag i statusoppdateringen etter merge), sammen med taglinen som avgjøres der. Beslutning, prioritet og innhold er uendret."
         }
       ]
     },
