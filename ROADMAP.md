@@ -9,8 +9,8 @@ Oppdatert 2026-10-27. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); re
 | | Antall |
 | :- | -: |
 | Oppføringer totalt | 286 |
-| Ferdige (`completed`) | 130 |
-| Åpne vedtatte (`committed`) | 128 |
+| Ferdige (`completed`) | 131 |
+| Åpne vedtatte (`committed`) | 127 |
 | Til vurdering (`considering`) | 24 |
 | Utsatt (`deferred`) | 4 |
 | Må verifiseres | 18 |
@@ -168,7 +168,6 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 
 | ID | Prio | Status | Oppgave | Under |
 | :- | :- | :- | :- | :- |
-| ROADMAP-02 | P1 | til review | Importer og avstem produktbeslutninger, åpne funn og konkurrentanalysen |  |
 | OPS-01 | P2 | ikke startet | Daglig avstemming av beslutninger mot roadmapen |  |
 
 ### INIT-SECURITY: Sikkerhet og personvern
