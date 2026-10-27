@@ -166,3 +166,15 @@ test('the markdown view is deterministic', () => {
   const data = loadRoadmap(path.join(root, 'roadmap', 'roadmap.json'));
   assert.equal(renderMarkdown(data), renderMarkdown(data));
 });
+
+test('table cells escape backslashes before pipes, so a title cannot break out of its cell', () => {
+  const data = base();
+  data.items.push({
+    id: 'IDEA-1', type: 'task', title: 'a\\|b | c\\\nd', summary: 'I', category: 'process', parent: 'INIT-A',
+    decision: 'considering', status: 'not_started', priority: 'P3', origin: 'claude_proposal',
+    sources: [{ type: 'owner_decision', ref: 'brief' }], updated: '2026-10-27',
+  });
+  assert.deepEqual(errorsOf(data), []);
+  const row = renderMarkdown(data).split('\n').find((line) => line.startsWith('| IDEA-1 |'));
+  assert.equal(row, '| IDEA-1 | P3 | a\\\\\\|b \\| c\\\\ d | INIT-A |');
+});

@@ -329,7 +329,7 @@ const DECISION_LABEL = {
 };
 
 function cell(text) {
-  return String(text ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' ');
+  return String(text ?? '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' ');
 }
 
 /** Render the generated, read-only overview (ROADMAP.md). */
