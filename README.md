@@ -335,11 +335,6 @@ Code scanning is also configured with CodeQL via `.github/workflows/codeql.yml`.
 - Authentication (Google, password, magic link)
 - Spond beta integration flow through GUI
 
-### Actively being built
-
-- Deepening Spond-driven workflows around match participation and planning
-- Tightening data integrity and sync ergonomics across integration surfaces
-
 ### Out of scope for MVP right now
 
 - Heavy analytics and advanced elite-level performance tooling
@@ -347,13 +342,7 @@ Code scanning is also configured with CodeQL via `.github/workflows/codeql.yml`.
 
 ## Roadmap
 
-Near-term directions visible from current structure and code:
-
-- Deeper matchday workflow continuity between planner, setup, and live modules
-- Continued Spond hardening (beta to more stable flow)
-- Smarter fairness guidance in live substitution decisions
-- Better sharing/export patterns for practical coaching workflows
-- Packaging path from web-first experience toward app-like distribution
+Planned work, open bugs, ideas and the full development history live in one place: [`roadmap/roadmap.json`](roadmap/roadmap.json), with a generated overview in [`ROADMAP.md`](ROADMAP.md). How to read and maintain it: [`roadmap/README.md`](roadmap/README.md).
 
 ## iOS / Capacitor
 

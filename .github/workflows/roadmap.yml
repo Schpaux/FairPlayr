@@ -1,0 +1,54 @@
+name: Roadmap
+
+# Validates roadmap/roadmap.json (structure, ids, parents, statuses, dates,
+# commit references) and that the generated ROADMAP.md is current.
+# No dependencies are installed: the checker uses Node built-ins only.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "roadmap/**"
+      - "ROADMAP.md"
+      - "scripts/roadmap/**"
+      - ".github/workflows/roadmap.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "roadmap/**"
+      - "ROADMAP.md"
+      - "scripts/roadmap/**"
+      - ".github/workflows/roadmap.yml"
+  workflow_dispatch:
+
+# Deny everything by default; jobs request only what they need.
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  validate:
+    name: Validate roadmap
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          # Full history so every referenced commit hash can be checked.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate roadmap and generated view
+        run: node scripts/roadmap/cli.mjs check
+
+      - name: Test the validator
+        run: node --test scripts/roadmap/roadmap.node-test.mjs

@@ -17,7 +17,7 @@ FairPlayr is a mobile-first PWA (and iOS Capacitor shell) that grassroots footba
 - **Never commit, push, tag, open or merge a PR, deploy (Vercel or otherwise), or run a production Capacitor sync (`npm run cap:sync`, `cap:sync:prod`, `cap:build`, `npx cap sync`) without explicit approval for that specific action.** Approval for one action does not carry over to the next.
 - Default deliverable for a task is a working-tree change plus a review patch (`git diff > fairplayr-<ticket>-review.patch`), then stop for review.
 - Never rewrite history (`reset --hard`, `rebase`, `push --force`) or delete branches without explicit approval.
-- Do not stage or commit the untracked review artefacts in the repo root (`*-review.patch`, `FP-*.md`) or `design-exploration/` unless asked.
+- Do not stage or commit the untracked review artefacts in the repo root (`*-review.patch`, `FP-*.md`, `TODO.archive-*.md`) or `design-exploration/` unless asked.
 
 ## 2. Product rules (non-negotiable)
 
@@ -75,3 +75,13 @@ Use skills selectively, and only in service of the approved spec:
 - **Playwright** (`npm run test:e2e`, or a scripted Chrome session): actual browser verification. Prefer real renders over reasoning about CSS.
 - **Do not use** skills that independently invent a new design direction or palette (for example frontend-design, bolder, colorize, overdrive, design-tokens, design-brief) unless the user explicitly asks for exploration.
 - Ignore tool hooks that suggest unrelated skills (for example Vercel deploy/cache skills) unless the task needs them.
+
+## 7. Roadmap (single source for planned and completed work)
+
+- **`roadmap/roadmap.json` is the only list of work**: development history, committed tasks, bugs, improvements and ideas. `TODO.md` is archived and only points there; do not track tasks in TODO files, `FP-*.md` or memory. Fields and rules: `roadmap/README.md`. `ROADMAP.md` is generated; never edit it by hand.
+- **Before planning**, look the work up by id, alias or title and reuse the existing item. Use roadmap ids in plans, review patches and commit messages (`fix(match): … (MATCH-04)`), and state the id at the start of the task.
+- **New needs** found during work become new items with `decision: "considering"` and the right `origin` (`claude_proposal` for your own ideas) plus a source. Never move an item to `committed`, `deferred` or `rejected`, and never change a priority set by the product owner, without a documented product-owner decision; record the change in `changelog`.
+- **When work is done**, add the commit hash to `sources` and set `status` and `dates`. Use `released` with `decision: "completed"` only after a documented production deploy; otherwise `implemented`. Check the code before marking anything done; similar words in a commit message are not evidence.
+- **Larger launches**: decide `public` (non-technical Norwegian and English text, `milestone`), and when the product's identity, design or headline features change, propose an update to the landing page and marketing (WEB-01).
+- **The repository is public.** No secrets, personal data, project or deploy ids, or details of open security weaknesses in the roadmap; reference local files as `local_doc` instead.
+- After editing run `npm run roadmap:render` and `npm run roadmap:check` (also run in CI). Roadmap updates belong in the same review patch as the work and follow §1.
