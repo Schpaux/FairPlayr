@@ -813,14 +813,16 @@
       "rationale": "Roadmapen er ikke komplett: GitHub viser ikke alle produktbeslutninger, og Claude har ikke tilgang til ChatGPT-samtalene eller konkurrentanalysen. Den må være avstemt før den vises offentlig (WEB-01).",
       "category": "process",
       "parent": "INIT-ROADMAP",
-      "decision": "committed",
-      "status": "in_review",
+      "decision": "completed",
+      "status": "implemented",
       "priority": "P1",
       "origin": "owner_decision",
       "dates": {
         "created": "2026-10-27",
-        "started": "2026-10-27"
+        "started": "2026-10-27",
+        "implemented": "2026-10-27"
       },
+      "verification": "not_applicable",
       "related": [
         "COMPETITOR-01a",
         "OPS-01"
@@ -850,6 +852,21 @@
           "type": "owner_decision",
           "ref": "Produkteiers endelige beslutninger ROADMAP-02 (2026-10-27)",
           "note": "Arkitektur og hovedinnhold godkjent; beslutningene i §1–§7 innarbeidet før commit"
+        },
+        {
+          "type": "commit",
+          "ref": "b8665f5",
+          "note": "avstemming av produktbeslutninger, åpne funn og konkurrentinnspill"
+        },
+        {
+          "type": "commit",
+          "ref": "809303a",
+          "note": "merge av PR #7 til main"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers godkjenning av merge av ROADMAP-02 (2026-10-27)",
+          "note": "Merge av PR #7 med merge commit godkjent; statusoppdateringen commites ikke uten ny godkjenning"
         }
       ],
       "updated": "2026-10-27",
@@ -873,6 +890,10 @@
         {
           "date": "2026-10-27",
           "note": "Siste justeringer fra produkteier: FIX-DATA P0 → P1, FEAT-SHARE-05 committed (not_started, P2), UI-GOAL-01 beholdt som ferdig. Øvrige beslutninger uendret."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "PR #7 merget til main (809303a) etter produkteiers godkjenning, med grønn CI (roadmap-validering, CodeQL, Trivy, Vercel). Roadmap-valideringen på main gir 286 oppføringer uten feil. Ferdig som prosessoppgave (implemented); produksjonsdeploy er ikke relevant."
         }
       ]
     },
