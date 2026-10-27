@@ -9,11 +9,11 @@ Oppdatert 2026-10-27. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); re
 | | Antall |
 | :- | -: |
 | Oppføringer totalt | 268 |
-| Ferdige (`completed`) | 121 |
-| Åpne vedtatte (`committed`) | 130 |
+| Ferdige (`completed`) | 126 |
+| Åpne vedtatte (`committed`) | 125 |
 | Til vurdering (`considering`) | 15 |
 | Utsatt (`deferred`) | 2 |
-| Må verifiseres | 17 |
+| Må verifiseres | 18 |
 | Offentlig synlige | 21 |
 
 ## Arbeidsrekkefølge
@@ -21,7 +21,7 @@ Oppdatert 2026-10-27. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); re
 Produkteiers prioriterte utviklingsområder. Unntak: P0-feil som kan påvirke kampdata, datalagring eller kritisk kampfunksjonalitet, og kritiske sikkerhetssårbarheter, tas før neste reelle kamptest.
 
 1. **ROADMAP-01** Roadmap-system som felles sannhetskilde (ferdig, implementert)
-2. **BRAND-01** FairPlayr Brand Refresh (vedtatt, pågår)
+2. **BRAND-01** FairPlayr Brand Refresh (vedtatt, implementert)
 3. **WEB-01** Ny landingsside og tydelig skille mellom nettside og app (vedtatt, ikke startet, etter ROADMAP-02, BRAND-01)
 4. **SMART-SUBS** Smart byttemotor (vedtatt, ikke startet)
 5. **FIX-POLISH** Samlet feilretting og UI-polish (vedtatt, pågår)
@@ -35,13 +35,7 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 
 | ID | Prio | Status | Oppgave | Under |
 | :- | :- | :- | :- | :- |
-| BRAND-01a | P1 | til review | Gjennomgå og verifiser brandpakken |  |
-| BRAND-01b | P1 | til review | Ny logo i appen og på den offentlige kampsiden |  |
-| BRAND-01c | P1 | til review | Favicon og PWA-ikoner |  |
-| BRAND-01e | P1 | til review | Samordne branding med Modern Sideline |  |
-| BRAND-01f | P1 | til review | BRAND.md og agentinstruksjoner |  |
-| BRAND-01d | P2 | til review | Appikon og splash for iOS/Capacitor |  |
-| BRAND-01g | P2 | ikke startet | Vurder øvrig markedsføringsmateriell |  |
+| BRAND-01d | P2 | må verifiseres | Appikon og splash for iOS/Capacitor |  |
 
 ### WEB-01: Ny landingsside og tydelig skille mellom nettside og app
 
@@ -49,6 +43,7 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 | :- | :- | :- | :- | :- |
 | WEB-01a | P1 | ikke startet | Produktpresentasjon |  |
 | WEB-01d | P1 | ikke startet | Skille nettside og app med tydelig tilgang til appen |  |
+| BRAND-01g | P2 | ikke startet | Vurder øvrig markedsføringsmateriell |  |
 | WEB-01b | P2 | ikke startet | FairPlayr-branding på nettsiden |  |
 | WEB-01c | P2 | ikke startet | Kontaktinformasjon |  |
 | WEB-01e | P2 | ikke startet | Offentlig roadmap-visning (Immich-inspirert) |  |
@@ -208,6 +203,7 @@ Arbeid som kan være gjort eller er levert, men ikke bekreftet.
 | OFF-07 | P1 | Manuell enhetsverifisering av offline-PWA | INIT-OFFLINE |
 | UI-LIVE-01 | P1 | Bekreft at iOS-bygget kjører Sideline-visningen | INIT-IOS |
 | UI-TOKENS-01-SW | P1 | Service worker-oppgradering på ekte enhet | INIT-OFFLINE |
+| BRAND-01d | P2 | Appikon og splash for iOS/Capacitor | BRAND-01 |
 | C4-F4 | P2 | Verifiser innlogget historikk og kampdetaljer mot ekte Supabase | FIX-POLISH |
 | FEAT-SHARE-01-V1 | P2 | Verifiser mål → offentlig side ende til ende i produksjon | INIT-SHARING |
 | OFF-12 | P2 | Skjermlås og bakgrunn under kamp: kort iPhone-kontroll | INIT-OFFLINE |
