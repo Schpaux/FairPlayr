@@ -26,7 +26,7 @@ function share(overrides: Partial<StoredMatchShare> = {}): StoredMatchShare {
     teamId: TEAM_ID,
     ownerUserId: "coach",
     token: TOKEN,
-    settings: { live: true, summary: false, detailLevel: "status", ageGroup: "unknown" },
+    settings: { live: true, summary: false, lineup: false, detailLevel: "status", ageGroup: "unknown" },
     revision: 1,
     syncedRevision: 0,
     matchCreated: false,
@@ -73,7 +73,7 @@ describe("syncStoredMatchShare", () => {
     expect(JSON.parse(String(createInit?.body))).toMatchObject({ id: MATCH_ID, teamId: TEAM_ID, status: "upcoming" });
     const [shareUrl, shareInit] = fetchMock.mock.calls[1];
     expect(shareUrl).toBe(`/api/matches/${MATCH_ID}/share`);
-    expect(JSON.parse(String(shareInit?.body))).toEqual({ live: true, summary: false, detailLevel: "status", ageGroup: "unknown", token: TOKEN, kickoffAt: null });
+    expect(JSON.parse(String(shareInit?.body))).toEqual({ live: true, summary: false, lineup: false, detailLevel: "status", ageGroup: "unknown", token: TOKEN, kickoffAt: null, plannedLineup: null });
     expect(getStoredMatchShare()).toMatchObject({ syncedRevision: 1, matchCreated: true });
 
     // Sent once: nothing to send again.
@@ -107,7 +107,7 @@ describe("syncStoredMatchShare", () => {
   });
 
   it("turning off before the server had it sends nothing", async () => {
-    saveStoredMatchShare(share({ settings: { live: false, summary: false, detailLevel: "status", ageGroup: "unknown" } }));
+    saveStoredMatchShare(share({ settings: { live: false, summary: false, lineup: false, detailLevel: "status", ageGroup: "unknown" } }));
     const fetchMock = vi.spyOn(globalThis, "fetch");
 
     expect(await syncStoredMatchShare("coach")).toBe("synced");
@@ -141,6 +141,59 @@ describe("syncStoredMatchShare", () => {
 
     await syncStoredMatchShare("coach");
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).not.toHaveProperty("kickoffAt");
+  });
+});
+
+describe("syncStoredMatchShare planned lineup (FEAT-SHARE-04)", () => {
+  const LINEUP = {
+    format: "7v7" as const,
+    formationId: "7v7-2-3-1",
+    slotAssignments: { gk: "p1", lb: "p2", rb: null },
+    benchPlayerIds: ["p3"],
+  };
+
+  beforeEach(() => {
+    window.localStorage.clear();
+    storedSetup.value = null;
+    vi.restoreAllMocks();
+  });
+
+  const sentBody = (fetchMock: { mock: { calls: unknown[][] } }) =>
+    JSON.parse(String((fetchMock.mock.calls.at(-1)?.[1] as RequestInit | undefined)?.body)) as Record<string, unknown>;
+
+  it("sends the setup's planned start with the lineup option, before «Start kampen»", async () => {
+    saveStoredMatchShare(share({ matchCreated: true, settings: { ...share().settings, lineup: true }, plannedLineup: LINEUP }));
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(ok({ share: { token: TOKEN } }));
+
+    expect(await syncStoredMatchShare("coach")).toBe("synced");
+    expect(sentBody(fetchMock)).toMatchObject({ lineup: true, plannedLineup: LINEUP });
+  });
+
+  it("a setup change is a new revision: kept offline, sent once when the network is back", async () => {
+    saveStoredMatchShare(share({ matchCreated: true, settings: { ...share().settings, lineup: true }, plannedLineup: LINEUP, revision: 2, syncedRevision: 1 }));
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new TypeError("offline"));
+    expect(await syncStoredMatchShare("coach")).toBe("offline");
+    expect(getStoredMatchShare()).toMatchObject({ revision: 2, syncedRevision: 1, plannedLineup: LINEUP });
+
+    vi.restoreAllMocks();
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(ok({ share: { token: TOKEN } }));
+    expect(await syncStoredMatchShare("coach")).toBe("synced");
+    expect(await syncStoredMatchShare("coach")).toBe("synced");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(sentBody(fetchMock)).toMatchObject({ plannedLineup: LINEUP });
+  });
+
+  it("without the option the server is told to drop it; after the start it is not sent at all", async () => {
+    saveStoredMatchShare(share({ matchCreated: true, plannedLineup: LINEUP }));
+    let fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(ok({ share: { token: TOKEN } }));
+    await syncStoredMatchShare("coach");
+    expect(sentBody(fetchMock)).toMatchObject({ lineup: false, plannedLineup: null });
+
+    vi.restoreAllMocks();
+    saveStoredMatchShare(share({ matchCreated: true, started: true, settings: { ...share().settings, lineup: true }, plannedLineup: LINEUP }));
+    fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(ok({ share: { token: TOKEN } }));
+    await syncStoredMatchShare("coach");
+    expect(sentBody(fetchMock)).not.toHaveProperty("plannedLineup");
   });
 });
 

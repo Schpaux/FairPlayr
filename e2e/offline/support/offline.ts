@@ -34,6 +34,8 @@ export const net = {
   clearLog: () => control("/log/clear", { method: "POST" }),
   swVariant: (variant: { suffix?: string; mode?: "on" | "off" } | null) =>
     control("/sw-variant", { method: "POST", body: JSON.stringify(variant ?? {}) }),
+  /** What the stub's get_public_match_share answers (null: no such share). */
+  publicShare: (answer: unknown) => control("/public-share", { method: "POST", body: JSON.stringify({ answer }) }),
 };
 
 // ── Persistent browser profile = the installed app on a device ───────────────

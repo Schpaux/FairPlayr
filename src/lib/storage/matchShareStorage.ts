@@ -11,7 +11,13 @@
  * kept for its sync; a new setup does not take it over.
  */
 
-import { isShareToken, normalizeShareSettings, type MatchShareSettings } from "@/domain/matchShare";
+import type { LiveLineupSnapshot } from "@/domain/liveMatch";
+import {
+  isShareToken,
+  normalizeShareSettings,
+  sanitizePlannedLineup,
+  type MatchShareSettings,
+} from "@/domain/matchShare";
 
 export const MATCH_SHARE_KEY = "fairplayr.matchShare.v1";
 
@@ -39,6 +45,13 @@ export interface StoredMatchShare {
    * A planned match uses its own time and never sends this.
    */
   kickoffAt: string | null;
+  /**
+   * FEAT-SHARE-04: the setup's planned start, kept only while «Vis
+   * lagoppstilling og benk» is on, so the link shows it before «Start
+   * kampen». Changes in the setup bump `revision` like any other change.
+   * Missing on records from older builds.
+   */
+  plannedLineup?: LiveLineupSnapshot | null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -71,6 +84,7 @@ function parse(value: unknown): StoredMatchShare | null {
     started: value.started === true,
     plannedMatch: value.plannedMatch === true,
     kickoffAt: typeof value.kickoffAt === "string" && !Number.isNaN(Date.parse(value.kickoffAt)) ? value.kickoffAt : null,
+    plannedLineup: sanitizePlannedLineup(value.plannedLineup),
   };
 }
 

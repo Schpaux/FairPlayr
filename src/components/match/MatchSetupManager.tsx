@@ -34,6 +34,7 @@ import {
   canStartMatch,
 } from "@/domain/match";
 import type { MatchConfig } from "@/domain/match";
+import { plannedShareLineup } from "@/domain/matchShare";
 import { chooseInitialSetup } from "@/domain/matchSetupInit";
 import styles from "@/components/live/LiveScreen.module.css";
 import {
@@ -668,6 +669,7 @@ export function MatchSetupManager() {
         teamId={team.id}
         ownerUserId={auth.status === "authenticated" && workspace.mode === "cloud" ? auth.user?.id ?? null : null}
         plannedMatchId={matchId}
+        plannedLineup={plannedShareLineup(setup)}
       />
 
       {/* 2. Who is here today: compact attendance chips. */}

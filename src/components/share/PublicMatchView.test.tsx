@@ -41,6 +41,7 @@ function upcoming(startsAt: string | null): PublicMatchShare {
     score: null,
     goals: null,
     summary: null,
+    lineup: null,
   };
 }
 
@@ -220,5 +221,95 @@ describe("PublicMatchView after the first ▶", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     await advance(30_000);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+// FEAT-SHARE-04: the lineup and bench, named only at the detailed level, as
+// empty markers otherwise, calm when missing, and gone at once when the coach
+// turns it off or lowers the level (the next filtered answer replaces it).
+describe("PublicMatchView lineup", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+  });
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    signal.handlers = null;
+  });
+
+  const named: NonNullable<PublicMatchShare["lineup"]> = {
+    kind: "current",
+    available: true,
+    format: "5v5",
+    formationId: "5v5-2-2",
+    field: [
+      { slot: "5v5-1", name: "Frida Berg" },
+      { slot: "5v5-2", name: "Ida" },
+      { slot: "5v5-3", name: "Emma Hau" },
+    ],
+    bench: [{ name: "Nora" }, { name: "Emma Lie" }],
+  };
+  const anonymous: NonNullable<PublicMatchShare["lineup"]> = {
+    ...named,
+    field: named.field.map(({ slot }) => ({ slot })),
+    bench: [{}, {}],
+  };
+
+  it("named: the players on the pitch and the bench, no minutes or numbers", () => {
+    renderView({ ...liveShare(), detailLevel: "detailed", lineup: named });
+
+    const section = screen.getByTestId("public-match-lineup");
+    expect(section.textContent).toContain(no.publicMatch.lineup.currentTitle);
+    expect(screen.getAllByTestId("public-lineup-token")).toHaveLength(3);
+    // Clashing first names are told apart as on the coach's pitch.
+    expect(section.textContent).toContain("Emma H");
+    expect(screen.getAllByTestId("public-bench-player").map((tile) => tile.textContent)).toEqual(["Nora", "Emma L"]);
+    expect(section.querySelector("button, [draggable]")).toBeNull();
+    expect(section.textContent).not.toMatch(/′|\d+ min/);
+  });
+
+  it("anonymous: one marker per position and bench place, no names", () => {
+    renderView({ ...liveShare(), lineup: anonymous });
+
+    const section = screen.getByTestId("public-match-lineup");
+    expect(screen.getAllByTestId("public-lineup-token")).toHaveLength(3);
+    expect(screen.getAllByTestId("public-bench-marker")).toHaveLength(2);
+    expect(section.textContent).not.toMatch(/Frida|Ida|Emma|Nora/);
+    expect(section.textContent).toContain("2 spillere på benken");
+  });
+
+  it("after the match: the starting lineup, clearly marked; an older match says it is missing", () => {
+    renderView({ ...liveShare(), phase: "completed", live: null, lineup: { ...named, kind: "start" } });
+    expect(screen.getByTestId("public-match-lineup").textContent).toContain(no.publicMatch.lineup.startTitle);
+    expect(screen.getByTestId("public-match-lineup-start-note").textContent).toBe(no.publicMatch.lineup.startNote);
+    cleanup();
+
+    renderView({ ...liveShare(), phase: "completed", live: null, lineup: { kind: "start", available: false } });
+    expect(screen.getByTestId("public-match-lineup-unavailable").textContent).toBe(no.publicMatch.lineup.startUnavailable);
+    expect(screen.getByTestId("public-match-hero")).toBeTruthy();
+  });
+
+  it("an open page drops the names, then the lineup, as the coach lowers the level and turns it off", async () => {
+    const answers = [
+      { ...liveShare(), lineup: anonymous },
+      { ...liveShare(), lineup: null },
+    ];
+    const fetchMock = vi.fn(async () => jsonResponse(200, { fetchedAt: FETCHED_AT, share: answers.shift() }));
+    vi.stubGlobal("fetch", fetchMock);
+    renderView({ ...liveShare(), detailLevel: "detailed", lineup: named }, "match-share:abc");
+    await advance(0);
+    expect(screen.getByTestId("public-match-lineup").textContent).toContain("Frida");
+
+    act(() => signal.handlers?.onSignal());
+    await advance(300);
+    expect(screen.getByTestId("public-match-lineup").textContent).not.toContain("Frida");
+    expect(screen.getAllByTestId("public-bench-marker")).toHaveLength(2);
+
+    await advance(2_000);
+    act(() => signal.handlers?.onSignal());
+    await advance(300);
+    expect(screen.queryByTestId("public-match-lineup")).toBeNull();
   });
 });

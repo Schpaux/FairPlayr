@@ -69,8 +69,20 @@ export function MatchShareSettingsForm({
         help={t("liveHelp")}
         checked={settings.live}
         disabled={disabled}
-        onToggle={() => onChange({ ...settings, live: !settings.live })}
+        // Turning «Del live» off hides the lineup too (FEAT-SHARE-04).
+        onToggle={() => onChange({ ...settings, live: !settings.live, lineup: settings.live ? false : settings.lineup })}
       />
+      {settings.live ? (
+        <ShareSwitch
+          id={`${uid}-lineup`}
+          label={t("lineupToggle")}
+          help={t("lineupHelp")}
+          checked={settings.lineup}
+          disabled={disabled}
+          nested
+          onToggle={() => onChange({ ...settings, lineup: !settings.lineup })}
+        />
+      ) : null}
       <ShareSwitch
         id={`${uid}-summary`}
         label={t("summaryToggle")}
@@ -130,6 +142,7 @@ function ShareSwitch({
   help,
   checked,
   disabled,
+  nested = false,
   onToggle,
 }: {
   id: string;
@@ -137,6 +150,8 @@ function ShareSwitch({
   help: string;
   checked: boolean;
   disabled?: boolean;
+  /** An option under the switch above it, indented. */
+  nested?: boolean;
   onToggle: () => void;
 }) {
   return (
@@ -148,7 +163,11 @@ function ShareSwitch({
       aria-describedby={`${id}-help`}
       disabled={disabled}
       onClick={onToggle}
-      className="flex min-h-16 w-full items-center gap-4 p-4 text-left transition-colors duration-(--fp-d-quick) focus-visible:ring-inset focus-visible:ring-offset-0 active:bg-fp-surface-2 disabled:opacity-60"
+      data-testid={nested ? "match-share-lineup" : undefined}
+      className={cn(
+        "flex min-h-16 w-full items-center gap-4 p-4 text-left transition-colors duration-(--fp-d-quick) focus-visible:ring-inset focus-visible:ring-offset-0 active:bg-fp-surface-2 disabled:opacity-60",
+        nested && "border-l-2 border-l-fp-rule pl-8"
+      )}
     >
       <span className="min-w-0 flex-1">
         <span id={`${id}-label`} className="block text-base font-semibold text-fp-ink">

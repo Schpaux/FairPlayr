@@ -97,6 +97,99 @@ function matchTables(status = "live") {
   };
 }
 
+/** The database before migration 20261027120000: any use of share_lineup is an unknown column. */
+function withoutLineupColumn(tables: Record<string, Row[]>) {
+  const inner = fakeSupabase(tables) as unknown as { from: (table: string) => Record<string, (...args: unknown[]) => unknown> };
+  return {
+    ...inner,
+    from: (table: string) => {
+      const builder = inner.from(table);
+      let unknownColumn = false;
+      const mark = (name: string, test: (arg: unknown) => boolean) => {
+        const original = builder[name];
+        builder[name] = (...args: unknown[]) => {
+          if (test(args[0])) unknownColumn = true;
+          return original(...args);
+        };
+      };
+      mark("select", (columns) => String(columns ?? "").includes("share_lineup"));
+      mark("insert", (row) => "share_lineup" in (row as Row) || "planned_lineup" in (row as Row));
+      mark("update", (patch) => "share_lineup" in (patch as Row) || "planned_lineup" in (patch as Row));
+      for (const end of ["single", "maybeSingle"]) {
+        const original = builder[end];
+        builder[end] = () =>
+          unknownColumn ? Promise.resolve({ data: null, error: { code: "42703", message: "column does not exist" } }) : original();
+      }
+      return builder;
+    },
+  } as never;
+}
+
+const PLANNED = {
+  format: "7v7",
+  formationId: "7v7-2-3-1",
+  slotAssignments: { gk: "33333333-3333-4333-8333-333333333333", lb: null },
+  benchPlayerIds: ["44444444-4444-4444-8444-444444444444"],
+};
+
+describe("saveMatchShare: lineup (FEAT-SHARE-04)", () => {
+  it("stores the lineup option only under «Del live», and turning live off turns it off", async () => {
+    const tables = matchTables();
+    const supabase = fakeSupabase(tables);
+
+    const on = await saveMatchShare(supabase, "coach", MATCH_ID, { live: true, lineup: true, token: DEVICE_TOKEN });
+    expect(on.share).toMatchObject({ live: true, lineup: true });
+    expect(tables.match_shares[0]).toMatchObject({ share_live: true, share_lineup: true });
+
+    const summaryOnly = await saveMatchShare(supabase, "coach", MATCH_ID, { live: false, summary: true, lineup: true });
+    expect(summaryOnly.share).toMatchObject({ live: false, summary: true, lineup: false });
+    expect(tables.match_shares[0]).toMatchObject({ share_live: false, share_lineup: false });
+  });
+
+  it("before the migration, live and summary sharing keep working without the option", async () => {
+    const tables = matchTables();
+    const supabase = withoutLineupColumn(tables);
+
+    const created = await saveMatchShare(supabase, "coach", MATCH_ID, { live: true, lineup: true, token: DEVICE_TOKEN });
+    expect(created.share).toMatchObject({ token: DEVICE_TOKEN, live: true, lineup: false });
+    expect(tables.match_shares[0]).not.toHaveProperty("share_lineup");
+
+    const changed = await saveMatchShare(supabase, "coach", MATCH_ID, {
+      live: true,
+      summary: true,
+      lineup: true,
+      plannedLineup: PLANNED,
+    });
+    expect(changed.share).toMatchObject({ live: true, summary: true, lineup: false });
+    expect(tables.match_shares[0]).not.toHaveProperty("planned_lineup");
+  });
+
+  it("keeps the setup's planned start only with the option, cleaned; leaving it out keeps it", async () => {
+    const tables = matchTables();
+    const supabase = fakeSupabase(tables);
+
+    await saveMatchShare(supabase, "coach", MATCH_ID, {
+      live: true,
+      lineup: true,
+      token: DEVICE_TOKEN,
+      plannedLineup: { ...PLANNED, slotAssignments: { ...PLANNED.slotAssignments, "bad slot": "p9" }, extra: "x" },
+    });
+    expect(tables.match_shares[0].planned_lineup).toEqual(PLANNED);
+
+    // The live screen's changes do not send it: it stays.
+    await saveMatchShare(supabase, "coach", MATCH_ID, { live: true, lineup: true, detailLevel: "result" });
+    expect(tables.match_shares[0].planned_lineup).toEqual(PLANNED);
+
+    // Not a lineup: nothing kept.
+    await saveMatchShare(supabase, "coach", MATCH_ID, { live: true, lineup: true, plannedLineup: { format: "99v99" } });
+    expect(tables.match_shares[0].planned_lineup).toBeNull();
+
+    await saveMatchShare(supabase, "coach", MATCH_ID, { live: true, lineup: true, plannedLineup: PLANNED });
+    await saveMatchShare(supabase, "coach", MATCH_ID, { live: true, lineup: false, plannedLineup: PLANNED });
+    expect(tables.match_shares[0]).toMatchObject({ share_lineup: false, planned_lineup: null });
+  });
+});
+
 describe("saveMatchShare", () => {
   it("keeps the same link while the level and switches change", async () => {
     const tables = matchTables();

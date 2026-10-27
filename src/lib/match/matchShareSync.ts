@@ -121,6 +121,9 @@ async function sendCurrent(userId: string | null): Promise<MatchShareSyncResult>
     body: JSON.stringify({
       ...stored.settings,
       token: stored.token,
+      // FEAT-SHARE-04: the setup's planned start, only with the lineup option
+      // and before the start (afterwards the running match is the source).
+      ...(stored.started ? {} : { plannedLineup: stored.settings.lineup ? (stored.plannedLineup ?? null) : null }),
       // A new match's own kick-off (or none); a planned match keeps its time.
       ...(stored.plannedMatch ? {} : { kickoffAt: stored.kickoffAt }),
     }),

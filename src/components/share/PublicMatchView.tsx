@@ -22,6 +22,10 @@
  *   (publicRefresh.ts: one read at a time, bursts become one). The card says
  *   when the match data last changed; old data or no contact is said in one
  *   short line, never shown as fresh.
+ * - Lineup (FEAT-SHARE-04, «Vis lagoppstilling og benk»): the planned start
+ *   before kick-off, who is on the pitch and bench while live, the starting
+ *   lineup after the match (with «Del oppsummering»). Last on the page, so a
+ *   missing lineup never holds up the rest.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -29,6 +33,7 @@ import { useTranslations } from "next-intl";
 import { CircleAlert } from "lucide-react";
 import { EventTimeline, type TimelineEntry } from "@/components/match/EventTimeline";
 import { publicMatchClock, type PublicMatchClock } from "@/components/share/publicMatchClock";
+import { PublicLineup } from "@/components/share/PublicLineup";
 import { Skeleton } from "@/components/ui/primitives";
 import { createRefreshCoordinator, type RefreshCoordinator } from "@/lib/share/publicRefresh";
 import {
@@ -319,6 +324,8 @@ export function PublicMatchView({ token, locale, initialShare, initialFetchedAt,
           )}
         </section>
       ) : null}
+
+      {share.lineup ? <PublicLineup lineup={share.lineup} /> : null}
     </PublicShell>
   );
 }

@@ -14,6 +14,7 @@ import {
   normalizeKickoffAt,
   normalizeShareSettings,
   publicSummaryBasis,
+  sanitizePlannedLineup,
   sanitizePublicMatchShare,
   type MatchShareSettings,
   type PublicMatchShare,
@@ -27,8 +28,10 @@ import {
  * it off deletes the row, so the old link stops working at once.
  */
 
-const SHARE_SELECT =
+const SHARE_SELECT_BASE =
   "match_id, team_id, token, share_live, share_summary, detail_level, age_group, public_summary_text, public_summary_level";
+/** FEAT-SHARE-04: with the lineup option (migration 20261027120000). */
+const SHARE_SELECT = `${SHARE_SELECT_BASE}, share_lineup`;
 
 interface MatchShareRow {
   match_id: string;
@@ -36,6 +39,8 @@ interface MatchShareRow {
   token: string;
   share_live: boolean;
   share_summary: boolean;
+  /** Missing until migration 20261027120000 is applied: then the option is off. */
+  share_lineup?: boolean;
   detail_level: ShareDetailLevel;
   age_group: ShareAgeGroup;
   public_summary_text: string | null;
@@ -52,6 +57,7 @@ function mapShare(row: MatchShareRow): MatchShareItem {
     ...normalizeShareSettings({
       live: row.share_live,
       summary: row.share_summary,
+      lineup: row.share_lineup === true,
       detailLevel: row.detail_level,
       ageGroup: row.age_group,
     }),
@@ -80,14 +86,35 @@ function shareFailed(error: { code?: string; message: string }): IntegrationErro
 }
 
 async function readShareRow(supabase: SupabaseClient, matchId: string): Promise<MatchShareRow | null> {
-  const { data, error } = await supabase
-    .from("match_shares")
-    .select(SHARE_SELECT)
-    .eq("match_id", matchId)
-    .maybeSingle<MatchShareRow>();
+  const read = (select: string) =>
+    supabase.from("match_shares").select(select).eq("match_id", matchId).maybeSingle<MatchShareRow>();
+
+  let { data, error } = await read(SHARE_SELECT);
+  // Before migration 20261027120000 the lineup option does not exist; sharing works without it.
+  if (isMissingColumn(error)) ({ data, error } = await read(SHARE_SELECT_BASE));
 
   if (error) throw shareFailed(error);
   return data;
+}
+
+/**
+ * An update or insert of a share row, returning the row. Before migration
+ * 20261027120000 the lineup column is left out (the option stays off), so
+ * live and summary sharing keep working.
+ */
+async function writeShareRow(
+  write: (columns: Record<string, unknown>, select: string) => PromiseLike<{
+    data: MatchShareRow | null;
+    error: { code?: string; message: string } | null;
+  }>,
+  columns: Record<string, unknown>
+) {
+  const result = await write(columns, SHARE_SELECT);
+  if (!isMissingColumn(result.error)) return result;
+  const withoutLineup = { ...columns };
+  delete withoutLineup.share_lineup;
+  delete withoutLineup.planned_lineup;
+  return write(withoutLineup, SHARE_SELECT_BASE);
 }
 
 export async function getMatchShare(
@@ -107,6 +134,14 @@ export async function getMatchShare(
 export interface SaveMatchShareInput {
   live?: unknown;
   summary?: unknown;
+  /** FEAT-SHARE-04 «Vis lagoppstilling og benk»; dropped unless «Del live» is on. */
+  lineup?: unknown;
+  /**
+   * FEAT-SHARE-04: the setup's planned start (player ids by slot, bench),
+   * shown before «Start kampen». Left as stored when not sent; cleared
+   * whenever the lineup option is off.
+   */
+  plannedLineup?: unknown;
   detailLevel?: unknown;
   ageGroup?: unknown;
   /** A token made on the device (so the link is known offline); used only for a new share. */
@@ -170,9 +205,15 @@ export async function saveMatchShare(
   const columns = {
     share_live: settings.live,
     share_summary: settings.summary,
+    share_lineup: settings.lineup,
     detail_level: settings.detailLevel,
     age_group: settings.ageGroup,
     ...(kickoffAt !== undefined ? { kickoff_from_match: false, kickoff_at: kickoffAt } : {}),
+    ...(!settings.lineup
+      ? { planned_lineup: null }
+      : input.plannedLineup !== undefined
+        ? { planned_lineup: sanitizePlannedLineup(input.plannedLineup) }
+        : {}),
   };
 
   // A kick-off the coach set in setup is the planned match's time everywhere
@@ -190,14 +231,13 @@ export async function saveMatchShare(
 
   const existing = await readShareRow(supabase, matchId);
   if (existing) {
-    const { data, error } = await supabase
-      .from("match_shares")
-      .update(columns)
-      .eq("match_id", matchId)
-      .select(SHARE_SELECT)
-      .single<MatchShareRow>();
+    const { data, error } = await writeShareRow(
+      (values, select) =>
+        supabase.from("match_shares").update(values).eq("match_id", matchId).select(select).single<MatchShareRow>(),
+      columns
+    );
 
-    if (error) throw shareFailed(error);
+    if (error || !data) throw shareFailed(error ?? { message: "Ingen delingsrad." });
     return { share: mapShare(data), summaryNeeded: needsPublicSummary(data, match.status) };
   }
 
@@ -207,17 +247,21 @@ export async function saveMatchShare(
   );
 
   for (const token of candidates) {
-    const { data, error } = await supabase
-      .from("match_shares")
-      .insert({ match_id: matchId, team_id: match.teamId, token, ...columns, created_by: userId })
-      .select(SHARE_SELECT)
-      .single<MatchShareRow>();
+    const { data, error } = await writeShareRow(
+      (values, select) =>
+        supabase
+          .from("match_shares")
+          .insert({ match_id: matchId, team_id: match.teamId, token, ...values, created_by: userId })
+          .select(select)
+          .single<MatchShareRow>(),
+      columns
+    );
 
-    if (!error) {
+    if (!error && data) {
       return { share: mapShare(data), summaryNeeded: needsPublicSummary(data, match.status) };
     }
 
-    if (error.code !== "23505") throw shareFailed(error);
+    if (!error || error.code !== "23505") throw shareFailed(error ?? { message: "Ingen delingsrad." });
 
     // Created meanwhile (another tab or a retry): change that one instead.
     if (await readShareRow(supabase, matchId)) {
@@ -295,7 +339,8 @@ export async function refreshPublicSummary(supabase: SupabaseClient, matchId: st
       .filter(Boolean);
 
     const goalPlayerIds = await readGoalPlayerIds(supabase, matchId, view);
-    const summary = await generatePublicSummary(view, { squadNames, goalPlayerIds });
+    // The lineup is never part of the AI input (SEC-05 data minimisation).
+    const summary = await generatePublicSummary({ ...view, lineup: null }, { squadNames, goalPlayerIds });
 
     // The data changed while the text was written (a correction, a new
     // level, the link turned off): this text is old, the newer run writes.

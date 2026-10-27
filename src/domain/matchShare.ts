@@ -17,7 +17,8 @@
  *   can never widen what a visitor gets.
  */
 
-import type { MatchClockBasis } from "@/domain/liveMatch";
+import type { LiveLineupSnapshot, MatchClockBasis } from "@/domain/liveMatch";
+import type { MatchConfig, MatchFormat } from "@/domain/match";
 
 export type ShareDetailLevel = "status" | "result" | "detailed";
 export type ShareAgeGroup = "child" | "youth" | "unknown";
@@ -28,6 +29,11 @@ export const SHARE_AGE_GROUPS: readonly ShareAgeGroup[] = ["child", "youth", "un
 export interface MatchShareSettings {
   live: boolean;
   summary: boolean;
+  /**
+   * FEAT-SHARE-04 «Vis lagoppstilling og benk»: an option under «Del live»,
+   * off by default and only on while «Del live» is on.
+   */
+  lineup: boolean;
   detailLevel: ShareDetailLevel;
   ageGroup: ShareAgeGroup;
 }
@@ -35,6 +41,7 @@ export interface MatchShareSettings {
 export const DEFAULT_SHARE_SETTINGS: MatchShareSettings = {
   live: false,
   summary: false,
+  lineup: false,
   detailLevel: "status",
   ageGroup: "unknown",
 };
@@ -75,9 +82,13 @@ export function normalizeShareSettings(input: Partial<Record<keyof MatchShareSet
   const requested = isShareDetailLevel(input.detailLevel) ? input.detailLevel : defaultDetailLevel(ageGroup);
   const detailLevel = requested === "detailed" && !allowsPublicNames(ageGroup) ? "result" : requested;
 
+  const live = input.live === true;
+
   return {
-    live: input.live === true,
+    live,
     summary: input.summary === true,
+    // Only under «Del live»: turning that off turns the lineup off too.
+    lineup: live && input.lineup === true,
     detailLevel,
     ageGroup,
   };
@@ -174,6 +185,30 @@ export interface PublicLiveState {
   clock: MatchClockBasis | null;
 }
 
+/**
+ * FEAT-SHARE-04: which lineup the page shows. Before kick-off the planned
+ * start, while live who is on the pitch and bench now, after the match the
+ * lineup at the first ▶ (only with «Del oppsummering» on too).
+ */
+export type PublicLineupKind = "planned" | "current" | "start";
+
+/** One position or bench place. A name only at the detailed level (youth); otherwise an empty marker. */
+export interface PublicLineupPlayer {
+  name?: string;
+}
+
+export type PublicLineup =
+  | { kind: PublicLineupKind; available: false }
+  | {
+      kind: PublicLineupKind;
+      available: true;
+      format: MatchFormat;
+      formationId: string;
+      /** Occupied positions only, by formation slot id. */
+      field: (PublicLineupPlayer & { slot: string })[];
+      bench: PublicLineupPlayer[];
+    };
+
 export interface PublicMatchShare {
   phase: PublicMatchPhase;
   teamName: string;
@@ -187,6 +222,8 @@ export interface PublicMatchShare {
   score: { for: number; against: number } | null;
   goals: PublicGoal[] | null;
   summary: { status: "ready" | "pending"; text: string | null; generatedAt: string | null } | null;
+  /** Only with «Vis lagoppstilling og benk» (FEAT-SHARE-04); null otherwise. */
+  lineup: PublicLineup | null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -315,7 +352,128 @@ export function sanitizePublicMatchShare(raw: unknown): PublicMatchShare | null 
     score,
     goals,
     summary,
+    lineup: sanitizePublicLineup(raw.lineup, { phase, shareLive, shareSummary, detailLevel }),
   };
+}
+
+const LINEUP_FORMATS: readonly MatchFormat[] = ["3v3", "5v5", "7v7", "9v9", "11v11"];
+const LINEUP_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
+/** More than any squad; a longer list is cut. */
+const MAX_LINEUP_PLAYERS = 40;
+const MAX_LINEUP_NAME = 80;
+
+/**
+ * FEAT-SHARE-04: the lineup under the same rules as the database: only with
+ * «Del live», the kind that belongs to the phase (after the match only with
+ * «Del oppsummering» too), and names only at the detailed level. Everything
+ * else on a position or bench place is dropped, so a marker is never more
+ * than a name or nothing.
+ */
+export function sanitizePublicLineup(
+  raw: unknown,
+  share: Pick<PublicMatchShare, "phase" | "shareLive" | "shareSummary" | "detailLevel">
+): PublicLineup | null {
+  if (!isRecord(raw) || !share.shareLive) return null;
+
+  const kind: PublicLineupKind | null =
+    share.phase === "upcoming"
+      ? "planned"
+      : share.phase === "live"
+        ? "current"
+        : share.shareSummary
+          ? "start"
+          : null;
+  // A live answer read as upcoming (clock not started) still shows its lineup as planned.
+  const rawKind = oneOf(raw.kind, ["planned", "current", "start"] as const);
+  const kindMatches = rawKind === kind || (kind === "planned" && rawKind === "current");
+  if (!kind || !kindMatches) return null;
+
+  const format = oneOf(raw.format, LINEUP_FORMATS);
+  const formationId = typeof raw.formationId === "string" && LINEUP_ID_PATTERN.test(raw.formationId) ? raw.formationId : null;
+  if (raw.available !== true || !format || !formationId) return { kind, available: false };
+
+  const named = share.detailLevel === "detailed";
+  const nameOf = (value: unknown): PublicLineupPlayer => {
+    const name = named && typeof value === "string" ? value.trim().slice(0, MAX_LINEUP_NAME) : "";
+    return name ? { name } : {};
+  };
+
+  const seenSlots = new Set<string>();
+  const field = (Array.isArray(raw.field) ? raw.field : [])
+    .filter(isRecord)
+    .flatMap((entry) => {
+      const slot = typeof entry.slot === "string" && LINEUP_ID_PATTERN.test(entry.slot) ? entry.slot : null;
+      if (!slot || seenSlots.has(slot)) return [];
+      seenSlots.add(slot);
+      return [{ slot, ...nameOf(entry.name) }];
+    })
+    .slice(0, MAX_LINEUP_PLAYERS);
+  const bench = (Array.isArray(raw.bench) ? raw.bench : [])
+    .filter(isRecord)
+    .map((entry) => nameOf(entry.name))
+    .slice(0, MAX_LINEUP_PLAYERS);
+
+  return { kind, available: true, format, formationId, field, bench };
+}
+
+/**
+ * FEAT-SHARE-04: the setup's planned start, sent with the share before
+ * «Start kampen» (afterwards the match's runtime state is the source). The
+ * same shape as the kick-off snapshot: positions held by starters and the
+ * bench as the live match would begin with it. Player ids only, for the
+ * coach's own share row; the public answer never returns them.
+ */
+export function plannedShareLineup(
+  setup: Pick<MatchConfig, "format" | "formationId" | "selectedPlayerIds" | "startingPlayerIds" | "slotAssignments">
+): LiveLineupSnapshot {
+  const starting = new Set(setup.startingPlayerIds);
+  const slotAssignments: Record<string, string | null> = {};
+  for (const [slotId, playerId] of Object.entries(setup.slotAssignments)) {
+    slotAssignments[slotId] = playerId && starting.has(playerId) ? playerId : null;
+  }
+  return {
+    format: setup.format,
+    formationId: setup.formationId,
+    slotAssignments,
+    benchPlayerIds: setup.selectedPlayerIds.filter((playerId) => !starting.has(playerId)),
+  };
+}
+
+/**
+ * A planned lineup read from storage or a request: known format, plain ids,
+ * at most MAX_LINEUP_PLAYERS positions and bench places. Null when it is not one.
+ */
+export function sanitizePlannedLineup(raw: unknown): LiveLineupSnapshot | null {
+  if (!isRecord(raw) || !isRecord(raw.slotAssignments) || !Array.isArray(raw.benchPlayerIds)) return null;
+  const format = oneOf(raw.format, LINEUP_FORMATS);
+  const formationId = typeof raw.formationId === "string" && LINEUP_ID_PATTERN.test(raw.formationId) ? raw.formationId : null;
+  if (!format || !formationId) return null;
+
+  const slotAssignments: Record<string, string | null> = {};
+  for (const [slotId, playerId] of Object.entries(raw.slotAssignments).slice(0, MAX_LINEUP_PLAYERS)) {
+    if (!LINEUP_ID_PATTERN.test(slotId)) continue;
+    slotAssignments[slotId] = typeof playerId === "string" && LINEUP_ID_PATTERN.test(playerId) ? playerId : null;
+  }
+  const benchPlayerIds = raw.benchPlayerIds
+    .filter((playerId): playerId is string => typeof playerId === "string" && LINEUP_ID_PATTERN.test(playerId))
+    .slice(0, MAX_LINEUP_PLAYERS);
+
+  return { format, formationId, slotAssignments, benchPlayerIds };
+}
+
+/** True when two planned lineups would show the same page. */
+export function samePlannedLineup(a: LiveLineupSnapshot | null, b: LiveLineupSnapshot | null): boolean {
+  if (!a || !b) return a === b;
+  const slots = (lineup: LiveLineupSnapshot) =>
+    Object.entries(lineup.slotAssignments)
+      .filter(([, playerId]) => playerId)
+      .sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0));
+  return (
+    a.format === b.format &&
+    a.formationId === b.formationId &&
+    JSON.stringify(slots(a)) === JSON.stringify(slots(b)) &&
+    JSON.stringify(a.benchPlayerIds) === JSON.stringify(b.benchPlayerIds)
+  );
 }
 
 /**

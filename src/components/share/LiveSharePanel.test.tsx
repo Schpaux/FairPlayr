@@ -42,7 +42,7 @@ describe("LiveSharePanel", () => {
       teamId: TEAM_ID,
       ownerUserId: USER_ID,
       token: TOKEN,
-      settings: { live: true, summary: false, detailLevel: "status", ageGroup: "unknown" },
+      settings: { live: true, summary: false, lineup: false, detailLevel: "status", ageGroup: "unknown" },
       revision: 1,
       syncedRevision: 1,
       matchCreated: true,

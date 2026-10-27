@@ -46,6 +46,8 @@ export async function PUT(request: Request, context: { params: Promise<{ matchId
     const { share, summaryNeeded } = await saveMatchShare(supabase, userId, matchId, {
       live: input.live,
       summary: input.summary,
+      lineup: input.lineup,
+      plannedLineup: "plannedLineup" in input ? input.plannedLineup : undefined,
       detailLevel: input.detailLevel,
       ageGroup: input.ageGroup,
       token: input.token,

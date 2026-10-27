@@ -15,6 +15,18 @@ export interface MatchClockBasis {
   isRunning: boolean;
 }
 
+/**
+ * FEAT-SHARE-04: the lineup at the first ▶ (the kick-off): positions and
+ * bench as they stood then, so changes made before kick-off are included and
+ * later substitutions never overwrite it.
+ */
+export interface LiveLineupSnapshot {
+  format: MatchFormat;
+  formationId: string;
+  slotAssignments: Record<string, string | null>;
+  benchPlayerIds: string[];
+}
+
 export interface LiveMatchState {
   id: string;
   setupId: string;
@@ -35,6 +47,11 @@ export interface LiveMatchState {
   liveSlotAssignments: Record<string, string | null>;
   /** Starting XI — captured at match creation, never mutated. Used by match report. */
   initialOnFieldPlayerIds: string[];
+  /**
+   * FEAT-SHARE-04: set once, at the first ▶. Missing before kick-off and on
+   * matches started by older builds; it is never guessed for those.
+   */
+  kickoffLineup?: LiveLineupSnapshot;
   onFieldPlayerIds: string[];
   benchPlayerIds: string[];
   playerAccumulatedMs: Record<string, number>;
@@ -281,9 +298,30 @@ export function startLiveMatch(state: LiveMatchState, nowMs: number): LiveMatchS
     startedAt: normalized.startedAt ?? nowIso(),
     updatedAt: nowIso(),
     events: nextEvents,
+    ...(shouldRecordStart && !normalized.kickoffLineup
+      ? { kickoffLineup: captureLineupSnapshot(normalized) }
+      : {}),
   };
 
   return withUpdatedStatus(nextState);
+}
+
+/**
+ * The positions and bench as they stand now (FEAT-SHARE-04). A slot keeps
+ * only a player who is on the field, as the live pitch shows it.
+ */
+export function captureLineupSnapshot(state: LiveMatchState): LiveLineupSnapshot {
+  const onField = new Set(state.onFieldPlayerIds);
+  const slotAssignments: Record<string, string | null> = {};
+  for (const [slotId, playerId] of Object.entries(state.liveSlotAssignments)) {
+    slotAssignments[slotId] = playerId && onField.has(playerId) ? playerId : null;
+  }
+  return {
+    format: state.format,
+    formationId: state.formationId,
+    slotAssignments,
+    benchPlayerIds: state.benchPlayerIds.filter((playerId) => !onField.has(playerId)),
+  };
 }
 
 export function pauseLiveMatch(state: LiveMatchState, nowMs: number): LiveMatchState {

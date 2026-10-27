@@ -10,7 +10,9 @@
 //   with the proxy.
 // - a control API (FP_OFFLINE_CONTROL_PORT, 3221), used by the specs:
 //   POST /network/on|off, GET /state, GET /log, POST /log/clear,
-//   POST /sw-variant {"suffix":"-next","mode":"on"|"off"} | {} to reset.
+//   POST /sw-variant {"suffix":"-next","mode":"on"|"off"} | {} to reset,
+//   POST /public-share {"answer": …} sets what the stub's
+//   get_public_match_share returns (FEAT-SHARE-04 spec; null by default).
 //   The variant rewrites the served /serwist/sw.js config banner (build id
 //   and mode) to simulate a new build or the kill switch without a second
 //   `next build` (sw-update spec).
@@ -28,6 +30,8 @@ const HOST = "127.0.0.1";
 
 let online = true;
 let swVariant = null; // { suffix, mode }
+// The stub's answer to rpc/get_public_match_share (the public share page).
+let publicShare = null;
 const log = [];
 const sockets = new Set();
 
@@ -179,6 +183,7 @@ const stub = http.createServer((req, res) => {
     if (url.pathname === "/auth/v1/token") return json(req, res, 200, session());
     if (url.pathname === "/auth/v1/logout") return json(req, res, 204);
     if (url.pathname.startsWith("/auth/")) return json(req, res, 404, { msg: "stub" });
+    if (url.pathname === "/rest/v1/rpc/get_public_match_share") return json(req, res, 200, publicShare);
 
     const match = url.pathname.match(/^\/rest\/v1\/([a-z_]+)/);
     if (!match) return json(req, res, 404, { message: "stub: unknown path" });
@@ -237,6 +242,10 @@ const control = http.createServer((req, res) => {
       const body = raw ? JSON.parse(raw) : {};
       swVariant = body && (body.suffix || body.mode) ? { suffix: body.suffix ?? "", mode: body.mode ?? null } : null;
       return send(200, { swVariant });
+    }
+    if (req.url === "/public-share" && req.method === "POST") {
+      publicShare = (raw ? JSON.parse(raw) : {}).answer ?? null;
+      return send(200, { ok: true });
     }
     // Health check for Playwright's webServer: the proxy answers only when
     // next start is up behind it.

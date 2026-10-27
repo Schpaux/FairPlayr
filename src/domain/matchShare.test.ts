@@ -71,7 +71,7 @@ describe("sharing rights", () => {
   });
 
   it("is off by default and only on for an explicit true", () => {
-    expect(normalizeShareSettings({})).toEqual({ live: false, summary: false, detailLevel: "status", ageGroup: "unknown" });
+    expect(normalizeShareSettings({})).toEqual({ live: false, summary: false, lineup: false, detailLevel: "status", ageGroup: "unknown" });
     expect(normalizeShareSettings({ live: "true", summary: 1 })).toMatchObject({ live: false, summary: false });
   });
 

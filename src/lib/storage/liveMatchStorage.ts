@@ -1,5 +1,6 @@
 import {
   recoverSecondHalfPhase,
+  type LiveLineupSnapshot,
   type LiveMatchState,
   type MatchClockBasis,
 } from "@/domain/liveMatch";
@@ -166,6 +167,27 @@ function readSlotAssignments(value: unknown): Record<string, string | null> {
   return output;
 }
 
+/** FEAT-SHARE-04: the kick-off lineup as stored, or undefined (never rebuilt from other fields). */
+function readKickoffLineup(value: unknown): LiveLineupSnapshot | undefined {
+  if (!isRecord(value)) return undefined;
+  const formationId = readString(value.formationId);
+  if (
+    !formationId ||
+    typeof value.format !== "string" ||
+    !(VALID_FORMATS as string[]).includes(value.format) ||
+    !isRecord(value.slotAssignments) ||
+    !Array.isArray(value.benchPlayerIds)
+  ) {
+    return undefined;
+  }
+  return {
+    format: value.format as MatchFormat,
+    formationId,
+    slotAssignments: readSlotAssignments(value.slotAssignments),
+    benchPlayerIds: readStringArray(value.benchPlayerIds),
+  };
+}
+
 function readOnFieldStartedAtElapsedMs(value: unknown): Record<string, number | null> {
   const output: Record<string, number | null> = {};
 
@@ -278,6 +300,8 @@ function toValidLiveMatch(value: unknown): LiveMatchState | null {
     ? readStringArray(value.initialOnFieldPlayerIds)
     : onFieldPlayerIds;
 
+  const kickoffLineup = readKickoffLineup(value.kickoffLineup);
+
   const storedEvents = normalizeMatchEvents(value.events);
   const legacyLiveEvents = migrateLegacyLiveEvents(value.liveEvents);
   const events = storedEvents.length > 0 ? storedEvents : legacyLiveEvents;
@@ -313,6 +337,7 @@ function toValidLiveMatch(value: unknown): LiveMatchState | null {
     formationId,
     liveSlotAssignments,
     initialOnFieldPlayerIds,
+    ...(kickoffLineup ? { kickoffLineup } : {}),
     onFieldPlayerIds,
     benchPlayerIds,
     playerAccumulatedMs,

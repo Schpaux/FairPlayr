@@ -724,7 +724,7 @@ describe("MatchSetupManager share discard and offline start", () => {
       teamId: "team-1",
       ownerUserId: "user-1",
       token: "T".repeat(43),
-      settings: { live: true, summary: false, detailLevel: "status", ageGroup: "unknown" },
+      settings: { live: true, summary: false, lineup: false, detailLevel: "status", ageGroup: "unknown" },
       revision: 1,
       syncedRevision: 1,
       matchCreated: true,
