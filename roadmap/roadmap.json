@@ -4955,19 +4955,24 @@
       "id": "SEC-03",
       "type": "chore",
       "title": "Commit sikkerhetsherdingen av agentmiljøet",
-      "summary": "Prosjektinnstillinger (spør- og nektregler, fp-guard og SessionStart-sjekk), git-hooks og AGENTS.md §1 og §8–9 (agentstrategi og sikkerhetslag; UI- og designagenter leser også BRAND.md) ligger klare i review-patch og venter på godkjenning.",
+      "summary": "Prosjektinnstillinger (spør- og nektregler, fp-guard og SessionStart-sjekk), git-hooks og AGENTS.md §1 og §8–9 (agentstrategi og sikkerhetslag; UI- og designagenter leser også BRAND.md) er merget til main.",
       "category": "security-privacy",
       "parent": "INIT-SECURITY",
-      "decision": "committed",
-      "status": "in_review",
+      "decision": "completed",
+      "status": "implemented",
       "priority": "P1",
       "origin": "legacy_todo",
+      "dates": {
+        "started": "2026-10-27",
+        "implemented": "2026-10-27"
+      },
+      "verification": "not_applicable",
       "related": [
         "HK-03",
         "BRAND-01",
         "SEC-03-F1"
       ],
-      "uncertainty": "Sluttkontroll 2026-10-27: to uavhengige reviewer (sikkerhet og kode) og isolert test i fersk klone av main c048705 med patchen lagt på. Git-hookene stoppet commit, push, merge-commit og rebase fra agentøkten, også i en worktree; nektreglene ble prøvd med en nestet agentøkt. Vesentlige funn er rettet i patchen; gjenstående punkter ligger i SEC-03-F1. Godkjenningsveien med FP_GIT_APPROVED=1 er ikke prøvd i testen, den brukes først ved godkjent commit.",
+      "uncertainty": "Sluttkontroll 2026-10-27: to uavhengige reviewer (sikkerhet og kode) og isolert test i fersk klone av main c048705 med patchen lagt på. Git-hookene stoppet commit, push, merge-commit og rebase fra agentøkten, også i en worktree; nektreglene ble prøvd med en nestet agentøkt. Vesentlige funn er rettet i patchen; gjenstående punkter ligger i SEC-03-F1. Godkjenningsveien med FP_GIT_APPROVED=1 er ikke prøvd i testen, den brukes først ved godkjent commit. Etter merge (b265770) er main kontrollert på nytt: roadmap-validering og fp-guard-testene grønne, git-hookene installert, og i en fersk klone av main stoppet hookene commit og rebase fra agentøkten. Ingen produksjonskontroll fordi endringen bare gjelder utviklingsmiljøet.",
       "sources": [
         {
           "type": "legacy_todo",
@@ -4990,6 +4995,21 @@
           "type": "local_doc",
           "ref": "FP-SEC-03-review-followups.md",
           "note": "funn og rettinger fra sluttkontrollen"
+        },
+        {
+          "type": "commit",
+          "ref": "fc21e9b",
+          "note": "agentvern, git-hooks og AGENTS.md"
+        },
+        {
+          "type": "commit",
+          "ref": "b265770",
+          "note": "merge av PR #5 til main"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers godkjenning av merge av SEC-03 og HK-03 (2026-10-27)",
+          "note": "Merge av PR #5 med merge commit godkjent; SEC-03-F1 forblir considering; statusoppdateringen commites ikke uten ny godkjenning"
         }
       ],
       "updated": "2026-10-27",
@@ -5005,6 +5025,10 @@
         {
           "date": "2026-10-27",
           "note": "Sluttkontroll: funn fra sikkerhets- og kodereview rettet (nektreglene forankret i prosjektroten og utvidet, spørreregler for endring av sikkerhetslagene, fp-guard og installasjonsskriptet herdet, nye tester); AGENTS.md §9 presisert."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "PR #5 merget til main (b265770) etter produkteiers godkjenning, og sikkerhetsreglene og git-hookene er kontrollert på main. Restpunktene ligger i SEC-03-F1, som forblir considering."
         }
       ]
     },
@@ -6833,10 +6857,15 @@
       "summary": "next dev skriver blokken på nytt.",
       "category": "process",
       "parent": "INIT-DEVEX",
-      "decision": "committed",
-      "status": "in_review",
+      "decision": "completed",
+      "status": "implemented",
       "priority": "P3",
       "origin": "legacy_todo",
+      "dates": {
+        "started": "2026-10-27",
+        "implemented": "2026-10-27"
+      },
+      "verification": "not_applicable",
       "related": [
         "SEC-03"
       ],
@@ -6849,9 +6878,25 @@
           "type": "review_patch",
           "ref": "fairplayr-sec03-review.patch",
           "note": "overskriften i Next-blokken slik next dev skriver den"
+        },
+        {
+          "type": "commit",
+          "ref": "fc21e9b",
+          "note": "Next-blokken i AGENTS.md, sammen med SEC-03"
+        },
+        {
+          "type": "commit",
+          "ref": "b265770",
+          "note": "merge av PR #5 til main"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-27",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "Merget til main med SEC-03 i PR #5 (b265770)."
+        }
+      ]
     },
     {
       "id": "HK-04",

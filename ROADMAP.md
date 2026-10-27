@@ -9,8 +9,8 @@ Oppdatert 2026-10-27. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); re
 | | Antall |
 | :- | -: |
 | Oppføringer totalt | 269 |
-| Ferdige (`completed`) | 126 |
-| Åpne vedtatte (`committed`) | 125 |
+| Ferdige (`completed`) | 128 |
+| Åpne vedtatte (`committed`) | 123 |
 | Til vurdering (`considering`) | 16 |
 | Utsatt (`deferred`) | 2 |
 | Må verifiseres | 18 |
@@ -139,7 +139,6 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 | STAB-04 | P2 | ikke startet | Rett lint-baselinen |  |
 | STAB-08 | P2 | ikke startet | Ustabil match-lifecycle.spec.ts |  |
 | HK-01 | P3 | ikke startet | Rydd rot-artefaktene |  |
-| HK-03 | P3 | til review | Commit Next-blokken i AGENTS.md sammen med SEC-03 |  |
 | STAB-05 | P3 | ikke startet | Prod-smoke-spec gir falske feil mot produksjon |  |
 | STAB-07 | P3 | ikke startet | Benken kan bli stående 1 px forskjøvet |  |
 | STAB-11 | P3 | ikke startet | Ustabil Vitest i share.test.ts |  |
@@ -176,7 +175,6 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 | :- | :- | :- | :- | :- |
 | SEC-01 | P0 | ikke startet | Rutinemessig nøkkelrotasjon |  |
 | SEC-02 | P0 | ikke startet | Opprydding etter nøkkelrotasjon |  |
-| SEC-03 | P1 | til review | Commit sikkerhetsherdingen av agentmiljøet |  |
 | SEC-06 | P2 | ikke startet | Forsvar i dybden for oppslag i sesongstatistikken |  |
 | SEC-10-F3 | P2 | må verifiseres | Røyktest av skrivende flyter etter flytting til dub1 |  |
 | SEC-07-F1 | P3 | ikke startet | Løft eslint-config-next til samme versjon som next |  |
