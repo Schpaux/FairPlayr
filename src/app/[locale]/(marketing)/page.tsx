@@ -91,6 +91,17 @@ export default async function MarketingPage({ params }: Props) {
                 <a href="#slik-virker-det" className={styles.heroSecondary}>
                   {t("hero.secondary")}
                 </a>
+                <a
+                  href="https://www.youtube.com/watch?v=pU1dnde4bLo"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.heroSecondary}
+                >
+                  <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false">
+                    <path d="M4 2.5v11l9-5.5z" fill="currentColor" />
+                  </svg>{" "}
+                  {t("hero.film")}
+                </a>
               </div>
               <p className={styles.assurance}>{t("hero.assurance")}</p>
             </div>
