@@ -1922,10 +1922,19 @@
           "type": "commit",
           "ref": "c5d9113",
           "note": "fase 0 merget til main (PR #12), produksjonsdeploy 2026-10-28"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers godkjenning av offentlig indeksering (2026-10-28)",
+          "note": "Forsiden gjøres søkbar nå; venter ikke på film, roadmap eller juridiske undersider"
         }
       ],
       "updated": "2026-10-28",
       "changelog": [
+        {
+          "date": "2026-10-28",
+          "note": "Produkteier: WEBSITE_INDEXABLE slått på. / og /no er indekserbare og står i sitemap.xml, og robots.txt peker på sitemapen. X-Robots-Tag: noindex sendes nå fra alle verter unntatt fairplayr.app (også alle preview- og deployment-domener). Appen, innlogging og offentlige kampsider beholder noindex. Gjenstår: Open Graph-bilde og strukturerte data."
+        },
         {
           "date": "2026-10-28",
           "note": "Produkteier: fase 0-løsningen beholdes (X-Robots-Tag på eksakt vert fair-playr.vercel.app). Lanseringskrav lagt til: bare det kanoniske produksjonsdomenet kan indekseres når WEBSITE_INDEXABLE aktiveres; andre Vercel-domener og preview-deployments skal fortsatt være noindex. Egne metabeskrivelser for norsk og engelsk lages i den kreative implementeringen."
