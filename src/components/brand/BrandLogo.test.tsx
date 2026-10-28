@@ -16,11 +16,11 @@ afterEach(cleanup);
 
 describe("BrandLogo", () => {
   it("draws the club-green master unchanged (F, then wordmark)", () => {
-    expect(pathsOf("fairplayr-horizontal-club.svg")).toEqual([BRAND_LOGO_PATHS.F_ON_LIGHT, BRAND_LOGO_PATHS.WORDMARK]);
+    expect(pathsOf("fairplayr-horizontal-club.svg")).toEqual([BRAND_LOGO_PATHS.F_ON_LIGHT, BRAND_LOGO_PATHS.WORDMARK, BRAND_LOGO_PATHS.WORDMARK_ACCENT]);
   });
 
   it("draws the chalk master unchanged (F, then wordmark)", () => {
-    expect(pathsOf("fairplayr-horizontal-chalk.svg")).toEqual([BRAND_LOGO_PATHS.F_ON_DARK, BRAND_LOGO_PATHS.WORDMARK]);
+    expect(pathsOf("fairplayr-horizontal-chalk.svg")).toEqual([BRAND_LOGO_PATHS.F_ON_DARK, BRAND_LOGO_PATHS.WORDMARK, BRAND_LOGO_PATHS.WORDMARK_ACCENT]);
   });
 
   it("keeps the master's dot and symbol placement", () => {
@@ -42,6 +42,11 @@ describe("BrandLogo", () => {
     const logo = screen.getByRole("img", { name: "FairPlayr" });
     expect(logo.getAttribute("fill")).toBe("currentColor");
     expect(logo.getAttribute("class")).toContain("text-fp-brand-mark");
+    const paths = logo.querySelectorAll(":scope > path");
+    expect(paths).toHaveLength(2);
+    expect(paths[0].getAttribute("d")).toBe(BRAND_LOGO_PATHS.WORDMARK);
+    expect(paths[1].getAttribute("d")).toBe(BRAND_LOGO_PATHS.WORDMARK_ACCENT);
+    expect(paths[1].getAttribute("style")).toContain("var(--fp-brand-wordmark-accent)");
   });
 
   it("shows the light-ground F in the light theme and the chalk F in the dark theme", () => {
