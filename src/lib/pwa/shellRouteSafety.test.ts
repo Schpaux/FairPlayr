@@ -21,12 +21,15 @@ const APP = path.join(SRC, "app");
 
 /** Shell pages, relative to src/app. */
 const SHELL_PAGES = [
-  "[locale]/(app)/page.tsx",
+  // The app's Home at /play (WEB-01d).
+  "[locale]/(app)/play/page.tsx",
   "[locale]/(app)/match/setup/page.tsx",
   "[locale]/(app)/match/live/page.tsx",
   "[locale]/(app)/team/page.tsx",
   // The service worker's offline fallback, precached with the shells.
   "[locale]/(app)/offline/page.tsx",
+  // The website's front page at / (WEB-01d); its chain includes (marketing)/layout.tsx.
+  "[locale]/(marketing)/page.tsx",
 ];
 
 /** Route files that wrap a page and render on the server with it. */

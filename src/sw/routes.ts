@@ -6,6 +6,7 @@
  * | not GET (HEAD, POST, Server Actions), cross-origin   | passthrough   |
  * | `Range`, RSC (`RSC: 1`, `_rsc`, router headers)      | passthrough   |
  * | `/api/*`, any `auth` segment, `/_vercel/*`, worker   | passthrough   |
+ * | navigation to `/`, `/en`, `/no` with `?source=pwa`   | launch        |
  * | navigation to `/`                                    | root          |
  * | navigation to a shell (`/no`, `/match/live`, ...)    | shell         |
  * | any other navigation                                 | navigate      |
@@ -14,10 +15,11 @@
  *
  * "passthrough" means the worker does not call `respondWith`: the browser
  * goes to the network exactly as without a worker, and nothing is cached or
- * served from a cache. Only `asset`, `shell`, `root` and `navigate` are
- * answered by the worker (see `engine.ts` for the strategies).
+ * served from a cache. Only `asset`, `shell`, `launch`, `root` and `navigate`
+ * are answered by the worker (see `engine.ts` for the strategies).
  */
-import { isRootPath, matchShell, normalizePathname, type ShellEntry } from "./shellRoutes";
+import { isPwaLaunch } from "../lib/appRoutes";
+import { isRootPath, launchLocaleOf, matchShell, normalizePathname, type ShellEntry, type ShellLocale } from "./shellRoutes";
 
 export interface RequestLike {
   url: string;
@@ -42,6 +44,8 @@ export type RouteDecision =
   | { kind: "passthrough"; reason: PassthroughReason }
   | { kind: "asset"; cacheKey: string }
   | { kind: "shell"; entry: ShellEntry }
+  /** An installed app's launch (WEB-01d); `locale` is null for `/`. */
+  | { kind: "launch"; locale: ShellLocale | null }
   | { kind: "root" }
   | { kind: "navigate"; pathname: string };
 
@@ -122,6 +126,9 @@ export function classifyRequest(request: RequestLike, origin: string): RouteDeci
   }
 
   if (request.mode === "navigate") {
+    // Before root and shell: `/no?source=pwa` is the app, `/no` the website.
+    const launchLocale = pathname === canonical || pathname === `${canonical}/` ? launchLocaleOf(pathname) : undefined;
+    if (launchLocale !== undefined && isPwaLaunch(url.searchParams)) return { kind: "launch", locale: launchLocale };
     if (isRootPath(pathname)) return { kind: "root" };
     // Only the plain spelling of a shell is served from the cache.
     const entry = pathname === canonical || pathname === `${canonical}/` ? matchShell(pathname) : null;

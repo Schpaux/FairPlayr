@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useActiveMatch } from "@/components/providers/ActiveMatchProvider";
 import { Button, ButtonLink } from "@/components/ui/primitives/Button";
 import { ListGroup, ListRow } from "@/components/ui/primitives/List";
+import { APP_HOME_PATH } from "@/lib/appRoutes";
 
 /**
  * The offline page's actions. The next action (lime) is the way back to the
@@ -22,7 +23,7 @@ export function OfflineActions() {
             {t("toMatch")}
           </ButtonLink>
         ) : (
-          <ButtonLink href="/" variant="primary" block>
+          <ButtonLink href={APP_HOME_PATH} variant="primary" block>
             {t("toHome")}
           </ButtonLink>
         )}

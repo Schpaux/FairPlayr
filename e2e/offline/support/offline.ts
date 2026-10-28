@@ -49,7 +49,11 @@ export class Device {
   context: BrowserContext | null = null;
   private offline = false;
 
-  constructor(private readonly info: TestInfo) {
+  /** `locale`: the device's language (Accept-Language); the project's by default. */
+  constructor(
+    private readonly info: TestInfo,
+    private readonly locale?: string
+  ) {
     this.dir = mkdtempSync(path.join(tmpdir(), "fp-offline-"));
   }
 
@@ -61,7 +65,7 @@ export class Device {
       isMobile: use.isMobile,
       hasTouch: use.hasTouch,
       userAgent: use.userAgent,
-      locale: use.locale ?? "nb-NO",
+      locale: this.locale ?? use.locale ?? "nb-NO",
       baseURL: use.baseURL,
       serviceWorkers: "allow",
       reducedMotion: "reduce",

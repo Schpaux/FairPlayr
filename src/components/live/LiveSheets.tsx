@@ -10,6 +10,7 @@ import { useEffect, useId, useRef } from "react";
 import { CircleAlert, Flag, History, House, Minus, Share2, TriangleAlert, WifiOff } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import { APP_HOME_PATH } from "@/lib/appRoutes";
 import { cn } from "@/lib/utils";
 import type { LiveEventView } from "@/components/live/liveScreenModel";
 import { EventTimeline, type TimelineEntry } from "@/components/match/EventTimeline";
@@ -198,7 +199,7 @@ export function MenuSheet({
 
       <div className={styles.menuGroup}>
         {/* Leaves Live without touching the match; Home's banner leads back. */}
-        <Link href="/" className={styles.menuRow}>
+        <Link href={APP_HOME_PATH} className={styles.menuRow}>
           <House size={20} {...ICON} />
           <span className={styles.menuGrow}>{t("leaveToHome")}</span>
         </Link>

@@ -7,9 +7,23 @@ import { firstVisitGuest } from "./support/flows";
 // OFF-01a acceptance 4: no /api, auth, RSC or Supabase response is ever served
 // from (or stored in) a service worker cache; precached shells were fetched
 // without cookies; unknown routes offline show the offline page; `/` offline
-// opens the last used locale. Network cut at the proxy.
+// opens the last used locale. Network cut at the proxy. WEB-01d: `/` and `/no`
+// are the website, `/play` and `/no/play` the app's Home.
 
-const SHELLS = ["/", "/match/setup", "/match/live", "/team", "/offline", "/no", "/no/match/setup", "/no/match/live", "/no/team", "/no/offline"];
+const SHELLS = [
+  "/",
+  "/play",
+  "/match/setup",
+  "/match/live",
+  "/team",
+  "/offline",
+  "/no",
+  "/no/play",
+  "/no/match/setup",
+  "/no/match/live",
+  "/no/team",
+  "/no/offline",
+];
 
 async function cachedUrls(page: Page): Promise<string[]> {
   return page.evaluate(async () => {
@@ -105,11 +119,16 @@ for (const theme of THEMES) {
       await device.restart();
       page = await device.page();
 
-      // `/` → English Home (last locale en), served by the worker.
+      // `/` → the English front page (last locale en), served by the worker.
       const root = await page.goto("/", { waitUntil: "domcontentloaded" });
       expect(root?.fromServiceWorker()).toBe(true);
       await expect(page).toHaveURL("http://localhost:3220/");
       await expect(page.locator("html")).toHaveAttribute("lang", "en");
+      await expect(page.getByTestId("marketing-page")).toBeVisible();
+      // An installed app's launch opens the app's Home instead (WEB-01d).
+      await page.goto("/?source=pwa", { waitUntil: "domcontentloaded" });
+      await expect(page).toHaveURL("http://localhost:3220/play?source=pwa");
+      await expect(page.getByTestId("home-fixture-panel")).toBeVisible({ timeout: 30_000 });
 
       // A Norwegian page switches the last locale: `/` → /no.
       await page.goto("/no/team", { waitUntil: "domcontentloaded" });
@@ -117,6 +136,7 @@ for (const theme of THEMES) {
       await page.waitForTimeout(500);
       await page.goto("/", { waitUntil: "domcontentloaded" });
       await expect(page).toHaveURL(/\/no$/);
+      await expect(page.getByTestId("marketing-page")).toBeVisible();
 
       // Unknown or non-shell routes → the offline page, never an error page.
       for (const [url, lang, title] of [

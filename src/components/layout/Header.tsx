@@ -1,5 +1,6 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import { APP_HOME_PATH } from "@/lib/appRoutes";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { ActiveTeamSwitcher } from "@/components/team/ActiveTeamSwitcher";
 import { ProfileMenu } from "@/components/layout/ProfileMenu";
@@ -16,7 +17,7 @@ export function Header() {
             in a 44px tall hit area (DESIGN.md §4). -ml-[7px] cancels the
             master's left clear space (39/863 of 150px), so the F lines up with
             the page gutter like the titles below it. */}
-        <Link href="/" className="-ml-[7px] flex min-h-11 shrink-0 items-center transition-opacity hover:opacity-75">
+        <Link href={APP_HOME_PATH} className="-ml-[7px] flex min-h-11 shrink-0 items-center transition-opacity hover:opacity-75">
           <BrandLogo label={t("appName")} />
         </Link>
 

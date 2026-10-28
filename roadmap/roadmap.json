@@ -1,7 +1,7 @@
 {
   "$schema": "./roadmap.schema.json",
   "schema_version": 1,
-  "updated": "2026-10-27",
+  "updated": "2026-10-28",
   "description": "FairPlayr roadmap: eneste kilde for utviklingshistorikk, vedtatt arbeid og ideer. Rediger her, kjør `npm run roadmap:render` og `npm run roadmap:check`. Se roadmap/README.md.",
   "missing_sources": [
     {
@@ -1506,6 +1506,16 @@
           "type": "owner_decision",
           "ref": "Produkteiers oppdrag ROADMAP-01 (2026-10-27)",
           "note": "Prioritet 2"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers arkitekturbeslutning WEB-01 (2026-10-27)",
+          "note": "Alternativ A2 med /play: samme repo, origin og Vercel-prosjekt; levert som WEB-01A (ruting og PWA-migrering) og deretter WEB-01B (landingsside)"
+        },
+        {
+          "type": "local_doc",
+          "ref": "FP-WEB-01A-plan.md",
+          "note": "fil-for-fil-plan for WEB-01A"
         }
       ],
       "updated": "2026-10-27",
@@ -1514,6 +1524,10 @@
         "BRAND-01"
       ],
       "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "Arkitektur besluttet (produkteier): nettsiden på «/», trenerappens Hjem på «/play» i samme app og origin. Leveres i to steg: WEB-01A (ruting og PWA-migrering, WEB-01d) før WEB-01B (landingssiden, WEB-01a–c, e–h). WEB-01B starter først når design og innhold er gjennomgått med produkteier."
+        },
         {
           "date": "2026-10-27",
           "note": "Avhenger av ROADMAP-02 (produkteiers beslutning): roadmapen avstemmes før landingssiden."
@@ -1549,7 +1563,16 @@
           "note": "WEB-01: produktpresentasjon"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-27",
+      "depends_on": [
+        "WEB-01d"
+      ],
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "Del av WEB-01B, som kommer etter at WEB-01A (WEB-01d) er testet og design og innhold er gjennomgått med produkteier."
+        }
+      ]
     },
     {
       "id": "WEB-01b",
@@ -1582,9 +1605,14 @@
       ],
       "updated": "2026-10-27",
       "depends_on": [
-        "BRAND-01"
+        "BRAND-01",
+        "WEB-01d"
       ],
       "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "Del av WEB-01B, som kommer etter at WEB-01A (WEB-01d) er testet og design og innhold er gjennomgått med produkteier."
+        },
         {
           "date": "2026-10-27",
           "note": "Bygger på BRAND-01 og BRAND.md i stedet for egen branding (produkteiers beslutning)."
@@ -1612,17 +1640,26 @@
           "note": "WEB-01: kontaktinformasjon"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-27",
+      "depends_on": [
+        "WEB-01d"
+      ],
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "Del av WEB-01B, som kommer etter at WEB-01A (WEB-01d) er testet og design og innhold er gjennomgått med produkteier."
+        }
+      ]
     },
     {
       "id": "WEB-01d",
       "type": "task",
       "title": "Skille nettside og app med tydelig tilgang til appen",
-      "summary": "Bestem ruting/domene for nettside vs. app (i dag er «/» appens Hjem og PWA-ens start_url), og gi en tydelig «Åpne appen»-vei. Må ikke bryte installerte PWA-er, service worker-scope, iOS-skallet eller delingslenkene /s/<token>.",
+      "summary": "Markedsføringssiden ligger på «/» og trenerappens Hjem på «/play» («/no/play»; segmentet oversettes ikke) i samme Next.js-app, origin og Vercel-prosjekt. Øvrige app-ruter, delingslenkene /s/<token>, innlogging og auth-callbacks er uendret, og ingen lokale data eller Supabase-data flyttes. PWA-ens start_url er fortsatt /?source=pwa, med uendret id og scope: en oppstart der går rett til appens Hjem på det språket treneren sist brukte (/no/play eller /play), også uten nett. Service workeren har /play som offline-skall og beholder pinning og oppdateringsvern under aktiv kamp. fair-playr.vercel.app beholdes uten redirect. Leveres som WEB-01A, med en midlertidig minimal side på «/».",
       "category": "website",
       "parent": "WEB-01",
       "decision": "committed",
-      "status": "not_started",
+      "status": "in_review",
       "priority": "P1",
       "origin": "owner_decision",
       "dates": {
@@ -1631,17 +1668,63 @@
       "related": [
         "OFF-01",
         "INIT-IOS",
-        "FEAT-SHARE-01"
+        "FEAT-SHARE-01",
+        "OFF-02",
+        "OFF-14",
+        "OFF-15"
       ],
-      "uncertainty": "Arkitekturvalget (samme Next.js-app med egen rutegruppe, eller eget prosjekt/subdomene) er ikke tatt.",
       "sources": [
         {
           "type": "owner_decision",
           "ref": "Produkteiers oppdrag ROADMAP-01 (2026-10-27)",
           "note": "WEB-01: tydelig skille mellom nettside og applikasjon"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers arkitekturbeslutning WEB-01 (2026-10-27)",
+          "note": "Alternativ A2 med /play: samme repo, origin og Vercel-prosjekt; levert som WEB-01A (ruting og PWA-migrering) og deretter WEB-01B (landingsside)"
+        },
+        {
+          "type": "local_doc",
+          "ref": "FP-WEB-01A-plan.md",
+          "note": "fil-for-fil-plan for WEB-01A"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers godkjenning av WEB-01A (2026-10-27)",
+          "note": "Plan og arkitektur godkjent; én skrivende agent, tre lesende reviewere; WEB-01A-1 og WEB-01A-2 som separate patcher i samme produksjonsdeploy; midlertidig side med noindex"
+        },
+        {
+          "type": "local_doc",
+          "ref": "fairplayr-web01a-review.patch",
+          "note": "WEB-01A-1: ruting, proxy, manifest, service worker, nettside og tester"
+        },
+        {
+          "type": "local_doc",
+          "ref": "fairplayr-web01a-live-review.patch",
+          "note": "WEB-01A-2: to lenker i MatchLiveManager.tsx"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers godkjenning av språkretting i WEB-01A (2026-10-28)",
+          "note": "start_url tilbake til /?source=pwa; /play, /no/play, nettsiden på «/», id, scope, redirect fra gammel startadresse og service workerens sikkerhetsmodell beholdes"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-28",
+      "changelog": [
+        {
+          "date": "2026-10-28",
+          "note": "Språkfeil rettet før merge: med start_url /play?source=pwa åpnet en norsk installasjon det engelske Hjem, både med og uten nett (service workeren leverte /play fra hurtigbufferen). start_url er satt tilbake til /?source=pwa, som sender oppstarten til Hjem på trenerens språk. Regresjonstester bruker manifestets egen start_url. Ikke committet eller deployet."
+        },
+        {
+          "date": "2026-10-28",
+          "note": "Implementert i en egen arbeidsgren og levert til review som to patcher (WEB-01A-1 og WEB-01A-2). Ikke committet eller deployet."
+        },
+        {
+          "date": "2026-10-27",
+          "note": "Arkitekturvalget er tatt (produkteier): alternativ A2 med /play i stedet for /app. Usikkerheten om arkitektur er fjernet."
+        }
+      ]
     },
     {
       "id": "WEB-01e",
@@ -1705,6 +1788,70 @@
           "type": "owner_decision",
           "ref": "Produkteiers oppdrag ROADMAP-02 (2026-10-27)",
           "note": "§2: markedsføring av FairPlayr Next og andre viktige funksjoner"
+        }
+      ],
+      "updated": "2026-10-27"
+    },
+    {
+      "id": "WEB-01g",
+      "type": "task",
+      "title": "SEO og metadata for nettsiden",
+      "summary": "Metadata, robots og sitemap for nettsiden på norsk og engelsk (med hreflang). App-rutene, delingslenkene og fair-playr.vercel.app indekseres ikke, og fairplayr.app er kanonisk vert.",
+      "category": "website",
+      "parent": "WEB-01",
+      "decision": "committed",
+      "status": "not_started",
+      "priority": "P2",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "depends_on": [
+        "WEB-01d"
+      ],
+      "related": [
+        "WEB-01a"
+      ],
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers arkitekturbeslutning WEB-01 (2026-10-27)",
+          "note": "WEB-01B: SEO og metadata"
+        }
+      ],
+      "updated": "2026-10-27"
+    },
+    {
+      "id": "WEB-01h",
+      "type": "task",
+      "title": "Rutine for å foreslå oppdatering av nettsiden",
+      "summary": "Når en større funksjon, merkevaren eller produktets identitet endres, foreslås en oppdatering av nettsiden (tekst, skjermbilder, video og fremhevede funksjoner), drevet av roadmapens offentlige milepæler.",
+      "category": "process",
+      "parent": "WEB-01",
+      "decision": "committed",
+      "status": "not_started",
+      "priority": "P3",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "depends_on": [
+        "WEB-01d"
+      ],
+      "related": [
+        "WEB-01f",
+        "WEB-01e"
+      ],
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers arkitekturbeslutning WEB-01 (2026-10-27)",
+          "note": "WEB-01B: rutine for oppdateringsforslag"
+        },
+        {
+          "type": "doc",
+          "ref": "AGENTS.md",
+          "note": "§7 Larger launches"
         }
       ],
       "updated": "2026-10-27"
@@ -5571,6 +5718,76 @@
       "updated": "2026-10-27"
     },
     {
+      "id": "SEC-11",
+      "type": "task",
+      "title": "Videresending etter innlogging",
+      "summary": "Del 1 av funnene fra arkitekturanalysen for WEB-01 i innloggingsflyten: hvor brukeren sendes etter innlogging. Detaljene ligger i et lokalt notat. Del 2 er SEC-12.",
+      "category": "security-privacy",
+      "parent": "INIT-SECURITY",
+      "decision": "committed",
+      "status": "not_started",
+      "priority": "P1",
+      "origin": "claude_proposal",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "related": [
+        "WEB-01d",
+        "SEC-12"
+      ],
+      "sources": [
+        {
+          "type": "local_doc",
+          "ref": "FP-WEB-01A-plan.md",
+          "note": "§9 Funn utenfor WEB-01A"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers godkjenning av WEB-01A (2026-10-27)",
+          "note": "SEC-11 vedtatt med prioritet P1; holdes utenfor WEB-01A"
+        }
+      ],
+      "updated": "2026-10-28",
+      "changelog": [
+        {
+          "date": "2026-10-27",
+          "note": "Vedtatt av produkteier (considering → committed, P2 → P1) ved godkjenningen av WEB-01A. Delt i to: SEC-11 (videresending etter innlogging) og SEC-12 (sesjonsfornyelse og cookies). Implementeres ikke i WEB-01A."
+        }
+      ]
+    },
+    {
+      "id": "SEC-12",
+      "type": "task",
+      "title": "Sesjonsfornyelse og cookies i proxyen",
+      "summary": "Del 2 av funnene fra arkitekturanalysen for WEB-01 i innloggingsflyten: undersøk hvordan sesjonen fornyes og cookies settes i proxyen, før noe endres. Detaljene ligger i et lokalt notat. Del 1 er SEC-11.",
+      "category": "security-privacy",
+      "parent": "INIT-SECURITY",
+      "decision": "committed",
+      "status": "not_started",
+      "priority": "P1",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-27"
+      },
+      "related": [
+        "SEC-11",
+        "WEB-01d"
+      ],
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers godkjenning av WEB-01A (2026-10-27)",
+          "note": "SEC-11 delt; denne delen vedtatt med prioritet P1"
+        },
+        {
+          "type": "local_doc",
+          "ref": "FP-WEB-01A-plan.md",
+          "note": "§10 Funn utenfor WEB-01A"
+        }
+      ],
+      "updated": "2026-10-28"
+    },
+    {
       "id": "MATCH-01",
       "type": "bug",
       "title": "Reparer enheter med skadet legacy-kamp (FP-MS2.1-A1.1)",
@@ -7285,6 +7502,61 @@
       "updated": "2026-10-27"
     },
     {
+      "id": "OFF-14",
+      "type": "task",
+      "title": "Testmiljø for installert PWA bak Vercel Authentication",
+      "summary": "Beskyttede Preview-deployer krever Vercel-innlogging. Service workeren henter app-skallene uten informasjonskapsler (credentials: \"omit\") for at hurtigbufferen aldri skal inneholde brukerspesifikk HTML, så på en beskyttet Preview blir den aldri installert, og offline-testing på fysiske enheter blir meningsløs der. Vurder et eget testmiljø eller en annen trygg testmekanisme. Service workerens bruk av credentials: \"omit\" skal ikke endres.",
+      "category": "devex",
+      "parent": "OFF-13",
+      "decision": "considering",
+      "status": "not_started",
+      "priority": "P2",
+      "origin": "claude_proposal",
+      "dates": {
+        "created": "2026-10-28"
+      },
+      "related": [
+        "OFF-07",
+        "WEB-01d"
+      ],
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers godkjenning av språkretting i WEB-01A (2026-10-28)",
+          "note": "punkt 3: registreres som considering, foreslått P2"
+        }
+      ],
+      "updated": "2026-10-28"
+    },
+    {
+      "id": "OFF-15",
+      "type": "feature",
+      "title": "Kamp og Historikk uten nett",
+      "summary": "I dag gir Kamp (kampplanleggeren) og Historikk offline-siden når appen åpnes uten nett. Kampplanleggeren bør kunne åpnes uten nett, og Historikk bør vise kampene som finnes lokalt på enheten. Ingen kritiske kamphandlinger skal være avhengige av nett. Retningen er fortsatt online-first med lokal lagring som sikkerhet.",
+      "category": "offline-sync",
+      "parent": "INIT-OFFLINE",
+      "decision": "considering",
+      "status": "not_started",
+      "priority": "P2",
+      "origin": "claude_proposal",
+      "dates": {
+        "created": "2026-10-28"
+      },
+      "related": [
+        "FEAT-HIST-01",
+        "OFF-11",
+        "WEB-01d"
+      ],
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers godkjenning av språkretting i WEB-01A (2026-10-28)",
+          "note": "punkt 3: registreres som considering, foreslått P2; implementeres ikke nå"
+        }
+      ],
+      "updated": "2026-10-28"
+    },
+    {
       "id": "UI-TOKENS-01-SW",
       "type": "task",
       "title": "Service worker-oppgradering på ekte enhet",
@@ -7816,6 +8088,32 @@
       ],
       "updated": "2026-10-27",
       "parent": "INIT-DEVEX"
+    },
+    {
+      "id": "STAB-13",
+      "type": "bug",
+      "title": "Ustabil enhetstest for offentlig kampsammendrag etter rettet resultat",
+      "summary": "src/lib/server/share/share.test.ts («a corrected result hides the old text at once and writes a new one») feilet tre ganger på rad i en periode, også isolert, og besto deretter 12 av 12 ganger både på main og i WEB-01A-grenen. Mistanke om tidsavhengighet (tidsstempler sammenlignes i teststubben). Gjelder testen, ikke appen så langt vi vet.",
+      "category": "devex",
+      "parent": "INIT-DEVEX",
+      "decision": "considering",
+      "status": "not_started",
+      "priority": "P3",
+      "origin": "claude_proposal",
+      "dates": {
+        "created": "2026-10-28"
+      },
+      "related": [
+        "FEAT-SHARE-01"
+      ],
+      "sources": [
+        {
+          "type": "local_doc",
+          "ref": "FP-WEB-01A-report.md",
+          "note": "funnet under baseline- og verifiseringskjøringer for WEB-01A"
+        }
+      ],
+      "updated": "2026-10-28"
     },
     {
       "id": "E2E-DRAG-01",

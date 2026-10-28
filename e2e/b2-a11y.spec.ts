@@ -139,7 +139,7 @@ for (const theme of THEMES) {
     });
 
     test("the profile menu is a modal sheet with a focus trap", async ({ page }, testInfo) => {
-      await open(page, "/no", theme);
+      await open(page, "/no/play", theme);
       const trigger = page.getByRole("button", { name: no.profileMenu.open });
       const sheet = page.getByRole("dialog", { name: no.profileMenu.title });
       // The header is server-rendered; retry until hydration wires the click.
@@ -170,8 +170,8 @@ for (const theme of THEMES) {
     });
 
     test("no link wraps a button outside Live", async ({ page }) => {
-      await open(page, "/no", theme);
-      for (const path of ["/no", "/no/team", "/no/match", "/no/match/setup", "/no/lineup", "/no/historikk", "/no/settings", "/no/auth/sign-in", "/no/auth/sign-up"]) {
+      await open(page, "/no/play", theme);
+      for (const path of ["/no", "/no/play", "/no/team", "/no/match", "/no/match/setup", "/no/lineup", "/no/historikk", "/no/settings", "/no/auth/sign-in", "/no/auth/sign-up"]) {
         await page.goto(path, { waitUntil: "domcontentloaded" });
         await expect(page.locator("main :is(h1, h2)").first()).toBeVisible({ timeout: 30_000 });
         await expect(page.locator("a button, a [role=button], button a, button button"), path).toHaveCount(0);

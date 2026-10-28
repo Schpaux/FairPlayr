@@ -2,16 +2,16 @@
 
 # FairPlayr roadmap
 
-Oppdatert 2026-10-27. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); regler og felt står i [roadmap/README.md](roadmap/README.md).
+Oppdatert 2026-10-28. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); regler og felt står i [roadmap/README.md](roadmap/README.md).
 
 ## Oversikt
 
 | | Antall |
 | :- | -: |
-| Oppføringer totalt | 286 |
+| Oppføringer totalt | 293 |
 | Ferdige (`completed`) | 131 |
-| Åpne vedtatte (`committed`) | 127 |
-| Til vurdering (`considering`) | 24 |
+| Åpne vedtatte (`committed`) | 131 |
+| Til vurdering (`considering`) | 27 |
 | Utsatt (`deferred`) | 4 |
 | Må verifiseres | 18 |
 | Offentlig synlige | 21 |
@@ -42,12 +42,14 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 | ID | Prio | Status | Oppgave | Under |
 | :- | :- | :- | :- | :- |
 | WEB-01a | P1 | ikke startet | Produktpresentasjon |  |
-| WEB-01d | P1 | ikke startet | Skille nettside og app med tydelig tilgang til appen |  |
+| WEB-01d | P1 | til review | Skille nettside og app med tydelig tilgang til appen |  |
 | BRAND-01g | P2 | ikke startet | Vurder øvrig markedsføringsmateriell |  |
 | WEB-01b | P2 | ikke startet | FairPlayr-branding på nettsiden |  |
 | WEB-01c | P2 | ikke startet | Kontaktinformasjon |  |
 | WEB-01e | P2 | ikke startet | Offentlig roadmap-visning (Immich-inspirert) |  |
+| WEB-01g | P2 | ikke startet | SEO og metadata for nettsiden |  |
 | WEB-01f | P3 | ikke startet | Markedsføring av nye funksjoner |  |
+| WEB-01h | P3 | ikke startet | Rutine for å foreslå oppdatering av nettsiden |  |
 
 ### SMART-SUBS: Smart byttemotor
 
@@ -176,6 +178,8 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 | :- | :- | :- | :- | :- |
 | SEC-01 | P0 | ikke startet | Rutinemessig nøkkelrotasjon |  |
 | SEC-02 | P0 | ikke startet | Opprydding etter nøkkelrotasjon |  |
+| SEC-11 | P1 | ikke startet | Videresending etter innlogging |  |
+| SEC-12 | P1 | ikke startet | Sesjonsfornyelse og cookies i proxyen |  |
 | SEC-06 | P2 | ikke startet | Forsvar i dybden for oppslag i sesongstatistikken |  |
 | SEC-10-F3 | P2 | må verifiseres | Røyktest av skrivende flyter etter flytting til dub1 |  |
 | SEC-07-F1 | P3 | ikke startet | Løft eslint-config-next til samme versjon som next |  |
@@ -229,6 +233,8 @@ Ideer og muligheter. Ikke vedtatt; endres bare til `committed` med dokumentert b
 | FEAT-HIST-01 | P2 | Lokal historikk for gjestekamper | INIT-HISTORY |
 | MATCH-06 | P2 | Databasetrigger som gjør completed terminal | FIX-POLISH |
 | OFF-09 | P2 | Tidsgrense for forlatt kamp som blokkerer oppdateringer | INIT-OFFLINE |
+| OFF-14 | P2 | Testmiljø for installert PWA bak Vercel Authentication | INIT-OFFLINE |
+| OFF-15 | P2 | Kamp og Historikk uten nett | INIT-OFFLINE |
 | STAB-12 | P2 | E2E-testen for oppsettrekkefølgen forventer ikke «Del kampen» | INIT-DEVEX |
 | BRAND-01j | P3 | SVG-favicon | BRAND-01 |
 | C3-F4 | P3 | Sette draktnummer i appen | INIT-TEAM |
@@ -243,6 +249,7 @@ Ideer og muligheter. Ikke vedtatt; endres bare til `committed` med dokumentert b
 | HK-02 | P3 | Usporet Xcode-workspace: commit eller ignorer | INIT-DEVEX |
 | MATCH-05-F1 | P3 | Serverfeil ved start av planlagt kamp viser feil selv om kampen er startet lokalt | FIX-POLISH |
 | SEC-03-F1 | P3 | Videre herding av agentvernet etter SEC-03 | INIT-SECURITY |
+| STAB-13 | P3 | Ustabil enhetstest for offentlig kampsammendrag etter rettet resultat | INIT-DEVEX |
 | UI-HIST-01-F1 | P3 | Historikk i to kolonner på desktop | FIX-POLISH |
 | UI-LIVE-02 | P3 | To lime «neste handlinger» før avspark | FIX-POLISH |
 

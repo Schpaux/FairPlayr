@@ -6,10 +6,15 @@
  * Strategies, by `classifyRequest` decision:
  * - asset:    this build's precache, else network (not stored).
  * - shell:    cache-first from this build's precache (§S.5), else network.
- * - root `/`: the last used locale's Home straight from the precache when
- *             the page has told us the locale (§S.6), so a weak network never
- *             delays the cold start. Only without a known locale is it
- *             network-first (the server picks), with a short timeout.
+ * - launch:   an installed app's start (`/?source=pwa`, `/no?source=pwa`,
+ *             WEB-01d): a redirect to the app's Home (`/play`, `/no/play`) in
+ *             the URL's locale, else the last used one, without waiting for
+ *             the network. Only without either does the server pick (short
+ *             timeout), and offline it is the English Home.
+ * - root `/`: the website's front page in the last used locale straight from
+ *             the precache when the page has told us the locale (§S.6). Only
+ *             without a known locale is it network-first (the server picks),
+ *             with a short timeout.
  * - navigate: network-first with a generous timeout (weak 3G), then the
  *             offline page for the path's locale. Navigation responses are
  *             never stored at runtime.
@@ -31,7 +36,9 @@
  *   previous build's precache, so the app the coach reopens is the same
  *   version. The pin ends when the page reports the match has ended; the old
  *   build's files stay available to pages still running it (lazy chunks)
- *   until the next activation.
+ *   until the next activation. A pinned build from before `/play` (WEB-01d)
+ *   has its Home at `/` and `/no`: while it is served, a launch and `/play`
+ *   open that Home, so the coach sees one version for the whole match.
  * - activate deletes our caches from other builds only, and claims clients
  *   only on the very first install (no worker was active before).
  * - kill switch (`mode: "off"`): skipWaiting, delete every `fp-` cache,
@@ -46,12 +53,17 @@ import {
   sanitizeBuildId,
 } from "./cacheNames";
 import { MESSAGE, parseClientMessage, type SwBuildConfig, type SwStatus } from "./protocol";
+import { APP_HOME_PATH } from "../lib/appRoutes";
 import { classifyRequest, isStorableResponse } from "./routes";
 import {
+  SHELL_DEFAULT_LOCALE,
   defaultLocaleAlias,
   isShellLocale,
+  launchTarget,
+  legacyHomeFor,
   localeOfPath,
   matchShell,
+  normalizePathname,
   offlinePathFor,
   rootFallback,
   shellPrecacheEntries,
@@ -338,6 +350,18 @@ export function createEngine(deps: EngineDeps) {
     return Response.redirect(absolute(path), 302);
   }
 
+  /**
+   * Pinned to a build from before WEB-01d: it has no `/play`; its Home is `/`
+   * and `/no`. Inferred from that build's precache on purpose (old workers
+   * wrote no marker). A precache that lacks `/play` for another reason lands
+   * on the same network fallback as before WEB-01d, never in a loop.
+   */
+  async function servesLegacyBuild(): Promise<boolean> {
+    const pin = await pinnedBuild();
+    if (pin === null) return false;
+    return !(await (await deps.caches.open(precacheName(pin))).match(absolute(APP_HOME_PATH)));
+  }
+
   async function offlineFallback(pathname: string): Promise<Response> {
     const alias = defaultLocaleAlias(pathname);
     if (alias !== null && (alias === "/" || matchShell(alias))) return redirectTo(alias);
@@ -351,7 +375,7 @@ export function createEngine(deps: EngineDeps) {
   }
 
   async function handleRoot(request: Request): Promise<Response> {
-    // The page told us the coach's locale: open its Home at once (§S.6).
+    // The page told us the coach's locale: open its front page at once (§S.6).
     const lastLocale = await readLastLocale();
     if (lastLocale !== null) {
       const cached = await rootFromCache(lastLocale);
@@ -362,6 +386,36 @@ export function createEngine(deps: EngineDeps) {
     } catch {
       return (await rootFromCache(lastLocale)) ?? (await fromPrecache(offlinePathFor("en"))) ?? Response.error();
     }
+  }
+
+  /**
+   * An installed app's launch (WEB-01d). The query (the marker) is kept on
+   * every redirect. A legacy build's Home is served at its own path rather
+   * than redirected to, so `/?source=pwa` never loops back into a launch.
+   */
+  async function handleLaunch(request: Request, pathLocale: ShellLocale | null): Promise<Response> {
+    const { pathname, search } = new URL(request.url);
+    const locale = pathLocale ?? (await readLastLocale());
+    if (await servesLegacyBuild()) {
+      const home = legacyHomeFor(launchTarget(locale ?? SHELL_DEFAULT_LOCALE)) ?? "/";
+      if (normalizePathname(pathname) !== home) return redirectTo(`${home}${search}`);
+      return (await fromPrecache(home)) ?? handleNavigate(request, home);
+    }
+    if (locale !== null) return redirectTo(`${launchTarget(locale)}${search}`);
+    try {
+      // The server redirects by cookie or Accept-Language (src/proxy.ts).
+      return await networkWithTimeout(request, rootTimeoutMs);
+    } catch {
+      return redirectTo(`${launchTarget(SHELL_DEFAULT_LOCALE)}${search}`);
+    }
+  }
+
+  async function handleShell(request: Request, entry: ShellEntry): Promise<Response> {
+    const legacyHome = legacyHomeFor(entry.url);
+    if (legacyHome !== null && (await servesLegacyBuild())) {
+      return redirectTo(`${legacyHome}${new URL(request.url).search}`);
+    }
+    return (await fromPrecache(entry.url)) ?? handleNavigate(request, entry.url);
   }
 
   async function handleNavigate(request: Request, pathname: string): Promise<Response> {
@@ -383,9 +437,9 @@ export function createEngine(deps: EngineDeps) {
       case "asset":
         return assetFromPrecache(decision.cacheKey).then((cached) => cached ?? deps.fetch(request));
       case "shell":
-        return fromPrecache(decision.entry.url).then(
-          (cached) => cached ?? handleNavigate(request, decision.entry.url)
-        );
+        return handleShell(request, decision.entry);
+      case "launch":
+        return handleLaunch(request, decision.locale);
       case "root":
         return handleRoot(request);
       case "navigate":

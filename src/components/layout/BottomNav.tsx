@@ -3,10 +3,11 @@
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import { Home, Users, Play, History } from "lucide-react";
+import { APP_HOME_PATH } from "@/lib/appRoutes";
 
 // Four tabs; settings live under the profile menu (DESIGN.md §7, U8).
 const navItems = [
-  { href: "/" as const, icon: Home, labelKey: "home" },
+  { href: APP_HOME_PATH, icon: Home, labelKey: "home" },
   { href: "/team" as const, icon: Users, labelKey: "team" },
   { href: "/match" as const, icon: Play, labelKey: "match" },
   { href: "/historikk" as const, icon: History, labelKey: "historikk" },
@@ -17,7 +18,7 @@ export function BottomNav() {
   const pathname = usePathname();
 
   function isActive(href: string) {
-    if (href === "/") return pathname === "/";
+    if (href === APP_HOME_PATH) return pathname === APP_HOME_PATH;
     return pathname.startsWith(href);
   }
 

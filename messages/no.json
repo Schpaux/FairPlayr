@@ -1390,5 +1390,13 @@
     "detailsOffline": "Ingen nett. Delingen kan endres når du er på nett igjen.",
     "kickoffLabel": "Avspark (valgfritt)",
     "kickoffHelp": "Gir nedtelling på kampsiden. Uten tidspunkt står det «Venter på avspark» til du starter kampen."
+  },
+  "marketing": {
+    "placeholder": {
+      "metaTitle": "Rettferdig spilletid i barnefotballen",
+      "title": "Rettferdig spilletid, rett fra sidelinjen",
+      "body": "FairPlayr hjelper treneren med bytter og spilletid i kampen, så alle får spille.",
+      "openApp": "Åpne appen"
+    }
   }
 }

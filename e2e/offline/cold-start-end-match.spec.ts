@@ -106,7 +106,7 @@ test("signed-in: ending offline keeps the result and queues the completion for l
     const context = await device.start();
     await signIn(context);
     let page = await device.page();
-    await page.goto("/no", { waitUntil: "domcontentloaded" });
+    await page.goto("/no/play", { waitUntil: "domcontentloaded" });
     await page.evaluate(() => localStorage.setItem("theme", "dark"));
     await page.reload({ waitUntil: "domcontentloaded" });
     await waitForServiceWorker(page);

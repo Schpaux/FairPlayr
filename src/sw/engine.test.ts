@@ -335,7 +335,7 @@ describe("fetch", () => {
     expect(ROOT_TIMEOUT_MS).toBeLessThan(NAVIGATION_TIMEOUT_MS);
   });
 
-  it("/ opens the known locale's Home from the precache, without waiting for the network", async () => {
+  it("/ opens the known locale's front page (the website) from the precache, without waiting for the network", async () => {
     const { engine, requests } = setup();
     await engine.install();
     const before = requests.length;
@@ -343,10 +343,12 @@ describe("fetch", () => {
     await engine.handleMessage({ type: MESSAGE.setLocale, locale: "no" });
     const redirect = await engine.handleFetch(navigation("/"))!;
     expect(redirect.status).toBe(302);
+    // The website, not the app's Home: lastLocale only picks the language (WEB-01d).
     expect(redirect.headers.get("location")).toBe(`${ORIGIN}/no`);
+    expect(await (await engine.handleFetch(navigation("/no"))!).text()).toBe("network /no");
 
     await engine.handleMessage({ type: MESSAGE.setLocale, locale: "en" });
-    expect(await (await engine.handleFetch(navigation("/?source=pwa"))!).text()).toBe("network /");
+    expect(await (await engine.handleFetch(navigation("/"))!).text()).toBe("network /");
     expect(requests.length).toBe(before);
   });
 
@@ -380,7 +382,7 @@ describe("fetch", () => {
     expect(await (await engine.handleFetch(navigation("/"))!).text()).toBe("network /");
 
     isOffline = true;
-    expect(await (await engine.handleFetch(navigation("/?source=pwa"))!).text()).toBe("network /");
+    expect(await (await engine.handleFetch(navigation("/?x=1"))!).text()).toBe("network /");
 
     await engine.handleMessage({ type: MESSAGE.setLocale, locale: "no" });
     const redirect = await engine.handleFetch(navigation("/"))!;
@@ -405,6 +407,133 @@ describe("fetch", () => {
     expect(requests.length).toBe(before);
     await engine.handleFetch(new Request(`${ORIGIN}/_next/static/chunks/other.js`));
     expect(requests.length).toBe(before + 1);
+  });
+});
+
+describe("launch: an installed app opens the app's Home (WEB-01d)", () => {
+  const location = (response: Response) => response.headers.get("location")?.replace(ORIGIN, "");
+
+  it("/?source=pwa goes to the last used locale's Home without the network, and that Home is cache-first", async () => {
+    const { engine, requests } = setup();
+    await engine.install();
+    const before = requests.length;
+    await engine.handleMessage({ type: MESSAGE.setLocale, locale: "no" });
+
+    const launch = await engine.handleFetch(navigation("/?source=pwa"))!;
+    expect(launch.status).toBe(302);
+    expect(location(launch)).toBe("/no/play?source=pwa");
+    expect(await (await engine.handleFetch(navigation("/no/play?source=pwa"))!).text()).toBe("network /no/play");
+    expect(location(await engine.handleFetch(navigation("/?source=pwa&x=1"))!)).toBe("/no/play?source=pwa&x=1");
+    expect(requests.length).toBe(before);
+  });
+
+  it("the locale in the URL wins over the last used one", async () => {
+    const { engine } = setup();
+    await engine.install();
+    await engine.handleMessage({ type: MESSAGE.setLocale, locale: "en" });
+    expect(location(await engine.handleFetch(navigation("/no?source=pwa"))!)).toBe("/no/play?source=pwa");
+    expect(location(await engine.handleFetch(navigation("/no/?source=pwa"))!)).toBe("/no/play?source=pwa");
+    await engine.handleMessage({ type: MESSAGE.setLocale, locale: "no" });
+    expect(location(await engine.handleFetch(navigation("/en?source=pwa"))!)).toBe("/play?source=pwa");
+  });
+
+  it("without a known locale the server decides, briefly; offline it is the English Home", async () => {
+    let isOffline = false;
+    const { engine, requests } = setup({
+      networkTimeoutMs: 5000,
+      rootTimeoutMs: 50,
+      fetchImpl: async (request) => (isOffline ? offline(request) : html(`network ${new URL(request.url).pathname}`)),
+    });
+    await engine.install();
+    const before = requests.length;
+    expect(await (await engine.handleFetch(navigation("/?source=pwa"))!).text()).toBe("network /");
+    expect(requests.length).toBe(before + 1);
+
+    isOffline = true;
+    expect(location(await engine.handleFetch(navigation("/?source=pwa"))!)).toBe("/play?source=pwa");
+    expect(await (await engine.handleFetch(navigation("/play?source=pwa"))!).text()).toBe("network /play");
+  });
+
+  it("/play and /no/play open offline from the precache", async () => {
+    let isOffline = false;
+    const { engine } = setup({ fetchImpl: async (request) => (isOffline ? offline(request) : html(`network ${new URL(request.url).pathname}`)) });
+    await engine.install();
+    isOffline = true;
+    expect(await (await engine.handleFetch(navigation("/play"))!).text()).toBe("network /play");
+    expect(await (await engine.handleFetch(navigation("/no/play"))!).text()).toBe("network /no/play");
+    expect(await (await engine.handleFetch(navigation("/no"))!).text()).toBe("network /no");
+  });
+
+  describe("pinned to a build from before /play", () => {
+    /** b1 is a legacy build (Home at / and /no, no /play) serving a match; b2 activated by itself. */
+    async function legacyPin({ legacy = true } = {}) {
+      const store = new FakeCacheStorage();
+      const build = (id: string) => (request: Request) => Promise.resolve(html(`${id} ${new URL(request.url).pathname}`));
+      const old = setup({ store, config: { buildId: "b1", mode: "on" }, fetchImpl: build("b1") });
+      await old.engine.install();
+      if (legacy) {
+        const cache = store.map.get(precacheName("b1"))!;
+        await cache.delete(`${ORIGIN}/play`);
+        await cache.delete(`${ORIGIN}/no/play`);
+      }
+      await old.engine.activate();
+      const next = setup({
+        store,
+        config: { buildId: "b2", mode: "on" },
+        fetchImpl: build("b2"),
+        registration: { active: {}, unregister: vi.fn(async () => true) },
+      });
+      await next.engine.install();
+      await old.engine.handleMessage({ type: MESSAGE.setMatchActive, active: true });
+      await next.engine.activate();
+      return { store, old, next };
+    }
+
+    it("a launch opens the old build's Home, without the network and without a loop", async () => {
+      const { next } = await legacyPin();
+      const before = next.requests.length;
+      await next.engine.handleMessage({ type: MESSAGE.setLocale, locale: "no" });
+      expect(location(await next.engine.handleFetch(navigation("/?source=pwa"))!)).toBe("/no?source=pwa");
+      expect(await (await next.engine.handleFetch(navigation("/no?source=pwa"))!).text()).toBe("b1 /no");
+      expect(location(await next.engine.handleFetch(navigation("/no/play?source=pwa"))!)).toBe("/no?source=pwa");
+
+      await next.engine.handleMessage({ type: MESSAGE.setLocale, locale: "en" });
+      expect(await (await next.engine.handleFetch(navigation("/?source=pwa"))!).text()).toBe("b1 /");
+      expect(location(await next.engine.handleFetch(navigation("/play?source=pwa"))!)).toBe("/?source=pwa");
+      expect(location(await next.engine.handleFetch(navigation("/play"))!)).toBe("/");
+      expect(next.requests.length).toBe(before);
+    });
+
+    it("without a known locale it is the old English Home, still without the network", async () => {
+      const { next } = await legacyPin();
+      const before = next.requests.length;
+      expect(await (await next.engine.handleFetch(navigation("/?source=pwa"))!).text()).toBe("b1 /");
+      expect(next.requests.length).toBe(before);
+    });
+
+    it("/ is the old Home as the old build served it, and the other shells stay on the old build", async () => {
+      const { next } = await legacyPin();
+      await next.engine.handleMessage({ type: MESSAGE.setLocale, locale: "en" });
+      expect(await (await next.engine.handleFetch(navigation("/"))!).text()).toBe("b1 /");
+      expect(await (await next.engine.handleFetch(navigation("/no/match/live"))!).text()).toBe("b1 /no/match/live");
+    });
+
+    it("when the match ends: launches open /play, and / is the website again", async () => {
+      const { next } = await legacyPin();
+      await next.engine.handleMessage({ type: MESSAGE.setLocale, locale: "no" });
+      await next.engine.handleMessage({ type: MESSAGE.setMatchActive, active: false });
+      expect(location(await next.engine.handleFetch(navigation("/?source=pwa"))!)).toBe("/no/play?source=pwa");
+      expect(await (await next.engine.handleFetch(navigation("/no/play?source=pwa"))!).text()).toBe("b2 /no/play");
+      expect(location(await next.engine.handleFetch(navigation("/"))!)).toBe("/no");
+      expect(await (await next.engine.handleFetch(navigation("/no"))!).text()).toBe("b2 /no");
+    });
+
+    it("a pinned build that has /play serves its own /play", async () => {
+      const { next } = await legacyPin({ legacy: false });
+      await next.engine.handleMessage({ type: MESSAGE.setLocale, locale: "no" });
+      expect(location(await next.engine.handleFetch(navigation("/?source=pwa"))!)).toBe("/no/play?source=pwa");
+      expect(await (await next.engine.handleFetch(navigation("/no/play?source=pwa"))!).text()).toBe("b1 /no/play");
+    });
   });
 });
 

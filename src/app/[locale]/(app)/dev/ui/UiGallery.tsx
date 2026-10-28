@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/primitives";
 import { MatchPlayingTime } from "@/components/match/MatchPlayingTime";
 import { summarizeMatchPlayingTime } from "@/domain/matchPlayingTime";
+import { APP_HOME_PATH } from "@/lib/appRoutes";
 
 const ICON = { size: 20, strokeWidth: 1.75 } as const;
 
@@ -79,7 +80,7 @@ export function UiGallery() {
           <Button variant="ghost" size="sm">
             {t("ghost")}
           </Button>
-          <ButtonLink href="/" variant="secondary" size="sm" icon={<ArrowLeft {...ICON} />}>
+          <ButtonLink href={APP_HOME_PATH} variant="secondary" size="sm" icon={<ArrowLeft {...ICON} />}>
             {t("link")}
           </ButtonLink>
         </div>

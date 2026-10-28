@@ -10,11 +10,14 @@ const THEMES = {
 } as const;
 
 const ROUTES = [
-  { name: "home", path: "/no" },
+  { name: "home", path: "/no/play" },
   { name: "team", path: "/no/team" },
   { name: "match setup", path: "/no/match/setup" },
   { name: "settings", path: "/no/settings" },
-  { name: "home (en)", path: "/" },
+  { name: "home (en)", path: "/play" },
+  // The website (WEB-01d): no app shell, the same palette and type.
+  { name: "website", path: "/no" },
+  { name: "website (en)", path: "/" },
 ];
 
 async function openWithTheme(page: Page, path: string, theme: keyof typeof THEMES) {
@@ -53,7 +56,7 @@ for (const theme of Object.keys(THEMES) as (keyof typeof THEMES)[]) {
     }
 
     test("palette tokens resolve to the Modern Sideline values", async ({ page }) => {
-      await openWithTheme(page, "/no", theme);
+      await openWithTheme(page, "/no/play", theme);
       const tokens = await page.evaluate(() => {
         const probe = document.createElement("div");
         document.body.appendChild(probe);
@@ -82,7 +85,7 @@ for (const theme of Object.keys(THEMES) as (keyof typeof THEMES)[]) {
 
 test.describe("typography", () => {
   test("UI text and headings use Inter, not Urbanist", async ({ page }) => {
-    await openWithTheme(page, "/no", "light");
+    await openWithTheme(page, "/no/play", "light");
     const fonts = await page.evaluate(() => ({
       body: getComputedStyle(document.body).fontFamily,
       heading: getComputedStyle(document.querySelector("h1, h2") ?? document.body).fontFamily,
@@ -97,7 +100,7 @@ test.describe("typography", () => {
     page.on("request", (req) => {
       if (req.resourceType() === "font") fontRequests.push(req.url());
     });
-    await openWithTheme(page, "/no", "light");
+    await openWithTheme(page, "/no/play", "light");
 
     const result = await page.evaluate(async () => {
       const el = document.createElement("span");

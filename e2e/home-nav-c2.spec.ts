@@ -74,7 +74,7 @@ function recordWrites(page: Page) {
 }
 
 async function openHome(page: Page) {
-  await page.goto("/no", { waitUntil: "domcontentloaded" });
+  await page.goto("/no/play", { waitUntil: "domcontentloaded" });
   await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
   await expect(page.getByTestId("home-fixture-panel")).toBeVisible({ timeout: 30_000 });
 }
@@ -186,7 +186,7 @@ for (const theme of ["dark", "light"] as const) {
       await page.getByRole("button", { name: "Avspark", exact: true }).click();
       await page.getByRole("button", { name: "Kampmeny" }).click();
       await page.getByRole("link", { name: "Til forsiden – kampen fortsetter" }).click();
-      await expect(page).toHaveURL(/\/no\/?$/);
+      await expect(page).toHaveURL(/\/no\/play\/?$/);
 
       const panel = page.getByTestId("home-fixture-panel");
       await expect(panel).toHaveAttribute("data-state", "live", { timeout: 30_000 });

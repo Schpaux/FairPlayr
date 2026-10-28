@@ -103,7 +103,7 @@ for (const theme of THEMES) {
       await hideDevOverlay(page);
       await endMatch(page);
       await expect.poll(() => storedSetupStatus(page)).toBe("ended");
-      await page.goto("/no", { waitUntil: "domcontentloaded" });
+      await page.goto("/no/play", { waitUntil: "domcontentloaded" });
       await expect.poll(async () => (await swStatus(page)).matchActive, { timeout: 15_000 }).toBe(false);
       await expect
         .poll(() => page.evaluate(async () => Boolean((await navigator.serviceWorker.getRegistration())?.waiting)), { timeout: 30_000 })
@@ -130,7 +130,7 @@ for (const theme of THEMES) {
     try {
       const { page } = await firstVisitGuest(device, theme, { withSetup: false });
       const first = await swStatus(page);
-      await page.goto("/no", { waitUntil: "domcontentloaded" });
+      await page.goto("/no/play", { waitUntil: "domcontentloaded" });
       await hideDevOverlay(page);
       const dataBefore = await deviceData(page);
 
@@ -181,7 +181,7 @@ test("an update that was waiting before the match: a cold start mid-match keeps 
   try {
     let { page } = await firstVisitGuest(device, "dark");
     const first = await swStatus(page);
-    await page.goto("/no", { waitUntil: "domcontentloaded" });
+    await page.goto("/no/play", { waitUntil: "domcontentloaded" });
     await hideDevOverlay(page);
 
     // The update installs while no match runs; the coach picks «Senere».
@@ -208,7 +208,7 @@ test("an update that was waiting before the match: a cold start mid-match keeps 
     await hideDevOverlay(page);
     await endMatch(page);
     await expect.poll(() => storedSetupStatus(page)).toBe("ended");
-    await page.goto("/no", { waitUntil: "domcontentloaded" });
+    await page.goto("/no/play", { waitUntil: "domcontentloaded" });
     await expect.poll(async () => (await swStatus(page)).servedBuildId, { timeout: 15_000 }).toBe(`${first.buildId}-next`);
   } finally {
     await device.dispose();
@@ -220,7 +220,7 @@ test("consent in one tab: every other tab without a match reloads exactly once",
   try {
     const { page } = await firstVisitGuest(device, "dark", { withSetup: false });
     const first = await swStatus(page);
-    await page.goto("/no", { waitUntil: "domcontentloaded" });
+    await page.goto("/no/play", { waitUntil: "domcontentloaded" });
     const other = await device.context!.newPage();
     await other.goto("/no/team", { waitUntil: "domcontentloaded" });
     await expect.poll(() => other.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);

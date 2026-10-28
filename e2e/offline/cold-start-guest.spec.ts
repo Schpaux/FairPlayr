@@ -41,7 +41,7 @@ for (const [index, theme] of THEMES.entries()) {
     try {
       // ── First online visit: the worker installs and precaches. ─────────────
       let page = await device.page();
-      await page.goto("/no", { waitUntil: "domcontentloaded" });
+      await page.goto("/no/play", { waitUntil: "domcontentloaded" });
       await seedDevice(page, theme, { [TEAMS_KEY]: guestTeam(), [SETUP_KEY]: draftSetup("team-e2e", IDS) });
       await page.reload({ waitUntil: "domcontentloaded" });
       await waitForServiceWorker(page);
@@ -114,11 +114,12 @@ for (const [index, theme] of THEMES.entries()) {
       await expect(page.getByRole("img", { name: "Frakoblet, lagres på telefonen" })).toBeVisible();
 
       // ── The other shells open offline too, with the match intact. ──────────
-      for (const url of ["/no", "/", "/no/match/setup"]) {
+      // `/?source=pwa` is an installed app's launch (WEB-01d): the last used locale's Home.
+      for (const url of ["/no/play", "/?source=pwa", "/no/match/setup"]) {
         const other = await device.page();
         const res = await other.goto(url, { waitUntil: "domcontentloaded" });
         expect(res?.fromServiceWorker(), `${url} from the worker`).toBe(true);
-        if (url === "/") await expect(other).toHaveURL(/\/no\/?$/); // last used locale
+        if (url === "/?source=pwa") await expect(other).toHaveURL(/\/no\/play\?source=pwa$/);
         await expect(other.getByRole("link", { name: /Kamp pågår/ }).first()).toBeVisible({ timeout: 30_000 });
         expect((await storedMatch(other)).events).toEqual(before.events);
         await other.close();

@@ -73,7 +73,7 @@ const galleryReady = async (page: Page) => {
 };
 
 const ROUTES: RouteSpec[] = [
-  { id: "home", path: "/no" },
+  { id: "home", path: "/no/play" },
   { id: "team", path: "/no/team" },
   { id: "planner", path: "/no/match" },
   { id: "setup", path: "/no/match/setup" },
