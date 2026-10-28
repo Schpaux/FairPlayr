@@ -1,11 +1,14 @@
 // @vitest-environment node
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-// The session refresh is not under test; it passes the response through.
-vi.mock("@/lib/supabase/middleware", () => ({
-  updateSupabaseSession: (_request: NextRequest, response: Response) => response,
+// The session refresh itself is not under test (SEC-12 owns
+// src/lib/supabase/middleware.ts); it passes the response through, and the
+// spy records which requests reach it.
+const { updateSupabaseSession } = vi.hoisted(() => ({
+  updateSupabaseSession: vi.fn((_request: NextRequest, response: Response) => response),
 }));
+vi.mock("@/lib/supabase/middleware", () => ({ updateSupabaseSession }));
 
 const { default: proxy } = await import("./proxy");
 const { pwaLaunchRedirect } = await import("@/lib/pwa/launchRedirect");
@@ -68,5 +71,46 @@ describe("proxy: an installed app's launch opens the app (WEB-01d)", () => {
     expect(location(proxy(request("/s/abc")))).toBeNull();
     expect(location(proxy(request("/no/s/abc")))).toBeNull();
     expect(location(proxy(request("/no/auth/sign-in?next=/team")))).toBeNull();
+  });
+});
+
+describe("proxy: the Supabase session refresh skips the website (WEB-01 phase 0)", () => {
+  beforeEach(() => updateSupabaseSession.mockClear());
+
+  it.each(["/", "/no", "/no/", "/en", "/?source=pwa", "/no?source=pwa"])("%s: no refresh", (path) => {
+    proxy(request(path));
+    expect(updateSupabaseSession).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "/play",
+    "/no/play",
+    "/team",
+    "/no/team",
+    "/match/live",
+    "/no/match/setup",
+    "/historikk",
+    "/settings",
+    "/offline",
+    "/lineup",
+    "/s/abc",
+    "/no/s/abc",
+    "/auth/sign-in",
+    "/no/auth/sign-in",
+    "/play?source=pwa",
+    "/roadmapx",
+    "/nox",
+    "//",
+    "/%2F",
+    "/%6Eo",
+  ])("%s: refreshed as before", (path) => {
+    proxy(request(path));
+    expect(updateSupabaseSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("the website is still localised without the refresh", () => {
+    expect(location(proxy(request("/", { "accept-language": "nb-NO" })))).toBe("/no");
+    expect(proxy(request("/")).headers.get("x-middleware-rewrite")).toBe(`${ORIGIN}/en`);
+    expect(updateSupabaseSession).not.toHaveBeenCalled();
   });
 });

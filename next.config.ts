@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 import { withSerwist } from "@serwist/turbopack";
+import { noindexHostHeaders } from "./src/lib/marketing/seo";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
@@ -18,6 +19,9 @@ const nextConfig: NextConfig = {
           { key: "Service-Worker-Allowed", value: "/" },
         ],
       },
+      // The Vercel production domain serves the same site as fairplayr.app
+      // and is never indexed (WEB-01g, src/lib/marketing/seo.ts).
+      ...noindexHostHeaders(),
     ];
   },
 };

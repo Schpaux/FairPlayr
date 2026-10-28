@@ -3,6 +3,8 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { ButtonLink } from "@/components/ui/primitives/Button";
 import { APP_HOME_PATH } from "@/lib/appRoutes";
+import { routing } from "@/i18n/routing";
+import { websiteMetadata, type WebsiteLocale } from "@/lib/marketing/seo";
 
 // Temporary front page (WEB-01d) until the website (WEB-01B) replaces it:
 // the logo, one line and the way into the app. Static and the same for every
@@ -13,10 +15,16 @@ type Props = {
   params: Promise<{ locale: string }>;
 };
 
+// Prerendered per locale (SSG, WEB-01 phase 0): the same HTML for everyone,
+// cacheable by the CDN. App routes stay dynamic.
+export function generateStaticParams() {
+  return routing.locales.map((locale) => ({ locale }));
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "marketing.placeholder" });
-  return { title: t("metaTitle"), description: t("body") };
+  return websiteMetadata({ locale: locale as WebsiteLocale, segment: "", title: t("metaTitle"), description: t("body") });
 }
 
 export default async function MarketingPage({ params }: Props) {

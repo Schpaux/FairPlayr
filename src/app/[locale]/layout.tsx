@@ -1,8 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import localFont from "next/font/local";
-import { NextIntlClientProvider } from "next-intl";
-import { getMessages, setRequestLocale } from "next-intl/server";
+import { setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
@@ -77,8 +76,9 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   // The locale comes from the URL, not from request headers or cookies: the
   // layout renders the same for every user (cache-safe shells, FP-OFF-01 B6).
+  // Messages are sent to the browser per route group ((app), (public),
+  // (marketing)), so the website does not carry the app's (WEB-01 phase 0).
   setRequestLocale(locale);
-  const messages = await getMessages();
 
   return (
     <html
@@ -87,19 +87,17 @@ export default async function LocaleLayout({ children, params }: Props) {
       className={`${inter.variable} ${barlowCondensed.variable} h-full`}
     >
       <body className="h-full antialiased bg-background text-foreground">
-        <NextIntlClientProvider messages={messages}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem={false}
-            disableTransitionOnChange={false}
-          >
-            <ThemeColorSync />
-            {/* The app shell is in (app)/layout.tsx; the public match page
-                (FEAT-SHARE-01, (public)/s/[token]) has none of it. */}
-            {children}
-          </ThemeProvider>
-        </NextIntlClientProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem={false}
+          disableTransitionOnChange={false}
+        >
+          <ThemeColorSync />
+          {/* The app shell is in (app)/layout.tsx; the public match page
+              (FEAT-SHARE-01, (public)/s/[token]) has none of it. */}
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
