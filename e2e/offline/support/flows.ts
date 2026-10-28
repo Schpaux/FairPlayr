@@ -6,7 +6,7 @@ export const GUEST_IDS = guestTeam().teams[0].players.map((player) => player.id)
 /** First online visit as a guest: data on the device, worker installed. */
 export async function firstVisitGuest(device: Device, theme: Theme, { withSetup = true } = {}) {
   const page = await device.page();
-  await page.goto("/no", { waitUntil: "domcontentloaded" });
+  await page.goto("/no/play", { waitUntil: "domcontentloaded" });
   await seedDevice(page, theme, {
     [TEAMS_KEY]: guestTeam(),
     ...(withSetup ? { [SETUP_KEY]: draftSetup("team-e2e", GUEST_IDS) } : {}),

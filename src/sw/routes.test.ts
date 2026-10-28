@@ -60,10 +60,29 @@ describe("classifyRequest: never handled by the worker", () => {
 describe("classifyRequest: handled", () => {
   it("navigation to / is root", () => {
     expect(classifyRequest(nav("/"), ORIGIN)).toEqual({ kind: "root" });
-    expect(classifyRequest(nav("/?source=pwa"), ORIGIN)).toEqual({ kind: "root" });
+    expect(classifyRequest(nav("/?source=web"), ORIGIN)).toEqual({ kind: "root" });
   });
 
-  it.each(["/no", "/no/", "/no/match/live", "/no/match/setup?x=1", "/no/team", "/match/live", "/match/setup", "/team", "/offline", "/no/offline"])(
+  it.each([
+    ["/?source=pwa", null],
+    ["/?x=1&source=pwa", null],
+    ["/no?source=pwa", "no"],
+    ["/no/?source=pwa", "no"],
+    ["/en?source=pwa", "en"],
+  ])("%s is an installed app's launch (WEB-01d)", (path, locale) => {
+    expect(classifyRequest(nav(path), ORIGIN)).toEqual({ kind: "launch", locale });
+  });
+
+  it("only the plain spelling of a front page with the marker is a launch", () => {
+    expect(classifyRequest(nav("/no"), ORIGIN)).toMatchObject({ kind: "shell", entry: { url: "/no", kind: "marketing" } });
+    expect(classifyRequest(nav("/play?source=pwa"), ORIGIN)).toMatchObject({ kind: "shell", entry: { url: "/play", kind: "home" } });
+    expect(classifyRequest(nav("/no/team?source=pwa"), ORIGIN)).toMatchObject({ kind: "shell", entry: { url: "/no/team" } });
+    expect(classifyRequest(nav("/%6Eo?source=pwa"), ORIGIN).kind).toBe("navigate");
+    expect(classifyRequest(req("/?source=pwa"), ORIGIN)).toEqual({ kind: "passthrough", reason: "unhandled" });
+    expect(classifyRequest(nav("/no/auth/sign-in?source=pwa"), ORIGIN)).toEqual({ kind: "passthrough", reason: "auth" });
+  });
+
+  it.each(["/no", "/no/", "/play", "/no/play", "/no/match/live", "/no/match/setup?x=1", "/no/team", "/match/live", "/match/setup", "/team", "/offline", "/no/offline"])(
     "%s is a shell",
     (path) => {
       const decision = classifyRequest(nav(path), ORIGIN);

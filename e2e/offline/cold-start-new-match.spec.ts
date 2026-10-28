@@ -15,7 +15,7 @@ for (const theme of THEMES) {
       await device.goOffline();
       await device.restart(500);
       const page = await device.page();
-      const home = await page.goto("/no", { waitUntil: "domcontentloaded" });
+      const home = await page.goto("/no/play", { waitUntil: "domcontentloaded" });
       expect(home?.fromServiceWorker()).toBe(true);
       await hideDevOverlay(page);
 

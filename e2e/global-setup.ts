@@ -16,6 +16,7 @@ import { chromium, type FullConfig } from "@playwright/test";
 // not matter for compilation.
 const ROUTES = [
   "/no",
+  "/no/play",
   "/no/match",
   "/no/match/setup",
   "/no/match/live",

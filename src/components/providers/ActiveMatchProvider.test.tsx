@@ -137,7 +137,7 @@ describe("active-match banner identity", () => {
 
   it("leaves this device's match to the fixture panel on Home", async () => {
     runOnDevice("match-A");
-    NAV.pathname = "/";
+    NAV.pathname = "/play"; // APP_HOME_PATH (WEB-01d)
     renderShell();
 
     await waitFor(() => expect(actions?.activeMatch?.id).toBe("match-A"));

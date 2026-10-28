@@ -1,7 +1,7 @@
 import { setRequestLocale } from "next-intl/server";
 import { HomeFixturePanel, HomeSeasonSummary, HomeSummaryProvider } from "@/components/home/HomeSeasonSummary";
 
-// Home is a user-agnostic shell (FP-OFF-01 B6, §S.5): the server renders only
+// Home (`/play`, WEB-01d) is a user-agnostic shell (FP-OFF-01 B6, §S.5): the server renders only
 // translations and static blocks, so the HTML is the same for every user and a
 // service worker may cache it. The fixture panel and the season stats are
 // client islands (`HomeSeasonSummary.tsx`). Do not read cookies, headers,

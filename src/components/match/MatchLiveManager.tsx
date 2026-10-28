@@ -115,6 +115,7 @@ import { variants } from "@/lib/tokens";
 import { isSidelineLiveUiEnabled } from "@/lib/featureFlags";
 import { LiveScreen } from "@/components/live/LiveScreen";
 import { buildLiveScreenModel, discLabel } from "@/components/live/liveScreenModel";
+import { APP_HOME_PATH } from "@/lib/appRoutes";
 
 interface PromptPlayerOption {
   id: string;
@@ -1317,7 +1318,7 @@ export function MatchLiveManager() {
         title={t("loadErrorTitle")}
         error={workspace.error}
         actions={
-          <ButtonLink href="/" variant="secondary" block>
+          <ButtonLink href={APP_HOME_PATH} variant="secondary" block>
             {t("actions.toHome")}
           </ButtonLink>
         }
@@ -1569,7 +1570,7 @@ export function MatchLiveManager() {
     <PageShell className="space-y-3 pb-6">
       {/* ── Minimal back nav: Home, never setup, so the match keeps running ── */}
       <Link
-        href="/"
+        href={APP_HOME_PATH}
         className="tap-target -ml-1 inline-flex items-center gap-0.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
       >
         <ChevronLeft size={14} />

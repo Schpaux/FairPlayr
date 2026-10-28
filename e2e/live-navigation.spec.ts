@@ -158,7 +158,7 @@ test.describe("an active match survives navigation", () => {
     const before = await playSidelineMinutes(page);
 
     await leaveViaMenu(page);
-    await expect(page).toHaveURL(/\/no\/?$/);
+    await expect(page).toHaveURL(/\/no\/play\/?$/);
     expect(await storedMatch(page)).toEqual(before);
 
     await backToLiveViaBanner(page);
@@ -213,7 +213,7 @@ test.describe("an active match survives navigation", () => {
     await leaveViaMenu(page);
     await page.waitForTimeout(500);
     await context.setOffline(false);
-    await page.goto("/no", { waitUntil: "domcontentloaded" });
+    await page.goto("/no/play", { waitUntil: "domcontentloaded" });
     expect(await storedMatch(page)).toEqual(offlineState);
 
     await backToLiveViaBanner(page);
@@ -233,7 +233,7 @@ test.describe("an active match survives navigation", () => {
     expect(before).toMatchObject({ setupStatus: "active", live: { status: "running" } });
 
     await page.getByRole("link", { name: "Til forsiden – kampen fortsetter" }).click();
-    await expect(page).toHaveURL(/\/no\/?$/);
+    await expect(page).toHaveURL(/\/no\/play\/?$/);
     expect(await storedMatch(page)).toEqual(before);
 
     await backToLiveViaBanner(page);
@@ -274,7 +274,7 @@ test("with no active match, setup starts a new match normally", async ({ page })
   await expect(page.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
   const started = await storedMatch(page);
   await page.getByRole("link", { name: "Til forsiden – kampen fortsetter" }).click();
-  await expect(page).toHaveURL(/\/no\/?$/);
+  await expect(page).toHaveURL(/\/no\/play\/?$/);
   await backToLiveViaBanner(page);
   await expect(page.getByRole("button", { name: "Pause", exact: true })).toBeVisible({ timeout: 30_000 });
   expect((await storedMatch(page)).live?.id).toBe(started.live?.id);

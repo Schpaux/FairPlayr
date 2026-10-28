@@ -49,7 +49,7 @@ for (const theme of THEMES) {
       const context = await device.start();
       await signIn(context);
       let page = await device.page();
-      await page.goto("/no", { waitUntil: "domcontentloaded" });
+      await page.goto("/no/play", { waitUntil: "domcontentloaded" });
       await page.evaluate((theme) => {
         localStorage.setItem("theme", theme);
       }, theme);
@@ -93,7 +93,7 @@ for (const theme of THEMES) {
       expect(await page.evaluate(() => localStorage.getItem("fairplayr.authIdentity.v1"))).toContain(USER.id);
 
       // Home offline: still signed in, the cloud team from the mirror, not a guest team.
-      await page.goto("/no", { waitUntil: "domcontentloaded" });
+      await page.goto("/no/play", { waitUntil: "domcontentloaded" });
       await hideDevOverlay(page);
       await expectActiveTeam(page);
       await expectSignedIn(page);

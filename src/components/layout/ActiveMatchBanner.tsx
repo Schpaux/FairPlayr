@@ -4,6 +4,7 @@ import { AlertTriangle, ChevronRight } from "lucide-react";
 import { Link, usePathname } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { useActiveMatch } from "@/components/providers/ActiveMatchProvider";
+import { APP_HOME_PATH } from "@/lib/appRoutes";
 
 export function ActiveMatchBanner() {
   const t = useTranslations("activeMatchBanner");
@@ -18,7 +19,7 @@ export function ActiveMatchBanner() {
   // Club green and static (DESIGN.md §7, C2). Home leaves it out: its fixture
   // panel shows the same match with the screen's one lime action.
   if (activeMatch?.status === "live") {
-    if (pathname === "/") {
+    if (pathname === APP_HOME_PATH) {
       return null;
     }
 

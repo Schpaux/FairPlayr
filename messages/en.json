@@ -1390,5 +1390,13 @@
     "detailsOffline": "No network. Sharing can be changed when you are online again.",
     "kickoffLabel": "Kick-off (optional)",
     "kickoffHelp": "Shows a countdown on the match page. Without a time it says “Waiting for kick-off” until you start the match."
+  },
+  "marketing": {
+    "placeholder": {
+      "metaTitle": "Fair playing time in grassroots football",
+      "title": "Fair playing time, right from the sideline",
+      "body": "FairPlayr helps the coach with substitutions and playing time during the match, so every player gets a game.",
+      "openApp": "Open the app"
+    }
   }
 }

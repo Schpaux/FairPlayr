@@ -98,7 +98,7 @@ async function kickoff(page: Page) {
 async function leaveToHome(page: Page) {
   await page.getByRole("button", { name: "Kampmeny" }).click();
   await page.getByRole("link", { name: "Til forsiden – kampen fortsetter" }).click();
-  await expect(page).toHaveURL(/\/no\/?$/);
+  await expect(page).toHaveURL(/\/no\/play\/?$/);
 }
 
 async function endViaMenu(page: Page) {
@@ -126,7 +126,7 @@ test.describe("match lifecycle and the active-match banner", () => {
     await expect.poll(async () => (await stored(page)).setupStatus).toBe("ended");
     expect((await stored(page)).live).toMatchObject({ status: "ended", clock: { isRunning: false } });
 
-    await page.goto("/no", { waitUntil: "domcontentloaded" });
+    await page.goto("/no/play", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading").first()).toBeVisible({ timeout: 30_000 });
     await expect(banner(page)).toHaveCount(0);
 
