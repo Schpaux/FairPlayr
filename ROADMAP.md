@@ -8,9 +8,9 @@ Oppdatert 2026-10-28. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); re
 
 | | Antall |
 | :- | -: |
-| Oppføringer totalt | 293 |
+| Oppføringer totalt | 297 |
 | Ferdige (`completed`) | 131 |
-| Åpne vedtatte (`committed`) | 131 |
+| Åpne vedtatte (`committed`) | 135 |
 | Til vurdering (`considering`) | 27 |
 | Utsatt (`deferred`) | 4 |
 | Må verifiseres | 18 |
@@ -43,11 +43,15 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 | :- | :- | :- | :- | :- |
 | WEB-01a | P1 | ikke startet | Produktpresentasjon |  |
 | WEB-01d | P1 | til review | Skille nettside og app med tydelig tilgang til appen |  |
+| WEB-01j | P1 | ikke startet | Promofilm på nettsiden |  |
+| WEB-01l | P1 | ikke startet | Juridiske avklaringer før offentlig lansering av nettsiden |  |
 | BRAND-01g | P2 | ikke startet | Vurder øvrig markedsføringsmateriell |  |
 | WEB-01b | P2 | ikke startet | FairPlayr-branding på nettsiden |  |
 | WEB-01c | P2 | ikke startet | Kontaktinformasjon |  |
 | WEB-01e | P2 | ikke startet | Offentlig roadmap-visning (Immich-inspirert) |  |
 | WEB-01g | P2 | ikke startet | SEO og metadata for nettsiden |  |
+| WEB-01i | P2 | ikke startet | Personvernerklæring og brukervilkår på nettsiden |  |
+| WEB-01k | P2 | ikke startet | Interaktiv kampdemo på nettsiden |  |
 | WEB-01f | P3 | ikke startet | Markedsføring av nye funksjoner |  |
 | WEB-01h | P3 | ikke startet | Rutine for å foreslå oppdatering av nettsiden |  |
 

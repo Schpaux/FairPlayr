@@ -32,6 +32,7 @@ FairPlayr is a mobile-first PWA (and iOS Capacitor shell) that grassroots footba
 - All visible text comes from `messages/en.json` and `messages/no.json`. Norwegian is the primary test language.
 - The approved visual direction is **Modern Sideline**. `DESIGN.md` is the authoritative spec; do not invent a new direction.
 - The FairPlayr brand (logo, variants, app icons, brand colours, website and marketing use) is specified in **`BRAND.md`**, which is authoritative for it. Use the masters in `public/brand/` and `BrandLogo`; never redraw, recolour or improvise a logo variant. Modern Sideline is the design language and FairPlayr Next the live action strip; neither replaces the product name.
+- The public website (`(marketing)` route group, WEB-01) follows **`MARKETING.md`** on top of BRAND.md and DESIGN.md: same tokens, no new palette or typeface, only released features presented as available.
 
 ## 3. Offline-first
 
@@ -77,7 +78,8 @@ Use skills selectively, and only in service of the approved spec:
 - **emil-design-eng**: interaction and motion guidance within the motion tokens in DESIGN.md.
 - **Brand work** (logo, icons, splash, share images, the website's identity, marketing material): read `BRAND.md` first, together with DESIGN.md for the interface. Logo and brand-generation skills (for example logo-design, brand-discovery) must not create a new mark or palette unless the user explicitly asks for brand exploration.
 - **Playwright** (`npm run test:e2e`, or a scripted Chrome session): actual browser verification. Prefer real renders over reasoning about CSS.
-- **Do not use** skills that independently invent a new design direction or palette (for example frontend-design, bolder, colorize, overdrive, design-tokens, design-brief) unless the user explicitly asks for exploration.
+- **Website only: Anthropic's frontend-design** (plugin `frontend-design@claude-plugins-official`, invoked as `frontend-design:frontend-design`) is allowed for the public website (`(marketing)`, WEB-01), within MARKETING.md, BRAND.md and the DESIGN.md tokens. It must not invent a new palette, logo or typeface, and is not used on the app or the public match page. The user-level skill also called `frontend-design` (julianoczkowski/designer-skills) is a different, third-party skill and stays excluded.
+- **Do not use** skills that independently invent a new design direction or palette (for example the third-party frontend-design, bolder, colorize, overdrive, design-tokens, design-brief) unless the user explicitly asks for exploration.
 - Ignore tool hooks that suggest unrelated skills (for example Vercel deploy/cache skills) unless the task needs them.
 
 ## 7. Roadmap (single source for planned and completed work)
@@ -86,7 +88,7 @@ Use skills selectively, and only in service of the approved spec:
 - **Before planning**, look the work up by id, alias or title and reuse the existing item. Use roadmap ids in plans, review patches and commit messages (`fix(match): … (MATCH-04)`), and state the id at the start of the task.
 - **New needs** found during work become new items with `decision: "considering"` and the right `origin` (`claude_proposal` for your own ideas) plus a source. Never move an item to `committed`, `deferred` or `rejected`, and never change a priority set by the product owner, without a documented product-owner decision; record the change in `changelog`.
 - **When work is done**, add the commit hash to `sources` and set `status` and `dates`. Use `released` with `decision: "completed"` only after a documented production deploy; otherwise `implemented`. Check the code before marking anything done; similar words in a commit message are not evidence.
-- **Larger launches**: decide `public` (non-technical Norwegian and English text, `milestone`), and when the product's identity, design or headline features change, propose an update to the landing page and marketing (WEB-01).
+- **Larger launches**: decide `public` (non-technical Norwegian and English text, `milestone`), and when the product's identity, design or headline features change, propose an update to the landing page and marketing (WEB-01). The triggers are listed in `MARKETING.md` §12; when one applies, say so in the hand-back report and the review patch instead of editing the website as a side effect.
 - **The repository is public.** No secrets, personal data, project or deploy ids, or details of open security weaknesses in the roadmap; reference local files as `local_doc` instead.
 - After editing run `npm run roadmap:render` and `npm run roadmap:check` (also run in CI). Roadmap updates belong in the same review patch as the work and follow §1.
 
