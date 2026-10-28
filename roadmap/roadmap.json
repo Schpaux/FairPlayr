@@ -1516,14 +1516,33 @@
           "type": "local_doc",
           "ref": "FP-WEB-01A-plan.md",
           "note": "fil-for-fil-plan for WEB-01A"
+        },
+        {
+          "type": "local_doc",
+          "ref": "FP-WEB-01B-prep.md",
+          "note": "forberedelse av WEB-01B: skills, arkitektur, sidekart, demo, personvern og SEO"
+        },
+        {
+          "type": "doc",
+          "ref": "MARKETING.md",
+          "note": "designguide for nettsiden (kreativ retning åpen)"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers avklaringer for WEB-01B (2026-10-28)",
+          "note": "A2, kreativ retning, prioriteringer, kontakt, skill-policy"
         }
       ],
-      "updated": "2026-10-27",
+      "updated": "2026-10-28",
       "depends_on": [
         "ROADMAP-02",
         "BRAND-01"
       ],
       "changelog": [
+        {
+          "date": "2026-10-28",
+          "note": "WEB-01B-forberedelse fullført. Produkteier har besluttet: domeneoppsett A2 beholdes (appen på /play); kreativ hovedretning «The Live Experience» med filmatisk storytelling og raffinert fintech-design (retning, ikke låst layout; ingen mockup er fasit); stor kreativ frihet på nettsiden (foto, avansert motion, CSS-3D, gradienter) innenfor merkevaren og fargetokenene; WEB-01i (P2), WEB-01j (P1) og WEB-01k (P2) committed, filmen i første lansering og demoen senere; kontakt support@fairplayr.app. Juridiske avklaringer før lansering er skilt ut i WEB-01l. Neste steg er fase 0 (teknisk grunnlag); visuell implementering venter på egen instruks."
+        },
         {
           "date": "2026-10-27",
           "note": "Arkitektur besluttet (produkteier): nettsiden på «/», trenerappens Hjem på «/play» i samme app og origin. Leveres i to steg: WEB-01A (ruting og PWA-migrering, WEB-01d) før WEB-01B (landingssiden, WEB-01a–c, e–h). WEB-01B starter først når design og innhold er gjennomgått med produkteier."
@@ -1638,13 +1657,22 @@
           "type": "owner_decision",
           "ref": "Produkteiers oppdrag ROADMAP-01 (2026-10-27)",
           "note": "WEB-01: kontaktinformasjon"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers avklaringer for WEB-01B (2026-10-28)",
+          "note": "kontaktadresse support@fairplayr.app"
         }
       ],
-      "updated": "2026-10-27",
+      "updated": "2026-10-28",
       "depends_on": [
         "WEB-01d"
       ],
       "changelog": [
+        {
+          "date": "2026-10-28",
+          "note": "Kontaktadresse besluttet (produkteier): support@fairplayr.app. FairPlayr har foreløpig ingen juridisk virksomhet; ingen selskapsopplysninger skal oppgis eller diktes opp (se WEB-01l)."
+        },
         {
           "date": "2026-10-27",
           "note": "Del av WEB-01B, som kommer etter at WEB-01A (WEB-01d) er testet og design og innhold er gjennomgått med produkteier."
@@ -1852,9 +1880,196 @@
           "type": "doc",
           "ref": "AGENTS.md",
           "note": "§7 Larger launches"
+        },
+        {
+          "type": "doc",
+          "ref": "MARKETING.md",
+          "note": "§12: sjekkliste for når nettsiden må oppdateres"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-28"
+    },
+    {
+      "id": "WEB-01i",
+      "type": "task",
+      "title": "Personvernerklæring og brukervilkår på nettsiden",
+      "summary": "Egne sider for personvern og vilkår på norsk og engelsk, med tekst som produkteier godkjenner. Må beskrive hvilke data som lagres (også om barn), underleverandører, AI, deling, Spond og sletting. Må være på plass før nettsiden indekseres.",
+      "category": "security-privacy",
+      "parent": "WEB-01",
+      "decision": "committed",
+      "status": "not_started",
+      "priority": "P2",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-28"
+      },
+      "related": [
+        "WEB-01c",
+        "WEB-01g",
+        "INIT-SECURITY"
+      ],
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers avklaringer for WEB-01B (2026-10-28)",
+          "note": "Godkjent som oppgave (produkteier), P2"
+        },
+        {
+          "type": "local_doc",
+          "ref": "FP-WEB-01B-prep.md",
+          "note": "research, arkitektur og plan for WEB-01B"
+        },
+        {
+          "type": "doc",
+          "ref": "MARKETING.md",
+          "note": "designguide for nettsiden"
+        }
+      ],
+      "updated": "2026-10-28",
+      "depends_on": [
+        "WEB-01d",
+        "WEB-01l"
+      ],
+      "changelog": [
+        {
+          "date": "2026-10-28",
+          "note": "considering → committed. Godkjent som oppgave (produkteier), P2. Kontaktadresse support@fairplayr.app; ingen selskapsopplysninger før det finnes en juridisk virksomhet. Teksten skrives etter de juridiske avklaringene i WEB-01l."
+        }
+      ]
+    },
+    {
+      "id": "WEB-01j",
+      "type": "task",
+      "title": "Promofilm på nettsiden",
+      "summary": "Promofilmen vises med egen plakat og en avspillingsknapp som først da laster videoen (youtube-nocookie eller egen hosting), med undertekster på norsk og engelsk.",
+      "category": "website",
+      "parent": "WEB-01",
+      "decision": "committed",
+      "status": "not_started",
+      "priority": "P1",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-28"
+      },
+      "related": [
+        "WEB-01a",
+        "BRAND-01g"
+      ],
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers avklaringer for WEB-01B (2026-10-28)",
+          "note": "Godkjent som oppgave (produkteier), P1"
+        },
+        {
+          "type": "local_doc",
+          "ref": "FP-WEB-01B-prep.md",
+          "note": "research, arkitektur og plan for WEB-01B"
+        },
+        {
+          "type": "doc",
+          "ref": "MARKETING.md",
+          "note": "designguide for nettsiden"
+        }
+      ],
+      "updated": "2026-10-28",
+      "depends_on": [
+        "WEB-01d"
+      ],
+      "changelog": [
+        {
+          "date": "2026-10-28",
+          "note": "considering → committed. Godkjent som oppgave (produkteier), P1. Filmen er med i første lansering av nettsiden."
+        }
+      ]
+    },
+    {
+      "id": "WEB-01k",
+      "type": "task",
+      "title": "Interaktiv kampdemo på nettsiden",
+      "summary": "En isolert demo med fiktive spillere der besøkende kan prøve bytter og se spilletid og FairPlayr Next oppdateres, uten innlogging. Bruker appens egne komponenter og rene funksjoner, uten lagring eller nettverk. Kommer etter første lansering; filmen og et statisk produktbilde dekker produktet til da.",
+      "category": "website",
+      "parent": "WEB-01",
+      "decision": "committed",
+      "status": "not_started",
+      "priority": "P2",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-28"
+      },
+      "related": [
+        "WEB-01a",
+        "SIDELINE-LIVE",
+        "FEAT-NEXT-01"
+      ],
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers avklaringer for WEB-01B (2026-10-28)",
+          "note": "Godkjent som oppgave (produkteier), P2"
+        },
+        {
+          "type": "local_doc",
+          "ref": "FP-WEB-01B-prep.md",
+          "note": "research, arkitektur og plan for WEB-01B"
+        },
+        {
+          "type": "doc",
+          "ref": "MARKETING.md",
+          "note": "designguide for nettsiden"
+        }
+      ],
+      "updated": "2026-10-28",
+      "depends_on": [
+        "WEB-01d"
+      ],
+      "changelog": [
+        {
+          "date": "2026-10-28",
+          "note": "considering → committed. Godkjent som oppgave (produkteier), P2. Den interaktive demoen kan komme etter første lansering."
+        }
+      ]
+    },
+    {
+      "id": "WEB-01l",
+      "type": "task",
+      "title": "Juridiske avklaringer før offentlig lansering av nettsiden",
+      "summary": "Avklaringer som produkteier (eventuelt med jurist) må gjøre før nettsiden indekseres og personvernerklæring og vilkår publiseres: hvem som er behandlingsansvarlig når det ikke finnes en juridisk virksomhet, rollefordeling for barnas data mellom trener, lag og klubb, rettslig grunnlag, databehandleravtaler og regioner hos underleverandører, overføring utenfor EØS, lagringstid og sletting, samtykke for YouTube og lokal lagring, og hvem som står som avsender av vilkårene. Ikke en utviklingsoppgave.",
+      "rationale": "Personvernerklæring og vilkår (WEB-01i) kan ikke skrives riktig før disse spørsmålene er besvart, og agenter skal ikke dikte opp juridiske formuleringer eller selskapsopplysninger.",
+      "category": "security-privacy",
+      "parent": "WEB-01",
+      "decision": "considering",
+      "status": "not_started",
+      "priority": "P1",
+      "origin": "claude_proposal",
+      "dates": {
+        "created": "2026-10-28"
+      },
+      "related": [
+        "WEB-01i",
+        "WEB-01c",
+        "WEB-01g",
+        "INIT-SECURITY"
+      ],
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers avklaringer for WEB-01B (2026-10-28)",
+          "note": "identifiser juridiske avklaringer, skilt fra tekniske oppgaver"
+        },
+        {
+          "type": "doc",
+          "ref": "MARKETING.md",
+          "note": "§13 Before public launch"
+        },
+        {
+          "type": "local_doc",
+          "ref": "FP-WEB-01B-prep.md",
+          "note": "G.2 og J: hva som må dokumenteres"
+        }
+      ],
+      "uncertainty": "Prioriteten er Claudes forslag: P1 fordi den blokkerer lansering av WEB-01 (P1). Produkteier setter den.",
+      "updated": "2026-10-28"
     },
     {
       "id": "SMART-SUBS",
