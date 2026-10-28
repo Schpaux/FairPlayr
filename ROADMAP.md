@@ -10,8 +10,8 @@ Oppdatert 2026-10-28. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); re
 | :- | -: |
 | Oppføringer totalt | 297 |
 | Ferdige (`completed`) | 131 |
-| Åpne vedtatte (`committed`) | 134 |
-| Til vurdering (`considering`) | 28 |
+| Åpne vedtatte (`committed`) | 135 |
+| Til vurdering (`considering`) | 27 |
 | Utsatt (`deferred`) | 4 |
 | Må verifiseres | 18 |
 | Offentlig synlige | 21 |
@@ -44,6 +44,7 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 | WEB-01a | P1 | ikke startet | Produktpresentasjon |  |
 | WEB-01d | P1 | til review | Skille nettside og app med tydelig tilgang til appen |  |
 | WEB-01j | P1 | ikke startet | Promofilm på nettsiden |  |
+| WEB-01l | P1 | ikke startet | Juridiske avklaringer før offentlig lansering av nettsiden |  |
 | BRAND-01g | P2 | ikke startet | Vurder øvrig markedsføringsmateriell |  |
 | WEB-01b | P2 | ikke startet | FairPlayr-branding på nettsiden |  |
 | WEB-01c | P2 | ikke startet | Kontaktinformasjon |  |
@@ -230,7 +231,6 @@ Ideer og muligheter. Ikke vedtatt; endres bare til `committed` med dokumentert b
 | :- | :- | :- | :- |
 | C6-F1e | P1 | Forenkle bunnområdet i kampoppsettet | FIX-POLISH |
 | OFF-03 | P1 | iOS uten nett: bundlet build eller service worker i WKWebView | INIT-IOS |
-| WEB-01l | P1 | Juridiske avklaringer før offentlig lansering av nettsiden | WEB-01 |
 | BRAND-01h | P2 | Delingsbilde (Open Graph) for app og nettside | BRAND-01 |
 | BRAND-01i | P2 | Varemerkeklarering og trykkprofil | BRAND-01 |
 | FEAT-AI-01 | P2 | Merking av AI-tekst og bekreftelse ved regenerering | INIT-AI |

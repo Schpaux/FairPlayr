@@ -1525,7 +1525,7 @@
         {
           "type": "doc",
           "ref": "MARKETING.md",
-          "note": "designguide for nettsiden (kreativ retning åpen)"
+          "note": "designguide for nettsiden; kreativ hovedretning valgt (The Live Experience), layout ikke låst"
         },
         {
           "type": "owner_decision",
@@ -2038,7 +2038,7 @@
       "rationale": "Personvernerklæring og vilkår (WEB-01i) kan ikke skrives riktig før disse spørsmålene er besvart, og agenter skal ikke dikte opp juridiske formuleringer eller selskapsopplysninger.",
       "category": "security-privacy",
       "parent": "WEB-01",
-      "decision": "considering",
+      "decision": "committed",
       "status": "not_started",
       "priority": "P1",
       "origin": "claude_proposal",
@@ -2066,10 +2066,20 @@
           "type": "local_doc",
           "ref": "FP-WEB-01B-prep.md",
           "note": "G.2 og J: hva som må dokumenteres"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers godkjenning av WEB-01 fase 0-planen (2026-10-28)",
+          "note": "committed, P1: juridisk avklaring før offentlig lansering, ikke en blokkering for utvikling"
         }
       ],
-      "uncertainty": "Prioriteten er Claudes forslag: P1 fordi den blokkerer lansering av WEB-01 (P1). Produkteier setter den.",
-      "updated": "2026-10-28"
+      "updated": "2026-10-28",
+      "changelog": [
+        {
+          "date": "2026-10-28",
+          "note": "Produkteier: considering → committed, P1. Avklaringen må være gjort før offentlig lansering (fjerning av noindex, publisering av personvernerklæring og vilkår). Blokkerer ikke utviklingen av nettsiden."
+        }
+      ]
     },
     {
       "id": "SMART-SUBS",

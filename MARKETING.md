@@ -156,11 +156,12 @@ The app has no ambient motion (DESIGN.md §4). The website may use advanced moti
 | WEB-01c | 2026-10-28 | Contact `support@fairplayr.app`. No company details until a legal entity exists (owner). |
 | WEB-01i/j/k | 2026-10-28 | Privacy and terms P2, promo film P1 and in the first launch, interactive demo P2 and after the first launch (owner). |
 | AGENTS.md §6 | 2026-10-28 | Anthropic's `frontend-design` allowed for the website (owner). |
+| WEB-01l | 2026-10-28 | Legal clarifications committed, P1: closed before public launch (removing `noindex`, publishing privacy and terms); not a blocker for development (owner). |
 | — | open | Public tagline and the "One coach. One screen. Zero stress." line. |
 | — | open | Default language on `/` and path names per language (English on `/`, English paths on both today). |
 | — | open | Theme on the website: art-directed per section, or following the coach's app theme. |
 | — | open | Analytics: none at launch is the current rule (§7). |
-| — | open | The legal clarifications in §13 (WEB-01l). |
+| — | open | The answers to the legal clarifications in §13.1 (WEB-01l). |
 
 ## 12. When the website needs an update
 
