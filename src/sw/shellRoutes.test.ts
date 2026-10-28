@@ -44,6 +44,14 @@ describe("shell routes", () => {
     expect(kinds).toMatchObject({ "/": "marketing", "/no": "marketing", "/play": "home", "/no/play": "home" });
   });
 
+  it("precache no other website page: a new one must be a deliberate change with its own test (WEB-01 phase 0)", () => {
+    expect(shellPrecacheEntries()).toHaveLength(12);
+    expect(shellPrecacheEntries().filter((entry) => entry.kind === "marketing").map((entry) => entry.url)).toEqual(["/", "/no"]);
+    for (const path of ["/roadmap", "/no/roadmap", "/privacy", "/no/privacy", "/terms", "/no/terms", "/contact", "/no/contact"]) {
+      expect(matchShell(path), path).toBeNull();
+    }
+  });
+
   it("match shells cache-first, but never / (the server localises it)", () => {
     expect(matchShell("/")).toBeNull();
     expect(matchShell("/no/")).toMatchObject({ url: "/no", locale: "no", kind: "marketing" });

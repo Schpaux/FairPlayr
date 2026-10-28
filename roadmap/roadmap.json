@@ -1478,7 +1478,7 @@
       "category": "website",
       "work_order": 3,
       "decision": "committed",
-      "status": "not_started",
+      "status": "in_progress",
       "priority": "P1",
       "origin": "owner_decision",
       "dates": {
@@ -1531,6 +1531,20 @@
           "type": "owner_decision",
           "ref": "Produkteiers avklaringer for WEB-01B (2026-10-28)",
           "note": "A2, kreativ retning, prioriteringer, kontakt, skill-policy"
+        },
+        {
+          "type": "local_doc",
+          "ref": "FP-WEB-01-PHASE0-plan.md",
+          "note": "Fase 0: teknisk grunnlag, godkjent 2026-10-28"
+        },
+        {
+          "type": "local_doc",
+          "ref": "FP-WEB-01-PHASE0-report.md",
+          "note": "Fase 0: rapport og testresultater"
+        },
+        {
+          "type": "review_patch",
+          "ref": "fairplayr-web01-phase0-review.patch"
         }
       ],
       "updated": "2026-10-28",
@@ -1558,6 +1572,10 @@
         {
           "date": "2026-10-27",
           "note": "Avhenger av BRAND-01 (produkteiers beslutning): nettsiden bygger på den nye merkevaren."
+        },
+        {
+          "date": "2026-10-28",
+          "note": "Fase 0 (teknisk grunnlag) implementert lokalt, venter på gjennomgang: meldinger per rutegruppe (nettsiden sender ingen app-tekster), statisk nettside (SSG), proxyen hopper over Supabase-fornyelsen på nettsidens stier, låsetester for service worker og nettsidens grenser. Ingen visuell endring."
         }
       ]
     },
@@ -1601,7 +1619,7 @@
       "category": "website",
       "parent": "WEB-01",
       "decision": "committed",
-      "status": "not_started",
+      "status": "in_progress",
       "priority": "P2",
       "origin": "owner_decision",
       "dates": {
@@ -1620,9 +1638,18 @@
         {
           "type": "doc",
           "ref": "BRAND.md"
+        },
+        {
+          "type": "local_doc",
+          "ref": "FP-WEB-01-PHASE0-plan.md",
+          "note": "Fase 0: teknisk grunnlag, godkjent 2026-10-28"
+        },
+        {
+          "type": "review_patch",
+          "ref": "fairplayr-web01-phase0-review.patch"
         }
       ],
-      "updated": "2026-10-27",
+      "updated": "2026-10-28",
       "depends_on": [
         "BRAND-01",
         "WEB-01d"
@@ -1635,6 +1662,10 @@
         {
           "date": "2026-10-27",
           "note": "Bygger på BRAND-01 og BRAND.md i stedet for egen branding (produkteiers beslutning)."
+        },
+        {
+          "date": "2026-10-28",
+          "note": "Fase 0: designGuard har en avgrenset nettsideprofil ((marketing) og components/marketing) og nye app-regler for gradienter, CSS-3D og fp-web-tokens. De eksisterende banegradientene og benkeskinnens fade er dokumenterte unntak."
         }
       ]
     },
@@ -1824,11 +1855,11 @@
       "id": "WEB-01g",
       "type": "task",
       "title": "SEO og metadata for nettsiden",
-      "summary": "Metadata, robots og sitemap for nettsiden på norsk og engelsk (med hreflang). App-rutene, delingslenkene og fair-playr.vercel.app indekseres ikke, og fairplayr.app er kanonisk vert.",
+      "summary": "Metadata, robots og sitemap for nettsiden på norsk og engelsk (med hreflang). App-rutene, delingslenkene og fair-playr.vercel.app indekseres ikke, og fairplayr.app er kanonisk vert. Lanseringskrav: når WEBSITE_INDEXABLE slås på, skal bare det kanoniske produksjonsdomenet kunne indekseres; alle andre Vercel-domener og preview-deployments forblir noindex.",
       "category": "website",
       "parent": "WEB-01",
       "decision": "committed",
-      "status": "not_started",
+      "status": "in_progress",
       "priority": "P2",
       "origin": "owner_decision",
       "dates": {
@@ -1845,9 +1876,33 @@
           "type": "owner_decision",
           "ref": "Produkteiers arkitekturbeslutning WEB-01 (2026-10-27)",
           "note": "WEB-01B: SEO og metadata"
+        },
+        {
+          "type": "local_doc",
+          "ref": "FP-WEB-01-PHASE0-plan.md",
+          "note": "Fase 0: teknisk grunnlag, godkjent 2026-10-28"
+        },
+        {
+          "type": "review_patch",
+          "ref": "fairplayr-web01-phase0-review.patch"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers godkjenning av WEB-01 fase 0 (2026-10-28)",
+          "note": "Punkt 2 og 3: SEO-løsningen fra fase 0 beholdes; lanseringskrav om indeksering bare på kanonisk produksjonsdomene; egne metabeskrivelser per språk i den kreative implementeringen"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-28",
+      "changelog": [
+        {
+          "date": "2026-10-28",
+          "note": "Produkteier: fase 0-løsningen beholdes (X-Robots-Tag på eksakt vert fair-playr.vercel.app). Lanseringskrav lagt til: bare det kanoniske produksjonsdomenet kan indekseres når WEBSITE_INDEXABLE aktiveres; andre Vercel-domener og preview-deployments skal fortsatt være noindex. Egne metabeskrivelser for norsk og engelsk lages i den kreative implementeringen."
+        },
+        {
+          "date": "2026-10-28",
+          "note": "Fase 0: metadata, canonical, hreflang (nb), robots.txt, tom sitemap, noindex på app-sidene og X-Robots-Tag: noindex på fair-playr.vercel.app, bak bryteren WEBSITE_INDEXABLE (av). Gjenstår: Open Graph-bilde, strukturerte data og å slå på indeksering ved lansering."
+        }
+      ]
     },
     {
       "id": "WEB-01h",
@@ -5996,7 +6051,8 @@
       },
       "related": [
         "SEC-11",
-        "WEB-01d"
+        "WEB-01d",
+        "WEB-01"
       ],
       "sources": [
         {
@@ -6010,7 +6066,13 @@
           "note": "§10 Funn utenfor WEB-01A"
         }
       ],
-      "updated": "2026-10-28"
+      "updated": "2026-10-28",
+      "changelog": [
+        {
+          "date": "2026-10-28",
+          "note": "Koordinering med WEB-01 fase 0: nettsidens stier (/, /no) går ikke lenger gjennom updateSupabaseSession (src/proxy.ts, låst av proxy.test.ts). SEC-12 eier fortsatt src/lib/supabase/middleware.ts; status uendret."
+        }
+      ]
     },
     {
       "id": "MATCH-01",
@@ -8087,6 +8149,39 @@
         }
       ],
       "updated": "2026-10-27"
+    },
+    {
+      "id": "FEAT-SHARE-07",
+      "type": "task",
+      "title": "Bare nødvendige oversettelser på den offentlige kampsiden",
+      "summary": "Den offentlige kampsiden (/s/<token>) sender i dag alle appens oversettelser til nettleseren. Send bare navnerommene siden bruker, slik nettsiden gjør etter WEB-01 fase 0, for mindre HTML.",
+      "category": "sharing",
+      "parent": "INIT-SHARING",
+      "decision": "deferred",
+      "status": "not_started",
+      "priority": "P3",
+      "origin": "claude_proposal",
+      "dates": {
+        "created": "2026-10-28"
+      },
+      "related": [
+        "WEB-01",
+        "FEAT-SHARE-01"
+      ],
+      "uncertainty": "Utsatt av produkteier ved godkjenningen av WEB-01 fase 0. Prioriteten er Claudes forslag.",
+      "sources": [
+        {
+          "type": "local_doc",
+          "ref": "FP-WEB-01-PHASE0-report.md",
+          "note": "Åpne punkter, punkt 3"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers godkjenning av WEB-01 fase 0 (2026-10-28)",
+          "note": "Punkt 4: trimming av oversettelser på offentlig kampside utsettes"
+        }
+      ],
+      "updated": "2026-10-28"
     },
     {
       "id": "FEAT-SHARE-01-V1",

@@ -54,7 +54,7 @@ Notes for anyone working from older briefs: the values `#163300` and `#0e0f0c` t
 - **website motion tokens** for scroll, reveal and cinematic sequences (§6), with the app's easing curves as the base;
 - **gradients, tints and light** built from existing tokens: for example a floodlight fall-off over `grass`, a `club`-to-`canvas` field behind a product frame, a shadow that gives a device or the pitch depth. Defined as named tokens, never inline values.
 
-No new hues. Hard-coded hex values in components are forbidden here too (AGENTS.md §4, `designGuard.test.ts`). The app's bans on gradients, glow, blur and ambient motion do not apply inside `(marketing)` (DESIGN.md §10, WEB-01B); they still apply everywhere else, including the public match page.
+No new hues. Hard-coded hex values in components are forbidden here too (AGENTS.md §4, `designGuard.test.ts`). The app's bans on gradients, glow, blur and ambient motion do not apply inside `(marketing)` (DESIGN.md §10, WEB-01B); they still apply everywhere else, including the public match page. `designGuard.test.ts` enforces this with a **website profile** for `src/app/[locale]/(marketing)/` and `src/components/marketing/` only (DESIGN.md §11); a component used by both the website and the app is checked as app code.
 
 ## 4. Typography
 
@@ -113,6 +113,7 @@ The app has no ambient motion (DESIGN.md §4). The website may use advanced moti
 - **`prefers-reduced-motion`:** every transform and scroll effect is off; content and order stay identical; the demo still works by tap, without autoplay.
 - No motion that carries information on its own (status is never motion-only or colour-only).
 - The logo animation is the only animation of the logo.
+- Checked by the website profile in `designGuard.test.ts` (DESIGN.md §11): animated `filter`/`backdrop-filter`, animated layout properties (including `transition-all` and Framer Motion `layout`) and scroll-linked motion (`animation-timeline`, `useScroll`) in a file without a reduced-motion check fail the test. Time-based CSS motion is already off with reduced motion (`globals.css`), and Framer Motion follows `MotionConfig reducedMotion="user"`.
 
 ## 7. Performance and technical floor
 
@@ -121,6 +122,8 @@ The app has no ambient motion (DESIGN.md §4). The website may use advanced moti
 - Images through `next/image` with explicit sizes; posters and stills in AVIF/WebP; no autoplaying video on mobile data.
 - No third-party requests on page load: no analytics, no tag managers, no remote fonts, no YouTube until the visitor asks to play (§8).
 - The website shares origin, service worker and storage with the app: it must stay user-agnostic and static (`shellRouteSafety.test.ts`), must not read or write the app's `localStorage` keys, and must not change the coach's theme setting.
+- **Website media lives in `public/marketing/`** and is referenced by path (`<Image src="/marketing/…">`, `<video src="/marketing/…">`), never imported statically: a static import lands in `.next/static/media`, which the service worker precaches into every installed app. `src/lib/marketing/websiteBoundary.test.ts` fails on a static media import, on browser storage, service-worker or `setTheme` calls, and on imports of the app's storage, Supabase, worker, providers or live match controller.
+- **Only `/` and `/no` are precached.** Other website pages (`/roadmap`, `/no/privacy`, …) are network-first and never stored by the worker; precaching another page is a deliberate change with its own test (`src/sw/shellRoutes.test.ts`). Website pages are listed once, in `src/lib/marketing/routes.ts`; the proxy skips the Supabase session refresh on exactly those paths.
 
 ## 8. Product visualisations and data
 
@@ -157,6 +160,8 @@ The app has no ambient motion (DESIGN.md §4). The website may use advanced moti
 | WEB-01i/j/k | 2026-10-28 | Privacy and terms P2, promo film P1 and in the first launch, interactive demo P2 and after the first launch (owner). |
 | AGENTS.md §6 | 2026-10-28 | Anthropic's `frontend-design` allowed for the website (owner). |
 | WEB-01l | 2026-10-28 | Legal clarifications committed, P1: closed before public launch (removing `noindex`, publishing privacy and terms); not a blocker for development (owner). |
+| WEB-01g | 2026-10-28 | Search foundation (phase 0): hreflang `nb` for Norwegian (`/no`), English on `/` as `x-default`, canonical always `https://fairplayr.app`. One switch, `WEBSITE_INDEXABLE` in `src/lib/marketing/seo.ts`, stays `false` until launch (noindex, empty sitemap, no `Sitemap:` line). `X-Robots-Tag: noindex` on every response from the exact host `fair-playr.vercel.app`, not from `fairplayr.app` or other hosts. App routes are `noindex` (owner). |
+| WEB-01 | 2026-10-28 | The website is prerendered per locale (SSG) and sends no app messages to the browser (owner). Because `/` and `/no` are precached by the worker, `/` must keep answering a plain 200 without a redirect; changing the default language on `/` needs a service-worker change and a two-builds test. |
 | — | open | Public tagline and the "One coach. One screen. Zero stress." line. |
 | — | open | Default language on `/` and path names per language (English on `/`, English paths on both today). |
 | — | open | Theme on the website: art-directed per section, or following the coach's app theme. |
@@ -196,7 +201,7 @@ Not development tasks. Each answer feeds the privacy policy and terms (WEB-01i).
 
 - Privacy and terms pages built from the owner's approved text (WEB-01i), and a contact route to `support@fairplayr.app` (WEB-01c).
 - The film behind a facade: no YouTube request before the visitor presses play (WEB-01j).
-- Metadata, canonical and hreflang, `robots.ts`, `sitemap.ts`, Open Graph image, structured data; app routes and the Vercel preview domain kept out of the index (WEB-01g, BRAND-01h).
+- Metadata, canonical and hreflang, `robots.ts`, `sitemap.ts`, Open Graph image, structured data; app routes and the Vercel preview domain kept out of the index (WEB-01g, BRAND-01h). **Done in phase 0:** metadata, canonical, hreflang, `robots.ts`, `sitemap.ts`, app-route `noindex`, `X-Robots-Tag` on `fair-playr.vercel.app`. **Left:** Open Graph image, structured data, a separate meta description per language (in the creative implementation), and turning `WEBSITE_INDEXABLE` on. When it is turned on, only the canonical production host may be indexable; every other Vercel host and every preview deployment stays `noindex` (owner decision 2026-10-28).
 - Performance budget (§7) and accessibility (§10) measured on the production build.
 - Public roadmap texts reviewed (`public.visible`, both languages).
 - `noindex` removed on the website only, as its own approved change.

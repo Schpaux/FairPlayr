@@ -165,11 +165,29 @@ describe("shell routes are user-agnostic (cache-safe HTML)", () => {
     ]);
   });
 
-  it("[locale]/layout.tsx pins the locale from the URL before getMessages()", () => {
+  it("[locale]/layout.tsx pins the locale from the URL and sends no messages itself", () => {
     const source = stripComments(readFileSync(path.join(APP, "[locale]/layout.tsx"), "utf8"));
-    const setAt = source.indexOf("setRequestLocale(locale)");
-    const messagesAt = source.indexOf("getMessages(");
-    expect(setAt).toBeGreaterThan(-1);
-    expect(messagesAt).toBeGreaterThan(setAt);
+    expect(source.indexOf("setRequestLocale(locale)")).toBeGreaterThan(-1);
+    expect(source).not.toContain("getMessages(");
+    expect(source).not.toContain("NextIntlClientProvider");
+  });
+
+  // WEB-01 phase 0: each route group sends its own messages to the browser.
+  it.each(["[locale]/(app)/layout.tsx", "[locale]/(public)/layout.tsx", "[locale]/(marketing)/layout.tsx"])(
+    "%s pins the locale from the URL before getMessages()",
+    (layout) => {
+      const source = stripComments(readFileSync(path.join(APP, layout), "utf8"));
+      const setAt = source.indexOf("setRequestLocale(locale)");
+      const messagesAt = source.indexOf("getMessages(");
+      expect(setAt).toBeGreaterThan(-1);
+      expect(messagesAt).toBeGreaterThan(setAt);
+      // Without `messages`, the provider would inherit every message.
+      expect(source).toMatch(/<NextIntlClientProvider\s+messages=\{messages\}>/);
+    }
+  );
+
+  it("the website passes only its client namespaces to the browser", () => {
+    const source = stripComments(readFileSync(path.join(APP, "[locale]/(marketing)/layout.tsx"), "utf8"));
+    expect(source).toMatch(/pickMessages\(await getMessages\(\), WEBSITE_CLIENT_NAMESPACES\)/);
   });
 });

@@ -90,6 +90,13 @@ describe("classifyRequest: handled", () => {
     }
   );
 
+  it.each(["/roadmap", "/no/roadmap", "/privacy", "/no/privacy", "/terms", "/no/terms", "/contact", "/no/contact"])(
+    "a future website page (%s) is network-first and never stored (WEB-01 phase 0)",
+    (path) => {
+      expect(classifyRequest(nav(path), ORIGIN)).toEqual({ kind: "navigate", pathname: path });
+    }
+  );
+
   it("other navigations are network-first", () => {
     expect(classifyRequest(nav("/no/historikk"), ORIGIN)).toEqual({ kind: "navigate", pathname: "/no/historikk" });
     expect(classifyRequest(nav("/no/match/abc"), ORIGIN)).toEqual({ kind: "navigate", pathname: "/no/match/abc" });

@@ -8,11 +8,11 @@ Oppdatert 2026-10-28. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); re
 
 | | Antall |
 | :- | -: |
-| Oppføringer totalt | 297 |
+| Oppføringer totalt | 298 |
 | Ferdige (`completed`) | 131 |
 | Åpne vedtatte (`committed`) | 135 |
 | Til vurdering (`considering`) | 27 |
-| Utsatt (`deferred`) | 4 |
+| Utsatt (`deferred`) | 5 |
 | Må verifiseres | 18 |
 | Offentlig synlige | 21 |
 
@@ -22,7 +22,7 @@ Produkteiers prioriterte utviklingsområder. Unntak: P0-feil som kan påvirke ka
 
 1. **ROADMAP-01** Roadmap-system som felles sannhetskilde (ferdig, implementert)
 2. **BRAND-01** FairPlayr Brand Refresh (vedtatt, implementert)
-3. **WEB-01** Ny landingsside og tydelig skille mellom nettside og app (vedtatt, ikke startet, etter ROADMAP-02, BRAND-01)
+3. **WEB-01** Ny landingsside og tydelig skille mellom nettside og app (vedtatt, pågår, etter ROADMAP-02, BRAND-01)
 4. **SMART-SUBS** Smart byttemotor (vedtatt, ikke startet)
 5. **FIX-POLISH** Samlet feilretting og UI-polish (vedtatt, pågår)
 6. **COMPETITOR-01** Funn fra konkurrentanalysen (vedtatt, ikke startet)
@@ -46,10 +46,10 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 | WEB-01j | P1 | ikke startet | Promofilm på nettsiden |  |
 | WEB-01l | P1 | ikke startet | Juridiske avklaringer før offentlig lansering av nettsiden |  |
 | BRAND-01g | P2 | ikke startet | Vurder øvrig markedsføringsmateriell |  |
-| WEB-01b | P2 | ikke startet | FairPlayr-branding på nettsiden |  |
+| WEB-01b | P2 | pågår | FairPlayr-branding på nettsiden |  |
 | WEB-01c | P2 | ikke startet | Kontaktinformasjon |  |
 | WEB-01e | P2 | ikke startet | Offentlig roadmap-visning (Immich-inspirert) |  |
-| WEB-01g | P2 | ikke startet | SEO og metadata for nettsiden |  |
+| WEB-01g | P2 | pågår | SEO og metadata for nettsiden |  |
 | WEB-01i | P2 | ikke startet | Personvernerklæring og brukervilkår på nettsiden |  |
 | WEB-01k | P2 | ikke startet | Interaktiv kampdemo på nettsiden |  |
 | WEB-01f | P3 | ikke startet | Markedsføring av nye funksjoner |  |
@@ -265,6 +265,7 @@ Bevisst parkert.
 | :- | :- | :- | :- |
 | MATCH-07 | P2 | FP-MS2.1-A2: øvrige endringer i bytteforslag | SMART-SUBS |
 | FEAT-NAME-02 | P3 | Valgfrie kallenavn på spillere | INIT-TEAM |
+| FEAT-SHARE-07 | P3 | Bare nødvendige oversettelser på den offentlige kampsiden | INIT-SHARING |
 | MATCH-13-F2 | P3 | Aktiv kamp startet før MATCH-13 får ingen server-ID | FIX-POLISH |
 | MATCH-14-F1 | P3 | Rett format på allerede fullførte kamper | FIX-POLISH |
 
