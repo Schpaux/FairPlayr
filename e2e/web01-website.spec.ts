@@ -56,10 +56,13 @@ for (const theme of THEMES) {
         // No hreflang Link header from next-intl (it would name this host and `no`).
         expect(response?.headers()["link"] ?? "").not.toContain("hreflang");
 
+        // Only the hero demo's strings reach the page (WEB-01 phase 1): the
+        // live screen's `matchLive.sideline`, not the rest of the app.
         const html = await page.content();
-        for (const appNamespace of ["matchPlanner", "matchLive", "matchHistory", "publicMatch", "teamSwitcher", "activeMatchBanner"]) {
+        for (const appNamespace of ["matchPlanner", "matchHistory", "publicMatch", "teamSwitcher", "activeMatchBanner", "endingSequence"]) {
           expect(html, appNamespace).not.toContain(appNamespace);
         }
+        await expect(page.getByRole("figure", { name: /FairPlayr/ })).toBeVisible();
         expect(problems).toEqual([]);
       });
     }

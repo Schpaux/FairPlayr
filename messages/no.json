@@ -1392,11 +1392,74 @@
     "kickoffHelp": "Gir nedtelling på kampsiden. Uten tidspunkt står det «Venter på avspark» til du starter kampen."
   },
   "marketing": {
-    "placeholder": {
+    "home": {
       "metaTitle": "Rettferdig spilletid i barnefotballen",
-      "title": "Rettferdig spilletid, rett fra sidelinjen",
-      "body": "FairPlayr hjelper treneren med bytter og spilletid i kampen, så alle får spille.",
-      "openApp": "Åpne appen"
+      "metaDescription": "FairPlayr teller minuttene mens kampen går, viser hvem som har spilt minst og foreslår bytter. Treneren bestemmer. Virker uten nett.",
+      "skip": "Hopp til innholdet",
+      "nav": {
+        "label": "Nettstedet",
+        "how": "Slik virker det",
+        "minutes": "Spilletid",
+        "language": "English",
+        "languageLabel": "Read in English",
+        "openApp": "Til appen"
+      },
+      "hero": {
+        "kicker": "For trenere i barne- og ungdomsfotball",
+        "title": "Alle får spille.",
+        "titleSecond": "Og du ser det.",
+        "lede": "FairPlayr teller minuttene mens kampen går. Benken står med minst spilt først, og appen foreslår et bytte når forskjellen blir stor. Du bestemmer.",
+        "cta": "Åpne appen",
+        "secondary": "Slik virker det",
+        "assurance": "Ingen registrering for å prøve · Virker uten nett"
+      },
+      "story": {
+        "title": "Tallet på spilleren er minuttene.",
+        "lede": "Det er det hele appen er bygd rundt. Ikke en vurdering, ikke en poengsum: hvor lenge hver spiller har vært på banen.",
+        "rows": {
+          "minutes": {
+            "figure": "16′",
+            "title": "Total spilletid, alltid synlig",
+            "body": "Hver spiller bærer minuttene sine, på banen og på benken. Ringen rundt nummeret viser tiden siden siste hvil, og nullstilles når spilleren går ut og i pausen."
+          },
+          "gap": {
+            "figure": "4′",
+            "title": "Et forslag, ikke en autopilot",
+            "body": "Appen foreslår et bytte først når forskjellen er minst fire minutter, og keeperen foreslås aldri. Du trykker Velg, og velger selv hvem som kommer inn."
+          },
+          "undo": {
+            "figure": "5 s",
+            "title": "Alt kan rettes",
+            "body": "Hvert bytte kan angres i fem sekunder, og mål kan rettes i hendelsene etterpå. Resultat og spilletid stemmer alltid med det som faktisk skjedde."
+          }
+        },
+        "offlineTitle": "Lagret på telefonen først",
+        "offlineBody": "Kampen går like godt uten nett. Alt lagres på enheten, og sendes når dekningen er tilbake.",
+        "cta": "Prøv den på neste kamp"
+      },
+      "footer": {
+        "contact": "Kontakt",
+        "note": "Spillere og kamper i demoen er oppdiktet."
+      }
+    },
+    "demo": {
+      "label": "Demo av kampskjermen i FairPlayr, med oppdiktede spillere",
+      "description": "Klokka går i første omgang. Selma har spilt 4 minutter og Maja 16, så appen foreslår Selma inn for Maja. Treneren velger, byttet gjøres og kan angres i fem sekunder. Benken sorteres så med minst spilt først.",
+      "pause": "Sett demoen på pause",
+      "play": "Spill av demoen",
+      "ledgerTitle": "Spilletid",
+      "ledgerSub": "Minst spilt først",
+      "onField": "På banen",
+      "onBench": "Benk",
+      "keeper": "Keeper",
+      "spread": "Forskjell, mest og minst spilt",
+      "minutesUnit": "min",
+      "beats": {
+        "suggestion": "Selma har spilt 4 minutter, Maja 16. Appen foreslår et bytte.",
+        "selection": "Treneren trykker Velg. Maja er valgt.",
+        "undo": "Selma inn, Maja ut. Byttet kan angres i fem sekunder.",
+        "settled": "Benken sorteres på nytt: minst spilt først."
+      }
     }
   }
 }

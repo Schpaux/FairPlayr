@@ -246,6 +246,52 @@
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   Website extensions (MARKETING.md §3, WEB-01 phase 1). Used only in
+   `(marketing)` and `src/components/marketing/` (designGuard website
+   profile). No new hues: every value is a §2 token value (the night scene is
+   the dark canvas, dark grass and chalk, whatever the coach's theme).
+───────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Night scene: the dark theme's canvas, surface, grass and chalk. */
+  --fp-web-night: #121B16;
+  --fp-web-night-2: #1A2620;
+  --fp-web-night-grass: #1E4B31;
+  --fp-web-night-stripe: #1B452D;
+  --fp-web-chalk: #F2EFE7;
+  --fp-web-chalk-2: #A4B3A9;
+  --fp-web-chalk-line: color-mix(in oklch, #F2EFE7 30%, transparent);
+  --fp-web-chalk-faint: color-mix(in oklch, #F2EFE7 12%, transparent);
+
+  /* Floodlights over the pitch, falling off into the night. */
+  --fp-web-floodlight:
+    radial-gradient(60% 55% at 18% -8%, color-mix(in oklch, #F2EFE7 16%, transparent), transparent 70%),
+    radial-gradient(55% 50% at 86% -10%, color-mix(in oklch, #F2EFE7 12%, transparent), transparent 70%);
+  /* The pitch plane: grass with mowing stripes. */
+  --fp-web-turf: repeating-linear-gradient(180deg, #1E4B31 0 9%, #1B452D 9% 18%);
+  /* Grass fading into the night at the far edge and into the canvas below. */
+  --fp-web-turf-fade: linear-gradient(180deg, #121B16 0%, #121B16 36%, color-mix(in oklch, #121B16 55%, transparent) 56%, transparent 82%);
+  --fp-web-hero-floor: linear-gradient(180deg, transparent 0%, #121B16 100%);
+  /* Depth under a device or panel standing on the pitch. */
+  --fp-web-shadow-device: 0 40px 80px -24px color-mix(in oklch, #0A1C13 80%, transparent), 0 0 0 1px color-mix(in oklch, #F2EFE7 8%, transparent);
+  --fp-web-shadow-panel: 0 24px 60px -20px color-mix(in oklch, #0A1C13 75%, transparent);
+
+  /* Display scale (the app stops at Display 30px). */
+  --fp-web-display: clamp(2.6rem, 1.4rem + 4.6vw, 5.25rem);
+  --fp-web-title: clamp(2rem, 1.3rem + 2.6vw, 3.25rem);
+  --fp-web-figure: clamp(4.5rem, 2.8rem + 6vw, 8.5rem);
+  --fp-web-lede: clamp(1.0625rem, 0.98rem + 0.35vw, 1.25rem);
+
+  /* Section rhythm (the 4px base and 16px mobile gutter stay). */
+  --fp-web-gutter: clamp(1rem, 0.4rem + 2.6vw, 2.5rem);
+  --fp-web-section: clamp(4.5rem, 2.5rem + 8vw, 10rem);
+
+  /* Website motion: the app's curves, longer for orchestrated moments. */
+  --fp-web-d-reveal: 900ms;
+  --fp-web-d-lights: 1600ms;
+  --fp-web-d-reorder: 520ms;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
    Dark Theme — floodlight mode (DESIGN.md §2)
    Same club green, lime and grass; only the surfaces change.
 ───────────────────────────────────────────────────────────────────────────── */
