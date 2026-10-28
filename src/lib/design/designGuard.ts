@@ -22,7 +22,7 @@
  *                  rgb()/hsl()/oklch() literals, Tailwind palette classes
  *                  (`bg-red-500`, `text-white`, …) and `bg-black/50`-style scrims
  *
- * Profiles (WEB-01b, DESIGN.md §10): the public website (`WEBSITE_SCOPE`) may
+ * Profiles (WEB-01b, DESIGN.md §11): the public website (`WEBSITE_SCOPE`) may
  * use glow, static blur, hover motion, gradients and CSS-3D. It is checked
  * for what MARKETING.md §6 forbids there instead:
  *   - animatedFilter: `filter`/`backdrop-filter` in keyframes, transitions or
@@ -61,7 +61,7 @@ export type GuardRule =
 
 export type GuardProfile = "app" | "website";
 
-/** The website's source (WEB-01b). Locked by a test: widen it only with DESIGN.md §10. */
+/** The website's source (WEB-01b). Locked by a test: widen it only with DESIGN.md §11. */
 export const WEBSITE_SCOPE = ["src/app/[locale]/(marketing)/", "src/components/marketing/"] as const;
 
 /** The profile a repo-relative path (forward slashes) is checked with. */

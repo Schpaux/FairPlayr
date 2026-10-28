@@ -8181,7 +8181,13 @@
           "note": "Punkt 4: trimming av oversettelser på offentlig kampside utsettes"
         }
       ],
-      "updated": "2026-10-28"
+      "updated": "2026-10-28",
+      "changelog": [
+        {
+          "date": "2026-10-28",
+          "note": "Opprettet som utsatt etter produkteiers beslutning ved godkjenningen av WEB-01 fase 0 (punkt 4)."
+        }
+      ]
     },
     {
       "id": "FEAT-SHARE-01-V1",

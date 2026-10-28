@@ -110,7 +110,7 @@ export function websiteRobotsTxt(indexable = WEBSITE_INDEXABLE): MetadataRoute.R
 export function noindexHostHeaders() {
   return NOINDEX_HOSTS.map((host) => ({
     source: "/:path*",
-    has: [{ type: "host" as const, value: host.replace(/\./g, "\\.") }],
+    has: [{ type: "host" as const, value: host.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") }],
     headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
   }));
 }
