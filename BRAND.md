@@ -1,6 +1,6 @@
 # FairPlayr brand
 
-**Status:** approved by the product owner, authoritative. **Version:** 1.0 (2026-10-27, BRAND-01), from brand package v1.0, direction «Neste spiller».
+**Status:** approved by the product owner, authoritative. **Version:** 1.1 (2026-10-28, approved wordmark accent), based on brand package v1.0, direction «Neste spiller».
 
 This document is the single source of truth for the FairPlayr **brand**: the logo, its variants, brand colours, app icons and how the brand is used in the app, on public pages and on the coming website (WEB-01). [DESIGN.md](DESIGN.md) stays the single source of truth for **Modern Sideline**, the design language of the interface. Where the two meet (colour tokens), they use the same values; if they ever disagree on the logo or icons, this document wins, and on everything else in the UI, DESIGN.md wins.
 
@@ -41,7 +41,7 @@ SVG is the master. PNG exports in the brand package are for presentations and pu
 - **Clear space:** at least one stem width (40/256 of the symbol grid) on every side. The master view boxes include margin, but not always a full 40 units (the symbol master has 36 on the right): keep clear space around the box as well.
 - **Minimum size on screen:** horizontal logo 150px wide; symbol 24px; the small cut for 16–23px. In print: symbol 8mm, logo 40mm.
 - **Never** stretch, rotate, redraw, re-space, recolour or move the dot. No gradient, glow, shadow, outline, 3D or live text. Do not build the tagline into the logo.
-- **The dot is never lime** by default. Lime belongs to the next action (DESIGN.md §1).
+- **The dot and F symbol are never lime.** The only approved two-tone exception is the final lowercase `r` of the outlined FairPlayr wordmark: `#4D8C1F` on light and `#9FE870` on dark. All other letterforms retain their existing colour and geometry.
 - **Two geometries:** the chalk and white masters have an F stem one unit wider than the club and black masters (41 vs 40 units; the package gives no reason). Use the chalk master on dark grounds and the club master on light grounds; never just recolour one into the other.
 
 ---
@@ -55,13 +55,13 @@ The brand colours are the Modern Sideline tokens (DESIGN.md §2); the brand pack
 | Klubbgrønt (club green) | `#0E4D33` | `club` | Identity; the logo on light grounds; app icon background |
 | Kalkhvitt (chalk) | `#F2EFE7` | `on-club` | The logo on club green or the dark canvas |
 | Mørk canvas (dark canvas) | `#121B16` | `canvas` (dark) | Dark background, PWA theme and splash |
-| Lime | `#9FE870` | `lime` | Next action only; never in the logo |
+| Lime | `#9FE870` | `lime` | Next action; also the last wordmark `r` on dark backgrounds |
 | On lime | `#0B2E1A` | `on-lime` | Text on lime |
 | Ink | `#111A15` | `ink` (light) | Text |
 | Light | `#F9FAF8` | `canvas` (light) | Light background |
 | Muted | `#A4B3A9` | `ink-2` (dark) | Secondary text on dark |
 
-**Logo colour:** `--fp-brand-mark` (Tailwind `text-fp-brand-mark`) is club green in the light theme and chalk in the dark theme. On a club-green panel, the logo is chalk.
+**Logo colour:** `--fp-brand-mark` (Tailwind `text-fp-brand-mark`) is club green in the light theme and chalk in the dark theme. `--fp-brand-wordmark-accent` is `#4D8C1F` on light and `#9FE870` on dark, used **only** for the final lowercase `r` in the wordmark. The F-and-dot symbol is always monochrome and unchanged. For use on club-green panels, ensure the chalk wordmark and lime final `r` remain legible.
 
 Colours are sRGB screen values. No Pantone match or print profile exists yet (BRAND-01i): proof any print job.
 
@@ -126,6 +126,8 @@ The logo animation in the brand package: the dot glides into place in 0.9 s, wit
 - **Brand package v1.0** (2026-10-27): a local, unversioned folder (`design-exploration/FairPlayr-Brand-package-v1/`). It is source material: keep it unchanged and copy only the files needed into the repo. It also holds the brand guide (PDF), SoMe templates, video end card, presentation, logo motion demo, brand tokens and AI briefs.
 - The logo is an original construction for FairPlayr. Inter and Barlow Condensed are SIL Open Font License 1.1.
 - **Not done:** trademark clearance, Pantone match and an ICC-profiled print master (BRAND-01i). Clear these before a larger public launch.
+
+**Brand v1.1 (2026-10-28):** approved two-tone last `r` on horizontal and stacked logo SVG masters and in `BrandLogo`. The local source package v1.0 remains unchanged and is not claimed to be regenerated. Standalone wordmark, presentations, PNG exports, email assets and other package-only artefacts require separate regeneration from updated masters when needed.
 
 ## 9. Open needs
 

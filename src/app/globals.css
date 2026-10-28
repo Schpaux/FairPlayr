@@ -145,6 +145,7 @@
   --fp-on-club-2: #B7CCBE;
   --fp-club-disc: #0E4D33;       /* shirt discs off the pitch */
   --fp-brand-mark: var(--fp-club);  /* the logo: club green on light (BRAND.md §3) */
+  --fp-brand-wordmark-accent: #4D8C1F; /* Brand v1.1, final r only */
 
   --fp-lime: #9FE870;           /* "your next action" — fill/ring/underline only, never text on light */
   --fp-on-lime: #0B2E1A;
@@ -264,6 +265,7 @@
 
   --fp-club-disc: #1D6345;       /* lifted so discs separate from the dark canvas */
   --fp-brand-mark: var(--fp-on-club);  /* the logo: chalk on the dark canvas (BRAND.md §3) */
+  --fp-brand-wordmark-accent: #9FE870; /* Brand v1.1, final r only */
 
   --fp-grass: #1E4B31;
   --fp-grass-stripe: #1B452D;
