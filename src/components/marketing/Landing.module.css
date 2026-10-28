@@ -1,0 +1,927 @@
+/*
+ * The website's front page (WEB-01 phase 1, MARKETING.md §5–§7).
+ *
+ * A floodlit match: the hero is always night (`.dark` + the `--fp-web-*`
+ * night tokens), the rest of the page follows the theme. One bold thing: the
+ * app's live screen with the playing-time ledger beside it. Motion is
+ * transform and opacity only; time-based motion is cut by the reduced-motion
+ * rule in globals.css, and every scroll-linked effect below sits inside
+ * `@media (prefers-reduced-motion: no-preference)` and `@supports`.
+ */
+
+.page {
+  background: var(--fp-canvas);
+  color: var(--fp-ink);
+  overflow-x: clip;
+}
+
+.skip {
+  position: absolute;
+  left: 16px;
+  top: -64px;
+  z-index: 80;
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: var(--fp-surface);
+  color: var(--fp-ink);
+  font-weight: 600;
+}
+
+.skip:focus-visible {
+  top: 12px;
+  outline: 2px solid var(--fp-focus);
+  outline-offset: 2px;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────── */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  color: var(--fp-web-chalk);
+  background: color-mix(in oklch, var(--fp-web-night) 90%, transparent);
+  backdrop-filter: saturate(140%) blur(14px);
+  -webkit-backdrop-filter: saturate(140%) blur(14px);
+  border-bottom: 1px solid var(--fp-web-chalk-faint);
+}
+
+.headerInner {
+  max-width: 1320px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 64px;
+  padding: env(safe-area-inset-top) max(var(--fp-web-gutter), env(safe-area-inset-right)) 0
+    max(var(--fp-web-gutter), env(safe-area-inset-left));
+}
+
+.headerLogo {
+  display: inline-flex;
+  margin-left: -7px;
+  border-radius: 8px;
+}
+
+.headerNav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.headerLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--fp-web-chalk-2);
+  transition: color var(--fp-d-quick) var(--fp-ease-out);
+}
+
+.headerLink:first-child,
+.headerLinkWide {
+  display: none;
+}
+
+.headerApp {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  margin-left: 4px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--fp-web-chalk);
+  box-shadow: inset 0 0 0 1.5px var(--fp-web-chalk-line);
+  transition: box-shadow var(--fp-d-quick) var(--fp-ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .headerLink:hover {
+    color: var(--fp-web-chalk);
+  }
+  .headerApp:hover {
+    box-shadow: inset 0 0 0 1.5px var(--fp-web-chalk);
+  }
+}
+
+.headerLink:focus-visible,
+.headerApp:focus-visible,
+.headerLogo:focus-visible {
+  outline: 2px solid var(--fp-focus);
+  outline-offset: 2px;
+}
+
+@media (min-width: 640px) {
+  .headerLink:first-child {
+    display: inline-flex;
+  }
+}
+
+@media (min-width: 900px) {
+  .headerLinkWide {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 380px) {
+  .headerApp {
+    padding: 0 12px;
+  }
+  .headerLink {
+    padding: 0 8px;
+  }
+}
+
+/* ── Hero: the night scene ────────────────────────────────────────────── */
+.hero {
+  position: relative;
+  isolation: isolate;
+  margin-top: -65px;
+  padding-top: 65px;
+  background: var(--fp-web-night);
+  color: var(--fp-web-chalk);
+  overflow: clip;
+}
+
+.scene {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  perspective: 1100px;
+  perspective-origin: 50% 0%;
+  pointer-events: none;
+}
+
+/* The pitch plane, tilted away from the viewer and lit from above. */
+.turf {
+  position: absolute;
+  left: -30%;
+  right: -30%;
+  top: 34%;
+  height: 120%;
+  transform-origin: 50% 0%;
+  transform: rotateX(64deg);
+  background: var(--fp-web-turf);
+}
+
+.turfLines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: var(--fp-web-chalk-line);
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.turfFade {
+  position: absolute;
+  inset: 0;
+  background: var(--fp-web-turf-fade);
+}
+
+.lights {
+  position: absolute;
+  inset: 0;
+  background: var(--fp-web-floodlight);
+  animation: lightsOn var(--fp-web-d-lights) var(--fp-ease-out) 200ms both;
+}
+
+.floor {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 30%;
+  background: var(--fp-web-hero-floor);
+}
+
+@keyframes lightsOn {
+  0% { opacity: 0; }
+  30% { opacity: 0.55; }
+  38% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
+.heroGrid {
+  position: relative;
+  max-width: 1320px;
+  margin: 0 auto;
+  display: grid;
+  gap: 40px;
+  padding: clamp(28px, 6vw, 72px) max(var(--fp-web-gutter), env(safe-area-inset-right)) 0
+    max(var(--fp-web-gutter), env(safe-area-inset-left));
+}
+
+.heroCopy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: 34rem;
+}
+
+.kicker {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--fp-web-chalk-2);
+  animation: rise var(--fp-web-d-reveal) var(--fp-ease-land) 80ms both;
+}
+
+.heroTitle {
+  margin-top: 14px;
+  font-size: var(--fp-web-display);
+  font-weight: 700;
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+
+.heroLine {
+  display: block;
+  animation: rise var(--fp-web-d-reveal) var(--fp-ease-land) both;
+}
+
+.heroLine:first-child {
+  animation-delay: 160ms;
+}
+
+.heroLine:last-child {
+  animation-delay: 280ms;
+}
+
+.heroLede {
+  margin-top: 24px;
+  max-width: 31rem;
+  font-size: var(--fp-web-lede);
+  line-height: 1.6;
+  color: var(--fp-web-chalk-2);
+  text-wrap: pretty;
+  animation: rise var(--fp-web-d-reveal) var(--fp-ease-land) 400ms both;
+}
+
+.heroActions {
+  margin-top: 32px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  width: 100%;
+  animation: rise var(--fp-web-d-reveal) var(--fp-ease-land) 500ms both;
+}
+
+.heroCta {
+  min-width: 12rem;
+}
+
+.heroSecondary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--fp-web-chalk);
+  text-decoration: underline;
+  text-decoration-color: var(--fp-web-chalk-line);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 6px;
+  border-radius: 6px;
+  transition: text-decoration-color var(--fp-d-quick) var(--fp-ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .heroSecondary:hover {
+    text-decoration-color: var(--fp-web-chalk);
+  }
+}
+
+.heroSecondary:focus-visible {
+  outline: 2px solid var(--fp-focus);
+  outline-offset: 4px;
+}
+
+.assurance {
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--fp-web-chalk-2);
+  animation: rise var(--fp-web-d-reveal) var(--fp-ease-land) 600ms both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── The demo: device + ledger ────────────────────────────────────────── */
+.demo {
+  --device-w: 100%;
+  --device-h: min(660px, calc(100svh - 120px));
+  position: relative;
+  display: grid;
+  gap: 16px;
+  perspective: 1400px;
+  animation: deviceIn 1100ms var(--fp-ease-land) 450ms both;
+}
+
+@keyframes deviceIn {
+  from {
+    opacity: 0;
+    transform: translateY(48px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.device {
+  position: relative;
+  width: var(--device-w);
+  height: max(560px, var(--device-h));
+  padding: 6px;
+  border-radius: 34px;
+  background: var(--fp-web-night-2);
+  box-shadow: var(--fp-web-shadow-device);
+  transform-style: preserve-3d;
+}
+
+.deviceScreen {
+  position: relative;
+  height: 100%;
+  border-radius: 28px;
+  overflow: hidden;
+  /* A new containing block: the live screen's fixed layers stay inside. */
+  transform: translateZ(0);
+}
+
+.deviceLive {
+  animation: screenIn 600ms var(--fp-ease-out) both;
+}
+
+@keyframes screenIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* The ledger: playing time as a balance that must be right. */
+.ledger {
+  --row-h: 40px;
+  --rows-shown: 4;
+  position: relative;
+  padding: 18px 18px 16px;
+  border-radius: 20px;
+  background: color-mix(in oklch, var(--fp-web-night-2) 88%, transparent);
+  box-shadow: var(--fp-web-shadow-panel), inset 0 0 0 1px var(--fp-web-chalk-faint);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  color: var(--fp-web-chalk);
+}
+
+.ledgerHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--fp-web-chalk-faint);
+}
+
+.ledgerTitle {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.ledgerSub {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--fp-web-chalk-2);
+}
+
+.ledgerClock {
+  font-size: 28px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--fp-web-chalk);
+}
+
+.ledgerList {
+  position: relative;
+  height: calc(var(--rows-shown) * var(--row-h));
+  overflow: hidden;
+  list-style: none;
+}
+
+.ledgerRow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: var(--row-h);
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto 3.2rem;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--fp-web-chalk-faint);
+  transform: translateY(calc(var(--i) * var(--row-h)));
+  transition: transform var(--fp-web-d-reorder) var(--fp-ease-land);
+}
+
+.ledgerDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1.5px var(--fp-web-chalk-2);
+}
+
+.ledgerRowOn .ledgerDot {
+  background: var(--fp-web-chalk);
+  box-shadow: none;
+}
+
+.ledgerName {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ledgerState {
+  font-size: 13px;
+  color: var(--fp-web-chalk-2);
+  white-space: nowrap;
+}
+
+.ledgerMinutes {
+  display: inline-flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  font-size: 26px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.ledgerUnit {
+  margin-left: 1px;
+  color: var(--fp-web-chalk-2);
+}
+
+.ledgerFigure {
+  display: inline-block;
+  animation: tick 480ms var(--fp-ease-land) both;
+}
+
+@keyframes tick {
+  from {
+    opacity: 0;
+    transform: translateY(45%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.ledgerRowIn::before {
+  content: "";
+  position: absolute;
+  inset: 3px -8px;
+  z-index: -1;
+  border-radius: 10px;
+  background: var(--fp-web-chalk-faint);
+  animation: screenIn 300ms var(--fp-ease-out) both;
+}
+
+.ledgerFoot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 14px;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--fp-web-chalk-2);
+}
+
+.ledgerSpread {
+  display: inline-flex;
+  align-items: baseline;
+  font-size: 40px;
+  line-height: 0.9;
+  color: var(--fp-web-chalk);
+  font-variant-numeric: tabular-nums;
+}
+
+.demoBar {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 8px;
+}
+
+.demoToggle {
+  grid-row: 1 / span 2;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  color: var(--fp-web-chalk);
+  box-shadow: inset 0 0 0 1.5px var(--fp-web-chalk-line);
+  transition: transform var(--fp-d-press) var(--fp-ease-out);
+}
+
+.demoToggle:active {
+  transform: scale(0.94);
+}
+
+.demoToggle:focus-visible {
+  outline: 2px solid var(--fp-focus);
+  outline-offset: 2px;
+}
+
+.demoCaption {
+  min-height: 2.6em;
+  display: flex;
+  align-items: flex-end;
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--fp-web-chalk-2);
+}
+
+.demoCaptionText {
+  animation: rise 420ms var(--fp-ease-out) both;
+}
+
+.demoProgress {
+  position: relative;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--fp-web-chalk-faint);
+  overflow: hidden;
+}
+
+.demoProgressFill {
+  position: absolute;
+  inset: 0;
+  background: var(--fp-web-chalk-2);
+  transform-origin: 0 50%;
+  transition: transform 200ms linear;
+}
+
+/* ── The centre circle across the section edge ────────────────────────── */
+.arc {
+  display: block;
+  width: min(380px, 72vw);
+  height: auto;
+  margin: 0 auto;
+  overflow: visible;
+  fill: none;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.arc path {
+  vector-effect: non-scaling-stroke;
+}
+
+.arcTop {
+  position: relative;
+  margin-top: clamp(48px, 7vw, 88px);
+  stroke: var(--fp-web-chalk-line);
+}
+
+.arcTop circle {
+  fill: var(--fp-web-chalk-line);
+  stroke: none;
+}
+
+/* The halfway line: the hero's last pixel row. */
+.hero::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1.5px;
+  background: var(--fp-web-chalk-line);
+}
+
+.arcBottom {
+  stroke: var(--fp-rule-strong);
+}
+
+/* ── Story: the minutes ───────────────────────────────────────────────── */
+.story {
+  scroll-margin-top: 48px;
+  padding-bottom: var(--fp-web-section);
+  background: var(--fp-canvas);
+}
+
+.storyInner {
+  max-width: 1320px;
+  margin: 0 auto;
+  margin-top: clamp(24px, 4vw, 48px);
+  padding: 0 max(var(--fp-web-gutter), env(safe-area-inset-right)) 0 max(var(--fp-web-gutter), env(safe-area-inset-left));
+}
+
+.storyHead {
+  max-width: 44rem;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.storyTitle {
+  font-size: var(--fp-web-title);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.storyLede {
+  margin: 20px auto 0;
+  max-width: 36rem;
+  font-size: var(--fp-web-lede);
+  line-height: 1.6;
+  color: var(--fp-ink-2);
+  text-wrap: pretty;
+}
+
+.storyRows {
+  margin-top: clamp(48px, 8vw, 104px);
+  list-style: none;
+  border-top: 1px solid var(--fp-rule);
+}
+
+.storyRow {
+  display: grid;
+  gap: 8px 48px;
+  padding: clamp(28px, 4vw, 48px) 0;
+  border-bottom: 1px solid var(--fp-rule);
+}
+
+.storyFigure {
+  font-size: var(--fp-web-figure);
+  line-height: 0.85;
+  letter-spacing: -0.01em;
+  color: var(--fp-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.storyText {
+  max-width: 36rem;
+}
+
+.storyRowTitle {
+  font-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.625rem);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+
+.storyBody {
+  margin-top: 8px;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--fp-ink-2);
+  text-wrap: pretty;
+}
+
+.storyClose {
+  margin-top: clamp(40px, 6vw, 72px);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px 40px;
+}
+
+.offline {
+  display: flex;
+  gap: 16px;
+  max-width: 34rem;
+}
+
+.offlineIcon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--fp-ink-2);
+}
+
+.offlineTitle {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+@media (min-width: 768px) {
+  .storyRow {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: end;
+  }
+}
+
+/* ── Footer ───────────────────────────────────────────────────────────── */
+.footer {
+  border-top: 1px solid var(--fp-rule);
+  background: var(--fp-canvas);
+}
+
+.footerInner {
+  max-width: 1320px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 32px;
+  padding: 32px max(var(--fp-web-gutter), env(safe-area-inset-right)) calc(32px + env(safe-area-inset-bottom))
+    max(var(--fp-web-gutter), env(safe-area-inset-left));
+}
+
+.footerNote {
+  font-size: 14px;
+  color: var(--fp-ink-2);
+}
+
+.footerNote a {
+  color: var(--fp-ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* ── Tablet: copy above, device and ledger side by side ───────────────── */
+@media (min-width: 768px) {
+  .demo {
+    --device-w: 384px;
+    --device-h: 740px;
+    grid-template-columns: var(--device-w) minmax(0, 300px);
+    grid-template-areas:
+      "device ledger"
+      "device bar";
+    justify-content: center;
+    align-items: end;
+    column-gap: 28px;
+  }
+  .device {
+    grid-area: device;
+  }
+  .ledger {
+    --rows-shown: 10;
+    grid-area: ledger;
+  }
+  .demoBar {
+    grid-area: bar;
+    padding: 0 4px 12px;
+  }
+}
+
+/* ── Desktop: the stage. Copy left, the device standing on the pitch. ─── */
+@media (min-width: 1180px) {
+  .hero {
+    min-height: min(100svh, 1000px);
+  }
+  .heroGrid {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 48px;
+    padding-top: clamp(40px, 6vh, 80px);
+  }
+  .heroCopy {
+    padding-bottom: 80px;
+  }
+  .demo {
+    --device-w: 384px;
+    --device-h: 740px;
+    grid-template-columns: var(--device-w) 280px;
+    column-gap: 0;
+  }
+  .device {
+    transform: rotateY(-9deg) rotateX(3deg);
+    z-index: 1;
+  }
+  .ledger,
+  .demoBar {
+    transform: translateX(-20px) translateZ(60px);
+    z-index: 2;
+  }
+  .ledger {
+    --row-h: 36px;
+    margin-bottom: 8px;
+  }
+  .heroTitle {
+    font-size: min(var(--fp-web-display), 4.25rem);
+  }
+  .demoBar {
+    padding-left: 44px;
+  }
+  .turf {
+    top: 40%;
+  }
+}
+
+/* ── Phones: the screen is the hero image, the ledger shows the four
+      least-played under it. ───────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .heroCopy {
+    max-width: none;
+  }
+  .heroActions > :first-child {
+    flex: 1 1 100%;
+  }
+  .heroSecondary {
+    margin: 0 auto;
+  }
+  .assurance {
+    align-self: center;
+    text-align: center;
+  }
+  .demo {
+    margin: 0 calc(-1 * var(--fp-web-gutter) + 8px);
+  }
+  .device {
+    height: min(640px, calc(100svh - 56px));
+    min-height: 540px;
+    border-radius: 30px;
+  }
+  .deviceScreen {
+    border-radius: 24px;
+  }
+  .ledger {
+    margin: 4px 8px 0;
+  }
+  .demoBar {
+    padding: 0 12px;
+  }
+  .turf {
+    top: 22%;
+  }
+}
+
+/* ── Scroll-linked: the device straightens and lifts as the hero leaves,
+      the centre circle draws in as the story arrives. Progressive. ─────── */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    @media (min-width: 1180px) {
+      .device {
+        animation: straighten linear both;
+        animation-timeline: view();
+        animation-range: exit -10% exit 80%;
+      }
+    }
+    .arc path {
+      stroke-dasharray: 1;
+      animation: drawArc linear both;
+      animation-timeline: view();
+      animation-range: entry 10% cover 45%;
+    }
+    .storyFigure {
+      animation: figureIn linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 90%;
+    }
+  }
+}
+
+@keyframes straighten {
+  from {
+    transform: rotateY(-9deg) rotateX(3deg);
+  }
+  to {
+    transform: rotateY(0deg) rotateX(14deg) translateY(-40px);
+  }
+}
+
+@keyframes drawArc {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes figureIn {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

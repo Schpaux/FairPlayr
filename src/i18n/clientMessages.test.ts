@@ -18,8 +18,9 @@ describe("pickMessages (WEB-01 phase 0)", () => {
     expect(() => pickMessages(messages, ["common.appName.x"])).toThrow();
   });
 
-  it("the website sends no messages to the browser in phase 0, and every listed namespace exists in both languages", () => {
-    expect(WEBSITE_CLIENT_NAMESPACES).toEqual([]);
+  it("the website sends only its islands' messages to the browser, and every listed namespace exists in both languages", () => {
+    // The hero demo renders the app's live components (WEB-01 phase 1): their strings, nothing else of the app.
+    expect(WEBSITE_CLIENT_NAMESPACES).toEqual(["marketing.demo", "matchLive.sideline", "restore.storageError"]);
     expect(() => pickMessages(en, WEBSITE_CLIENT_NAMESPACES)).not.toThrow();
     expect(() => pickMessages(no, WEBSITE_CLIENT_NAMESPACES)).not.toThrow();
   });

@@ -1392,11 +1392,74 @@
     "kickoffHelp": "Shows a countdown on the match page. Without a time it says “Waiting for kick-off” until you start the match."
   },
   "marketing": {
-    "placeholder": {
+    "home": {
       "metaTitle": "Fair playing time in grassroots football",
-      "title": "Fair playing time, right from the sideline",
-      "body": "FairPlayr helps the coach with substitutions and playing time during the match, so every player gets a game.",
-      "openApp": "Open the app"
+      "metaDescription": "FairPlayr counts the minutes during the match, shows who has played least and suggests substitutions. The coach decides. Works offline.",
+      "skip": "Skip to content",
+      "nav": {
+        "label": "Website",
+        "how": "How it works",
+        "minutes": "Playing time",
+        "language": "Norsk",
+        "languageLabel": "Les på norsk",
+        "openApp": "Open app"
+      },
+      "hero": {
+        "kicker": "For grassroots and youth football coaches",
+        "title": "Everyone plays.",
+        "titleSecond": "And you can see it.",
+        "lede": "FairPlayr counts the minutes while the match is on. The bench lists who has played least first, and the app suggests a substitution when the gap grows. You decide.",
+        "cta": "Open the app",
+        "secondary": "How it works",
+        "assurance": "No sign-up to try it · Works offline"
+      },
+      "story": {
+        "title": "The number on a player is their minutes.",
+        "lede": "The whole app is built around it. Not a rating, not a score: how long each player has been on the pitch.",
+        "rows": {
+          "minutes": {
+            "figure": "16′",
+            "title": "Total playing time, always in view",
+            "body": "Every player carries their minutes, on the pitch and on the bench. The ring around the number shows the time since their last rest, and resets when they come off and at half-time."
+          },
+          "gap": {
+            "figure": "4′",
+            "title": "A suggestion, not an autopilot",
+            "body": "The app suggests a substitution only when the gap is at least four minutes, and never suggests the keeper. You tap Select, then pick who comes on yourself."
+          },
+          "undo": {
+            "figure": "5 s",
+            "title": "Everything can be corrected",
+            "body": "Every substitution can be undone for five seconds, and goals can be corrected in the events afterwards. The score and the minutes always match what actually happened."
+          }
+        },
+        "offlineTitle": "Saved on the phone first",
+        "offlineBody": "The match runs just as well without a connection. Everything is saved on the device and sent when coverage returns.",
+        "cta": "Try it at your next match"
+      },
+      "footer": {
+        "contact": "Contact",
+        "note": "The players and matches in the demo are fictional."
+      }
+    },
+    "demo": {
+      "label": "Demo of the FairPlayr match screen, with fictional players",
+      "description": "The clock runs in the first half. Selma has played 4 minutes and Maja 16, so the app suggests Selma on for Maja. The coach chooses, the substitution is made and can be undone for five seconds. The bench then re-sorts with the least played first.",
+      "pause": "Pause the demo",
+      "play": "Play the demo",
+      "ledgerTitle": "Playing time",
+      "ledgerSub": "Least played first",
+      "onField": "On the pitch",
+      "onBench": "Bench",
+      "keeper": "Keeper",
+      "spread": "Gap, most and least played",
+      "minutesUnit": "min",
+      "beats": {
+        "suggestion": "Selma has played 4 minutes, Maja 16. The app suggests a substitution.",
+        "selection": "The coach taps Select. Maja is selected.",
+        "undo": "Selma on, Maja off. The substitution can be undone for five seconds.",
+        "settled": "The bench re-sorts: least played first."
+      }
     }
   }
 }

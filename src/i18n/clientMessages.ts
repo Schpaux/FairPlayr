@@ -3,12 +3,14 @@ import type { AbstractIntlMessages } from "next-intl";
 /**
  * The messages the website sends to the browser (WEB-01 phase 0). Its text
  * is rendered by Server Components (`getTranslations`), so the client gets
- * none: the app's namespaces (~48 kB) stay out of the website's HTML. When a
- * client island needs text (the video facade WEB-01j, the demo WEB-01k), add
- * its own namespace here, for example `"marketing.video"`, and update the
- * test in the same patch.
+ * only what its islands need: the app's namespaces (~48 kB) stay out of the
+ * website's HTML. The hero's live demo (WEB-01 phase 1) renders the app's
+ * own live components, so it gets their strings (`matchLive.sideline`, ~4 kB,
+ * and the scoreboard's `restore.storageError`) next to its own. When another
+ * island needs text (the video facade WEB-01j), add its own namespace here,
+ * for example `"marketing.video"`, and update the test in the same patch.
  */
-export const WEBSITE_CLIENT_NAMESPACES: readonly string[] = [];
+export const WEBSITE_CLIENT_NAMESPACES: readonly string[] = ["marketing.demo", "matchLive.sideline", "restore.storageError"];
 
 /**
  * The given namespaces of `messages`, nested as in the file. A dotted name
