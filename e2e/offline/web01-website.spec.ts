@@ -60,7 +60,7 @@ test("signed-in coach: the website makes no Supabase request, the app keeps the 
     await device.goOffline();
     await page.goto("/no", { waitUntil: "domcontentloaded" });
     await expect(page.getByTestId("marketing-page")).toBeVisible();
-    await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex, nofollow");
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "index, follow");
   } finally {
     await device.dispose();
   }

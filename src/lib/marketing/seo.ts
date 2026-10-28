@@ -5,26 +5,28 @@ import { WEBSITE_SEGMENTS } from "./routes";
  * The website's search metadata (WEB-01g, FP-WEB-01 phase 0). Everything is
  * built behind one switch, `WEBSITE_INDEXABLE`: while it is false the
  * website says `noindex, nofollow`, the sitemap is empty and robots.txt names
- * no sitemap. It is turned on at launch only, as its own approved change
- * (MARKETING.md §13).
+ * no sitemap. Turned on for the landing page on 2026-10-28 (owner decision,
+ * MARKETING.md §13.2); app, sign-in and public match pages keep their own
+ * `noindex`.
  */
 
 /** The canonical host, also when the page is served from another one. */
 export const SITE_URL = "https://fairplayr.app";
 
 /**
- * Off until launch (MARKETING.md §13). The one switch for indexing. Launch
- * requirement (WEB-01g): turning it on must leave only the canonical
- * production host indexable; other Vercel hosts and previews stay noindex.
+ * The one switch for indexing (WEB-01g). Only the canonical production host
+ * is indexable: every other host gets `X-Robots-Tag: noindex`
+ * (`noindexHostHeaders`).
  */
-export const WEBSITE_INDEXABLE: boolean = false;
+export const WEBSITE_INDEXABLE: boolean = true;
 
 /**
- * Hosts that answer `X-Robots-Tag: noindex` on every response
- * (`next.config.ts`): the Vercel production domain serves the same site as
- * `fairplayr.app` and must never be indexed. Exact hostnames.
+ * The only host that may be indexed. Every other host answers
+ * `X-Robots-Tag: noindex` on every response (`next.config.ts`): the Vercel
+ * production domain, deployment URLs and every preview deployment. Exact
+ * hostname.
  */
-export const NOINDEX_HOSTS = ["fair-playr.vercel.app"] as const;
+export const INDEXABLE_HOST = "fairplayr.app";
 
 export type WebsiteLocale = "en" | "no";
 export type WebsiteSegment = (typeof WEBSITE_SEGMENTS)[number];
@@ -106,11 +108,13 @@ export function websiteRobotsTxt(indexable = WEBSITE_INDEXABLE): MetadataRoute.R
   };
 }
 
-/** `next.config.ts` headers: `X-Robots-Tag: noindex` on every response from `NOINDEX_HOSTS`. */
+/** `next.config.ts` headers: `X-Robots-Tag: noindex` on every response from any host but `INDEXABLE_HOST`. */
 export function noindexHostHeaders() {
-  return NOINDEX_HOSTS.map((host) => ({
-    source: "/:path*",
-    has: [{ type: "host" as const, value: host.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") }],
-    headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
-  }));
+  return [
+    {
+      source: "/:path*",
+      missing: [{ type: "host" as const, value: INDEXABLE_HOST.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") }],
+      headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+    },
+  ];
 }

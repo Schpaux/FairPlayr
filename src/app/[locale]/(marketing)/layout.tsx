@@ -10,8 +10,8 @@ import { SITE_URL, websiteRobots } from "@/lib/marketing/seo";
  * `(public)`: no session, team, active match, service worker registration,
  * header or bottom nav. The pages are precached by the worker
  * (`src/sw/shellRoutes.ts`), so they must stay user-agnostic
- * (`shellRouteSafety.test.ts`). Not indexed until launch (`WEBSITE_INDEXABLE`,
- * WEB-01g); canonical URLs always point at `SITE_URL`.
+ * (`shellRouteSafety.test.ts`). Indexable on `fairplayr.app` only
+ * (`WEBSITE_INDEXABLE`, WEB-01g); canonical URLs always point at `SITE_URL`.
  *
  * The browser gets only `WEBSITE_CLIENT_NAMESPACES` (none in phase 0): the
  * text is rendered on the server. The list is always passed explicitly,

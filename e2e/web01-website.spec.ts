@@ -2,7 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 
 // WEB-01 phase 0: the website's technical foundation. Only its own messages
 // reach the browser (none yet), it carries its search metadata behind
-// noindex, and the app and the public match page keep all their messages.
+// index (only on fairplayr.app), and the app and the public match page keep
+// all their messages and their noindex.
 // Routing and the installed app's launch: e2e/web01-routing.spec.ts. The
 // session (no Supabase round trip on the website) and the service worker:
 // e2e/offline/web01-website.spec.ts.
@@ -35,7 +36,7 @@ for (const theme of THEMES) {
       { path: "/", lang: "en", canonical: "https://fairplayr.app", ogLocale: "en_GB", title: "Fair playing time in grassroots football" },
       { path: "/no", lang: "no", canonical: "https://fairplayr.app/no", ogLocale: "nb_NO", title: "Rettferdig spilletid i barnefotballen" },
     ] as const) {
-      test(`${path}: search metadata behind noindex, and no app messages in the page`, async ({ page, context }) => {
+      test(`${path}: search metadata, indexable, and no app messages in the page`, async ({ page, context }) => {
         await context.clearCookies();
         const { response, problems } = await open(page, path, theme);
         expect(response?.status()).toBe(200);
@@ -44,7 +45,7 @@ for (const theme of THEMES) {
         await expect(page).toHaveTitle(`${title} — FairPlayr`);
 
         const head = page.locator("head");
-        await expect(head.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex, nofollow");
+        await expect(head.locator('meta[name="robots"]')).toHaveAttribute("content", "index, follow");
         await expect(head.locator('link[rel="canonical"]')).toHaveAttribute("href", canonical);
         const alternates = await head.locator('link[rel="alternate"][hreflang]').evaluateAll((links) =>
           links.map((link) => `${link.getAttribute("hreflang")} ${link.getAttribute("href")}`)
@@ -129,21 +130,23 @@ test("the website's other spellings are redirects, not duplicate pages", async (
   }
 });
 
-test("robots.txt names no sitemap and sitemap.xml is empty until launch", async ({ request }) => {
+test("robots.txt names the sitemap, and the sitemap lists / and /no only", async ({ request }) => {
   const robots = await (await request.get("/robots.txt")).text();
   expect(robots).toContain("Disallow: /api/");
   expect(robots).toContain("Disallow: /serwist/");
-  expect(robots).not.toContain("Sitemap:");
+  expect(robots).toContain("Sitemap: https://fairplayr.app/sitemap.xml");
   const sitemap = await request.get("/sitemap.xml");
   expect(sitemap.status()).toBe(200);
   const xml = await sitemap.text();
-  expect(xml).toContain("<urlset");
-  expect(xml).not.toContain("<url>");
+  const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
+  expect(urls).toEqual(["https://fairplayr.app/", "https://fairplayr.app/no"]);
 });
 
-test("the Vercel production host answers X-Robots-Tag: noindex, fairplayr.app does not", async ({ request }) => {
-  const vercel = await request.get("/no", { headers: { host: "fair-playr.vercel.app" }, maxRedirects: 0 });
-  expect(vercel.headers()["x-robots-tag"]).toBe("noindex, nofollow");
+test("every host but fairplayr.app answers X-Robots-Tag: noindex", async ({ request }) => {
+  for (const host of ["fair-playr.vercel.app", "fair-playr-git-web-01-team.vercel.app", "www.fairplayr.app"]) {
+    const other = await request.get("/no", { headers: { host }, maxRedirects: 0 });
+    expect(other.headers()["x-robots-tag"], host).toBe("noindex, nofollow");
+  }
   const site = await request.get("/no", { headers: { host: "fairplayr.app" }, maxRedirects: 0 });
   expect(site.headers()["x-robots-tag"]).toBeUndefined();
 });

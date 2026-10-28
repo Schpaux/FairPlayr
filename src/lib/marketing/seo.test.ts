@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import nextConfig from "../../../next.config";
 import {
-  NOINDEX_HOSTS,
+  INDEXABLE_HOST,
   SITE_URL,
   WEBSITE_INDEXABLE,
   noindexHostHeaders,
@@ -13,9 +13,10 @@ import {
 } from "./seo";
 
 describe("website SEO (WEB-01g, phase 0)", () => {
-  it("is not indexable until launch", () => {
-    expect(WEBSITE_INDEXABLE).toBe(false);
-    expect(websiteMetadata({ locale: "en", segment: "", title: "T", description: "D" }).robots).toEqual({ index: false, follow: false });
+  it("is indexable since launch, and can still be built without", () => {
+    expect(WEBSITE_INDEXABLE).toBe(true);
+    expect(websiteMetadata({ locale: "en", segment: "", title: "T", description: "D" }).robots).toEqual({ index: true, follow: true });
+    expect(websiteMetadata({ locale: "en", segment: "", title: "T", description: "D", indexable: false }).robots).toEqual({ index: false, follow: false });
   });
 
   it("builds canonical URLs on fairplayr.app, with hreflang nb and x-default English", () => {
@@ -41,26 +42,27 @@ describe("website SEO (WEB-01g, phase 0)", () => {
     expect(withImage).toMatchObject({ openGraph: { images: ["/marketing/og.png"] }, twitter: { card: "summary_large_image" }, robots: { index: true, follow: true } });
   });
 
-  it("has an empty sitemap and no sitemap line while not indexable", () => {
-    expect(websiteSitemap()).toEqual([]);
-    expect(websiteRobotsTxt()).toEqual({ rules: { userAgent: "*", allow: "/", disallow: ["/api/", "/serwist/"] } });
-    expect(websiteSitemap(true).map((entry) => entry.url)).toEqual(["https://fairplayr.app/", "https://fairplayr.app/no"]);
-    expect(websiteRobotsTxt(true).sitemap).toBe("https://fairplayr.app/sitemap.xml");
+  it("lists / and /no in the sitemap and names it in robots.txt; neither while not indexable", () => {
+    expect(websiteSitemap().map((entry) => entry.url)).toEqual(["https://fairplayr.app/", "https://fairplayr.app/no"]);
+    expect(websiteRobotsTxt()).toEqual({ rules: { userAgent: "*", allow: "/", disallow: ["/api/", "/serwist/"] }, sitemap: "https://fairplayr.app/sitemap.xml" });
+    expect(websiteSitemap(false)).toEqual([]);
+    expect(websiteRobotsTxt(false).sitemap).toBeUndefined();
   });
 
-  it("sends X-Robots-Tag: noindex for the exact Vercel production host only", async () => {
-    expect(NOINDEX_HOSTS).toEqual(["fair-playr.vercel.app"]);
+  it("sends X-Robots-Tag: noindex from every host but fairplayr.app", async () => {
+    expect(INDEXABLE_HOST).toBe("fairplayr.app");
     const [rule] = noindexHostHeaders();
     expect(rule).toEqual({
       source: "/:path*",
-      has: [{ type: "host", value: "fair-playr\\.vercel\\.app" }],
+      missing: [{ type: "host", value: "fairplayr\\.app" }],
       headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
     });
-    // Next.js anchors host values as ^value$ (prepare-destination.js).
-    const matches = (host: string) => new RegExp(`^${rule.has[0].value}$`).test(host);
-    expect(matches("fair-playr.vercel.app")).toBe(true);
-    for (const host of ["fairplayr.app", "www.fairplayr.app", "fair-playr-git-x.vercel.app", "fair-playrxvercel.app", "a.fair-playr.vercel.app", "fair-playr.vercel.app.evil.com"]) {
-      expect(matches(host), host).toBe(false);
+    // Next.js anchors host values as ^value$ (prepare-destination.js); the
+    // header is sent when the host does not match.
+    const noindex = (host: string) => !new RegExp(`^${rule.missing[0].value}$`).test(host);
+    expect(noindex("fairplayr.app")).toBe(false);
+    for (const host of ["fair-playr.vercel.app", "fair-playr-git-x.vercel.app", "fair-playr-abc123-team.vercel.app", "www.fairplayr.app", "fairplayrxapp", "a.fairplayr.app", "fairplayr.app.evil.com", "localhost:3000"]) {
+      expect(noindex(host), host).toBe(true);
     }
     const headers = await nextConfig.headers!();
     expect(headers).toEqual(expect.arrayContaining([rule]));
