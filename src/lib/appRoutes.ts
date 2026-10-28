@@ -14,8 +14,14 @@ export const APP_HOME_PATH = "/play";
 export const PWA_SOURCE_PARAM = "source";
 export const PWA_SOURCE_VALUE = "pwa";
 
-/** The manifest's `start_url`. Older installs keep `/?source=pwa`, which still opens the app. */
-export const PWA_START_URL = `${APP_HOME_PATH}?${PWA_SOURCE_PARAM}=${PWA_SOURCE_VALUE}`;
+/**
+ * The manifest's `start_url`, the same as before WEB-01d. A launch at `/` is
+ * sent to the coach's Home in the coach's language: by the service worker
+ * (last used locale) and offline too, or by `src/proxy.ts` (cookie,
+ * Accept-Language). Not `/play?source=pwa`: the worker serves that as the
+ * English Home from its cache, whatever the coach's language.
+ */
+export const PWA_START_URL = `/?${PWA_SOURCE_PARAM}=${PWA_SOURCE_VALUE}`;
 
 /** True when the URL is an installed app's launch (`?source=pwa`). */
 export function isPwaLaunch(searchParams: URLSearchParams): boolean {

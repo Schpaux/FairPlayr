@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { APP_HOME_PATH, PWA_START_URL, isPwaLaunch } from "./appRoutes";
 
 describe("app routes", () => {
-  it("put the app's Home at /play and start installed apps there", () => {
+  it("put the app's Home at /play and keep the start_url at / (the launch picks the language)", () => {
     expect(APP_HOME_PATH).toBe("/play");
-    expect(PWA_START_URL).toBe("/play?source=pwa");
+    expect(PWA_START_URL).toBe("/?source=pwa");
   });
 
   it("recognise an installed app's launch by its marker only", () => {

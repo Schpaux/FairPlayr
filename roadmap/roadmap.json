@@ -1655,7 +1655,7 @@
       "id": "WEB-01d",
       "type": "task",
       "title": "Skille nettside og app med tydelig tilgang til appen",
-      "summary": "Markedsføringssiden ligger på «/» og trenerappens Hjem på «/play» («/no/play»; segmentet oversettes ikke) i samme Next.js-app, origin og Vercel-prosjekt. Øvrige app-ruter, delingslenkene /s/<token>, innlogging og auth-callbacks er uendret, og ingen lokale data eller Supabase-data flyttes. PWA-en starter på /play?source=pwa med uendret id og scope, og den gamle startadressen (/?source=pwa, også norsk) går fortsatt rett til appen. Service workeren har /play som offline-skall og beholder pinning og oppdateringsvern under aktiv kamp. fair-playr.vercel.app beholdes uten redirect. Leveres som WEB-01A, med en midlertidig minimal side på «/».",
+      "summary": "Markedsføringssiden ligger på «/» og trenerappens Hjem på «/play» («/no/play»; segmentet oversettes ikke) i samme Next.js-app, origin og Vercel-prosjekt. Øvrige app-ruter, delingslenkene /s/<token>, innlogging og auth-callbacks er uendret, og ingen lokale data eller Supabase-data flyttes. PWA-ens start_url er fortsatt /?source=pwa, med uendret id og scope: en oppstart der går rett til appens Hjem på det språket treneren sist brukte (/no/play eller /play), også uten nett. Service workeren har /play som offline-skall og beholder pinning og oppdateringsvern under aktiv kamp. fair-playr.vercel.app beholdes uten redirect. Leveres som WEB-01A, med en midlertidig minimal side på «/».",
       "category": "website",
       "parent": "WEB-01",
       "decision": "committed",
@@ -1669,7 +1669,9 @@
         "OFF-01",
         "INIT-IOS",
         "FEAT-SHARE-01",
-        "OFF-02"
+        "OFF-02",
+        "OFF-14",
+        "OFF-15"
       ],
       "sources": [
         {
@@ -1701,10 +1703,19 @@
           "type": "local_doc",
           "ref": "fairplayr-web01a-live-review.patch",
           "note": "WEB-01A-2: to lenker i MatchLiveManager.tsx"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers godkjenning av språkretting i WEB-01A (2026-10-28)",
+          "note": "start_url tilbake til /?source=pwa; /play, /no/play, nettsiden på «/», id, scope, redirect fra gammel startadresse og service workerens sikkerhetsmodell beholdes"
         }
       ],
       "updated": "2026-10-28",
       "changelog": [
+        {
+          "date": "2026-10-28",
+          "note": "Språkfeil rettet før merge: med start_url /play?source=pwa åpnet en norsk installasjon det engelske Hjem, både med og uten nett (service workeren leverte /play fra hurtigbufferen). start_url er satt tilbake til /?source=pwa, som sender oppstarten til Hjem på trenerens språk. Regresjonstester bruker manifestets egen start_url. Ikke committet eller deployet."
+        },
         {
           "date": "2026-10-28",
           "note": "Implementert i en egen arbeidsgren og levert til review som to patcher (WEB-01A-1 og WEB-01A-2). Ikke committet eller deployet."
@@ -7489,6 +7500,61 @@
         }
       ],
       "updated": "2026-10-27"
+    },
+    {
+      "id": "OFF-14",
+      "type": "task",
+      "title": "Testmiljø for installert PWA bak Vercel Authentication",
+      "summary": "Beskyttede Preview-deployer krever Vercel-innlogging. Service workeren henter app-skallene uten informasjonskapsler (credentials: \"omit\") for at hurtigbufferen aldri skal inneholde brukerspesifikk HTML, så på en beskyttet Preview blir den aldri installert, og offline-testing på fysiske enheter blir meningsløs der. Vurder et eget testmiljø eller en annen trygg testmekanisme. Service workerens bruk av credentials: \"omit\" skal ikke endres.",
+      "category": "devex",
+      "parent": "OFF-13",
+      "decision": "considering",
+      "status": "not_started",
+      "priority": "P2",
+      "origin": "claude_proposal",
+      "dates": {
+        "created": "2026-10-28"
+      },
+      "related": [
+        "OFF-07",
+        "WEB-01d"
+      ],
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers godkjenning av språkretting i WEB-01A (2026-10-28)",
+          "note": "punkt 3: registreres som considering, foreslått P2"
+        }
+      ],
+      "updated": "2026-10-28"
+    },
+    {
+      "id": "OFF-15",
+      "type": "feature",
+      "title": "Kamp og Historikk uten nett",
+      "summary": "I dag gir Kamp (kampplanleggeren) og Historikk offline-siden når appen åpnes uten nett. Kampplanleggeren bør kunne åpnes uten nett, og Historikk bør vise kampene som finnes lokalt på enheten. Ingen kritiske kamphandlinger skal være avhengige av nett. Retningen er fortsatt online-first med lokal lagring som sikkerhet.",
+      "category": "offline-sync",
+      "parent": "INIT-OFFLINE",
+      "decision": "considering",
+      "status": "not_started",
+      "priority": "P2",
+      "origin": "claude_proposal",
+      "dates": {
+        "created": "2026-10-28"
+      },
+      "related": [
+        "FEAT-HIST-01",
+        "OFF-11",
+        "WEB-01d"
+      ],
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers godkjenning av språkretting i WEB-01A (2026-10-28)",
+          "note": "punkt 3: registreres som considering, foreslått P2; implementeres ikke nå"
+        }
+      ],
+      "updated": "2026-10-28"
     },
     {
       "id": "UI-TOKENS-01-SW",

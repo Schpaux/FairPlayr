@@ -3,8 +3,9 @@ import { Device, THEMES, goalUs, hideDevOverlay, live, openLive, scoreIs, stored
 import { firstVisitGuest, startMatchFromSetup } from "./support/flows";
 
 // WEB-01d (FP-WEB-01A §7.2): an installed app cold-starts offline, mid-match,
-// at the start_url from before WEB-01d (`/no?source=pwa`, `/?source=pwa`) and
-// at the new one (`/no/play?source=pwa`). Each opens the app's Home from the
+// at the manifest's start_url (`/?source=pwa`, unchanged by WEB-01d), its
+// Norwegian spelling (`/no?source=pwa`) and the Home's own address with the
+// marker (`/no/play?source=pwa`). Each opens the app's Home from the
 // worker; the device's data is untouched and the match (clock, substitutions,
 // goals) is intact. Without the marker, `/no` is the website, also offline.
 

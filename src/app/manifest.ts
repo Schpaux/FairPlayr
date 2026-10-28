@@ -7,11 +7,12 @@ import { PWA_START_URL } from "@/lib/appRoutes";
  * Next links it from every page automatically, so `metadata.manifest` is not
  * set in the layout.
  *
- * - `start_url` is the app's Home plus a marker (`/play?source=pwa`, WEB-01d);
- *   next-intl (`as-needed`) serves English at `/play` and redirects to
- *   `/no/play` by cookie or Accept-Language, keeping the query string. Installs
- *   from before WEB-01d start at `/?source=pwa`; `src/proxy.ts` and the
- *   service worker send that to the app's Home too. `id` and `scope` stay "/"
+ * - `start_url` is `/?source=pwa`, as before WEB-01d. The marker makes it a
+ *   launch, not the website: the service worker sends it to the app's Home
+ *   in the last used locale (`/play` or `/no/play`, also offline), and
+ *   `src/proxy.ts` does the same by cookie or Accept-Language. It is not
+ *   `/play?source=pwa`, which the worker serves as the English Home from its
+ *   cache on a Norwegian device (WEB-01A regression). `id` and `scope` stay "/"
  *   (never change them: the browser would treat it as another app), so both
  *   locales and the website are inside the installed app.
  * - Colours come from `brandColors.ts` (= `--fp-canvas` dark, DESIGN.md §2.1).

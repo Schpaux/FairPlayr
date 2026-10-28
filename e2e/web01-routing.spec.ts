@@ -1,8 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
 // WEB-01d (FP-WEB-01A §7.2): the website is at `/` and `/no`, the app's Home
-// at `/play` and `/no/play`. An installed app's launch (`?source=pwa`, old
-// and new start_url) opens the app; bookmarks, share links and sign-in are
+// at `/play` and `/no/play`. An installed app's launch (`?source=pwa`; the
+// start_url is `/?source=pwa`) opens the app; bookmarks, share links and sign-in are
 // unchanged. The offline side is in e2e/offline/web01-launch.spec.ts.
 
 const THEMES = ["light", "dark"] as const;
@@ -23,7 +23,7 @@ async function open(page: Page, path: string, theme: (typeof THEMES)[number] = "
   return { response, errors };
 }
 
-const mainNav = (page: Page) => page.getByRole("navigation", { name: "Hovedmeny" });
+const mainNav = (page: Page) => page.getByRole("navigation", { name: /^(Hovedmeny|Main menu)$/ });
 
 for (const theme of THEMES) {
   test.describe(`${theme} theme`, () => {
@@ -84,13 +84,39 @@ test.describe("an installed app's launch opens the app's Home", () => {
     await expect(page.getByTestId("home-fixture-panel")).toBeVisible({ timeout: 30_000 });
   });
 
-  test("the new start_url /play?source=pwa keeps the coach's language", async ({ page, context, baseURL }) => {
-    await context.addCookies([{ name: "NEXT_LOCALE", value: "no", url: baseURL! }]);
-    await open(page, "/play?source=pwa");
-    await expect(page).toHaveURL(/\/no\/play\?source=pwa$/);
-    await open(page, "/?source=pwa");
-    await expect(page).toHaveURL(/\/no\/play\?source=pwa$/);
-  });
+  // The manifest's own start_url, on a Norwegian and an English device, with
+  // and without the coach's choice stored (cookie). Offline and with the
+  // service worker: e2e/offline/web01-start-url.spec.ts.
+  for (const { device, choice, home, lang, tab } of [
+    { device: "nb-NO", choice: "no", home: /\/no\/play\?source=pwa$/, lang: "no", tab: "Hjem" },
+    { device: "en-US", choice: "en", home: /localhost:\d+\/play\?source=pwa$/, lang: "en", tab: "Home" },
+  ] as const) {
+    test.describe(`${device} device, ${choice} chosen`, () => {
+      test.use({ locale: device });
+
+      test("the manifest's start_url opens Home in that language; / is still the website", async ({ page, context, baseURL }) => {
+        const manifest = await (await page.request.get("/manifest.webmanifest")).json();
+        expect(manifest.start_url).toBe("/?source=pwa");
+
+        for (const chosen of [false, true]) {
+          await context.clearCookies();
+          if (chosen) await context.addCookies([{ name: "NEXT_LOCALE", value: choice, url: baseURL! }]);
+          const { errors } = await open(page, manifest.start_url);
+          await expect(page, `chosen: ${chosen}`).toHaveURL(home);
+          await expect(page.locator("html")).toHaveAttribute("lang", lang);
+          await expect(page.getByTestId("home-fixture-panel")).toBeVisible({ timeout: 30_000 });
+          await expect(mainNav(page).getByRole("link", { name: tab })).toHaveAttribute("aria-current", "page");
+          expect(errors).toEqual([]);
+        }
+
+        // Ordinary navigation to / (no marker) is the website in that language.
+        await open(page, "/");
+        await expect(page.getByTestId("marketing-page")).toBeVisible();
+        await expect(page.locator("html")).toHaveAttribute("lang", lang);
+        await expect(mainNav(page)).toHaveCount(0);
+      });
+    });
+  }
 
   test("an iOS home-screen app that opens the website goes to the app (no marker)", async ({ page }) => {
     await page.addInitScript(() => {

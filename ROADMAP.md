@@ -8,10 +8,10 @@ Oppdatert 2026-10-28. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); re
 
 | | Antall |
 | :- | -: |
-| Oppføringer totalt | 291 |
+| Oppføringer totalt | 293 |
 | Ferdige (`completed`) | 131 |
 | Åpne vedtatte (`committed`) | 131 |
-| Til vurdering (`considering`) | 25 |
+| Til vurdering (`considering`) | 27 |
 | Utsatt (`deferred`) | 4 |
 | Må verifiseres | 18 |
 | Offentlig synlige | 21 |
@@ -233,6 +233,8 @@ Ideer og muligheter. Ikke vedtatt; endres bare til `committed` med dokumentert b
 | FEAT-HIST-01 | P2 | Lokal historikk for gjestekamper | INIT-HISTORY |
 | MATCH-06 | P2 | Databasetrigger som gjør completed terminal | FIX-POLISH |
 | OFF-09 | P2 | Tidsgrense for forlatt kamp som blokkerer oppdateringer | INIT-OFFLINE |
+| OFF-14 | P2 | Testmiljø for installert PWA bak Vercel Authentication | INIT-OFFLINE |
+| OFF-15 | P2 | Kamp og Historikk uten nett | INIT-OFFLINE |
 | STAB-12 | P2 | E2E-testen for oppsettrekkefølgen forventer ikke «Del kampen» | INIT-DEVEX |
 | BRAND-01j | P3 | SVG-favicon | BRAND-01 |
 | C3-F4 | P3 | Sette draktnummer i appen | INIT-TEAM |
