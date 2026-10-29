@@ -1,7 +1,7 @@
 {
   "$schema": "./roadmap.schema.json",
   "schema_version": 1,
-  "updated": "2026-10-28",
+  "updated": "2026-10-29",
   "description": "FairPlayr roadmap: eneste kilde for utviklingshistorikk, vedtatt arbeid og ideer. Rediger her, kjør `npm run roadmap:render` og `npm run roadmap:check`. Se roadmap/README.md.",
   "missing_sources": [
     {
@@ -9856,6 +9856,40 @@
         }
       ],
       "updated": "2026-10-27"
+    },
+    {
+      "id": "WEB-01m",
+      "type": "bug",
+      "title": "Nettsiden oppdateres for tidligere PWA-besøkende",
+      "summary": "Hent markedsføringssiden fra nett når nett er tilgjengelig, behold offline-fallback og migrer eldre service workere uten å avbryte aktive kamper eller endre lagrede brukerdata.",
+      "category": "website",
+      "parent": "WEB-01",
+      "decision": "committed",
+      "status": "in_review",
+      "priority": "P1",
+      "origin": "user_feedback",
+      "dates": {
+        "created": "2026-10-29"
+      },
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers feilrapport og rettingsoppdrag (2026-10-29)",
+          "note": "P1: gammel landingsside låst i PWA-cache; målrettet retting og PR mot main."
+        },
+        {
+          "type": "review_patch",
+          "ref": "fairplayr-web01m-review.patch",
+          "note": "Målrettet cache-policy, engangsmigrering og regresjonstester; avventer PR-gjennomgang."
+        }
+      ],
+      "updated": "2026-10-29",
+      "changelog": [
+        {
+          "date": "2026-10-29",
+          "note": "Produkteier bestilte permanent feilretting med offline-fallback og fortsatt oppdateringsvern under kamp."
+        }
+      ]
     }
   ]
 }

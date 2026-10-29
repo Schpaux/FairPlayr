@@ -74,7 +74,7 @@ describe("classifyRequest: handled", () => {
   });
 
   it("only the plain spelling of a front page with the marker is a launch", () => {
-    expect(classifyRequest(nav("/no"), ORIGIN)).toMatchObject({ kind: "shell", entry: { url: "/no", kind: "marketing" } });
+    expect(classifyRequest(nav("/no"), ORIGIN)).toMatchObject({ kind: "marketing", pathname: "/no" });
     expect(classifyRequest(nav("/play?source=pwa"), ORIGIN)).toMatchObject({ kind: "shell", entry: { url: "/play", kind: "home" } });
     expect(classifyRequest(nav("/no/team?source=pwa"), ORIGIN)).toMatchObject({ kind: "shell", entry: { url: "/no/team" } });
     expect(classifyRequest(nav("/%6Eo?source=pwa"), ORIGIN).kind).toBe("navigate");
@@ -82,7 +82,7 @@ describe("classifyRequest: handled", () => {
     expect(classifyRequest(nav("/no/auth/sign-in?source=pwa"), ORIGIN)).toEqual({ kind: "passthrough", reason: "auth" });
   });
 
-  it.each(["/no", "/no/", "/play", "/no/play", "/no/match/live", "/no/match/setup?x=1", "/no/team", "/match/live", "/match/setup", "/team", "/offline", "/no/offline"])(
+  it.each(["/play", "/no/play", "/no/match/live", "/no/match/setup?x=1", "/no/team", "/match/live", "/match/setup", "/team", "/offline", "/no/offline"])(
     "%s is a shell",
     (path) => {
       const decision = classifyRequest(nav(path), ORIGIN);
@@ -96,6 +96,10 @@ describe("classifyRequest: handled", () => {
       expect(classifyRequest(nav(path), ORIGIN)).toEqual({ kind: "navigate", pathname: path });
     }
   );
+
+  it.each(["/no", "/no/", "/no?campaign=test"])("%s uses the marketing network policy", (path) => {
+    expect(classifyRequest(nav(path), ORIGIN)).toEqual({ kind: "marketing", pathname: "/no" });
+  });
 
   it("other navigations are network-first", () => {
     expect(classifyRequest(nav("/no/historikk"), ORIGIN)).toEqual({ kind: "navigate", pathname: "/no/historikk" });

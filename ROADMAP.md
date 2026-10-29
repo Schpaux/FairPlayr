@@ -2,15 +2,15 @@
 
 # FairPlayr roadmap
 
-Oppdatert 2026-10-28. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); regler og felt står i [roadmap/README.md](roadmap/README.md).
+Oppdatert 2026-10-29. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); regler og felt står i [roadmap/README.md](roadmap/README.md).
 
 ## Oversikt
 
 | | Antall |
 | :- | -: |
-| Oppføringer totalt | 298 |
+| Oppføringer totalt | 299 |
 | Ferdige (`completed`) | 131 |
-| Åpne vedtatte (`committed`) | 135 |
+| Åpne vedtatte (`committed`) | 136 |
 | Til vurdering (`considering`) | 27 |
 | Utsatt (`deferred`) | 5 |
 | Må verifiseres | 18 |
@@ -45,6 +45,7 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 | WEB-01d | P1 | til review | Skille nettside og app med tydelig tilgang til appen |  |
 | WEB-01j | P1 | ikke startet | Promofilm på nettsiden |  |
 | WEB-01l | P1 | ikke startet | Juridiske avklaringer før offentlig lansering av nettsiden |  |
+| WEB-01m | P1 | til review | Nettsiden oppdateres for tidligere PWA-besøkende |  |
 | BRAND-01g | P2 | ikke startet | Vurder øvrig markedsføringsmateriell |  |
 | WEB-01b | P2 | pågår | FairPlayr-branding på nettsiden |  |
 | WEB-01c | P2 | ikke startet | Kontaktinformasjon |  |

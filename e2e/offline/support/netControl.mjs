@@ -72,6 +72,11 @@ const proxy = http.createServer((req, res) => {
   }
   record("app", req);
   const isSw = req.url.startsWith("/serwist/sw.js") && swVariant;
+  if (isSw && swVariant.script) {
+    res.writeHead(200, { "Content-Type": "application/javascript", "Cache-Control": "no-store", "Service-Worker-Allowed": "/" });
+    res.end(swVariant.script);
+    return;
+  }
   const headers = { ...req.headers, host: `localhost:${APP_PORT}` };
   if (isSw) delete headers["accept-encoding"];
 
@@ -240,7 +245,7 @@ const control = http.createServer((req, res) => {
     }
     if (req.url === "/sw-variant" && req.method === "POST") {
       const body = raw ? JSON.parse(raw) : {};
-      swVariant = body && (body.suffix || body.mode) ? { suffix: body.suffix ?? "", mode: body.mode ?? null } : null;
+      swVariant = body && (body.suffix || body.mode || body.script) ? { suffix: body.suffix ?? "", mode: body.mode ?? null, script: body.script ?? null } : null;
       return send(200, { swVariant });
     }
     if (req.url === "/public-share" && req.method === "POST") {

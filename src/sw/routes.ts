@@ -7,8 +7,9 @@
  * | `Range`, RSC (`RSC: 1`, `_rsc`, router headers)      | passthrough   |
  * | `/api/*`, any `auth` segment, `/_vercel/*`, worker   | passthrough   |
  * | navigation to `/`, `/en`, `/no` with `?source=pwa`   | launch        |
+ * | navigation to `/no`                                | marketing     |
  * | navigation to `/`                                    | root          |
- * | navigation to a shell (`/no`, `/match/live`, ...)    | shell         |
+ * | navigation to a shell (`/play`, `/match/live`, ...)    | shell         |
  * | any other navigation                                 | navigate      |
  * | `/_next/static/*`, fonts, manifest, icons            | asset         |
  * | anything else                                        | passthrough   |
@@ -47,6 +48,7 @@ export type RouteDecision =
   /** An installed app's launch (WEB-01d); `locale` is null for `/`. */
   | { kind: "launch"; locale: ShellLocale | null }
   | { kind: "root" }
+  | { kind: "marketing"; pathname: string }
   | { kind: "navigate"; pathname: string };
 
 const RSC_HEADERS = ["rsc", "next-router-prefetch", "next-router-state-tree", "next-router-segment-prefetch"];
@@ -132,6 +134,7 @@ export function classifyRequest(request: RequestLike, origin: string): RouteDeci
     if (isRootPath(pathname)) return { kind: "root" };
     // Only the plain spelling of a shell is served from the cache.
     const entry = pathname === canonical || pathname === `${canonical}/` ? matchShell(pathname) : null;
+    if (entry?.kind === "marketing") return { kind: "marketing", pathname: entry.url };
     if (entry) return { kind: "shell", entry };
     return { kind: "navigate", pathname };
   }
