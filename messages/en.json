@@ -1402,7 +1402,8 @@
         "minutes": "Playing time",
         "language": "Norsk",
         "languageLabel": "Les på norsk",
-        "openApp": "Open app"
+        "openApp": "Open app",
+        "roadmap": "Roadmap"
       },
       "hero": {
         "kicker": "For grassroots and youth football coaches",
@@ -1461,6 +1462,45 @@
         "undo": "Selma on, Maja off. The substitution can be undone for five seconds.",
         "settled": "The bench re-sorts: least played first."
       }
+    },
+    "roadmap": {
+      "metaTitle": "Roadmap",
+      "metaDescription": "See what FairPlayr has released, what we are building and what comes next. An open path towards better match days.",
+      "skip": "Skip to content",
+      "home": "Back to home",
+      "eyebrow": "FairPlayr · Roadmap",
+      "title": "More game.",
+      "titleSecond": "Step by step.",
+      "intro": "From the first minutes to the next big step. Follow FairPlayr as it becomes a better teammate on the touchline.",
+      "openApp": "Open FairPlayr",
+      "explore": "See what is next",
+      "latest": "Latest milestone",
+      "seeHistory": "Explore the journey",
+      "sectionNav": "On this page",
+      "developing": "In development",
+      "planned": "Planned",
+      "released": "Released",
+      "nextChapter": "The next chapter",
+      "upcomingTitle": "Better match days start here.",
+      "upcomingIntro": "What we are working on, and where we want to go next. Always with the coach, the team and fair playing time at the centre.",
+      "developingNote": "We are building and finishing these areas. They are not marked as released yet.",
+      "planNote": "Plans can change. We share release dates when they are ready, never before.",
+      "historyEyebrow": "Already part of match day",
+      "historyTitle": "Small steps. Real progress.",
+      "historyIntro": "From keeping track of minutes to a match the whole team can follow. Here is what we have delivered.",
+      "releasedOn": "Released",
+      "availableBy": "Available by",
+      "releaseUndated": "Released · date not documented",
+      "undated": "No documented date",
+      "milestone": "Milestone",
+      "improvement": "Improvement",
+      "emptyDeveloping": "We will share the next step here when work begins.",
+      "emptyPlanned": "New plans appear here once they are agreed.",
+      "emptyHistory": "The first releases will appear here.",
+      "closingEyebrow": "The next match is waiting",
+      "closingTitle": "The rest happens on the touchline.",
+      "closingBody": "Try what is already ready. Open FairPlayr and get your team ready for match day.",
+      "footer": "Built for grassroots football. One step at a time."
     }
   }
 }

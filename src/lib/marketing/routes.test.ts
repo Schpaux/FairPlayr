@@ -23,13 +23,13 @@ describe("website routes (WEB-01 phase 0)", () => {
     expect(routing.localePrefix).toBe("as-needed");
   });
 
-  it("is the front page only in phase 0, the one website page the worker precaches", () => {
-    expect(WEBSITE_SEGMENTS).toEqual([""]);
+  it("includes the roadmap without expanding the worker precache", () => {
+    expect(WEBSITE_SEGMENTS).toEqual(["", "/roadmap"]);
     expect(MARKETING_SEGMENT).toBe("");
     expect(shellPrecacheEntries().filter((entry) => entry.kind === "marketing").map((entry) => entry.url)).toEqual(["/", "/no"]);
   });
 
-  it.each(["/", "/no", "/no/", "/en", "/en/"])("%s is the website", (pathname) => {
+  it.each(["/", "/no", "/no/", "/en", "/en/", "/roadmap", "/no/roadmap", "/no/roadmap/", "/en/roadmap"])("%s is the website", (pathname) => {
     expect(isWebsitePath(pathname)).toBe(true);
   });
 
@@ -41,7 +41,6 @@ describe("website routes (WEB-01 phase 0)", () => {
     "/s/abc",
     "/auth/sign-in",
     "/no/auth/sign-in",
-    "/roadmap",
     "/roadmapx",
     "/nox",
     "/no/x",

@@ -29,6 +29,13 @@ describe("website SEO (WEB-01g, phase 0)", () => {
     });
   });
 
+  it("gives the roadmap its own canonical, hreflang and social metadata", () => {
+    expect(websiteMetadata({ locale: "no", segment: "/roadmap", title: "Roadmap", description: "D" })).toMatchObject({
+      alternates: { canonical: "https://fairplayr.app/no/roadmap", languages: { en: "https://fairplayr.app/roadmap", nb: "https://fairplayr.app/no/roadmap", "x-default": "https://fairplayr.app/roadmap" } },
+      openGraph: { url: "https://fairplayr.app/no/roadmap", locale: "nb_NO" },
+    });
+  });
+
   it("fills Open Graph and Twitter for a page", () => {
     const metadata = websiteMetadata({ locale: "no", segment: "", title: "Tittel", description: "Beskrivelse" });
     expect(metadata).toMatchObject({
@@ -42,8 +49,8 @@ describe("website SEO (WEB-01g, phase 0)", () => {
     expect(withImage).toMatchObject({ openGraph: { images: ["/marketing/og.png"] }, twitter: { card: "summary_large_image" }, robots: { index: true, follow: true } });
   });
 
-  it("lists / and /no in the sitemap and names it in robots.txt; neither while not indexable", () => {
-    expect(websiteSitemap().map((entry) => entry.url)).toEqual(["https://fairplayr.app/", "https://fairplayr.app/no"]);
+  it("lists the home and roadmap pages in both languages in the sitemap and names it in robots.txt; neither while not indexable", () => {
+    expect(websiteSitemap().map((entry) => entry.url)).toEqual(["https://fairplayr.app/", "https://fairplayr.app/no", "https://fairplayr.app/roadmap", "https://fairplayr.app/no/roadmap"]);
     expect(websiteRobotsTxt()).toEqual({ rules: { userAgent: "*", allow: "/", disallow: ["/api/", "/serwist/"] }, sitemap: "https://fairplayr.app/sitemap.xml" });
     expect(websiteSitemap(false)).toEqual([]);
     expect(websiteRobotsTxt(false).sitemap).toBeUndefined();

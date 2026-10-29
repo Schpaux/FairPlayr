@@ -478,11 +478,11 @@
         "visible": true,
         "milestone": true,
         "no": {
-          "title": "Nytt design: Modern Sideline",
+          "title": "Nytt design for kampdagen",
           "summary": "Hele appen er tegnet på nytt for bruk på sidelinjen: store tall, tydelige knapper og mørkt tema som standard."
         },
         "en": {
-          "title": "New design: Modern Sideline",
+          "title": "A new design for match day",
           "summary": "The whole app was redesigned for the sideline: big numbers, clear buttons and dark mode by default."
         }
       },
@@ -509,11 +509,15 @@
           "note": "Modern Sideline er designspråket, ikke FairPlayr Next"
         }
       ],
-      "updated": "2026-10-27",
+      "updated": "2026-10-29",
       "related": [
         "FEAT-NEXT-01"
       ],
       "changelog": [
+        {
+          "date": "2026-10-29",
+          "note": "Offentlig tittel bruker trenerens språk i stedet for internt designnavn, i tråd med MARKETING.md §2 (WEB-01e). Ingen endring i status eller datoer."
+        },
         {
           "date": "2026-10-27",
           "note": "Aliaset FAIRPLAYR-NEXT fjernet: produkteier har avklart at FairPlayr Next er en egen funksjon (FEAT-NEXT-01), ikke designspråket."
@@ -1819,7 +1823,7 @@
       "category": "website",
       "parent": "WEB-01",
       "decision": "committed",
-      "status": "not_started",
+      "status": "in_review",
       "priority": "P2",
       "origin": "owner_decision",
       "dates": {
@@ -1839,9 +1843,18 @@
           "type": "doc",
           "ref": "roadmap/README.md",
           "note": "offentlig utvalg"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag WEB-01e (2026-10-29)",
+          "note": "Ferdig førsteversjon av offentlig roadmap, på norsk og engelsk, med premium nettsidedesign og PR mot main. Ingen merge eller produksjonsdeploy."
+        },
+        {
+          "type": "review_patch",
+          "ref": "fairplayr-web01e-review.patch"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-29"
     },
     {
       "id": "WEB-01f",

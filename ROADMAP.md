@@ -49,7 +49,7 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 | BRAND-01g | P2 | ikke startet | Vurder øvrig markedsføringsmateriell |  |
 | WEB-01b | P2 | pågår | FairPlayr-branding på nettsiden |  |
 | WEB-01c | P2 | ikke startet | Kontaktinformasjon |  |
-| WEB-01e | P2 | ikke startet | Offentlig roadmap-visning (Immich-inspirert) |  |
+| WEB-01e | P2 | til review | Offentlig roadmap-visning (Immich-inspirert) |  |
 | WEB-01g | P2 | pågår | SEO og metadata for nettsiden |  |
 | WEB-01i | P2 | ikke startet | Personvernerklæring og brukervilkår på nettsiden |  |
 | WEB-01k | P2 | ikke startet | Interaktiv kampdemo på nettsiden |  |

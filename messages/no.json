@@ -1402,7 +1402,8 @@
         "minutes": "Spilletid",
         "language": "English",
         "languageLabel": "Read in English",
-        "openApp": "Til appen"
+        "openApp": "Til appen",
+        "roadmap": "Roadmap"
       },
       "hero": {
         "kicker": "For trenere i barne- og ungdomsfotball",
@@ -1461,6 +1462,45 @@
         "undo": "Selma inn, Maja ut. Byttet kan angres i fem sekunder.",
         "settled": "Benken sorteres på nytt: minst spilt først."
       }
+    },
+    "roadmap": {
+      "metaTitle": "Roadmap",
+      "metaDescription": "Se hva FairPlayr har lansert, hva vi utvikler og hva som står på planen. En åpen vei mot bedre kampdager.",
+      "skip": "Hopp til innhold",
+      "home": "Til forsiden",
+      "eyebrow": "FairPlayr · Roadmap",
+      "title": "Mer kamp.",
+      "titleSecond": "Steg for steg.",
+      "intro": "Fra de første minuttene til neste store steg. Her ser du hvordan FairPlayr blir en bedre lagkamerat på sidelinjen.",
+      "openApp": "Åpne FairPlayr",
+      "explore": "Se hva som kommer",
+      "latest": "Siste store milepæl",
+      "seeHistory": "Se hele historien",
+      "sectionNav": "På denne siden",
+      "developing": "Under utvikling",
+      "planned": "På planen",
+      "released": "Lansert",
+      "nextChapter": "Neste kapittel",
+      "upcomingTitle": "Bedre kampdager begynner her.",
+      "upcomingIntro": "Dette jobber vi med, og dette vil vi ta videre. Alltid med treneren, laget og rettferdig spilletid i sentrum.",
+      "developingNote": "Vi utvikler og ferdigstiller disse områdene. De er ikke merket som lansert ennå.",
+      "planNote": "Planer kan endre seg. Vi deler lanseringsdatoer når de er klare, ikke før.",
+      "historyEyebrow": "Allerede en del av kampdagen",
+      "historyTitle": "Små steg. Stor forskjell.",
+      "historyIntro": "Fra oversikt over minuttene til en kamp hele laget kan følge. Dette er levert.",
+      "releasedOn": "Lansert",
+      "availableBy": "Tilgjengelig senest",
+      "releaseUndated": "Lansert · dato ikke dokumentert",
+      "undated": "Uten dokumentert dato",
+      "milestone": "Milepæl",
+      "improvement": "Forbedring",
+      "emptyDeveloping": "Vi deler neste steg her når arbeidet er i gang.",
+      "emptyPlanned": "Nye planer kommer hit når de er vedtatt.",
+      "emptyHistory": "De første lanseringene kommer hit.",
+      "closingEyebrow": "Neste kamp venter",
+      "closingTitle": "Resten skjer på sidelinjen.",
+      "closingBody": "Prøv det som allerede er klart. Åpne FairPlayr og gjør laget klart til kamp.",
+      "footer": "Bygget for breddefotball. Ett steg om gangen."
     }
   }
 }
