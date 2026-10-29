@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatRoadmapDate, getWebsiteRoadmap, websiteRoadmap } from "./roadmap";
+import { formatRoadmapDate, getWebsiteRoadmap, hasMilestonePreview, websiteRoadmap } from "./roadmap";
 
 const copy = { title: "Public title", summary: "Public description" };
 function item(id: string, overrides = {}) {
@@ -51,6 +51,23 @@ describe("the marketing roadmap (WEB-01e)", () => {
     ]);
     expect(result.released.map((item) => item.id)).toEqual(["minor", "major"]);
     expect(result.latest?.id).toBe("major");
+  });
+
+  it("keeps the newest milestone featured even when it has no live preview", () => {
+    const result = view([
+      item("FEAT-SHARE-01", { status: "released", decision: "completed", dates: { released: "2026-10-26" }, public: { visible: true, milestone: true, en: copy, no: copy } }),
+      item("new-milestone", { status: "released", decision: "completed", dates: { released: "2026-10-29" }, public: { visible: true, milestone: true, en: copy, no: copy } }),
+    ]);
+    expect(result.latest?.id).toBe("new-milestone");
+    expect(hasMilestonePreview(result.latest)).toBe(false);
+    expect(hasMilestonePreview({ id: "FEAT-SHARE-01" })).toBe(true);
+    expect(hasMilestonePreview(null)).toBe(false);
+  });
+
+  it("puts all upcoming work on one ordered path, without release dates", () => {
+    const result = view([item("working", { status: "in_progress" }), item("planned")]);
+    expect(result.upcoming).toHaveLength(2);
+    expect(result.upcoming.every((item) => item.date === null)).toBe(true);
   });
 
   it("preserves date precision and formats Norwegian and English on the server", () => {

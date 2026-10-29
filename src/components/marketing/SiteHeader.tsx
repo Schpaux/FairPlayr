@@ -25,21 +25,23 @@ export async function SiteHeader({ segment = "" }: { segment?: WebsiteSegment } 
           <BrandLogo label={common("appName")} className="w-[150px]" />
         </Link>
         <nav className={styles.headerNav} aria-label={t("label")}>
-          <Link href="/#slik-virker-det" className={styles.headerLink}>
+          {segment !== "/roadmap" && <>
+          <Link href="/#slik-virker-det" className={cn(styles.headerLink, styles.headerLinkOptional)}>
             {t("how")}
           </Link>
           <Link href="/#spilletid" className={cn(styles.headerLink, styles.headerLinkWide)}>
             {t("minutes")}
           </Link>
+          </>}
           <Link href="/roadmap" className={styles.headerLink} aria-current={segment === "/roadmap" ? "page" : undefined}>
             {t("roadmap")}
           </Link>
           <Link href={segment || "/"} locale={otherLocale} className={styles.headerLink} hrefLang={otherLocale === "no" ? "nb" : "en"} aria-label={t("languageLabel")}>
             {t("language")}
           </Link>
-          <Link href={APP_HOME_PATH} className={styles.headerApp}>
+          {segment !== "/roadmap" && <Link href={APP_HOME_PATH} className={styles.headerApp}>
             {t("openApp")}
-          </Link>
+          </Link>}
         </nav>
       </div>
     </header>

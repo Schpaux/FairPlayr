@@ -50,6 +50,7 @@ export function websiteRoadmap(data: RoadmapSource, locale: WebsiteLocale) {
   const released = items.filter((item) => item.state === "released")
     .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? "") || a.id.localeCompare(b.id));
   return {
+    upcoming: items.filter((item) => item.state !== "released"),
     developing: items.filter((item) => item.state === "in_progress"),
     planned: items.filter((item) => item.state === "planned"),
     released,
@@ -68,4 +69,9 @@ export function formatRoadmapDate(date: string, locale: WebsiteLocale, monthOnly
     year: "numeric", ...(parts.length > 1 ? { month: "long" as const } : {}),
     ...(parts.length > 2 && !monthOnly ? { day: "numeric" as const } : {}), timeZone: "UTC",
   }).format(new Date(`${parts[0]}-${parts[1] ?? "01"}-${parts[2] ?? "01"}T12:00:00Z`));
+}
+
+/** Capability only: the latest milestone itself is always selected from public data. */
+export function hasMilestonePreview(milestone: Pick<PublicMilestone, "id"> | null): boolean {
+  return milestone?.id === "FEAT-SHARE-01";
 }

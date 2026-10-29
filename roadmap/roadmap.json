@@ -1852,9 +1852,25 @@
         {
           "type": "review_patch",
           "ref": "fairplayr-web01e-review.patch"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers gjennomgang av WEB-01e og fallbackkrav (2026-10-29)",
+          "note": "Fjern appreklame og åpne-knapper. Én tidslinje med kommende og leverte punkter. Siste store milepæl er hovedattraksjonen, med ekte livevisning når støttet og statisk fallback ellers."
+        },
+        {
+          "type": "commit",
+          "ref": "516ca6d",
+          "note": "Førsteversjonen i PR #17; videre revidert etter produkteiers gjennomgang."
         }
       ],
-      "updated": "2026-10-29"
+      "updated": "2026-10-29",
+      "changelog": [
+        {
+          "date": "2026-10-29",
+          "note": "Førsteversjonen forenklet etter produkteiers gjennomgang: én tidslinje, ingen app-CTA og fremhevet siste milepæl med lokal produktdemo eller statisk fallback. Ingen endring i andre oppføringers prioritet, status eller lanseringsdatoer."
+        }
+      ]
     },
     {
       "id": "WEB-01f",

@@ -81,7 +81,7 @@
   transition: color var(--fp-d-quick) var(--fp-ease-out);
 }
 
-.headerLink:first-child,
+.headerLinkOptional,
 .headerLinkWide {
   display: none;
 }
@@ -118,7 +118,7 @@
 }
 
 @media (min-width: 640px) {
-  .headerLink:first-child {
+  .headerLinkOptional {
     display: inline-flex;
   }
 }

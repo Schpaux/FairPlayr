@@ -15,7 +15,7 @@ for (const theme of ["light", "dark"] as const) {
       await expect(page.getByTestId("roadmap-page")).toBeVisible();
       await expect(page.locator("html")).toHaveAttribute("lang", locale);
       await expect(page.locator("h1")).toHaveCount(1);
-      await expect(page.locator("h1")).toContainText(locale === "no" ? "Mer kamp." : "More game.");
+      await expect(page.locator("h1")).toHaveText("Roadmap");
       const main = page.locator("main");
       const data = getWebsiteRoadmap(locale);
       for (const item of [...data.developing, ...data.planned, ...data.released]) {
@@ -24,7 +24,7 @@ for (const theme of ["light", "dark"] as const) {
       const history = page.locator("#history");
       await expect(history.getByRole("list")).toHaveCount(1);
       await expect(history.locator("time")).toHaveCount(data.released.filter((item) => item.date).length);
-      await expect(page.locator("#upcoming time")).toHaveCount(0);
+      await expect(history.locator('[data-state="upcoming"] time')).toHaveCount(0);
       expect(await main.innerText()).not.toMatch(/Modern Sideline|WEB-01|P[0-3]|committed|implemented|roadmap\.roadmap/);
       await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", `https://fairplayr.app${path}`);
       await expect(page.locator('link[hreflang="nb"]')).toHaveAttribute("href", "https://fairplayr.app/no/roadmap");
@@ -33,7 +33,10 @@ for (const theme of ["light", "dark"] as const) {
       await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "index, follow");
       const nav = page.getByRole("navigation", { name: locale === "no" ? "Nettstedet" : "Website" });
       await expect(nav.getByRole("link", { name: "Roadmap", exact: true })).toHaveAttribute("aria-current", "page");
-      await expect(page.getByRole("link", { name: locale === "no" ? "Åpne FairPlayr" : "Open FairPlayr", exact: true }).first()).toHaveAttribute("href", locale === "no" ? "/no/play" : "/play");
+      await expect(page.locator('a[href$="/play"]')).toHaveCount(0);
+      await expect(page.getByRole("heading", { name: /^(Under utvikling|På planen|In development|Planned)$/ })).toHaveCount(0);
+      await expect(page.getByTestId("roadmap-share-demo")).toBeVisible();
+      await expect(history.locator('[data-state="upcoming"]')).toHaveCount(data.upcoming.length);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
       expect(await page.evaluate(() => localStorage.getItem("theme"))).toBe(theme);
       expect(errors).toEqual([]);
@@ -57,10 +60,36 @@ test.describe("server-rendered roadmap", () => {
   test.use({ javaScriptEnabled: false });
   test("content, localised navigation and date labels work without JavaScript", async ({ page }) => {
     await page.goto("/no/roadmap");
-    await expect(page.getByRole("heading", { name: "Mer kamp. Steg for steg." })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Roadmap", exact: true })).toBeVisible();
     await expect(page.locator("#history")).toContainText("Tilgjengelig senest");
-    await page.getByRole("navigation", { name: "På denne siden" }).getByRole("link", { name: "Lansert" }).click();
+    await expect(page.getByTestId("roadmap-share-demo").locator(".fp-live-pulse")).toHaveCSS("animation-play-state", "paused");
+    await expect(page.getByRole("button", { name: "Spill av demonstrasjonen" })).toBeDisabled();
+    await page.getByRole("link", { name: "Se tidslinjen", exact: true }).click();
     await expect(page).toHaveURL(/#history$/);
     await expect(page.locator("#history-title")).toBeInViewport();
   });
+});
+
+
+test("the milestone demo stays local, respects reduced motion, and keeps score and goals together", async ({ page }) => {
+  const reads: string[] = [];
+  page.on("request", (request) => { if (new URL(request.url()).pathname.startsWith("/api/public/")) reads.push(request.url()); });
+  await page.goto("/no/roadmap");
+  const demo = page.getByTestId("roadmap-share-demo");
+  await demo.scrollIntoViewIfNeeded();
+  const clock = demo.getByTestId("public-match-clock");
+  await expect(clock).toHaveText("16:48");
+  await page.waitForTimeout(1100);
+  await expect(clock).toHaveText("16:48");
+  await page.clock.install();
+  await demo.getByRole("button", { name: "Spill av demonstrasjonen" }).click();
+  await page.clock.runFor(13_000);
+  await expect(demo.getByTestId("public-match-score")).toHaveText(/2\s*–\s*0/);
+  await expect(demo.getByTestId("roadmap-demo-goals").getByRole("listitem")).toHaveCount(2);
+  await demo.getByRole("button", { name: "Sett demonstrasjonen på pause" }).click();
+  const pausedTime = await clock.innerText();
+  await page.clock.runFor(3000);
+  await expect(clock).toHaveText(pausedTime);
+  await expect(demo.locator(".fp-live-pulse")).toHaveCSS("animation-play-state", "paused");
+  expect(reads).toEqual([]);
 });
