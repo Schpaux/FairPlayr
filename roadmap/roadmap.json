@@ -1849,12 +1849,15 @@
       "summary": "Vis en kuratert, ikke-teknisk tidslinje fra roadmap/roadmap.json: oppføringer med public.visible, sortert etter dato, med «Kommer»-del for vedtatte planer. Ingen egen, manuelt vedlikeholdt offentlig liste.",
       "category": "website",
       "parent": "WEB-01",
-      "decision": "committed",
-      "status": "in_review",
+      "decision": "completed",
+      "status": "released",
       "priority": "P2",
       "origin": "owner_decision",
       "dates": {
-        "created": "2026-10-27"
+        "created": "2026-10-27",
+        "implemented": "2026-10-29",
+        "released": "2026-10-29",
+        "verified": "2026-10-29"
       },
       "depends_on": [
         "ROADMAP-01",
@@ -1899,6 +1902,21 @@
           "type": "commit",
           "ref": "804d5e7",
           "note": "Godkjent visuell retning med milepælsdemo og statisk fallback i PR #17."
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers produksjonsgodkjenning av PR #17 (2026-10-29)",
+          "note": "Vanlig merge commit til main og automatisk Vercel-produksjonsdeploy godkjent. Oppdater WEB-01e til fullført etter produksjonskontroll."
+        },
+        {
+          "type": "commit",
+          "ref": "48df2e6",
+          "note": "PR #17 merget til main og automatisk produksjonsdeploy bekreftet READY 2026-10-29."
+        },
+        {
+          "type": "url",
+          "ref": "https://github.com/Schpaux/FairPlayr/pull/17",
+          "note": "Produksjonskontroll 2026-10-29: /roadmap og /no/roadmap har riktig språk, siste store milepæl er den nye nettsiden med dokumentert lanseringsdato 2026-10-28 og statisk fallback. /, /no, /play og /no/play svarer 200 og rendrer uten JavaScript-feil."
         }
       ],
       "updated": "2026-10-29",
@@ -1910,8 +1928,13 @@
         {
           "date": "2026-10-29",
           "note": "Siste avgrensede justering etter designgodkjenning: dokumentert lansering av BRAND-01 og WEB-01 i kilden, og tettere vertikal rytme for mindre oppdateringer."
+        },
+        {
+          "date": "2026-10-29",
+          "note": "Produkteier godkjente produksjonssetting. PR #17 merget med vanlig merge commit; automatisk Vercel-deploy og avgrenset produksjonskontroll bekreftet. WEB-01e registrert som completed/released med production-verifisering."
         }
-      ]
+      ],
+      "verification": "production"
     },
     {
       "id": "WEB-01f",
