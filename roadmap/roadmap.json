@@ -478,11 +478,11 @@
         "visible": true,
         "milestone": true,
         "no": {
-          "title": "Nytt design: Modern Sideline",
+          "title": "Nytt design for kampdagen",
           "summary": "Hele appen er tegnet på nytt for bruk på sidelinjen: store tall, tydelige knapper og mørkt tema som standard."
         },
         "en": {
-          "title": "New design: Modern Sideline",
+          "title": "A new design for match day",
           "summary": "The whole app was redesigned for the sideline: big numbers, clear buttons and dark mode by default."
         }
       },
@@ -509,11 +509,15 @@
           "note": "Modern Sideline er designspråket, ikke FairPlayr Next"
         }
       ],
-      "updated": "2026-10-27",
+      "updated": "2026-10-29",
       "related": [
         "FEAT-NEXT-01"
       ],
       "changelog": [
+        {
+          "date": "2026-10-29",
+          "note": "Offentlig tittel bruker trenerens språk i stedet for internt designnavn, i tråd med MARKETING.md §2 (WEB-01e). Ingen endring i status eller datoer."
+        },
         {
           "date": "2026-10-27",
           "note": "Aliaset FAIRPLAYR-NEXT fjernet: produkteier har avklart at FairPlayr Next er en egen funksjon (FEAT-NEXT-01), ikke designspråket."
@@ -935,14 +939,15 @@
       "rationale": "Appen hadde ingen egentlig logo (et banemerke og ordet FairPlayr i ren tekst), og iOS-skallet brukte Capacitors standardikon og -splash. Den kommende landingssiden (WEB-01) skal bygge på samme identitet uten å gjøre brandingarbeidet på nytt.",
       "category": "design-ui",
       "work_order": 2,
-      "decision": "committed",
-      "status": "implemented",
+      "decision": "completed",
+      "status": "released",
       "priority": "P1",
       "origin": "owner_decision",
       "dates": {
         "created": "2026-10-27",
         "started": "2026-10-27",
-        "implemented": "2026-10-27"
+        "implemented": "2026-10-27",
+        "released": "2026-10-27"
       },
       "related": [
         "WEB-01",
@@ -956,11 +961,11 @@
         "milestone": true,
         "no": {
           "title": "Ny visuell identitet",
-          "summary": "Ny logo og nytt appikon for FairPlayr, brukt likt i appen, på delte kampsider og på den kommende nettsiden."
+          "summary": "Ny logo og nytt appikon for FairPlayr, brukt likt i appen, på delte kampsider og på nettsiden."
         },
         "en": {
           "title": "A new FairPlayr identity",
-          "summary": "A new logo and app icon for FairPlayr, used the same way in the app, on shared match pages and on the coming website."
+          "summary": "A new logo and app icon for FairPlayr, used the same way in the app, on shared match pages and on the website."
         }
       },
       "sources": [
@@ -1001,9 +1006,14 @@
           "type": "owner_decision",
           "ref": "Produkteiers godkjenning av merge av BRAND-01 (2026-10-27)",
           "note": "Merge av PR #3 med merge commit og automatisk produksjonsdeploy godkjent"
+        },
+        {
+          "type": "url",
+          "ref": "https://github.com/Schpaux/FairPlayr/pull/3",
+          "note": "Vercel-produksjonshistorikk kontrollert 2026-10-29: main 2b8f4b1 var READY 2026-10-27. Logo og webikoner er tidligere produksjonskontrollert; iOS-verifisering i BRAND-01d er fortsatt åpen."
         }
       ],
-      "updated": "2026-10-27",
+      "updated": "2026-10-29",
       "changelog": [
         {
           "date": "2026-10-27",
@@ -1020,8 +1030,13 @@
         {
           "date": "2026-10-27",
           "note": "PR #3 merget til main og deployet til produksjon; logo og ikoner kontrollert i produksjon. Initiativet står som implemented til iOS-ikon og splash er verifisert (BRAND-01d). BRAND-01g flyttet til WEB-01; BRAND-01h–j forblir considering."
+        },
+        {
+          "date": "2026-10-29",
+          "note": "Produkteier ba om at offentlig identitetsmilepæl vises som lansert. Produksjonsdato 2026-10-27 dokumentert fra PR #3 og Vercel-historikk. Initiativet registreres som released/completed for webleveransen, med partial verifisering; BRAND-01d og øvrige åpne underoppgaver endres ikke."
         }
-      ]
+      ],
+      "verification": "partial"
     },
     {
       "id": "BRAND-01a",
@@ -1477,13 +1492,14 @@
       "rationale": "I dag er forsiden appens Hjem; det finnes ingen offentlig presentasjon av produktet. Den første markedsføringssiden fra april ble erstattet av kampdag-dashbordet i mai.",
       "category": "website",
       "work_order": 3,
-      "decision": "committed",
-      "status": "in_progress",
+      "decision": "completed",
+      "status": "released",
       "priority": "P1",
       "origin": "owner_decision",
       "dates": {
         "created": "2026-10-27",
-        "started": "2026-10-28"
+        "started": "2026-10-28",
+        "released": "2026-10-28"
       },
       "related": [
         "HIST-LANDING-01",
@@ -1556,9 +1572,19 @@
           "type": "owner_decision",
           "ref": "Produkteiers godkjenning av WEB-01 fase 1 (2026-10-28)",
           "note": "visuell landingsside godkjent for commit, merge og produksjonsdeploy; WEBSITE_INDEXABLE forblir false med noindex"
+        },
+        {
+          "type": "commit",
+          "ref": "73faea1",
+          "note": "PR #13: visuell landingsside merget og produksjonsdeployet 2026-10-28."
+        },
+        {
+          "type": "url",
+          "ref": "https://github.com/Schpaux/FairPlayr/pull/13",
+          "note": "Vercel-produksjonshistorikk kontrollert 2026-10-29: main 73faea1 var READY 2026-10-28. Datoen gjelder første visuelle nettsidelansering; senere leveranser og åpne underoppgaver beholdes separat."
         }
       ],
-      "updated": "2026-10-28",
+      "updated": "2026-10-29",
       "depends_on": [
         "ROADMAP-02",
         "BRAND-01"
@@ -1591,8 +1617,13 @@
         {
           "date": "2026-10-28",
           "note": "Fase 0 merget (c5d9113) og deployet til produksjon. Fase 1 (visuell landingsside: kveldslys-hero med appens ekte kampvisning som demo, spilletidsoversikt og historiedel) godkjent av produkteier for produksjon. Nettsiden er fortsatt ikke indekserbar (WEBSITE_INDEXABLE = false, noindex). Film, roadmap-underside og øvrige markedsføringssider gjenstår."
+        },
+        {
+          "date": "2026-10-29",
+          "note": "Produkteier ba om at offentlig nettsidemilepæl vises som lansert. Første visuelle produksjonslansering fra PR #13 var 2026-10-28, kontrollert i Vercel-historikk. Initiativet registreres som released/completed for denne lanseringen, med partial verifisering; roadmapen og andre åpne underoppgaver endres ikke."
         }
-      ]
+      ],
+      "verification": "partial"
     },
     {
       "id": "WEB-01a",
@@ -1819,7 +1850,7 @@
       "category": "website",
       "parent": "WEB-01",
       "decision": "committed",
-      "status": "not_started",
+      "status": "in_review",
       "priority": "P2",
       "origin": "owner_decision",
       "dates": {
@@ -1839,9 +1870,48 @@
           "type": "doc",
           "ref": "roadmap/README.md",
           "note": "offentlig utvalg"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers oppdrag WEB-01e (2026-10-29)",
+          "note": "Ferdig førsteversjon av offentlig roadmap, på norsk og engelsk, med premium nettsidedesign og PR mot main. Ingen merge eller produksjonsdeploy."
+        },
+        {
+          "type": "review_patch",
+          "ref": "fairplayr-web01e-review.patch"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers gjennomgang av WEB-01e og fallbackkrav (2026-10-29)",
+          "note": "Fjern appreklame og åpne-knapper. Én tidslinje med kommende og leverte punkter. Siste store milepæl er hovedattraksjonen, med ekte livevisning når støttet og statisk fallback ellers."
+        },
+        {
+          "type": "commit",
+          "ref": "516ca6d",
+          "note": "Førsteversjonen i PR #17; videre revidert etter produkteiers gjennomgang."
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers siste justeringer av PR #17 (2026-10-29)",
+          "note": "Design godkjent. Korriger dokumenterte produksjonsdatoer for identitet og nettside, og gjør mindre oppdateringer mer kompakte. Produkteier valgte eksisterende statisk fallback for nettsidemilepælen; kampdemoen beholdes i kodebasen uten kunstig kobling. Commit og push godkjent; ikke merge."
+        },
+        {
+          "type": "commit",
+          "ref": "804d5e7",
+          "note": "Godkjent visuell retning med milepælsdemo og statisk fallback i PR #17."
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-29",
+      "changelog": [
+        {
+          "date": "2026-10-29",
+          "note": "Førsteversjonen forenklet etter produkteiers gjennomgang: én tidslinje, ingen app-CTA og fremhevet siste milepæl med lokal produktdemo eller statisk fallback. Ingen endring i andre oppføringers prioritet, status eller lanseringsdatoer."
+        },
+        {
+          "date": "2026-10-29",
+          "note": "Siste avgrensede justering etter designgodkjenning: dokumentert lansering av BRAND-01 og WEB-01 i kilden, og tettere vertikal rytme for mindre oppdateringer."
+        }
+      ]
     },
     {
       "id": "WEB-01f",

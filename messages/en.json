@@ -1402,7 +1402,8 @@
         "minutes": "Playing time",
         "language": "Norsk",
         "languageLabel": "Les på norsk",
-        "openApp": "Open app"
+        "openApp": "Open app",
+        "roadmap": "Roadmap"
       },
       "hero": {
         "kicker": "For grassroots and youth football coaches",
@@ -1460,6 +1461,34 @@
         "selection": "The coach taps Select. Maja is selected.",
         "undo": "Selma on, Maja off. The substitution can be undone for five seconds.",
         "settled": "The bench re-sorts: least played first."
+      }
+    },
+    "roadmap": {
+      "metaTitle": "Roadmap",
+      "metaDescription": "Explore FairPlayr’s latest milestone, what comes next and the whole journey in one timeline.",
+      "skip": "Skip to content",
+      "home": "Back to home",
+      "intro": "What we have built. What comes next.",
+      "latest": "Latest milestone",
+      "seeHistory": "Explore the timeline",
+      "released": "Released",
+      "planNote": "Plans can change. We share release dates when they are ready, never before.",
+      "releasedOn": "Released",
+      "availableBy": "Available by",
+      "releaseUndated": "Released · date not documented",
+      "emptyHistory": "The first releases will appear here.",
+      "timelineTitle": "The journey",
+      "coming": "Coming next",
+      "demo": {
+        "label": "Public match page demonstration",
+        "audience": "The match, from the touchline",
+        "team": "Home",
+        "opponent": "Away",
+        "caption": "The clock is running. Everyone can follow.",
+        "goal": "Goal! The score and events update.",
+        "fictional": "Demo match with fictional teams.",
+        "play": "Play demonstration",
+        "pause": "Pause demonstration"
       }
     }
   }

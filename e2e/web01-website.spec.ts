@@ -130,7 +130,7 @@ test("the website's other spellings are redirects, not duplicate pages", async (
   }
 });
 
-test("robots.txt names the sitemap, and the sitemap lists / and /no only", async ({ request }) => {
+test("robots.txt names the sitemap, and the sitemap lists the home and roadmap pages in both languages", async ({ request }) => {
   const robots = await (await request.get("/robots.txt")).text();
   expect(robots).toContain("Disallow: /api/");
   expect(robots).toContain("Disallow: /serwist/");
@@ -139,7 +139,7 @@ test("robots.txt names the sitemap, and the sitemap lists / and /no only", async
   expect(sitemap.status()).toBe(200);
   const xml = await sitemap.text();
   const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
-  expect(urls).toEqual(["https://fairplayr.app/", "https://fairplayr.app/no"]);
+  expect(urls).toEqual(["https://fairplayr.app/", "https://fairplayr.app/no", "https://fairplayr.app/roadmap", "https://fairplayr.app/no/roadmap"]);
 });
 
 test("every host but fairplayr.app answers X-Robots-Tag: noindex", async ({ request }) => {

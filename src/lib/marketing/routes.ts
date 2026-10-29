@@ -8,7 +8,7 @@
  */
 
 /** Website pages without the locale prefix; "" is the front page. */
-export const WEBSITE_SEGMENTS = [""] as const;
+export const WEBSITE_SEGMENTS = ["", "/roadmap"] as const;
 
 /** `""` is English (unprefixed), `/en` the alias next-intl redirects, `/no` Norwegian. */
 const LOCALE_PREFIXES = ["", "/en", "/no"] as const;

@@ -81,7 +81,7 @@
   transition: color var(--fp-d-quick) var(--fp-ease-out);
 }
 
-.headerLink:first-child,
+.headerLinkOptional,
 .headerLinkWide {
   display: none;
 }
@@ -118,7 +118,7 @@
 }
 
 @media (min-width: 640px) {
-  .headerLink:first-child {
+  .headerLinkOptional {
     display: inline-flex;
   }
 }
@@ -925,3 +925,9 @@
     transform: none;
   }
 }
+
+/* The app is the hero's primary action on small screens; keep navigation calm. */
+@media (max-width: 639px) {
+  .headerApp { display: none; }
+}
+.headerLink[aria-current="page"] { color: var(--fp-web-chalk); text-decoration: underline; text-underline-offset: 6px; }

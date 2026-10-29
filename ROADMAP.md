@@ -9,8 +9,8 @@ Oppdatert 2026-10-29. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); re
 | | Antall |
 | :- | -: |
 | Oppføringer totalt | 299 |
-| Ferdige (`completed`) | 131 |
-| Åpne vedtatte (`committed`) | 136 |
+| Ferdige (`completed`) | 133 |
+| Åpne vedtatte (`committed`) | 134 |
 | Til vurdering (`considering`) | 27 |
 | Utsatt (`deferred`) | 5 |
 | Må verifiseres | 18 |
@@ -21,8 +21,8 @@ Oppdatert 2026-10-29. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); re
 Produkteiers prioriterte utviklingsområder. Unntak: P0-feil som kan påvirke kampdata, datalagring eller kritisk kampfunksjonalitet, og kritiske sikkerhetssårbarheter, tas før neste reelle kamptest.
 
 1. **ROADMAP-01** Roadmap-system som felles sannhetskilde (ferdig, implementert)
-2. **BRAND-01** FairPlayr Brand Refresh (vedtatt, implementert)
-3. **WEB-01** Ny landingsside og tydelig skille mellom nettside og app (vedtatt, pågår, etter ROADMAP-02, BRAND-01)
+2. **BRAND-01** FairPlayr Brand Refresh (ferdig, i produksjon)
+3. **WEB-01** Ny landingsside og tydelig skille mellom nettside og app (ferdig, i produksjon, etter ROADMAP-02, BRAND-01)
 4. **SMART-SUBS** Smart byttemotor (vedtatt, ikke startet)
 5. **FIX-POLISH** Samlet feilretting og UI-polish (vedtatt, pågår)
 6. **COMPETITOR-01** Funn fra konkurrentanalysen (vedtatt, ikke startet)
@@ -49,7 +49,7 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 | BRAND-01g | P2 | ikke startet | Vurder øvrig markedsføringsmateriell |  |
 | WEB-01b | P2 | pågår | FairPlayr-branding på nettsiden |  |
 | WEB-01c | P2 | ikke startet | Kontaktinformasjon |  |
-| WEB-01e | P2 | ikke startet | Offentlig roadmap-visning (Immich-inspirert) |  |
+| WEB-01e | P2 | til review | Offentlig roadmap-visning (Immich-inspirert) |  |
 | WEB-01g | P2 | pågår | SEO og metadata for nettsiden |  |
 | WEB-01i | P2 | ikke startet | Personvernerklæring og brukervilkår på nettsiden |  |
 | WEB-01k | P2 | ikke startet | Interaktiv kampdemo på nettsiden |  |
@@ -276,6 +276,8 @@ Ferdige initiativer og funksjoner, nyeste først. «≤» betyr at commiten var 
 
 | Dato | ID | Leveranse | Commit |
 | :- | :- | :- | :- |
+| 2026-10-28 (prod 2026-10-28) | WEB-01 | Ny landingsside og tydelig skille mellom nettside og app | `c5d9113` `73faea1` |
+| 2026-10-27 (prod 2026-10-27) | BRAND-01 | FairPlayr Brand Refresh | `7df63a8` `2b8f4b1` |
 | 2026-10-27 (prod 2026-10-27) | FEAT-SHARE-02 | Pseudonymiserte, lengre og faktatro AI-oppsummeringer i EU | `965200b` |
 | 2026-10-27 (prod 2026-10-27) | FEAT-SHARE-04 | Offentlig lagoppstilling og benk | `b8181a3` |
 | 2026-10-27 | ROADMAP-01 | Roadmap-system som felles sannhetskilde | `fb5cc71` `5320df8` `2813bff` |

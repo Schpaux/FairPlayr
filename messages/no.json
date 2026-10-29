@@ -1402,7 +1402,8 @@
         "minutes": "Spilletid",
         "language": "English",
         "languageLabel": "Read in English",
-        "openApp": "Til appen"
+        "openApp": "Til appen",
+        "roadmap": "Roadmap"
       },
       "hero": {
         "kicker": "For trenere i barne- og ungdomsfotball",
@@ -1460,6 +1461,34 @@
         "selection": "Treneren trykker Velg. Maja er valgt.",
         "undo": "Selma inn, Maja ut. Byttet kan angres i fem sekunder.",
         "settled": "Benken sorteres på nytt: minst spilt først."
+      }
+    },
+    "roadmap": {
+      "metaTitle": "Roadmap",
+      "metaDescription": "Se FairPlayrs siste store milepæl, hva som kommer og hele historien i én tidslinje.",
+      "skip": "Hopp til innhold",
+      "home": "Til forsiden",
+      "intro": "Det vi har laget. Det som kommer.",
+      "latest": "Siste store milepæl",
+      "seeHistory": "Se tidslinjen",
+      "released": "Lansert",
+      "planNote": "Planer kan endre seg. Vi deler lanseringsdatoer når de er klare, ikke før.",
+      "releasedOn": "Lansert",
+      "availableBy": "Tilgjengelig senest",
+      "releaseUndated": "Lansert · dato ikke dokumentert",
+      "emptyHistory": "De første lanseringene kommer hit.",
+      "timelineTitle": "Veien videre",
+      "coming": "Kommer",
+      "demo": {
+        "label": "Demonstrasjon av den offentlige kampsiden",
+        "audience": "Kampen, sett fra tribunen",
+        "team": "Hjemme",
+        "opponent": "Borte",
+        "caption": "Klokken går. Alle kan følge med.",
+        "goal": "Mål! Stillingen og hendelsene oppdateres.",
+        "fictional": "Demokamp med fiktive lag.",
+        "play": "Spill av demonstrasjonen",
+        "pause": "Sett demonstrasjonen på pause"
       }
     }
   }
