@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { getWebsiteRoadmap } from "../src/lib/marketing/roadmap";
+import { getWebsiteRoadmap, hasMilestonePreview } from "../src/lib/marketing/roadmap";
 
 for (const theme of ["light", "dark"] as const) {
   for (const locale of ["no", "en"] as const) {
@@ -35,7 +35,13 @@ for (const theme of ["light", "dark"] as const) {
       await expect(nav.getByRole("link", { name: "Roadmap", exact: true })).toHaveAttribute("aria-current", "page");
       await expect(page.locator('a[href$="/play"]')).toHaveCount(0);
       await expect(page.getByRole("heading", { name: /^(Under utvikling|På planen|In development|Planned)$/ })).toHaveCount(0);
-      await expect(page.getByTestId("roadmap-share-demo")).toBeVisible();
+      if (hasMilestonePreview(data.latest)) {
+        await expect(page.getByTestId("roadmap-share-demo")).toBeVisible();
+      } else {
+        await expect(page.locator('[data-preview="static"]')).toBeVisible();
+        await expect(page.getByTestId("roadmap-share-demo")).toHaveCount(0);
+        await expect(page.getByRole("heading", { name: data.latest!.title, level: 2, exact: true })).toBeVisible();
+      }
       await expect(history.locator('[data-state="upcoming"]')).toHaveCount(data.upcoming.length);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0);
       expect(await page.evaluate(() => localStorage.getItem("theme"))).toBe(theme);
@@ -62,8 +68,13 @@ test.describe("server-rendered roadmap", () => {
     await page.goto("/no/roadmap");
     await expect(page.getByRole("heading", { name: "Roadmap", exact: true })).toBeVisible();
     await expect(page.locator("#history")).toContainText("Tilgjengelig senest");
-    await expect(page.getByTestId("roadmap-share-demo").locator(".fp-live-pulse")).toHaveCSS("animation-play-state", "paused");
-    await expect(page.getByRole("button", { name: "Spill av demonstrasjonen" })).toBeDisabled();
+    if (hasMilestonePreview(getWebsiteRoadmap("no").latest)) {
+      await expect(page.getByTestId("roadmap-share-demo").locator(".fp-live-pulse")).toHaveCSS("animation-play-state", "paused");
+      await expect(page.getByRole("button", { name: "Spill av demonstrasjonen" })).toBeDisabled();
+    } else {
+      await expect(page.locator('[data-preview="static"]')).toBeVisible();
+      await expect(page.getByTestId("roadmap-share-demo")).toHaveCount(0);
+    }
     await page.getByRole("link", { name: "Se tidslinjen", exact: true }).click();
     await expect(page).toHaveURL(/#history$/);
     await expect(page.locator("#history-title")).toBeInViewport();
@@ -72,6 +83,7 @@ test.describe("server-rendered roadmap", () => {
 
 
 test("the milestone demo stays local, respects reduced motion, and keeps score and goals together", async ({ page }) => {
+  test.skip(!hasMilestonePreview(getWebsiteRoadmap("no").latest), "The latest milestone uses the static fallback; keep this check for a supported featured demo.");
   const reads: string[] = [];
   page.on("request", (request) => { if (new URL(request.url()).pathname.startsWith("/api/public/")) reads.push(request.url()); });
   await page.goto("/no/roadmap");

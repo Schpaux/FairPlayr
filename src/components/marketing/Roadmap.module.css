@@ -286,6 +286,26 @@
   letter-spacing: -0.025em;
 }
 
+.timeline > .update {
+  padding-bottom: 24px;
+}
+
+.update .entry {
+  padding-top: 20px;
+}
+
+.update .timelineDot {
+  top: 22px;
+}
+
+.update .entryDate {
+  margin-bottom: 8px;
+}
+
+.update .entryBody {
+  margin-top: 8px;
+}
+
 .update h4 {
   font-size: 18px;
   line-height: 1.3;

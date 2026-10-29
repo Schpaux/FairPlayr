@@ -77,6 +77,16 @@ describe("the marketing roadmap (WEB-01e)", () => {
     expect(formatRoadmapDate("2026-10-25", "en", true)).toBe("October 2026");
   });
 
+  it("shows the documented identity and website launches as released in both languages", () => {
+    for (const locale of ["no", "en"] as const) {
+      const result = getWebsiteRoadmap(locale);
+      expect(result.released.find((item) => item.id === "BRAND-01")).toMatchObject({ date: "2026-10-27", dateKind: "released" });
+      expect(result.released.find((item) => item.id === "WEB-01")).toMatchObject({ date: "2026-10-28", dateKind: "released" });
+      expect(result.upcoming.some((item) => ["BRAND-01", "WEB-01"].includes(item.id))).toBe(false);
+      expect(result.latest?.id).toBe("WEB-01");
+    }
+  });
+
   it("reads the repository's single public source in both languages", () => {
     for (const locale of ["no", "en"] as const) {
       const result = getWebsiteRoadmap(locale);
