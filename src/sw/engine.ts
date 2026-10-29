@@ -11,17 +11,16 @@
  *             the URL's locale, else the last used one, without waiting for
  *             the network. Only without either does the server pick (short
  *             timeout), and offline it is the English Home.
- * - root `/`: the website's front page in the last used locale straight from
- *             the precache when the page has told us the locale (§S.6). Only
- *             without a known locale is it network-first (the server picks),
- *             with a short timeout.
+ * - root and marketing: network-first, bypassing HTTP cache; build-scoped
+ *   precache only on failure, timeout or server error.
  * - navigate: network-first with a generous timeout (weak 3G), then the
  *             offline page for the path's locale. Navigation responses are
  *             never stored at runtime.
  * - passthrough: not answered (`null`), so the browser uses the network.
  *
  * Lifecycle (§2.2, §S.7):
- * - install precaches everything for this build and never calls skipWaiting;
+ * - install precaches everything for this build; except the one-time website
+ *   migration below, it never calls skipWaiting:
  *   a new build waits until every page has closed, or until the coach agrees
  *   to update (`SKIP_WAITING`, only offered when no match is active).
  * - update gate: an update (a worker is already active) fails its install
@@ -39,6 +38,9 @@
  *   until the next activation. A pinned build from before `/play` (WEB-01d)
  *   has its Home at `/` and `/no`: while it is served, a launch and `/play`
  *   open that Home, so the coach sees one version for the whole match.
+ * - WEB-01m: one-time migration skips waiting only outside a match and
+ *   navigates website clients. App clients use their existing guarded
+ *   controllerchange handling; old chunks are retained for open pages.
  * - activate deletes our caches from other builds only, and claims clients
  *   only on the very first install (no worker was active before).
  * - kill switch (`mode: "off"`): skipWaiting, delete every `fp-` cache,
@@ -81,11 +83,14 @@ export interface EngineDeps {
   fetch: (request: Request) => Promise<Response>;
   /** `self.registration`: `active` is read at install time. */
   registration: { readonly active: unknown; unregister(): Promise<boolean> };
-  clients: { claim(): Promise<void> };
+  clients: {
+    claim(): Promise<void>;
+    matchAll(options: { type: "window"; includeUncontrolled: true }): Promise<readonly { url: string; navigate(url: string): Promise<unknown> }[]>;
+  };
   skipWaiting(): Promise<void>;
   /** Timeout for navigations other than `/` (default NAVIGATION_TIMEOUT_MS). */
   networkTimeoutMs?: number;
-  /** Timeout for `/` when no locale is known (default ROOT_TIMEOUT_MS). */
+  /** Timeout for website `/` (default ROOT_TIMEOUT_MS). */
   rootTimeoutMs?: number;
   /** Parallel precache requests. */
   concurrency?: number;
@@ -94,7 +99,7 @@ export interface EngineDeps {
 
 /** Non-shell navigations: long enough for a slow 3G page, then the offline page. */
 export const NAVIGATION_TIMEOUT_MS = 8000;
-/** `/` without a known locale: a short wait, then the English Home shell. */
+/** Website `/`: a short wait before the offline front page. */
 export const ROOT_TIMEOUT_MS = 3000;
 /** How long a D4 override (FP_ALLOW_UPDATE_ONCE) stays valid. */
 export const UPDATE_OVERRIDE_TTL_MS = 5 * 60 * 1000;
@@ -185,7 +190,17 @@ export function createEngine(deps: EngineDeps) {
     if (firstInstall) {
       const meta = await deps.caches.open(META_CACHE);
       await meta.put(absolute(META_KEYS.firstInstall(config.buildId)), new Response("1"));
+    } else if ((await needsMarketingMigration()) && !(await readMatchActive())) {
+      // Old website HTML has no registrar/update prompt. Browser update checks
+      // still fetch this same script URL: finish the migration without new JS.
+      // Do not set activationRequested: a match starting now must still pin.
+      await deps.skipWaiting();
     }
+  }
+
+  async function needsMarketingMigration(): Promise<boolean> {
+    return (await readMeta(META_KEYS.marketingNetworkFirst)) !== "1" &&
+      (await readMeta(META_KEYS.servedBuild)) !== null;
   }
 
   async function kill(): Promise<void> {
@@ -219,10 +234,14 @@ export function createEngine(deps: EngineDeps) {
         ? previous
         : null;
 
+    const migrating = !firstInstall && (await needsMarketingMigration());
+    // Existing app tabs may still need old chunks if they defer their reload.
+    const keep = pin ?? (migrating ? previous : null);
     const names = await deps.caches.keys();
-    await Promise.all(cachesToDeleteOnActivate(names, config.buildId, pin).map((name) => deps.caches.delete(name)));
-    await meta.delete(absolute(META_KEYS.retiredBuild));
-    retired = null;
+    await Promise.all(cachesToDeleteOnActivate(names, config.buildId, keep).map((name) => deps.caches.delete(name)));
+    retired = pin === null && migrating && previous !== ownBuild ? previous : null;
+    if (retired !== null) await meta.put(absolute(META_KEYS.retiredBuild), new Response(retired));
+    else await meta.delete(absolute(META_KEYS.retiredBuild));
     if (pin !== null) {
       await meta.put(absolute(META_KEYS.pinnedBuild), new Response(pin));
     } else {
@@ -236,6 +255,24 @@ export function createEngine(deps: EngineDeps) {
       // First install only: the page that installed us is controlled without
       // a reload. Never on an update (§S.7).
       await deps.clients.claim();
+    }
+    if (pin === null) {
+      await writeMeta(META_KEYS.marketingNetworkFirst, "1");
+      if (migrating && !(await readMatchActive())) {
+        // Only website documents are explicitly navigated. App clients retain
+        // their existing guarded controllerchange handling. Website pages are
+        // navigated; this also works when their old HTML has no client JS.
+        for (const client of await deps.clients.matchAll({ type: "window", includeUncontrolled: true })) {
+          const url = new URL(client.url);
+          const path = normalizePathname(url.pathname);
+          if (url.origin === origin && (path === "/" || path === "/no") &&
+              url.searchParams.get("source") !== "pwa" && !(await readMatchActive())) {
+            // Navigation waits for activation; awaiting it here would deadlock
+            // the activate event. Only dispatch it within the lifetime promise.
+            void client.navigate(client.url).catch(() => undefined);
+          }
+        }
+      }
     }
   }
 
@@ -375,16 +412,34 @@ export function createEngine(deps: EngineDeps) {
   }
 
   async function handleRoot(request: Request): Promise<Response> {
-    // The page told us the coach's locale: open its front page at once (§S.6).
     const lastLocale = await readLastLocale();
-    if (lastLocale !== null) {
+    // A pinned pre-/play build uses the website paths as its live app Home.
+    if (await servesLegacyBuild()) {
       const cached = await rootFromCache(lastLocale);
       if (cached) return cached;
     }
     try {
-      return await networkWithTimeout(request, rootTimeoutMs);
+      return await marketingNetwork(request, rootTimeoutMs);
     } catch {
       return (await rootFromCache(lastLocale)) ?? (await fromPrecache(offlinePathFor("en"))) ?? Response.error();
+    }
+  }
+
+  async function marketingNetwork(request: Request, ms: number = timeoutMs): Promise<Response> {
+    const response = await networkWithTimeout(new Request(request, { cache: "no-store" }), ms);
+    if (response.status >= 500) throw new Error("website unavailable");
+    return response;
+  }
+
+  async function handleMarketing(request: Request, pathname: string): Promise<Response> {
+    if (await servesLegacyBuild()) {
+      const cached = await fromPrecache(pathname);
+      if (cached) return cached;
+    }
+    try {
+      return await marketingNetwork(request);
+    } catch {
+      return (await fromPrecache(pathname)) ?? offlineFallback(pathname);
     }
   }
 
@@ -438,6 +493,8 @@ export function createEngine(deps: EngineDeps) {
         return assetFromPrecache(decision.cacheKey).then((cached) => cached ?? deps.fetch(request));
       case "shell":
         return handleShell(request, decision.entry);
+      case "marketing":
+        return handleMarketing(request, decision.pathname);
       case "launch":
         return handleLaunch(request, decision.locale);
       case "root":

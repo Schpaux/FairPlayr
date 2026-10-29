@@ -15,6 +15,7 @@ export const META_CACHE = `${CACHE_PREFIX}meta`;
 
 /** Cache keys inside META_CACHE (same-origin URLs nobody serves). */
 export const META_KEYS = {
+  marketingNetworkFirst: "/__fp-sw/meta/marketing-network-first",
   lastLocale: "/__fp-sw/meta/last-locale",
   matchActive: "/__fp-sw/meta/match-active",
   allowUpdateOnce: "/__fp-sw/meta/allow-update-once",

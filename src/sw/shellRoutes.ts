@@ -17,7 +17,8 @@
  *
  * WEB-01d (FP-WEB-01A §5): `/` and `/no` are the website, the app's Home is
  * `/play` (`APP_HOME_PATH`). The website pages are user-agnostic and built
- * with the app, so they are precached like the shells. An installed app's
+ * with the app, so they are precached for offline fallback. Online they use
+ * network-first (WEB-01m). An installed app's
  * launch (`/?source=pwa`, `/no?source=pwa`) opens the app's Home instead.
  */
 import { APP_HOME_PATH } from "../lib/appRoutes";
@@ -85,8 +86,8 @@ export function isRootPath(pathname: string): boolean {
 }
 
 /**
- * The cache-first shell for a path, or null. `/` is not a cache-first shell
- * (see the file comment); `/no` is, because its locale is in the URL.
+ * The precached entry for a path, or null. The website entry at `/no` is
+ * only an offline fallback; `/` uses its own root handler.
  */
 export function matchShell(pathname: string): ShellEntry | null {
   const path = normalizePathname(pathname);

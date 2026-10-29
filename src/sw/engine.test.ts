@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
-import { META_CACHE, precacheName } from "./cacheNames";
+import { META_CACHE, META_KEYS, precacheName } from "./cacheNames";
 import {
   NAVIGATION_TIMEOUT_MS,
   PRECACHE_HEADER,
@@ -75,7 +75,7 @@ function setup(overrides: Partial<EngineDeps> & { fetchImpl?: FetchImpl; store?:
       return fetchImpl(request);
     },
     registration: { active: null, unregister: vi.fn(async () => true) },
-    clients: { claim: vi.fn(async () => undefined) },
+    clients: { claim: vi.fn(async () => undefined), matchAll: vi.fn(async () => []) },
     skipWaiting: vi.fn(async () => undefined),
     networkTimeoutMs: 50,
     ...rest,
@@ -130,6 +130,62 @@ describe("install", () => {
     await update.engine.activate();
     expect(update.deps.clients.claim).not.toHaveBeenCalled();
     expect(update.deps.skipWaiting).not.toHaveBeenCalled();
+  });
+});
+
+describe("legacy website cache migration (WEB-01m)", () => {
+  async function legacy() {
+    const old = setup({ config: { buildId: "legacy", mode: "on" } });
+    await old.engine.install();
+    await old.engine.activate();
+    // Legacy workers never wrote the policy marker. Keep their real metadata,
+    // precache and active-match protocol; no new window JS runs the migration.
+    await (await old.caches.open(META_CACHE)).delete(`${ORIGIN}${META_KEYS.marketingNetworkFirst}`);
+    const website = { url: `${ORIGIN}/no`, navigate: vi.fn(async () => undefined) };
+    const app = { url: `${ORIGIN}/no/play`, navigate: vi.fn(async () => undefined) };
+    const launch = { url: `${ORIGIN}/?source=pwa`, navigate: vi.fn(async () => undefined) };
+    const next = setup({ store: old.caches, registration: { active: {}, unregister: vi.fn(async () => true) },
+      clients: { claim: vi.fn(async () => undefined), matchAll: vi.fn(async () => [website, app, launch]) } });
+    return { old, next, website, app, launch };
+  }
+
+  it("activates once without new page JS, refreshes only website clients and preserves old chunks", async () => {
+    const { old, next, website, app, launch } = await legacy();
+    await next.engine.install();
+    expect(next.deps.skipWaiting).toHaveBeenCalledTimes(1);
+    // A navigation only finishes after activation: never await it inside activate.
+    website.navigate.mockImplementation(() => new Promise(() => undefined));
+    // Worker globals may be lost between install and activate.
+    await createEngine(next.deps).activate();
+    expect(website.navigate).toHaveBeenCalledWith(website.url);
+    expect(app.navigate).not.toHaveBeenCalled();
+    expect(launch.navigate).not.toHaveBeenCalled();
+    expect(await old.caches.has(precacheName("legacy"))).toBe(true);
+    const later = setup({ store: old.caches, config: { buildId: "later", mode: "on" },
+      registration: { active: {}, unregister: vi.fn(async () => true) } });
+    await later.engine.install();
+    expect(later.deps.skipWaiting).not.toHaveBeenCalled();
+  });
+
+  it("defers while a match is active and retries successfully after it ends", async () => {
+    const { old, next, website } = await legacy();
+    await old.engine.handleMessage({ type: MESSAGE.setMatchActive, active: true });
+    await expect(next.engine.install()).rejects.toBeInstanceOf(UpdateDeferredError);
+    expect(next.deps.skipWaiting).not.toHaveBeenCalled();
+    expect(website.navigate).not.toHaveBeenCalled();
+    await old.engine.handleMessage({ type: MESSAGE.setMatchActive, active: false });
+    await next.engine.install();
+    expect(next.deps.skipWaiting).toHaveBeenCalledTimes(1);
+  });
+
+  it("a match starting after install still pins the old build and prevents navigation", async () => {
+    const { old, next, website } = await legacy();
+    await next.engine.install();
+    await old.engine.handleMessage({ type: MESSAGE.setMatchActive, active: true });
+    await next.engine.activate();
+    expect((await next.engine.status()).servedBuildId).toBe("legacy");
+    expect(website.navigate).not.toHaveBeenCalled();
+    expect(await (await next.engine.handleFetch(navigation("/no/match/live"))!).text()).toBe("network /no/match/live");
   });
 });
 
@@ -335,21 +391,29 @@ describe("fetch", () => {
     expect(ROOT_TIMEOUT_MS).toBeLessThan(NAVIGATION_TIMEOUT_MS);
   });
 
-  it("/ opens the known locale's front page (the website) from the precache, without waiting for the network", async () => {
-    const { engine, requests } = setup();
+  it.each(["/", "/no", "/no/?campaign=test"])("%s fetches fresh HTML even with a known locale and cached website", async (path) => {
+    let body = "old website";
+    const { engine, requests } = setup({ fetchImpl: async () => html(body) });
     await engine.install();
-    const before = requests.length;
-
     await engine.handleMessage({ type: MESSAGE.setLocale, locale: "no" });
-    const redirect = await engine.handleFetch(navigation("/"))!;
-    expect(redirect.status).toBe(302);
-    // The website, not the app's Home: lastLocale only picks the language (WEB-01d).
-    expect(redirect.headers.get("location")).toBe(`${ORIGIN}/no`);
-    expect(await (await engine.handleFetch(navigation("/no"))!).text()).toBe("network /no");
+    body = "new website";
+    const before = requests.length;
+    expect(await (await engine.handleFetch(navigation(path))!).text()).toBe("new website");
+    expect(requests).toHaveLength(before + 1);
+    expect(requests.at(-1)?.cache).toBe("no-store");
+  });
 
-    await engine.handleMessage({ type: MESSAGE.setLocale, locale: "en" });
-    expect(await (await engine.handleFetch(navigation("/"))!).text()).toBe("network /");
-    expect(requests.length).toBe(before);
+  it.each(["/", "/no"])("%s keeps an offline fallback after network failure, timeout or 503", async (path) => {
+    let failure = "";
+    const { engine } = setup({ rootTimeoutMs: 10, networkTimeoutMs: 10, fetchImpl: async () => {
+      if (failure === "offline") throw new TypeError("offline");
+      if (failure === "timeout") return new Promise<Response>(() => undefined);
+      return html(failure ? "unavailable" : "cached website", { status: failure ? 503 : 200 });
+    } });
+    await engine.install();
+    for (failure of ["offline", "timeout", "503"]) {
+      expect(await (await engine.handleFetch(navigation(path))!).text()).toBe("cached website");
+    }
   });
 
   it("/ without a known locale waits only the short root timeout", async () => {
@@ -524,7 +588,7 @@ describe("launch: an installed app opens the app's Home (WEB-01d)", () => {
       await next.engine.handleMessage({ type: MESSAGE.setMatchActive, active: false });
       expect(location(await next.engine.handleFetch(navigation("/?source=pwa"))!)).toBe("/no/play?source=pwa");
       expect(await (await next.engine.handleFetch(navigation("/no/play?source=pwa"))!).text()).toBe("b2 /no/play");
-      expect(location(await next.engine.handleFetch(navigation("/"))!)).toBe("/no");
+      expect(await (await next.engine.handleFetch(navigation("/"))!).text()).toBe("b2 /");
       expect(await (await next.engine.handleFetch(navigation("/no"))!).text()).toBe("b2 /no");
     });
 
