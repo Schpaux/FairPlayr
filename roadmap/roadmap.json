@@ -1,7 +1,7 @@
 {
   "$schema": "./roadmap.schema.json",
   "schema_version": 1,
-  "updated": "2026-10-29",
+  "updated": "2026-10-30",
   "description": "FairPlayr roadmap: eneste kilde for utviklingshistorikk, vedtatt arbeid og ideer. Rediger her, kjør `npm run roadmap:render` og `npm run roadmap:check`. Se roadmap/README.md.",
   "missing_sources": [
     {
@@ -9949,6 +9949,29 @@
         }
       ],
       "updated": "2026-10-27"
+    },
+    {
+      "id": "SPOND-COMPAT-01",
+      "type": "bug",
+      "title": "Tom Spond-arrangements-ID må avvises før direkteoppslag",
+      "summary": "Valider eventId før kall mot Sponds enkeltarrangement-endepunkt. En tom ID kan ellers bli tolket som liste-endepunktet og gi feil responsform til FairPlayr.",
+      "category": "spond",
+      "parent": "INIT-SPOND",
+      "decision": "considering",
+      "status": "not_started",
+      "priority": "P2",
+      "origin": "claude_proposal",
+      "dates": {
+        "created": "2026-10-30"
+      },
+      "sources": [
+        {
+          "type": "url",
+          "ref": "https://github.com/Olen/Spond/commit/75fc93b2805d1062f4cd222c80591f4e8376bd75",
+          "note": "Upstream validerer tom UID før direkteoppslag for å unngå at sponds/ blir liste-endepunktet."
+        }
+      ],
+      "updated": "2026-10-30"
     },
     {
       "id": "WEB-01m",
