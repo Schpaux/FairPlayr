@@ -341,3 +341,4 @@ Ferdige initiativer og funksjoner, nyeste først. «≤» betyr at commiten var 
 - **SRC-TESTFLIGHT** iOS/TestFlight-bygg: Ikke dokumentert om eller når et iOS-bygg er lastet opp, eller hvilken URL det laster (UI-LIVE-01, SEC-09).
 - **SRC-VERSIONS** Versjonsnumre: Repoet har ingen tagger, releases eller PR-er; package.json står på 0.1.0. Ingen historiske versjonsnumre er registrert.
 - **SRC-DEVICE-TESTS** Fysiske enhetstester: Produkteier opplyser at flere enhetstester er gjennomført (OFF-04, OFF-05, OFF-07, OFF-12), men ingen testlogg eller rapport er funnet. De står som needs_verification til resultatene er dokumentert.
+
