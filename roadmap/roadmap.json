@@ -2334,6 +2334,11 @@
           "type": "owner_decision",
           "ref": "Produkteiers roadmap-beslutning 2026-10-30",
           "note": "FairPlayr Balance og iOS med Capacitor"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers navnegodkjenning 2026-10-30",
+          "note": "FairPlayr Balance er offisielt produktnavn."
         }
       ],
       "updated": "2026-10-30",
@@ -2345,6 +2350,10 @@
         {
           "date": "2026-10-30",
           "note": "Brandnavn FairPlayr Balance foreslått og tatt i bruk i roadmap; forskningsanbefaling: kapasitetsbevisst adaptiv regelmotor med kort adaptivt oppstartsvern, uten hybride posisjonskjeder i første versjon."
+        },
+        {
+          "date": "2026-10-30",
+          "note": "Produkteier godkjente FairPlayr Balance som offisielt navn på byttemotoren."
         }
       ]
     },
