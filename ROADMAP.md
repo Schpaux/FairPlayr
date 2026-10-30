@@ -8,9 +8,9 @@ Oppdatert 2026-10-30. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); re
 
 | | Antall |
 | :- | -: |
-| Oppføringer totalt | 303 |
+| Oppføringer totalt | 304 |
 | Ferdige (`completed`) | 134 |
-| Åpne vedtatte (`committed`) | 138 |
+| Åpne vedtatte (`committed`) | 139 |
 | Til vurdering (`considering`) | 26 |
 | Utsatt (`deferred`) | 5 |
 | Må verifiseres | 18 |
@@ -46,6 +46,7 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 | WEB-01j | P1 | ikke startet | Promofilm på nettsiden |  |
 | WEB-01l | P1 | ikke startet | Juridiske avklaringer før offentlig lansering av nettsiden |  |
 | WEB-01m | P1 | til review | Nettsiden oppdateres for tidligere PWA-besøkende |  |
+| WEB-01n | P1 | ikke startet | Til appen: tilpass inngangen for desktop-brukere |  |
 | BRAND-01g | P2 | ikke startet | Vurder øvrig markedsføringsmateriell |  |
 | WEB-01b | P2 | pågår | FairPlayr-branding på nettsiden |  |
 | WEB-01c | P2 | ikke startet | Kontaktinformasjon |  |
