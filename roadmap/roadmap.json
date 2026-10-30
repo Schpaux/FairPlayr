@@ -1,7 +1,7 @@
 {
   "$schema": "./roadmap.schema.json",
   "schema_version": 1,
-  "updated": "2026-10-29",
+  "updated": "2026-10-30",
   "description": "FairPlayr roadmap: eneste kilde for utviklingshistorikk, vedtatt arbeid og ideer. Rediger her, kjør `npm run roadmap:render` og `npm run roadmap:check`. Se roadmap/README.md.",
   "missing_sources": [
     {
@@ -388,7 +388,7 @@
       "id": "INIT-IOS",
       "type": "initiative",
       "title": "iOS-app (Capacitor)",
-      "summary": "Capacitor-skall for iOS som laster produksjonsnettstedet (server URL mode). Forberedt for TestFlight.",
+      "summary": "Egen iOS-app med Capacitor, TestFlight og senere App Store. Gjenbruk av eksisterende Next.js-app, med offline-kampflyt og mulighet for native iOS-funksjoner som Live Activities og Dynamic Island.",
       "category": "platform",
       "decision": "committed",
       "status": "in_progress",
@@ -411,9 +411,26 @@
         {
           "type": "local_doc",
           "ref": "FP-OFF-03-capacitor-notes.md"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers roadmap-beslutning 2026-10-30",
+          "note": "FairPlayr Balance og iOS med Capacitor"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-30",
+      "public": {
+        "visible": true,
+        "milestone": true,
+        "no": {
+          "title": "FairPlayr for iPhone",
+          "summary": "FairPlayr som iPhone-app, med rask kampstyring og støtte for kampinformasjon på låseskjermen."
+        },
+        "en": {
+          "title": "FairPlayr for iPhone",
+          "summary": "FairPlayr as an iPhone app, with fast match controls and match updates on the Lock Screen."
+        }
+      }
     },
     {
       "id": "INIT-DESIGN-V1",
@@ -2273,8 +2290,8 @@
     {
       "id": "SMART-SUBS",
       "type": "initiative",
-      "title": "Smart byttemotor",
-      "summary": "Bytteforslag som tar hensyn til spilletid, posisjoner og lagets bytterytme: posisjonspreferanser per spiller, faste bytteintervaller per lag og dynamiske forslag. Rettferdig spilletid er det sentrale prinsippet.",
+      "title": "FairPlayr Balance – intelligent byttemotor",
+      "summary": "Kapasitetsbevisst adaptiv byttemotor med rettferdig spilletid, posisjonspreferanser, valgbart fast eller dynamisk bytteintervall og rådgivende forslag til treneren.",
       "rationale": "Dagens forslag ser bare på spilletidsgap (minst 4 min, aldri keeper). Trenere bytter i praksis etter posisjon og faste intervaller.",
       "category": "substitutions",
       "work_order": 4,
@@ -2293,12 +2310,12 @@
         "visible": true,
         "milestone": true,
         "no": {
-          "title": "Smartere bytteforslag",
-          "summary": "Bytteforslag som tar hensyn til spilletid, posisjoner og lagets bytterytme. Treneren bestemmer fortsatt."
+          "title": "FairPlayr Balance",
+          "summary": "Smartere bytter basert på spilletid, spillerposisjoner og kampens rytme. Treneren tar alltid beslutningen."
         },
         "en": {
-          "title": "Smarter substitution suggestions",
-          "summary": "Suggestions that consider playing time, positions and the team's rotation rhythm. The coach still decides."
+          "title": "FairPlayr Balance",
+          "summary": "Smarter substitutions based on playing time, player positions and match rhythm. The coach stays in control."
         }
       },
       "uncertainty": "Krav i AGENTS.md §2 og §4 gjelder: forslag er rådgivende, keeper foreslås aldri, ny logikk kommer som valgfrie parametre med dagens oppførsel som standard. Kritisk logikk: én skriver.",
@@ -2312,13 +2329,22 @@
           "type": "doc",
           "ref": "AGENTS.md",
           "note": "§2, §4"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers roadmap-beslutning 2026-10-30",
+          "note": "FairPlayr Balance og iOS med Capacitor"
         }
       ],
-      "updated": "2026-10-27",
+      "updated": "2026-10-30",
       "changelog": [
         {
           "date": "2026-10-27",
           "note": "Arbeidsrekkefølge 3 → 4: produkteier prioriterte BRAND-01 foran (BRAND-01)."
+        },
+        {
+          "date": "2026-10-30",
+          "note": "Brandnavn FairPlayr Balance foreslått og tatt i bruk i roadmap; forskningsanbefaling: kapasitetsbevisst adaptiv regelmotor med kort adaptivt oppstartsvern, uten hybride posisjonskjeder i første versjon."
         }
       ]
     },
@@ -7645,10 +7671,10 @@
       "summary": "iOS-skallet kjører i server URL mode og krever nett, i strid med offline-målet.",
       "category": "platform",
       "parent": "INIT-IOS",
-      "decision": "considering",
+      "decision": "committed",
       "status": "not_started",
       "priority": "P1",
-      "origin": "legacy_todo",
+      "origin": "owner_decision",
       "sources": [
         {
           "type": "legacy_todo",
@@ -7657,9 +7683,17 @@
         {
           "type": "local_doc",
           "ref": "FP-OFF-03-capacitor-notes.md"
+        },
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers roadmap-beslutning 2026-10-30",
+          "note": "FairPlayr Balance og iOS med Capacitor"
         }
       ],
-      "updated": "2026-10-27"
+      "updated": "2026-10-30",
+      "dates": {
+        "created": "2026-10-30"
+      }
     },
     {
       "id": "OFF-04",
@@ -9983,6 +10017,98 @@
           "note": "Produkteier bestilte permanent feilretting med offline-fallback og fortsatt oppdateringsvern under kamp."
         }
       ]
+    },
+    {
+      "id": "SMART-SUBS-11",
+      "type": "task",
+      "title": "Implementer kapasitetsbevisst adaptiv regelmotor",
+      "summary": "Bruk forskningsrapportens anbefalte kapasitetsbevisste adaptive regelmotor og kort adaptivt oppstartsvern. Utsett hybridens interne posisjonskjeder.",
+      "category": "substitutions",
+      "parent": "SMART-SUBS",
+      "decision": "committed",
+      "status": "not_started",
+      "priority": "P2",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-30"
+      },
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers roadmap-beslutning 2026-10-30",
+          "note": "FairPlayr Balance og iOS med Capacitor"
+        }
+      ],
+      "updated": "2026-10-30"
+    },
+    {
+      "id": "SMART-SUBS-12",
+      "type": "task",
+      "title": "Valider motoren mot forskningsresultatene",
+      "summary": "Bruk forskningspakken med 32 616 simulerte kamper som beslutningsgrunnlag; kontroller fairness, antall bytter, trenerens overstyring og robusthet ved avvik.",
+      "category": "substitutions",
+      "parent": "SMART-SUBS",
+      "decision": "committed",
+      "status": "not_started",
+      "priority": "P2",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-30"
+      },
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers roadmap-beslutning 2026-10-30",
+          "note": "FairPlayr Balance og iOS med Capacitor"
+        }
+      ],
+      "updated": "2026-10-30"
+    },
+    {
+      "id": "IOS-01",
+      "type": "task",
+      "title": "Capacitor iOS-produksjonsløp",
+      "summary": "Avklar bundle/offline-strategi, native bridge, App Store-krav, TestFlight og bygge-/signeringsprosess.",
+      "category": "platform",
+      "parent": "INIT-IOS",
+      "decision": "committed",
+      "status": "not_started",
+      "priority": "P2",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-30"
+      },
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers roadmap-beslutning 2026-10-30",
+          "note": "FairPlayr Balance og iOS med Capacitor"
+        }
+      ],
+      "updated": "2026-10-30"
+    },
+    {
+      "id": "IOS-02",
+      "type": "task",
+      "title": "Live Activities og Dynamic Island",
+      "summary": "Utforsk ActivityKit gjennom Capacitor-plugin/native iOS-bridge for førkamp og live kamp. Referanse: https://medium.com/@gauravharkhani01/mastering-live-activities-in-ios-the-complete-developers-guide-5357eb35d520",
+      "category": "platform",
+      "parent": "INIT-IOS",
+      "decision": "committed",
+      "status": "not_started",
+      "priority": "P2",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-30"
+      },
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers roadmap-beslutning 2026-10-30",
+          "note": "FairPlayr Balance og iOS med Capacitor"
+        }
+      ],
+      "updated": "2026-10-30"
     }
   ]
 }
