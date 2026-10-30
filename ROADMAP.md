@@ -2,16 +2,16 @@
 
 # FairPlayr roadmap
 
-Oppdatert 2026-10-29. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); regler og felt står i [roadmap/README.md](roadmap/README.md).
+Oppdatert 2026-10-30. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); regler og felt står i [roadmap/README.md](roadmap/README.md).
 
 ## Oversikt
 
 | | Antall |
 | :- | -: |
-| Oppføringer totalt | 299 |
+| Oppføringer totalt | 300 |
 | Ferdige (`completed`) | 134 |
 | Åpne vedtatte (`committed`) | 133 |
-| Til vurdering (`considering`) | 27 |
+| Til vurdering (`considering`) | 28 |
 | Utsatt (`deferred`) | 5 |
 | Må verifiseres | 18 |
 | Offentlig synlige | 21 |
@@ -239,6 +239,7 @@ Ideer og muligheter. Ikke vedtatt; endres bare til `committed` med dokumentert b
 | OFF-09 | P2 | Tidsgrense for forlatt kamp som blokkerer oppdateringer | INIT-OFFLINE |
 | OFF-14 | P2 | Testmiljø for installert PWA bak Vercel Authentication | INIT-OFFLINE |
 | OFF-15 | P2 | Kamp og Historikk uten nett | INIT-OFFLINE |
+| SPOND-COMPAT-01 | P2 | Tom Spond-arrangements-ID må avvises før direkteoppslag | INIT-SPOND |
 | STAB-12 | P2 | E2E-testen for oppsettrekkefølgen forventer ikke «Del kampen» | INIT-DEVEX |
 | BRAND-01j | P3 | SVG-favicon | BRAND-01 |
 | C3-F4 | P3 | Sette draktnummer i appen | INIT-TEAM |
