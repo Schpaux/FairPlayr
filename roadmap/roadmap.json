@@ -10118,6 +10118,33 @@
         }
       ],
       "updated": "2026-10-30"
+    },
+    {
+      "id": "WEB-01n",
+      "type": "task",
+      "title": "Til appen: tilpass inngangen for desktop-brukere",
+      "summary": "På mobil skal «Til appen» fortsatt åpne /play direkte. På brede skjermer skal markedsføringssiden unngå å sende nye besøkende rett inn i en mobiltilpasset app som gir en dårlig desktop-opplevelse. Lag en gjennomarbeidet desktop-flyt med forklaring om mobil-først, QR-kode eller delbar lenke for å åpne FairPlayr på telefonen, og et tydelig valg om å fortsette på desktop likevel. Behold eksisterende funksjonell desktop-tilgang og unngå brukeragentbasert blokkering. Vurder både header-CTA og hero-CTA. Test med desktop, mobil, nettbrett, tastatur og skjermleser; bruk next-intl.",
+      "rationale": "Nettsidens «Til appen»-knapp viser appen også på desktop, men appens kampflyt er mobil-først og oppleves visuelt dårlig på store skjermer. Forventningsstyring og alternativ mobilinngang er bedre enn en død eller skjult CTA.",
+      "category": "website",
+      "parent": "WEB-01",
+      "decision": "committed",
+      "status": "not_started",
+      "priority": "P1",
+      "origin": "owner_decision",
+      "dates": {
+        "created": "2026-10-30"
+      },
+      "related": [
+        "WEB-01d"
+      ],
+      "sources": [
+        {
+          "type": "owner_decision",
+          "ref": "Produkteiers tilbakemelding 2026-10-30",
+          "note": "Desktop-brukere bør ikke sendes direkte inn i en mobiloptimalisert live-app fra «Til appen»."
+        }
+      ],
+      "updated": "2026-10-30"
     }
   ]
 }
