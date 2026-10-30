@@ -2,19 +2,19 @@
 
 # FairPlayr roadmap
 
-Oppdatert 2026-10-29. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); regler og felt står i [roadmap/README.md](roadmap/README.md).
+Oppdatert 2026-10-30. Kilden er [roadmap/roadmap.json](roadmap/roadmap.json); regler og felt står i [roadmap/README.md](roadmap/README.md).
 
 ## Oversikt
 
 | | Antall |
 | :- | -: |
-| Oppføringer totalt | 299 |
+| Oppføringer totalt | 303 |
 | Ferdige (`completed`) | 134 |
-| Åpne vedtatte (`committed`) | 133 |
-| Til vurdering (`considering`) | 27 |
+| Åpne vedtatte (`committed`) | 138 |
+| Til vurdering (`considering`) | 26 |
 | Utsatt (`deferred`) | 5 |
 | Må verifiseres | 18 |
-| Offentlig synlige | 21 |
+| Offentlig synlige | 22 |
 
 ## Arbeidsrekkefølge
 
@@ -23,7 +23,7 @@ Produkteiers prioriterte utviklingsområder. Unntak: P0-feil som kan påvirke ka
 1. **ROADMAP-01** Roadmap-system som felles sannhetskilde (ferdig, implementert)
 2. **BRAND-01** FairPlayr Brand Refresh (ferdig, i produksjon)
 3. **WEB-01** Ny landingsside og tydelig skille mellom nettside og app (ferdig, i produksjon, etter ROADMAP-02, BRAND-01)
-4. **SMART-SUBS** Smart byttemotor (vedtatt, ikke startet)
+4. **SMART-SUBS** FairPlayr Balance – intelligent byttemotor (vedtatt, ikke startet)
 5. **FIX-POLISH** Samlet feilretting og UI-polish (vedtatt, pågår)
 6. **COMPETITOR-01** Funn fra konkurrentanalysen (vedtatt, ikke startet)
 
@@ -55,7 +55,7 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 | WEB-01f | P3 | ikke startet | Markedsføring av nye funksjoner |  |
 | WEB-01h | P3 | ikke startet | Rutine for å foreslå oppdatering av nettsiden |  |
 
-### SMART-SUBS: Smart byttemotor
+### SMART-SUBS: FairPlayr Balance – intelligent byttemotor
 
 | ID | Prio | Status | Oppgave | Under |
 | :- | :- | :- | :- | :- |
@@ -68,6 +68,8 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 | SMART-SUBS-07 | P2 | ikke startet | Tilpasse livevisningen til nye forslag | SMART-SUBS-DYNAMIC |
 | SMART-SUBS-08 | P2 | ikke startet | Rettferdighetsregler og tester for forslagsmotoren | SMART-SUBS-FAIR |
 | SMART-SUBS-10 | P2 | ikke startet | Posisjonsmatching i forslagsfunksjonen | SMART-SUBS-POSAWARE |
+| SMART-SUBS-11 | P2 | ikke startet | Implementer kapasitetsbevisst adaptiv regelmotor |  |
+| SMART-SUBS-12 | P2 | ikke startet | Valider motoren mot forskningsresultatene |  |
 | SMART-SUBS-09 | P3 | ikke startet | Konfigurerbar terskel for bytteforslag i UI | SMART-SUBS-FAIR |
 
 ### FIX-POLISH: Samlet feilretting og UI-polish
@@ -155,7 +157,10 @@ Vedtatte oppgaver som ikke er ferdige, sortert etter prioritet. Initiativer med 
 
 | ID | Prio | Status | Oppgave | Under |
 | :- | :- | :- | :- | :- |
+| OFF-03 | P1 | ikke startet | iOS uten nett: bundlet build eller service worker i WKWebView |  |
 | UI-LIVE-01 | P1 | må verifiseres | Bekreft at iOS-bygget kjører Sideline-visningen |  |
+| IOS-01 | P2 | ikke startet | Capacitor iOS-produksjonsløp |  |
+| IOS-02 | P2 | ikke startet | Live Activities og Dynamic Island |  |
 | SEC-09 | P2 | ikke startet | Kontroller native avhengighetsversjoner i iOS-bygget |  |
 
 ### INIT-OFFLINE: Offline-app og PWA
@@ -230,7 +235,6 @@ Ideer og muligheter. Ikke vedtatt; endres bare til `committed` med dokumentert b
 | ID | Prio | Oppgave | Initiativ |
 | :- | :- | :- | :- |
 | C6-F1e | P1 | Forenkle bunnområdet i kampoppsettet | FIX-POLISH |
-| OFF-03 | P1 | iOS uten nett: bundlet build eller service worker i WKWebView | INIT-IOS |
 | BRAND-01h | P2 | Delingsbilde (Open Graph) for app og nettside | BRAND-01 |
 | BRAND-01i | P2 | Varemerkeklarering og trykkprofil | BRAND-01 |
 | FEAT-AI-01 | P2 | Merking av AI-tekst og bekreftelse ved regenerering | INIT-AI |
@@ -337,4 +341,3 @@ Ferdige initiativer og funksjoner, nyeste først. «≤» betyr at commiten var 
 - **SRC-TESTFLIGHT** iOS/TestFlight-bygg: Ikke dokumentert om eller når et iOS-bygg er lastet opp, eller hvilken URL det laster (UI-LIVE-01, SEC-09).
 - **SRC-VERSIONS** Versjonsnumre: Repoet har ingen tagger, releases eller PR-er; package.json står på 0.1.0. Ingen historiske versjonsnumre er registrert.
 - **SRC-DEVICE-TESTS** Fysiske enhetstester: Produkteier opplyser at flere enhetstester er gjennomført (OFF-04, OFF-05, OFF-07, OFF-12), men ingen testlogg eller rapport er funnet. De står som needs_verification til resultatene er dokumentert.
-
